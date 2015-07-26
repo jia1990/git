@@ -1,0 +1,119 @@
+package com.rongdu.p2psys.borrow.executer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.dao.AccountLogDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+
+/**
+ * 复审失败
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class BorrowFullVerifyFailExecuter extends BaseExecuter {
+
+	protected AccountLogDao accountLogDao;
+	protected AccountDao accountDao;
+	private String accountLogType = Constant.BORROW_FULL_VERIFY_FAIL;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void prepare() {
+		accountLogDao = (AccountLogDao) BeanUtil.getBean("accountLogDao");
+		accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+
+	}
+
+	@Override
+	public void addAccountLog() {
+//		Global.setTransfer("weburl", Global.getString("weburl"));
+//		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+//		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+//		//操作金额
+//		log.setRechargeMoney(rechargeMoney);
+//		log.setAwardMoney(awardMoney);
+//		log.setInterestMoney(interestMoney);
+//		log.setReturnCapitalMoney(returnCapitalMoney);
+//		//账户总额
+//		log.setAccountTotal(account.getAccountTotal());
+//		//账户多种可用
+//		log.setRechargeUsable(account.getRechargeUsable());
+//		log.setAwardUsable(account.getAwardUsable());
+//		log.setInterestUsable(account.getInterestUsable());
+//		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+//		//账户多种冻结
+//		log.setFreezeUseAward(account.getFreezeUseAward());
+//		log.setFreezeUseInterest(account.getFreezeUseInterest());
+//		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+//		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+//		//账户待收总额
+//		log.setCollectionTotal(account.getCollectionTotal());
+//		log.setRemark(this.getLogRemark());
+//		log.setPaymentsType((byte)0);
+		
+		
+//		log.setMoney(super.money);
+//		log.setTotal(account.getTotal());
+//		log.setUseMoney(account.getUseMoney());
+//		log.setNoUseMoney(account.getNoUseMoney());
+//		log.setCollection(account.getCollection());
+//		log.setRemark("满标审核失败。");
+//		log.setPaymentsType((byte)0);
+//		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		
+	}
+
+	@Override
+	public void handleAccountSum() {
+
+	}
+
+	@Override
+	public void handlePoints() {
+
+	}
+
+	@Override
+	public void handleNotice() {
+        BaseMsg msg = new BaseMsg(NoticeConstant.BORROW_FULL_FAIL);
+        msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+
+	}
+
+	@Override
+	public void handleInterface() {
+		//普通标满标复审失败调用接口解冻资金，
+		
+	}
+
+	@Override
+	public void extend() {
+
+	}
+}

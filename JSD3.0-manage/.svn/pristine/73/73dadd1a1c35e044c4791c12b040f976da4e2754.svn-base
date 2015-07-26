@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>来源用户投资总额</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+    var sourceInvestDetailTitle = "查看来源用户投资详细";
+    var sourceInvestDetailUrl =  "/modules/analysis/sourceInvestDetailManage.html";
+    var sourceInvestDetailWinParmeters = "'{0}','{2}','{3}','"+sourceInvestDetailTitle+"',880,500,'"+sourceInvestDetailUrl+"'";
+    
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'sourceAndInvestList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect : true,
+			showFooter : true,	//显示页脚
+			columns : [ [ 			
+			{ field: 'investMoney', title: "投资金额", width: 60},
+			{ field: 'sourceURL', title: '来源路径名称', width: 100},
+			{ field: 'startTime', title: '开始时间', width: 100,hidden:true},
+			{ field: 'endTime', title: '结束时间', width: 100,hidden:true},
+			{ field: 'action',title : '操作',width :60,fixed:true, formatter:function(value, row, index){
+				var str = '';
+				
+				  str += "<@secAuthorizeUrl value='/analysis/sourceInvestDetailBtn.html' >";
+	           	  str += $.formatString('<img onclick="$.fn.formOptions.viewFunUserSource('+sourceInvestDetailWinParmeters+');" src="{1}" title="查看来源投资金额详细"/>', row.sourceURL, '${theme_dir}/css/images/extjs_icons/book_open.png',row.startTime,row.endTime);
+	           	  str += "</@secAuthorizeUrl>";
+				
+                return str;
+			}}
+			 ] ]
+		});
+		
+	});
+
+
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<!-- <li>加盟商：<input type="text" name="branchName" id="username" autocomplete="off"/></li>
+            		<li>地址：<input type="text" name="detail" id="realname" autocomplete="off"/></li> -->
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime"  class="searchTime" style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

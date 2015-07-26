@@ -1,0 +1,155 @@
+<script language="JavaScript" type="text/javascript"> 
+//by ahuinan 2009-4-10 
+    function clearNoNum(event,obj){ 
+        //响应鼠标事件，允许左右方向键移动 
+        event = window.event||event; 
+        if(event.keyCode == 37 | event.keyCode == 39){ 
+            return; 
+        } 
+        //先把非数字的都替换掉，除了数字和. 
+        obj.value = obj.value.replace(/[^\d.]/g,""); 
+        //必须保证第一个为数字而不是. 
+        obj.value = obj.value.replace(/^\./g,""); 
+        //保证只有出现一个.而没有多个. 
+        obj.value = obj.value.replace(/\.{2,}/g,"."); 
+        //保证.只出现一次，而不能出现两次以上 
+        obj.value = obj.value.replace(".","$#$").replace(/\./g,"").replace("$#$","."); 
+    } 
+    function checkNum(obj){ 
+        //为了去除最后一个. 
+        obj.value = obj.value.replace(/\.$/g,""); 
+    } 
+</script> 
+<script type="text/javascript">
+    $(function() {
+    	
+    	$('#goodsCategoryList').dialog({   
+    		title:'商品分类(请点击选择)',
+    		width:320,
+    		height:398,
+    		modal: true
+    	}); 
+    	$('#goodsCategoryList').dialog("close");
+    	
+    	$('#parentIdName').click(function(){
+    		$('#goodsCategoryList').dialog("open");
+    		
+    		$('#goodsCategoryTree').tree({
+    			url:'/modules/goods/goodsMessage/goodsCategoryTreeList.html',
+    			onClick: function(node){
+    				
+    				// 开始截取
+    				var name = node.text; 
+    				
+    				//alert(node.id);
+    				$('#parentIdName').val(name);
+    				$('#categoryId').val(node.id);
+    				$('#goodsCategoryList').dialog("close");
+    				
+    			} 
+    				
+    		}); 
+    	});
+    	
+    	
+        $.fn.dataGridOptions.formSubFun("#form",'/modules/goods/goodsMessage/addGoods.html');
+    });
+</script>
+<style>
+	#title_label{ font-size:15px; }
+</style>
+<form id="form" method="post" enctype="multipart/form-data">
+<div class="borrowForm" style="border-top:none;">
+	<h1 class="borrowFormTitle">基本信息</h1>
+	<ul>
+		<li><span id="title_label">商品名称：</span><input type="text" name="name" maxlength="30" autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true,validType:'maxLength[25]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/></li>
+		<li><span id="title_label">所属分类：</span><input type="text" name="parentId" id="parentIdName" maxlength="20" autocomplete="off" class="borrowFormTxt easyui-validatebox" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" readonly="readonly" value="(请点击选择)"/>
+			<input type="hidden" name="categoryId" id="categoryId"  />
+		</li>
+		<!-- <li hidden="hidden"><span>参数id：</span><input type="hidden" name="categoryId" id="categoryId"  /></li> -->
+		<li><span id="title_label">商品编码：</span><input type="text" name="goodsNo" id="goodsNo" maxlength="35" autocomplete="off" size="15" class="borrowFormTxt2 easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" style="width:200px;"/></li>
+		
+		<li><span id="title_label">所属商户：</span><input type="text" name="userName" id="userName" onclick="showUser(13)" maxlength="20" autocomplete="off" class="borrowFormTxt easyui-validatebox" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" readonly="readonly" value="(请点击选择)"/>
+			<input type="hidden" name="userId" id="userId"  />
+		</li>
+		
+		<li><span id="title_label">商品价格：</span><input type="text" name="cost" autocomplete="off" onkeyup="value=value.replace(/[^0-9]/g,'')" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'accout[1,10000]'"><em>元</em></li>
+		
+		<li><span id="title_label">类型：</span><input type="text" name="typeStr" value="待上架"  maxlength="20" autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" disabled="disabled"/>
+		<input type="hidden" name="type" value="10" />
+		</li>
+		
+		<li><span id="title_label">屏幕尺寸：</span><input type="text" name="size" autocomplete="off" onKeyUp="clearNoNum(event,this)" onBlur="checkNum(this)" maxlength="20" class="borrowFormTxt1 easyui-validatebox" data-options="required: true"><em>寸</em></li>
+		<li><span id="title_label">年化利率：</span><input type="text" style="width:170px;" name="goodsApr" maxlength="5" autocomplete="off" class="borrowFormTxt1 easyui-validatebox"  style="width:60px" data-options="required: true,validType:'apr[1,24]'"  ><em>%</em></li>
+		
+		<li><span id="title_label">商品库存：</span><input type="text" style="width:170px;" name="stock"  autocomplete="off" maxlength="10" class="borrowFormTxt1 easyui-validatebox"  style="width:60px" data-options="required: true" onkeyup="value=value.replace(/[^0-9]/g,'')" ><em>件</em>
+		</li>
+		
+		<li><span id="title_label">商品颜色：</span><input type="text" name="color" maxlength="15" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span id="title_label">商品版本：</span><input type="text" name="vesion" maxlength="20" autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		</li>
+		
+		
+		<!-- <input name="borrowAddPageToken" value="${borrowAddPageToken!}" type="hidden"/> -->
+	</ul>
+	
+	<div class="borrowFormMuti" style="passing-top:15px;">
+		<span style="font-size:15px;" id="title_label">商品描述：</span><textarea id="description" name="description" maxlength="1000" class="easyui-validatebox borrowFormTextarea" ></textarea>
+	</div>
+	
+</div>
+
+<div class="borrowForm">
+
+	<h2 class="borrowFormTitle">商品图片</h2>
+	<div class="guarantee_type">
+		<div id="uploadGuaranteeBox" data-arr="uploadFile" style="height: auto;">
+			<ul id="uploadPiclistGoods" class="photoUpload" style="list-style: none; padding: 0; margin: 0;">
+		    	<li class="add_btn" style="float: left;">
+		        	<i class="a"></i> <i class="b"></i>
+		            	<input type="file" name="file" id="uploadFile4" onchange="return ajaxFileUpload1('uploadFile4','/imageUp.jsp','goodsPic','3');" title="点击上传图片" />
+		        </li>
+		    </ul>
+		</div>
+	</div>
+	
+	<h2 class="borrowFormTitle">商品详情</h2>
+	
+	<div class="ipt">
+		<script id="detail" name="detail" type="text/plain"></script>
+	</div>
+	<!-- <div class="borrowFormMuti">
+		<textarea id="detail" name="detail"  class="easyui-validatebox borrowFormTextarea" ></textarea>
+	</div> -->
+</div>
+
+	<input type="hidden" value="${goodsMessageAddToken!}" name="goodsMessageAddToken">
+
+</form>
+<div id="goodsCategoryList">
+	<ul id="goodsCategoryTree"></ul>
+</div>
+<!-- 编辑器 -->
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+    var descriptionBox = UE.getEditor('detail', {
+        autoHeight: false,
+        initialFrameWidth:728,
+        toolbars: [
+                   ['undo', 'redo', 'justifyleft', 'justifyright','justifycenter', 'justifyjustify', 'forecolor', 'fontfamily', 
+                    'fontsize', 'paragraph', 'customstyle','anchor', 'bold', 'indent','italic','underline', 'strikethrough', 'subscript','fontborder', 
+                    'superscript', 'formatmatch', 'source', 'blockquote', 'pasteplain', 'selectall', 'print', 'horizontal', 'removeformat', 'time', 
+                     'date', 'unlink', 'insertrow', 'insertcol', 'mergeright', 'mergedown','deleterow', 'deletecol', 'splittorows', 'splittocols', 'splittocells',
+                       'deletecaption','inserttitle','mergecells', 'deletetable', 'cleardoc', 'insertparagraphbeforetable','simpleupload', 'insertimage','edittable',
+                       'edittd', 'link', 'spechars', 'searchreplace','backcolor','insertorderedlist','insertunorderedlist', 'fullscreen', 'directionalityltr', 'directionalityrtl', 
+                       'rowspacingtop', 'rowspacingbottom', 'pagebreak', 'imagenone', 'imageleft', 'imageright', 'attachment','imagecenter','lineheight','edittip ', 'autotypeset', 
+                       'touppercase', 'tolowercase', 'background', 'template','inserttable', 'drafts', 'charts'
+                   ]
+               ]
+        
+    });
+   
+</script>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>

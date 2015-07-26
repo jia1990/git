@@ -1,0 +1,178 @@
+package com.rongdu.manage.action.account;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoTenderModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.account.model.AccountBankModel;
+import com.rongdu.p2psys.account.service.AccountBankService;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class ManageAccountBankAction extends BaseAction<AccountBankModel> implements ModelDriven<AccountBankModel> {
+
+	@Resource
+	private AccountBankService accountBankservice;
+	@Resource
+	private DictService dictService;
+
+	private AccountBankModel model = new AccountBankModel();
+
+	private Map<String, Object> data;
+
+	public AccountBankModel getModel() {
+		return model;
+	}
+
+	/**
+	 * 用户银行卡列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/cash/accountbank/accountBankManager")
+	public String accountBankManager() throws Exception {
+		return "accountBankManager";
+	}
+	/**
+	 * 用户银行卡列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/cash/accountbank/accountBankView")
+	public String accountBankView() throws Exception {
+		initRSAME();
+		saveToken("accountBankUpdateToken");
+		long id=paramLong("id");
+    	AccountBank bank=accountBankservice.find(id);
+    	Dict dictBank = dictService.find("account_bank", bank.getBank());
+		if(dictBank != null){
+			bank.setBank(dictBank.getName());
+		}
+    	request.setAttribute("bank", bank);
+		return "accountBankView";
+	}
+	
+	/**
+	 * 用户银行卡修改
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/cash/accountbank/updateBank")
+	public void updateBank() throws Exception {
+		
+		AccountBank bank = accountBankservice.find(model.getId());
+		bank.setBankNo(model.getBankNo());
+		bank.setBranch(model.getBranch());
+		bank.setProvince(model.getProvince());
+		bank.setCity(model.getCity());
+		bank.setArea(model.getArea());
+		bank.setStatus(model.getStatus());
+		checkToken("accountBankUpdateToken");
+		AccountBank accountBank = accountBankservice.update(bank);
+		
+		data = new HashMap<String, Object>();
+		if(accountBank != null){
+			data.put("result", true);
+			data.put("msg", "修改银行卡成功");
+		}else{
+			data.put("result", false);
+			data.put("msg", "修改银行卡失败");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 用户银行卡列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/cash/accountbank/accountBankList")
+	public void accountBankList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		model.setStatus(model.getStatus() - 1);
+		PageDataList<AccountBankModel> accountBankList = accountBankservice.accountBankList(model, pageNumber, pageSize);
+		data.put("total", accountBankList.getPage().getTotal()); // 总行数
+		data.put("rows", accountBankList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 提现银行卡导出
+	 * @throws Exception
+	 */
+	@Action("/modules/account/cash/accountbank/accountBankExcel")
+	public void accountBankExcel() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		model.setStatus(model.getStatus() - 1);
+		
+//		PageDataList<AccountBankModel> pageDataList = accountBankservice.accountBankList(model, 1, 99999999);
+//		List<AccountBankModel> list = pageDataList.getList();
+		List newList = accountBankservice.excelListBankCard(model);
+//		List<AccountBankModel> newList = new ArrayList<AccountBankModel>();		
+//		for(int i=0;i<list.size();i++){
+//			AccountBankModel autoTender = list.get(i);
+//			if(autoTender.getStatus() == 1){
+//				autoTender.setStatusNew("启用");
+//			}else if(autoTender.getStatus() == 0){
+//				autoTender.setStatusNew("关闭");
+//			}
+//			newList.add(autoTender);
+//		}
+		String title = "提现银行卡Excel表";
+		
+		String[] hearders = new String[] {"编号","用户名","银行账号","状态","所属银行","账户姓名","支行","省","市","手机号码","添加时间"};// 表头数组
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object6]","object[7]","object[8]","object[9]","object[10]"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountBankModel> tdList = new ArrayList<AccountBankModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				AccountBankModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+		
+	}
+}

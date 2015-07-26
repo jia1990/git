@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>提现管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = false;
+</script>
+<script type="text/javascript">
+	$.canDelete = false;
+</script>
+<script type="text/javascript">
+	$.canAdd = false;
+</script>
+<script type="text/javascript">
+	$.canGrant = false;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  800;
+	var winHeight = 280;
+	
+	var fullVerifyTitle="财务提现审核";
+	var fullVerifyUrl="/modules/account/cash/accountcash/cwFullCashEditPage.html";
+	var fullVerifyWinParmeters = "'{0}','"+fullVerifyTitle+"',800,600,'"+fullVerifyUrl+"','确定'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'fullAccountCashList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'desc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width: 50,fixed: true,sortable:true},
+			{ field: 'userName', title: '用户名', width: 60},
+			{ field: 'realName', title: '真实姓名', width: 80},
+			{ field: 'status', title: '状态', width: 80,formatter:function(value, row, index){
+// 					switch(value){
+// 					case 1:return "财务复审通过";
+// 					case 3:return "财务复审不通过";
+// 					case 4:return "用户取消提现";
+// 					case 5:return "审核中";
+// 					}
+					switch(value){
+						case 0:return "待审核";
+						case 1:return "财务复审通过";
+						case 3:return "财务复审未通过";
+						case 4:return "用户取消";
+						case 5:return "客服初审通过";
+						case 6:return "客服初审未通过";
+						case 7:return "财务初审通过";
+						case 8:return "财务初审未通过";
+					}
+				}
+			},
+			{ field: 'bankNo', title: '银行账号', width: 150},
+			{ field: 'bank', title: '所属银行', width: 60},
+			{ field: 'branch', title: '支行', width: 60},
+			{ field: 'money', title: '提现总额', width: 60,formatter:function(value, row, index){
+				return value+"元";
+			}},
+			{ field: 'credited', title: '到账金额', width: 60,formatter:function(value, row, index){
+				return value+"元";
+			}},
+			{ field: 'fee', title: '手续费', width: 60,formatter:function(value, row, index){
+				return value+"元";
+			}},
+			{ field: 'addTime', title: '添加时间', width: 130,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{field:'addIp', title:'添加IP',width: 100},
+			{field:'verifyUserName', title:'审核人',width: 100},
+			{field : 'action',title : '操作',width :100,formatter : function(value, row, index) {
+					var str = '';
+					if (row.status==5) {//财务提现审核
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+fullVerifyWinParmeters+');" src="{1}" title="财务提现审核"/>', row.id, '${theme_dir}/css/images/extjs_icons/key.png');
+					}
+					str += '&nbsp;';                    
+					return str;
+				}
+			} 
+			 ]],
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			},
+			onRowContextMenu : function(e, rowIndex, rowData) {
+				e.preventDefault();
+				$(this).datagrid('unselectAll').datagrid('uncheckAll');
+				$(this).datagrid('selectRow', rowIndex);
+				$('#menu').menu('show', {
+					left : e.pageX,
+					top : e.pageY
+				});
+			}
+		});
+	});
+
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		 <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+					<li>用户名：<input type="text" name="userName" autocomplete="off"/></li>
+					<li>状态：
+						<select name="status" class="type">
+							<option value="5" selected="selected">待审核</option>
+							<option value="7">初审通过</option>
+							<option value="8">初审未通过</option>
+							<option value="1">复审通过</option>
+							<option value="2">复审未通过</option>
+							<option value="4">用户取消提现</option>
+						</select>
+					</li>
+					<li>时间：<input type="text" name="startTime" onClick="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" onClick="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="searchTime"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+</html>

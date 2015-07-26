@@ -1,0 +1,128 @@
+package com.ddtkj.p2psys.phone.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.phone.domain.PhoneScrollPic;
+import com.rongdu.common.util.Page;
+
+/**
+ * 手机轮展图Model
+ * 
+ * @author sxy
+ * @version 3.0
+ * @since 2015年3月20日
+ */
+public class PhoneScrollPicModel extends PhoneScrollPic {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1565838682025240461L;
+	/** 序列号 */
+
+	/** 当前页码 */
+	private int page;
+	/** 上一篇ID */
+	private long prevId;
+	/** 下一篇ID*/
+	private long nextId;
+	
+	/** 每页数据条数 */
+    private int size = Page.ROWS;
+    
+	/** 栏目标识 */
+	private String nid;
+
+	/** 名称 */
+	private String name;
+
+	/** 状态 */
+	private String statusStr;
+	
+	
+	
+
+	/** 作者 */
+	private String author;
+	public String getAuthor() {
+		return author;
+	}
+
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+
+	/**
+	 * 
+	 * @param PhoneScrollPic
+	 * @return
+	 */
+	public static PhoneScrollPicModel instance(PhoneScrollPic phoneScrollPic) {
+		PhoneScrollPicModel phoneScrollPicModel = new PhoneScrollPicModel();
+		BeanUtils.copyProperties(phoneScrollPic, phoneScrollPicModel);
+		return phoneScrollPicModel;
+	}
+
+	public PhoneScrollPic prototype() {
+		PhoneScrollPic phoneScrollPic = new PhoneScrollPic();
+		BeanUtils.copyProperties(this, phoneScrollPic);
+		return phoneScrollPic;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public String getNid() {
+		return nid;
+	}
+
+	public void setNid(String nid) {
+		this.nid = nid;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	
+    public String getStatusStr() {
+		return statusStr;
+	}
+
+	public void setStatusStr(String statusStr) {
+		this.statusStr = statusStr;
+	}
+
+	public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public long getPrevId() {
+        return prevId;
+    }
+
+    public void setPrevId(long prevId) {
+        this.prevId = prevId;
+    }
+
+    public long getNextId() {
+        return nextId;
+    }
+
+    public void setNextId(long nextId) {
+        this.nextId = nextId;
+    }
+}

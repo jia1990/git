@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户分析</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../include/resources.html">
+<script src="/plugins/handlebars-v1.3.0/handlebars-v1.3.0.js" type="text/javascript"></script>
+<script>
+$(function(){
+	$.ajax({
+		url:"itemCountAnalysisInfo.html",
+		type:"POST",
+		dataType:"json",
+		cache:false,
+		success:function(json){
+			var source = $("#template").html(); 
+			var template = Handlebars.compile(source);
+			var html    = template(json);
+			$('#template_con').html(html);
+		}
+	})
+})
+</script>
+</head>
+<body>
+	  <script id="template" type="text/x-handlebars-template">
+		  <table border="1" style="border-collapse:collapse;width: 100%;">
+			<tbody>
+				<tr>
+					<th rowspan="2">项目总数</th>
+					<th colspan="2">已完成项目数</th>
+					<th colspan="5">未完成项目数</th>
+				</tr>
+				<tr>
+					<th>正常项目数</th>
+					<th>逾期项目数</th>
+					<!--<th>待登记项目数</th>-->
+					<th>待初审项目数</th>
+					<th>投资中项目数</th>
+					<th>待满标复审项目数</th>
+					<th>还款中项目数</th>
+					<th>逾期中项目数</th>
+				</tr>
+				<tr>
+					<td>{{allCount}} 个</td>
+					<td>{{allNormalCount}} 个</td>
+					<td>{{allOverduedCount}} 个</td>
+					<!--<td>{{registerelessCount}} 个</td>-->
+					<td>{{registeredCount}} 个</td>
+					<td>{{investingCount}} 个</td>
+					<td>{{verifyFullCount}} 个</td>
+					<td>{{repayingCount}} 个</td>
+					<td>{{allOverdueingCount}} 个</td>
+				</tr>
+			</tbody>	
+		</table>
+	  </script>
+	  <div id="template_con"></div>
+</body>
+</html>

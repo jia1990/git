@@ -1,0 +1,151 @@
+package com.rongdu.p2psys.user.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+
+/**
+ * 认证信息
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月17日17:27:02
+ */
+public interface UserIdentifyDao extends BaseDao<UserIdentify> {
+
+	/**
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	UserIdentify findByUserId(long userId);
+
+	/**
+	 * 更新实名认证状态real_name_status
+	 * 
+	 * @param userId
+	 */
+	int modifyRealnameStatus(long userId, String status, String preStatus);
+	/**
+     * 更新实名认证状态real_name_status
+     * 
+     * @param userId
+     */
+    void modifyRealnameStatus(long userId, String status);
+
+	/**
+	 * 更新邮箱激活状态email_status
+	 * 
+	 * @param userId
+	 */
+	void modifyEmailStatus(long userId, String status, String preStatus);
+
+	/**
+	 * 更新手机绑定状态mobile_phone_status
+	 * 
+	 * @param userId
+	 */
+	void modifyMobilePhoneStatus(long userId, String status, String preStatus);
+	/**
+     * 更新手机绑定状态mobile_phone_status
+     * 
+     * @param userId
+     */
+    void modifyMobilePhoneStatus(long userId, String status);
+
+	/**
+	 * 得到单个用户的认证状态
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	UserIdentifyModel getUserIdentifyByUserId(long userId);
+
+	/**
+	 * 审核用户认证信息
+	 * 
+	 * @param id
+	 * @param realNameVerifyRemark
+	 * @param realNameStatus
+	 * @param user
+	 */
+	void userAttestationEdit(long id, String realNameVerifyRemark, String realNameStatus, Operator operator);
+
+	/**
+	 * 根据实名认证状态统计总数
+	 * 
+	 * @param status
+	 * @return
+	 */
+	int countByRealName(String status);
+
+	/**
+	 * 根据手机号计数 注意:已经手机认证的用户
+	 * 
+	 * @param mobilePhone
+	 * @return
+	 */
+	int countByMobilePhone(String mobilePhone);
+
+	/**
+	 * 统计邮箱：已经认证的用户
+	 * 
+	 * @param email
+	 * @return
+	 */
+	int countByEmail(String email);
+	
+	/**
+	 * 更具主键查询
+	 * 
+	 * @param userIdentifyId
+	 * @return
+	 */
+	UserIdentify findById(long userIdentifyId);
+	/**
+	 * 统计已经实名认证通过的身份证号是否存在
+	 * @param cardId
+	 * @return
+	 * wcw
+	 * 2014-12-4
+	 */
+	int countByVerifyOkCardNo(String cardId);
+	
+	
+	/**
+	 * 统计身份证号是否存在
+	 * @param cardId
+	 * @return
+	 * wcw
+	 * 2014-12-4
+	 */
+	int countByCardNo(String cardId);
+	
+	/**
+	 * 通过实名认证用户数 —— 投资人(通过&不通过)
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countTenderByRealName(String status);
+	/**
+	 * 查询是否已完成3项认证
+	 * @param userId
+	 * @return
+	 */
+	boolean findFinishIdentify(long userId);
+
+	
+	//JSDP-116 fengguoqin 2015-05-16 start
+	/**
+	 * excel导出用户认证信息
+	 * @return
+	 * @author 冯国琴
+	 */
+	public List<UserIdentifyModel> excelListUserIdentifyInfo(UserIdentifyModel model);
+	//JSDP-116 fengguoqin 2015-05-16 end
+}

@@ -1,0 +1,30 @@
+package com.rongdu.p2psys.core.protocol;
+
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * 平台下载协议实现类
+ * 
+ * @author qj
+ * @version 2.0
+ * @since 2014-05-23
+ */
+public class CreditProtocol extends AbstractProtocolBean {
+
+	@Override
+	public void prepare() {
+		
+	}
+
+	@Override
+	public void validDownload() {
+		// 先调用父类基础校验
+		super.validDownload();
+		Operator oper = operatorService.getUserById(userId);
+		if (oper == null) {
+			throw new BorrowException("操作异常！");
+		}
+	}
+
+}

@@ -1,0 +1,1273 @@
+package com.rongdu.manage.action.column;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.alibaba.fastjson.JSONArray;
+import com.ddtkj.p2psys.article.domain.ArticlePic;
+import com.ddtkj.p2psys.article.service.ArticlePicService;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Article;
+import com.rongdu.p2psys.core.domain.Site;
+import com.rongdu.p2psys.core.model.ArticleModel;
+import com.rongdu.p2psys.core.model.TreeModel;
+import com.rongdu.p2psys.core.service.ArticleService;
+import com.rongdu.p2psys.core.service.SiteService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 文章管理
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class ManageArticleAction extends BaseAction<ArticleModel> implements ModelDriven<ArticleModel> {
+	
+	private static final Logger logger = Logger.getLogger(ManageArticleAction.class);
+
+	@Resource
+	private ArticleService articleService;
+	@Resource
+	private SiteService siteService;
+	@Resource
+	private ArticlePicService articlePicService;
+
+    private Map<String, Object> data;
+    
+    // JSDP-131 2015年5月20日  sxy start
+    private long[] delIds; // 删除的图片ID
+	
+	public long[] getDelIds() {
+		return delIds;
+	}
+
+	public void setDelIds(long[] delIds) {
+		this.delIds = delIds;
+	}
+	 // JSDP-131 2015年5月20日  sxy start
+    
+    /**
+     * 广告的列表页面=首页广告
+     * @author sunxiaoyong@ddtkj.com
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/ad/adManagerBorrowAd")
+    public String adManagerBorrowAd() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	
+    	return "adManager";
+    }
+    
+    /**
+     * 广告的列表页面=标的详情页
+     * @author sunxiaoyong@ddtkj.com
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/ad/adManagerIndexAd")
+    public String adManagerIndexAd() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	
+    	return "adManager";
+    }
+    
+    /**
+	 * 广告条列表查询
+	 * @author sunxiaoyong@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/ad/adList")
+	public void adList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String typeName = paramString("typeName");
+		String status = paramString("status");
+		model.setNid(typeName);
+		PageDataList<ArticleModel> articleList = articleService.articleList(model, pageNumber, pageSize);
+		data.put("total", articleList.getPage().getTotal()); // 总行数
+		data.put("rows", articleList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	/**
+	 * 广告条的添加
+	 * @author sunxiaoyong@ddtkj.com
+	 * @return
+	 */
+	@Action(value="/modules/column/ad/adAddPage")
+	public String adAddPage() throws Exception {
+		//initRSAME();
+		saveToken("articleAddToken");
+		String typeName = paramString("typeName");
+		Site site = siteService.findByType(typeName);
+		int articleSort = articleService.findArticleBySiteId(site.getId());
+		if(null != site){
+			request.setAttribute("sortId", articleSort+1);
+			request.setAttribute("site", site);
+		}
+		return "adAddPage";
+	}
+    /**
+     * 广告条的修改
+     * @author sunxiaoyong@ddtkj.com
+     * @return
+     */
+	@Action(value="/modules/column/ad/adEditPage")
+	public String adEditPage() throws Exception{
+		//initRSAME();
+		saveToken("articleEditToken");
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "adEditPage";
+	}
+    
+    /**
+     * 添加媒体文章的页面
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/addMediaPage")
+    public String addMediaPage() throws Exception{
+    	//initRSAME();
+    	saveToken("articleAddToken");
+    	String typeName = paramString("typeName");
+    	Site site = siteService.findByType(typeName);
+		if(null != site){
+			int sortId = articleService.findArticleBySiteId(site.getId());
+			request.setAttribute("sortId", sortId+1);
+			request.setAttribute("siteNew", site);
+		}
+    	return "mediaAddPage";
+    }
+    /**
+     * 修改媒体文章页面
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/editMediaPage")
+    public String editMediaPage() throws Exception{
+    	//initRSAME();
+    	saveToken("articleEditToken");
+    	long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+    	
+    	return "mediaEditPage";
+    }
+    
+    /**
+     * 晋商文化
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerJsculture")
+    public String mediaManagerJsculture() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    
+    
+    
+    /**
+     * 晋商新闻
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerSupervise")
+    public String mediaManagerSupervise() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    
+    
+    /**
+     * 平台公告
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerNotice")
+    public String mediaManagerNotice() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=新手入门
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerXsrmQuestions")
+    public String mediaManagerXsrmQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=安全保障
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerAqbzQuestions")
+    public String mediaManagerAqbzQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=资质认证
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerZzrzQuestions")
+    public String mediaManagerZzrzQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=理财借款
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerLcjkQuestions")
+    public String mediaManagerLcjkQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=债权转让
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerZqzrQuestions")
+    public String mediaManagerZqzrQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=自费规则
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerZfgzQuestions")
+    public String mediaManagerZfgzQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=账户管理
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerInvestQuestions")
+    public String mediaManagerInvestQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    /**
+     * 常见问题=登录注册
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/media/mediaManagerLoginQuestions")
+    public String mediaManagerLoginQuestions() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "mediaManager";
+    }
+    
+    /**
+     * 媒体文章的查询列表
+     * @throws Exception
+     */
+    @Action(value = "/modules/column/media/mediaList")
+	public void mediaList() throws Exception {
+		data = new HashMap<String, Object>();
+		String typeName = paramString("typeName");
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		model.setNid(typeName);
+		PageDataList<ArticleModel> articleList = articleService.articleList(model, pageNumber, pageSize);
+		data.put("total", articleList.getPage().getTotal()); // 总行数
+		data.put("rows", articleList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+    
+    /**
+     * 添加媒体报道的页面
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/report/addReportPage")
+    public String addReportPage() throws Exception{
+    	//initRSAME();
+    	saveToken("articleAddToken");
+    	String typeName = paramString("typeName");
+    	Site site = siteService.findByType(typeName);
+		if(null != site){
+			int sortId = articleService.findArticleBySiteId(site.getId());
+			request.setAttribute("sortId", sortId+1);
+			request.setAttribute("siteNew", site);
+		}
+    	return "reportAddPage";
+    }
+    /**
+     * 修改媒体报道页面
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/report/editReportPage")
+    public String editReportPage() throws Exception{
+    	//initRSAME();
+    	saveToken("articleEditToken");
+    	long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+    	
+    	return "reportEditPage";
+    }
+    
+    /**
+     * 媒体报道的页面
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/report/reportManager")
+    public String reportManager() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	request.setAttribute("weburl", Global.getString("weburl"));
+    	return "reportManager";
+    }
+    
+    /**
+     * 媒体报道的查询列表
+     * @throws Exception
+     */
+    @Action(value = "/modules/column/report/reportList")
+	public void reportList() throws Exception {
+		data = new HashMap<String, Object>();
+		String typeName = paramString("typeName");
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		model.setNid(typeName);
+		PageDataList<ArticleModel> articleList = articleService.articleList(model, pageNumber, pageSize);
+		data.put("total", articleList.getPage().getTotal()); // 总行数
+		data.put("rows", articleList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+    
+    /**
+     * 轮转图的列表页面
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/banner/bannerManager")
+    public String bannerManager() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	return "bannerManager";
+    }
+    
+    /**
+	 * 轮转图列表查询
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/banner/bannerList")
+	public void bannerList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String typeName = paramString("typeName");
+		model.setNid(typeName);
+		PageDataList<ArticleModel> articleList = articleService.articleList(model, pageNumber, pageSize);
+		data.put("total", articleList.getPage().getTotal()); // 总行数
+		data.put("rows", articleList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 轮转图的添加
+	 * @return
+	 * @throws Exception 
+	 */
+	@Action(value="/modules/column/banner/bannerAddPage")
+	public String bannerAddPage() throws Exception{
+		//initRSAME();
+		saveToken("articleAddToken");
+		String typeName = paramString("typeName");
+		Site site = siteService.findByType(typeName);
+		if(null != site){
+			int sortId = articleService.findArticleBySiteId(site.getId());
+			request.setAttribute("sortId", sortId+1);
+			request.setAttribute("site", site);
+		}
+		return "bannerAddPage";
+	}
+    /**
+     * 轮展图的修改
+     * @author xingjia@ddtkj.com
+     * @return
+     */
+	@Action(value="/modules/column/banner/bannerEditPage")
+	public String bannerEditPage() throws Exception{
+		//initRSAME();
+		saveToken("articleEditToken");
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "bannerEditPage";
+	}
+	
+	
+	/**
+	 * 文章列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleManager")
+	public String articleManager() throws Exception {
+		request.setAttribute("weburl", Global.getString("weburl"));
+		//将要从文章管理中移除的分类加入下列字符串中
+		// JSDP-176  sxy start
+		StringBuffer sbf = new StringBuffer("scrollPic,media,jsculture,supervise,ad,"
+				+ "indexAd,borrowAd,notice,questions,qualiQuestions,borrowQuestions,"
+				+ "investQuestions,loginQuestions,bondQuestions,riskMoney");
+		List<Site> siteList = siteService.articleListBySite(sbf);
+		request.setAttribute("siteList", siteList);
+		return "articleManager";
+	}
+
+	/**
+	 * 其他列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleList")
+	public void articleList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null) {
+		    model.setStatus((byte)-1);
+		}
+//		PageDataList<ArticleModel> articleList = articleService.articleList(model, pageNumber, pageSize);
+		PageDataList<ArticleModel> articleList = articleService.articleParamList(model, pageNumber, pageSize);
+		data.put("total", articleList.getPage().getTotal()); // 总行数
+		data.put("rows", articleList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+
+	/**
+	 * 文章列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleParamList")
+	public void articleParamList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null) {
+		    model.setStatus((byte)-1);
+		}
+		PageDataList<ArticleModel> articleList = articleService.articleParamList(model, pageNumber, pageSize);
+		data.put("total", articleList.getPage().getTotal()); // 总行数
+		data.put("rows", articleList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 添加文章页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleAddPage")
+	public String articleAddPage() throws Exception {
+		//initRSAME();
+		List<Site> list = siteService.findList();
+		request.setAttribute("list", list);
+		saveToken("articleAddToken");
+		return "articleAddPage";
+	}
+
+	/**
+	 * 添加文章
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleAdd")
+	public void articleAdd() throws Exception {
+		
+		// 接收栏目标题
+		String siteNewName = paramString("siteNewName");
+		if(null != siteNewName && !"".equals(siteNewName)){
+		
+			data = new HashMap<String, Object>();
+			Article articleNew = model.prototype();
+			// long siteId = paramLong("siteId");
+			// 接收到栏目
+			String siteNid = paramString("siteNid");
+			String link = paramString("link");
+			String content = paramString("content");
+			String showWay = paramString("showWay");
+			
+			// 晋商贷视频、首页广告条、轮展图 (依据前台情况增加条件)
+			if(siteNid.equals("jsdVideo") || siteNid.equals("indexAd") || siteNid.equals("borrowAd") || siteNid.equals("scrollPic")){
+				if(null == link){
+					throw new BussinessException("链接不能为空！", 1);
+				}else{
+					articleNew.setContent(link);
+				}
+			} else if (siteNid.equals("media")){	// 媒体报道
+				
+				if("1".equals(showWay)){
+					if(null == link){
+						throw new BussinessException("链接不能为空！", 1);
+					}else{
+						articleNew.setContent(link);
+					}
+				}
+				if("2".equals(showWay)){
+					if(null == content){
+						articleNew.setContent("");
+					}else{
+						articleNew.setContent(content);
+					}
+				}
+			// JSDP-131  2015年5月20日   sxy  start
+			} else if (siteNid.equals("riskMoney")){
+			
+				// 风险备用金图片
+				String[] articlePics = request.getParameterValues("riskMoney");
+				
+				if (articlePics != null) {
+					List<String> list = new ArrayList<String>();
+				
+					for(int i = 0;i < articlePics.length;i++){
+					
+						list.add(articlePics[i]);
+						
+					}
+					
+					model.setFiles(list);
+				}
+				
+			// JSDP-131  2015年5月20日   sxy  start
+		    } else {
+				if(null == content){
+					articleNew.setContent("");
+				}else{
+					articleNew.setContent(content);
+				}
+			}
+			
+			
+			
+			
+			articleNew.setAddTime(new Date());
+			articleNew.setAddIp(Global.getIP());
+			articleNew.setClicks(0);
+			articleNew.setSite(new Site(Long.valueOf(model.getSiteId())));
+			articleNew.setUpdateTime(Calendar.getInstance().getTime());
+			articleNew.setUpdateUser(getOperatorId());
+			articleNew.setUpdateUserName(getOperatorUserName());
+			if(siteNid.equals("media")){
+				if (request.getParameter("fileIndex") != null) {
+					String picPaths[] = imgsUpload();
+					
+					if (picPaths[0] != null) {
+				        articleNew.setPicPath(picPaths[0]);
+					}
+					
+					if (picPaths[1] != null) {
+				        articleNew.setLogoPath(picPaths[1]);
+					}
+					
+				}
+			}else{
+				String picPath = imgUpload();
+				if (picPath != null) {
+			        articleNew.setPicPath(picPath);
+				}
+			}
+			checkToken("articleAddToken");
+			articleService.articleAdd(articleNew);
+			
+			// JSDP-131  2015年5月20日   sxy  start
+			// 如果为备用金，则先保存文章后再保存图片（能够保证获得文章ID）
+			if(siteNid.equals("riskMoney")){
+				// 保存图片
+				for (String imgUrl : model.getFiles()) {
+					ArticlePic pic = new ArticlePic();
+		            pic.setPicUrl(imgUrl);
+		            pic.setArticleId(articleNew.getId());
+		            pic.setType("riskMoney");
+		            pic.setAddTime(new Date());
+		            pic.setAddUser(String.valueOf(getOperatorId()));
+		            
+		            
+		            articlePicService.addArticlePic(pic);
+		        }
+			}
+			// JSDP-131  2015年5月20日   sxy  start
+			
+			data.put("result", true);
+			data.put("msg", "保存成功！");
+			printJson(getStringOfJpaObj(data));
+		
+		} else {
+			throw new BussinessException("栏目不能为空！", 1);
+		}
+	}
+
+	/**
+	 * 修改文章页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleEditPage")
+	public String articleEditPage() throws Exception {
+		//initRSAME();
+		saveToken("articleEditToken");
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "articleEditPage";
+	}
+
+	/**
+	 * 修改文章
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleEdit")
+	public void articleEdit() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		Article articleNew = model.prototype();
+		
+		Article article = articleService.find(id);
+		
+		String[] articlePicPaths = request.getParameterValues("riskMoney");
+		
+		//long siteId = paramLong("siteId");
+		// 接收到栏目
+		String siteNid = paramString("siteNid");
+		String link = paramString("link");
+		String content = paramString("content");
+		String showWay = paramString("showWay");
+		
+		// 晋商贷视频、首页广告条、轮展图 (依据前台情况增加条件)
+		if(siteNid.equals("jsdVideo") || siteNid.equals("indexAd") || siteNid.equals("borrowAd") || siteNid.equals("scrollPic")){
+			if (null == link) {
+				throw new BussinessException("链接不能为空！", 1);
+			} else {
+				articleNew.setContent(link);
+			}
+		} else if(siteNid.equals("media")){		// 媒体报道
+				
+				if("1".equals(showWay)){
+					if(null == link){
+						throw new BussinessException("链接不能为空！", 1);
+					}else{
+						articleNew.setContent(link);
+					}
+				}
+				if("2".equals(showWay)){
+					if(null == content){
+						articleNew.setContent("");
+					}else{
+						articleNew.setContent(content);
+					}
+				}
+		}else {
+			if (null == content) {
+				articleNew.setContent("");
+			} else {
+				articleNew.setContent(content);
+			}
+		}
+	/*	
+		String[] picPaths = request.getParameterValues("goodsPic");
+		
+		
+		if (picPaths != null) {
+			for (String path : picPaths) {
+				DdtkjGoodsPic uu = new DdtkjGoodsPic();
+				uu.setGoodsId(goodsId);
+				uu.setPicUrl(path);
+				uu.setAddTime(new Date());
+				list.add(uu);
+			}
+		}
+		*/
+		
+		
+		
+		
+		
+		articleNew.setSite(new Site(Long.valueOf(model.getSiteId())));
+		articleNew.setId(id);
+		articleNew.setUpdateTime(Calendar.getInstance().getTime());
+		articleNew.setUpdateUser(getOperatorId());
+		articleNew.setUpdateUserName(getOperatorUserName());
+		if(siteNid.equals("media")){
+			if (request.getParameter("fileIndex") != null) {
+				String picPaths[] = imgsUpload();
+				
+				if (picPaths[0] != null) {
+			        articleNew.setPicPath(picPaths[0]);
+				}else{
+					articleNew.setPicPath(article.getPicPath());
+				}
+				
+				if (picPaths[1] != null) {
+			        articleNew.setLogoPath(picPaths[1]);
+				}else{
+					articleNew.setLogoPath(article.getLogoPath());
+				}
+				
+			}
+		}else{
+			String picPath = imgUpload();
+			if (picPath != null) {
+		        articleNew.setPicPath(picPath);
+			}
+		}
+		
+		List<ArticlePic> list = new ArrayList<ArticlePic>();
+		
+		if (siteNid.equals("riskMoney")){
+			
+			//String[] articlePicPaths = request.getParameterValues("riskMoney");
+			if (articlePicPaths != null) {
+				// 保存图片
+				for (String path : articlePicPaths) {
+					ArticlePic pic = new ArticlePic();
+		            pic.setPicUrl(path);
+		            pic.setArticleId(articleNew.getId());
+		            pic.setType("riskMoney");
+		            pic.setAddTime(new Date());
+		            pic.setAddUser(String.valueOf(getOperatorId()));
+		            list.add(pic);
+		            //articlePicService.addArticlePic(pic);
+		        }
+			}
+			
+		}
+		
+		checkToken("articleEditToken");
+		articleService.update(articleNew,list,siteNid,delIds);
+		
+/*
+        if (siteNid.equals("riskMoney")){
+			
+			List<ArticlePic> list = new ArrayList<ArticlePic>();
+			String[] picPaths = request.getParameterValues("riskMoney");
+			// 保存图片
+			for (String path : picPaths) {
+				ArticlePic pic = new ArticlePic();
+	            pic.setPicUrl(path);
+	            pic.setArticleId(articleNew.getId());
+	            pic.setType("riskMoney");
+	            pic.setAddTime(new Date());
+	            pic.setAddUser(String.valueOf(getOperatorId()));
+	            list.add(pic);
+	            //articlePicService.addArticlePic(pic);
+	        }
+			
+			
+			articlePicService.addArticlePic(list);
+	    	goodsDao.merge(goods);
+		    if (delIds != null) {
+	            for (long id : delIds) {
+	            	DdtkjGoodsPic uu = goodsPicDao.find(id);
+	                goodsPicDao.delete(id);
+	                String realPath = ServletActionContext.getServletContext().getRealPath(uu.getPicUrl());
+	                new File(realPath).delete();
+	            }
+	        }
+			
+        }
+		*/
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 修改媒体报道
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/report/reportEdit")
+	public void reportEdit() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		
+		Article articleNew = articleService.find(id);
+		
+		// 接收到栏目
+		String siteNid = paramString("siteNid");
+		String link = paramString("link");
+		String content = paramString("content");
+		// 媒体报道
+		if (siteNid.equals("media")) {
+			if (null == link) {
+				throw new BussinessException("链接不能为空！", 1);
+			} else {
+				articleNew.setContent(link);
+			}
+		} else {
+			if (null == content) {
+				articleNew.setContent("");
+			} else {
+				articleNew.setContent(content);
+			}
+		}
+		
+		articleNew.setSite(new Site(Long.valueOf(model.getSiteId())));
+		articleNew.setId(id);
+		articleNew.setUpdateTime(Calendar.getInstance().getTime());
+		articleNew.setUpdateUser(getOperatorId());
+		articleNew.setUpdateUserName(getOperatorUserName());
+		
+		if(siteNid.equals("media")){
+			
+			if (request.getParameter("fileIndex") != null) {
+				
+				String[] picPath = imgsUpload();
+				
+	            if (picPath[0] != null) {
+	            	articleNew.setPicPath(picPath[0]);
+	        	}
+	            if (picPath[1] != null) {
+	            	articleNew.setLogoPath(picPath[1]);
+	            }
+				
+			}
+			
+		}else{
+			String picPath = imgUpload();
+			if (picPath != null) {
+		        articleNew.setPicPath(picPath);
+			}
+		}
+		//checkToken("articleEditToken");
+		articleService.update(articleNew);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 删除文章
+	 * @throws Exception
+	 */
+	@Action(value="/modules/column/article/articleDel")
+	public void articleDel() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		articleNew.setIsDelete(true);
+		articleService.update(articleNew);
+		data.put("result", true);
+		data.put("msg", "删除成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 修改文章的状态（显示/隐藏，是否置顶，是否推荐）
+	 * @throws Exception
+	 */
+	@Action(value="/modules/column/article/articleUpdate")
+	public void articleUpdate() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		String type = paramString("type");
+		int value = paramInt("value");
+		Article articleNew = articleService.find(id);
+		//状态，0：隐藏，1：显示
+		if("status".equals(type)){
+			if(value==1){
+				articleNew.setStatus((byte) 0);
+			}else{
+				articleNew.setStatus((byte) 1);
+			}
+		}else if("isTop".equals(type)){
+			if(value==1){
+				articleNew.setIsTop((byte) 0);
+			}else{
+				articleNew.setIsTop((byte) 1);
+			}
+		}else if("isRecommend".equals(type)){
+			if(value==1){
+				articleNew.setIsRecommend((byte) 0);
+			}else{
+				articleNew.setIsRecommend((byte) 1);
+			}
+		}
+		articleNew.setUpdateUser(getOperatorId());
+		articleNew.setUpdateUserName(getOperatorUserName());
+		articleNew.setUpdateTime(Calendar.getInstance().getTime());
+		articleService.update(articleNew);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+
+	/**
+	 * 栏目tree列表展示
+	 * @author sunxiaoyong@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleTreeList")
+	public void articleTreePage() throws Exception {
+		List<Site> siteList = siteService.findByNid(0);
+		//List<Site> siteList = siteService.findList();
+		List<TreeModel> treeList = new ArrayList<TreeModel>();
+		for (Site siteNew : siteList) {
+			TreeModel tree = new TreeModel();
+			tree.setId(siteNew.getId());
+			tree.setText(siteNew.getName()+" <a style=\"display:none;\"> "+siteNew.getNid()+" </a>");
+			tree.setChildren(this.getChild(siteNew.getId()));
+			treeList.add(tree);
+		}
+		response.setContentType("text/json;charset=GBK");
+		String jsonStr = "" + JSONArray.toJSONString(treeList);
+		response.getWriter().write(jsonStr);
+	}
+	
+	/**
+	 * 栏目tree列表展示
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/article/articleHomeTreeList")
+	public void articleHomeTreePage() throws Exception {
+		List<Site> siteList = siteService.findByNid(1);
+		//List<Site> siteList = siteService.findList();
+		List<TreeModel> treeList = new ArrayList<TreeModel>();
+		for (Site siteNew : siteList) {
+			TreeModel tree = new TreeModel();
+			tree.setId(siteNew.getId());
+			tree.setText(siteNew.getName());
+			tree.setChildren(this.getChild(siteNew.getId()));
+			treeList.add(tree);
+		}
+		response.setContentType("text/json;charset=GBK");
+		String jsonStr = "" + JSONArray.toJSONString(treeList);
+		response.getWriter().write(jsonStr);
+	}
+
+	/**
+	 * 获取栏目的子目录
+	 * @param nid
+	 * @return
+	 */
+	private List<TreeModel> getChild(long nid) {
+		List<Site> siteList = siteService.findByNid(nid);
+		List<TreeModel> childList = new ArrayList<TreeModel>();
+		for (Site siteNew : siteList) {
+			if(!"jsculture".equals(siteNew.getNid()) && !"scrollPic".equals(siteNew.getNid())
+					&& !"supervise".equals(siteNew.getNid())&& !"media".equals(siteNew.getNid())
+					&&!"ad".equals(siteNew.getNid())&&!"notice".equals(siteNew.getNid())&&
+					!"questions".equals(siteNew.getNid())){
+				TreeModel tree = new TreeModel();
+				tree.setId(siteNew.getId());
+				tree.setText(siteNew.getName()+" <a style=\"display:none;\"> "+siteNew.getNid()+" </a>");
+				tree.setChildren(this.getChild(siteNew.getId()));
+				childList.add(tree);
+			}
+		}
+		return childList;
+	}
+	
+	/**
+	 * 获取图片
+	 * 
+	 * @throws Exception
+	 */
+	/*@Action("/modules/column/article/getPicPage")
+	public String getEmailListPage() throws Exception {
+		long id = paramLong("id");
+		
+		request.setAttribute("id", id);
+		return "getPicPage";
+	}*/
+
+
+	/**
+     * 轮展图预览图片
+     * @author 
+     * @return
+     */
+	@Action(value="/modules/column/banner/getPicPage")
+	public String bannerPicPage() throws Exception{
+		
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "getPicPage";
+	}
+	/**
+	 * 文章预览图片
+	 * @author 
+	 * @return
+	 */
+	@Action(value="/modules/column/article/getPicPage")
+	public String arcitlePicPage() throws Exception{
+		
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "getPicPage";
+	}
+	/**
+	 * 媒体报道预览图片
+	 * @author 
+	 * @return
+	 */
+	@Action(value="/modules/column/report/getPicPage")
+	public String reportPicPage() throws Exception{
+		
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "getPicPage";
+	}
+	/**
+	 * 晋商文化预览图片
+	 * @author 
+	 * @return
+	 */
+	@Action(value="/modules/column/media/getPicPage")
+	public String mediaPicPage() throws Exception{
+		
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "getPicPage";
+	}
+	/**
+	 * 广告预览图片
+	 * @author 
+	 * @return
+	 */
+	@Action(value="/modules/column/ad/getPicPage")
+	public String adPicPage() throws Exception{
+		
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "getPicPage";
+	}
+	
+	// JSDP-131  2015年5月20日   sxy  start
+	 
+    /**
+     * 风险备用金的列表页面
+     * @return
+     * @throws Exception
+     */
+    @Action(value="/modules/column/riskMoney/riskMoneyManager")
+    public String riskMoneyManager() throws Exception{
+    	String typeName = paramString("typeName");
+    	request.setAttribute("typeName", typeName);
+    	return "riskMoneyManager";
+    }
+    
+    /**
+	 * 风险备用金列表查询
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/column/riskMoney/riskMoneyList")
+	public void riskMoneyList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String typeName = paramString("typeName");
+		model.setNid(typeName);
+		PageDataList<ArticleModel> articleList = articleService.articleList(model, pageNumber, pageSize);
+		data.put("total", articleList.getPage().getTotal()); // 总行数
+		data.put("rows", articleList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 风险备用金的添加
+	 * @return
+	 * @throws Exception 
+	 */
+	@Action(value="/modules/column/riskMoney/riskMoneyAddPage")
+	public String riskMoneyAddPage() throws Exception{
+		//initRSAME();
+		saveToken("articleAddToken");
+		String typeName = paramString("typeName");
+		Site site = siteService.findByType(typeName);
+		if(null != site){
+			int sortId = articleService.findArticleBySiteId(site.getId());
+			request.setAttribute("sortId", sortId+1);
+			request.setAttribute("site", site);
+		}
+		return "addRiskMoneyPage";
+	}
+    /**
+     * 风险备用金的修改
+     * @author sxy
+     * @return
+     */
+	@Action(value="/modules/column/riskMoney/riskMoneyEditPage")
+	public String riskMoneyEditPage() throws Exception{
+		//initRSAME();
+		saveToken("articleEditToken");
+		long id = paramLong("id");
+		Article articleNew = articleService.find(id);
+		Site siteNew = siteService.find(articleNew.getSite().getId());
+		request.setAttribute("siteNew", siteNew);
+		request.setAttribute("articleNew", articleNew);
+		return "editRiskMoneyPage";
+	}
+	
+	/**
+     * 获取风险备用金照片
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/column/riskMoney/getArticlePic")
+    public void getRiskMoneyPic() throws Exception {
+    	
+    	long id = paramLong("id");
+    	
+    	if(id != 0){
+	    	
+    		Article article = articleService.find(id);
+	     	
+	     	List<ArticlePic> list = articlePicService.getArticlePicByArticleId(article.getId());
+	     	
+	        data = new HashMap<String, Object>();
+	    	data.put("list", list);
+			printJson(getStringOfJpaObj(data));
+
+    	}
+    }
+	
+	// JSDP-131  2015年5月20日   sxy  start
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}

@@ -1,0 +1,133 @@
+package com.ddtkj.p2psys.errorlog.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述: 错误和异常日志类
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-12   
+ */
+@Entity
+@Table(name = "t_jsd_error_log")
+public class ErrorLog implements Serializable {
+
+	private static final long serialVersionUID = -434199545605577350L;
+	
+	/** 用于搜索：全部*/
+	public static final String SEARCH_ALL = "99";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	/** 异常名称 */
+	private String name;			
+	/** 异常等级 */
+	private String level;			
+	/** 异常模块 */
+	private String type;			
+	/** 异常编码 */
+	private String errorCode;		
+	/** 异常添加时间 */
+	private Date addTime;			
+	/** 异常添加IP */
+	private String addIp;			
+	/** 异常信息 */
+	private String exception;		
+	/** 异常实体ID */
+	private long eid;	
+	/** 出错平台 */
+	private String platform;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "add_user_id")
+	/** 异常添加用户 */
+	private User addUser;			
+	/** 异常实体模块 */
+	private String errorModuleName;	
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getLevel() {
+		return level;
+	}
+	public void setLevel(String level) {
+		this.level = level;
+	}
+	public String getType() {
+		return type;
+	}
+	public void setType(String type) {
+		this.type = type;
+	}
+	public String getErrorCode() {
+		return errorCode;
+	}
+	public void setErrorCode(String errorCode) {
+		this.errorCode = errorCode;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public String getException() {
+		return exception;
+	}
+	public void setException(String exception) {
+		this.exception = exception;
+	}
+	public long getEid() {
+		return eid;
+	}
+	public void setEid(long eid) {
+		this.eid = eid;
+	}
+	public User getAddUser() {
+		return addUser;
+	}
+	public void setAddUser(User addUser) {
+		this.addUser = addUser;
+	}
+	public String getErrorModuleName() {
+		return errorModuleName;
+	}
+	public void setErrorModuleName(String errorModuleName) {
+		this.errorModuleName = errorModuleName;
+	}
+	public String getPlatform() {
+		return platform;
+	}
+	public void setPlatform(String platform) {
+		this.platform = platform;
+	}
+	
+}

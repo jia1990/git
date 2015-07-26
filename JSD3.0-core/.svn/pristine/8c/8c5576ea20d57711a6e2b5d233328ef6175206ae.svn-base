@@ -1,0 +1,154 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpActivityConsumeDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.ddtkj.p2psys.redpacket.model.RpActivityConsumeModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：活动红包的消费dao层实现类  JSDP-184
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+@Repository("rpActivityConsumeDao")
+public class RpActivityConsumeDaoImpl extends BaseDaoImpl<RpActivityConsume> implements RpActivityConsumeDao {
+
+	@Override
+	public List<RpActivityConsumeModel> getSumListRpConsume(
+			RpActivityConsumeModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT SUM(rac.consume_money),rac.consume_status"
+				+" FROM"
+				+" t_jsd_rp_activity_consume rac,"
+				+" t_jsd_user u "
+				+" WHERE u.user_id = rac.consume_user");
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" AND u.user_name LIKE '%"+model.getUserName()+"%'");
+		}
+		if(StringUtil.isNotBlank(model.getType())){
+			//JSDP-203 xingjia 20150702 start
+			sql.append(" AND rac.activity_type =:activityType ");
+			//JSDP-203 xingjia 20150702 end
+		}
+		if(StringUtil.isNotBlank(model.getConsumeStatus()) && !"99".equals(model.getConsumeStatus())){
+			sql.append(" AND rac.consume_status=:consumeStatus");
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" AND rac.add_time >=:startTime ");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" AND rac.add_time <:endTime ");
+		}
+		sql.append(" group by rac.consume_status ");
+		sql.append(" order by rac.add_time desc ");
+		Query query = em.createNativeQuery(sql.toString());
+		//JSDP-203 xingjia 20150702 start
+		if(StringUtil.isNotBlank(model.getType()) && !"99".equals(model.getConsumeStatus())){
+			query.setParameter("activityType", model.getType());
+		}
+		//JSDP-203 xingjia 20150702 end
+		if(StringUtil.isNotBlank(model.getConsumeStatus()) && !"99".equals(model.getConsumeStatus())){
+			query.setParameter("consumeStatus", model.getConsumeStatus());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		
+		
+		List racListSum = query.getResultList();
+		RpActivityConsumeModel racModel = new RpActivityConsumeModel();
+		List<RpActivityConsumeModel> racModelList = new ArrayList<RpActivityConsumeModel>();
+		Object[] obj = new Object[racListSum.size()];
+		for(int i=0;i<racListSum.size();i++){
+			obj = (Object[]) racListSum.get(i);
+			
+			// 消费成功 
+			if((null != obj[1] && obj[1].equals(RpActivityConsume.RP_CONSUME_STATUS_SUC))){
+				racModel.setConsumeSucMoney(Double.parseDouble(obj[0].toString()));
+			}
+			//消费失败
+			if((null != obj[1] && obj[1].equals(RpActivityConsume.RP_CONSUME_STATUS_FAIL))){
+				racModel.setConsumeFailMoney(Double.parseDouble(obj[0].toString()));
+			}
+			
+		}
+		racModelList.add(racModel);
+		return racModelList;
+	}
+
+	@Override
+	public List excelListRpConsume(RpActivityConsumeModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("  SELECT "
+				+"rac.id,u.user_name,u.real_name,CASE rac.consume_type WHEN 'vt' THEN '投标' ELSE '其他' END consumeType ,"
+				+"rac.consume_money, rac.consume_status ,rac.add_time,rac.remark"
+				+"FROM"
+				+"t_jsd_rp_activity_consume rac,"
+				+"t_jsd_user u "
+				+"WHERE u.user_id = rac.consume_user");
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" AND u.user_name LIKE '%"+model.getUserName()+"%'");
+		}
+		if(StringUtil.isNotBlank(model.getType())){
+			sql.append(" AND rac.consume_type =:consumeType ");
+		}
+		if(StringUtil.isNotBlank(model.getConsumeStatus()) && !"99".equals(model.getConsumeStatus())){
+			sql.append(" AND rac.consume_status=:consumeStatus");
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" AND rac.add_time >=:startTime ");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" AND rac.add_time <:endTime ");
+		}
+		sql.append(" group by rac.consume_status ");
+		sql.append(" order by rac.add_time desc ");
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if(StringUtil.isNotBlank(model.getType())){
+			query.setParameter("consumeType", model.getType());
+		}
+		if(StringUtil.isNotBlank(model.getConsumeStatus()) && !"99".equals(model.getConsumeStatus())){
+			query.setParameter("consumeStatus", model.getConsumeStatus());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		
+		List racList = query.getResultList();
+		return racList;
+	}
+
+	@Override
+	public double getActivityRpConsume(String activityType, long userId) {
+		StringBuffer sql = new StringBuffer();
+		//JSDP-203 xingjia 20150702 start
+		sql.append("SELECT SUM(rc.consume_money) FROM t_jsd_rp_activity_consume rc,t_jsd_rp_activity ra WHERE rc.consume_user="+userId
+				+ " AND rc.consume_status='suc' AND ra.activity_type='" + activityType + "' and ra.activity_type = rc.activity_type ");
+		//JSDP-203 xingjia 20150702 end
+		Query query = em.createNativeQuery(sql.toString());
+		Object object = query.getSingleResult();
+		double activityRpConsume = 0;
+		if(null != object){
+			activityRpConsume = Double.parseDouble(object.toString());
+		}
+		return activityRpConsume;
+	}
+	
+}

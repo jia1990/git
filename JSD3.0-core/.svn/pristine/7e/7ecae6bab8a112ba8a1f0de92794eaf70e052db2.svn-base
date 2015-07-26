@@ -1,0 +1,127 @@
+package com.ddtkj.p2psys.core.util;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+
+/**
+ * <p>
+ * 参考:https://192.168.251.254/svn/ddtkj_develop/大德通科技/晋商贷3.0/
+ * </p>
+ * <p>
+ * 需求分析/晋商贷与第三方交易码设置规则/第三方业务规则设计.docx
+ * </p>
+ * 
+ * @author xinggw
+ * */
+public class TradeIDGenerator {
+
+
+	/**
+	 * 交易日期代码(17位)yyyyMMddHHmmss(20141204183647977)
+	 * **/
+	private synchronized static String getDateCode() {
+		try {
+			Thread.sleep(1);//同步在毫秒级别
+		} catch (InterruptedException e) {
+		
+			e.printStackTrace();
+		}
+		long todayMill = System.currentTimeMillis();
+		Date todayDate = new Date(todayMill);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssS");
+		String todayDateStr = sdf.format(todayDate);
+		int length = todayDateStr.length();
+		StringBuilder sbf = new StringBuilder(todayDateStr);
+	
+		for (int i = 0; i < 17 -length; i++) {
+			sbf.append("0");
+		}
+		
+		//System.out.println("------->"+ sbf.length());
+		return sbf.toString();
+
+	}
+
+	/**
+	 * 商户交易流水serial number
+	 * 生成规则（20位）：交易途径代码(1位)+交易小类别代码(2位)+交易日期代码(17位)
+	 * 
+	 * @param way
+	 *            交易途径代码
+	 * @param smallSort
+	 *            交易小类别代码
+	 * @return 交易流水SN
+	 * */
+	public static String createTradeSN(String way, String smallSort) {
+		String v1 = way;
+		String v2 = smallSort;
+		String v3 = getDateCode();
+		
+		StringBuilder r = new StringBuilder();
+		r.append(v1);
+		r.append(v2);
+		r.append(v3);
+	
+		return r.toString();
+	}
+
+	/**
+	 * 商户交易批次(Batch Number)号规约（20位）： J+交易大类别代码(2位)+交易日期代码(17位)
+	 * 
+	 * @param largeSort
+	 *            交易大类别代码
+	 * @return 商户交易批次号
+	 * */
+	public static String createTradeBN(String largeSort) {
+		String v1 = "J";
+		String v2 = largeSort;
+		String v3 = getDateCode();
+		StringBuilder r = new StringBuilder();
+		r.append(v1);
+		r.append(v2);
+		r.append(v3);
+		return r.toString();
+	}
+
+	// 同步测试多线程下安全
+	public static void main(String[] args) {
+		
+	 for(int i=0;i<100000;i++){
+
+	 }
+		
+	 
+	 /* 测试线程1 */
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				for (int i = 0; i < 100000; i++) {
+
+					String r =TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC,AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_REPAY);
+					System.out.println("线程--1>"+ r);
+				}
+
+			}
+
+		}).start();
+		
+		
+		/* 测试线程1 */
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				for (int i = 0; i < 100000; i++) {
+
+					String r =TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC,AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_REPAY);
+					System.out.println("线程--2>"+ r);
+				}
+
+			}
+
+		}).start();
+	}
+
+}

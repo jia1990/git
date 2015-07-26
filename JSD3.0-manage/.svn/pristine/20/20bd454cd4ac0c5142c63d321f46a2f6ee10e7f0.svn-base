@@ -1,0 +1,93 @@
+
+package com.ddtkj.manage.action.system;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-20   
+ */
+public class ManageDataTransferAction extends BaseAction {
+	
+	private static Logger logger = Logger.getLogger(ManageDataTransferAction.class);	
+	
+	@Resource
+	private UserService userService;
+	public Map<String, Object> data = new HashMap<String, Object>();
+	
+	
+	@Action("/modules/system/initdata/dataTransferManage")
+	public String dataTransferManage () throws Exception {
+			
+		return "dataTransferManage";
+	}
+	
+	/**
+	 * 处理数据转化
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/initdata/handleDataTransfer")
+	public void handleDataTransfer () throws Exception {
+		List<User> userList = userService.findUserByType(UserConstant.USER_SORT_INVESTOR, UserConstant.USER_NATURE_PERSON);
+		long start = System.currentTimeMillis();
+		int i = 0;
+		logger.info("userList size:"+userList.size());
+		try {
+			for (User user : userList) {
+				if (!ValidateUtil.isUserName(user.getUserName())) {
+					logger.error("userId:"+user.getUserId()+"用户名格式错误"+user.getUserName());
+					i++;
+					continue;
+				}
+			}
+			for (User users : userList) {
+				userService.handleUserTransfer(users);
+			}
+		} catch (Exception e) {
+			logger.error("error message:"+e.getMessage());
+			printResult(e.getMessage(), false);
+		}
+		long end = System.currentTimeMillis();
+		logger.info("save nickname cost times:"+ (end-start));
+		logger.info("i:"+i);
+		printResult("操作成功", true);
+	}
+	
+	/**
+	 * 检查提交的数据格式
+	 * @param  user
+	 * @return boolean 
+	 * @throws Exception   
+	 */ 
+	public boolean validDataByUser(User user) {
+		boolean hasError = false;
+		if (!ValidateUtil.isUserName(user.getUserName())) {
+			logger.error("userId:"+user.getUserId()+"用户名格式错误"+user.getUserName());
+			hasError = true;
+		}
+		if (StringUtil.isBlank(user.getEmail()) && StringUtil.isBlank(user.getMobilePhone())) {
+			logger.error("userId:"+user.getUserId()+"邮箱和手机不能同时为空！"+user.getEmail()+","+user.getMobilePhone());
+			hasError = true;
+		}
+		if (StringUtil.isNotBlank(user.getEmail())&& !ValidateUtil.isEmail(user.getEmail())) {
+			logger.error("userId:"+user.getUserId()+"邮箱格式错误！"+user.getEmail());
+			hasError = true;
+		}
+		return hasError;
+	}	
+	
+}

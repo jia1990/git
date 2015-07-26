@@ -1,0 +1,59 @@
+package com.ddtkj.p2psys.webpetcard.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.webpetcard.domain.PetCardLog;
+import com.ddtkj.p2psys.webpetcard.model.PetCardLogModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * 
+ * 晋商贷体验卡消费记录Dao
+ * 
+ * @author sxy
+ * @JIRA JSDP-171 
+ *
+ */
+public interface PetCardLogDao  extends BaseDao<PetCardLog>{
+
+	/**
+	 * SQL查询体验卡消费记录列表
+	 * 
+	 * @author sxy
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return PageDataList<PetCardLog>
+	 */
+	PageDataList<PetCardLog> petCardLogListForSQL(int pageNumber, int pageSize, PetCardLogModel model);
+	
+	/**
+	 * 导出体验卡消费记录数据
+	 * 
+	 * @author sxy
+	 * @param model
+	 * @return List<PetCardLog>
+	 */
+	public List<PetCardLog> excelPetCardLogList(PetCardLogModel model);
+	//JSDP-171 xingjia 20150609 start
+	/**
+	 * 根据用户id查询消费的体验卡金额
+	 * @param userId
+	 * @return
+	 */
+	public double petCardConsumeMoney(long userId);
+	//JSDP-171 xingjia 20150609 end
+	//JSDP-171 xingjia 20150714 start
+	/**
+	 * 根据标查询冻结的体验卡金额
+	 * @param userId
+	 * @param bid
+	 * @param status
+	 * @return
+	 */
+	public PetCardLog petCardConsumeMoneyByTender(long userId,long bid,String status);
+	//JSDP-171 xingjia 20150714 end
+	
+	
+}

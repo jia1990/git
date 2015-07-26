@@ -1,0 +1,32 @@
+<script type="text/javascript">
+    $(function() {
+    	$.fn.treeGridOptions.formSubFun("#form",'/modules/goods/goodsCategory/addGoodsCategory.html');
+    });
+</script>
+
+<form id="form"  method="post">
+<div class="popForm sForm">
+	<div class="formitm">
+		<label class="lab">分类名称：</label>
+		<div class="ipt"><input type="text" name="name" class="easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/></div>
+	</div>
+	
+	<div class="formitm" >
+		<label class="lab">所属上级：</label>
+		<div class="ipt"><input type="text" name="parentId" class="easyui-validatebox" value="${name}" data-options="required: true" disabled="disabled"onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		<input type="hidden" name="parentId" value="${pid}"/>
+		</div>
+		
+	</div>
+	<div class="formitm">
+		<label class="lab">排序：</label>
+		<div class="ipt"><input type="text" name="sort" maxlength="5" class="easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/\D/g,'')"/></div>
+	</div>
+	<div class="formitm">
+		<label class="lab">备注：</label>
+		<div class="ipt"><textarea name="remark" class="easyui-validatebox" maxlength="255" style="width:400px;height:100px;"></textarea></div>
+	</div>
+	
+	<input name="addGoodsCategoryPageToken" value="${addGoodsCategoryPageToken!}" type="hidden">
+</div>
+</form>

@@ -1,0 +1,150 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/loan/borrowBespeak/borrowBespeakEdit.html');
+	});
+</script>
+<div class="popForm">
+	<#if borrowBespeak.companyName??>
+	<div class="formitm">
+		<label class="lab">公司名称：</label>
+		<div class="ipt">${borrowBespeak.companyName!}</div>
+	</div>
+	</#if>
+	<div class="formitm">
+		<label class="lab">联系人：</label>
+		<div class="ipt">${borrowBespeak.name!}</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">性别：</label>
+		<div class="ipt">
+		<#if borrowBespeak.sex == "M">
+			男
+		<#else>
+			女
+		</#if>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">借款类型：</label>
+		<div class="ipt">
+		<#if borrowBespeak.type == "113">
+			能源宝
+		</#if>
+		<#if borrowBespeak.type == "115">
+			微企贷
+		</#if>
+		<#if borrowBespeak.type == "103">
+			车贷宝
+		</#if>
+		<#if borrowBespeak.type == "105">
+			分期宝
+		</#if>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">联系电话：</label>
+		<div class="ipt">${borrowBespeak.telephone!}</div>
+	</div>
+	<#if borrowBespeak.type != "105">
+	<div class="formitm">
+		<label class="lab">借款金额：</label>
+		<div class="ipt">${borrowBespeak.money!}元</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">借款用途：</label>
+		<div class="ipt">${borrowBespeak.borrowUse!}&nbsp;</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">借款期限：</label>
+		<div class="ipt">${borrowBespeak.limitTime!}&nbsp;</div>
+	</div>
+	</#if>
+	<#if borrowBespeak.type == "103">
+	<div class="formitm">
+		<label class="lab">品牌：</label>
+		<div class="ipt">${borrowBespeak.brandType!}&nbsp;</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">分期周期：</label>
+		<div class="ipt">${borrowBespeak.stageCycle!}&nbsp;</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">原购车价：</label>
+		<div class="ipt">${borrowBespeak.originalPrice!}&nbsp;</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">购买年月：</label>
+		<div class="ipt">${borrowBespeak.buyDate!}&nbsp;</div>
+	</div>
+	</#if>
+	<#if borrowBespeak.type == "105">
+	<div class="formitm">
+		<label class="lab">品牌类型：</label>
+		<div class="ipt">${borrowBespeak.brandType!'这个人很懒，没有留下任何内容！'}&nbsp;</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">就读大学：</label>
+		<div class="ipt">${borrowBespeak.college!'这个人很懒，没有留下任何内容！'}&nbsp;</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">专业：</label>
+		<div class="ipt">${borrowBespeak.major!'这个人很懒，没有留下任何内容！'}&nbsp;</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">学号：</label>
+		<div class="ipt">${borrowBespeak.studentId!'这个人很懒，没有留下任何内容！'}&nbsp;</div>
+	</div>
+	</#if>
+	<#if borrowBespeak.type != "105">
+	<div class="formitm">
+		<label class="lab">借款描述：</label>
+		<div class="ipt">
+		<#if borrowBespeak.description??>
+			
+			<#if borrowBespeak.description !=''>
+			<textarea rows="10" cols="30" readonly>${borrowBespeak.description!'这个人很懒，没有留下任何内容！'}</textarea>
+			<#else>
+			<textarea rows="10" cols="30" readonly>这个人很懒，没有留下任何内容！</textarea>
+			</#if>
+			
+		<#else>
+			<textarea rows="10" cols="30" readonly>这个人很懒，没有留下任何内容！</textarea>
+		</#if>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">抵押物描述：</label>
+		<div class="ipt">
+		<#if borrowBespeak.collateralDescription??>
+			
+			<#if borrowBespeak.collateralDescription !=''>
+			<textarea rows="10" cols="30" readonly>${borrowBespeak.collateralDescription!'这个人很懒，没有留下任何内容！'}</textarea>
+			<#else>
+			<textarea rows="10" cols="30" readonly>这个人很懒，没有留下任何内容！</textarea>
+			</#if>
+			
+		<#else>
+			<textarea rows="10" cols="30" readonly>这个人很懒，没有留下任何内容！</textarea>
+		</#if>
+		</div>
+	</div>
+	</#if>
+	<form id="form"  method="post">
+	<div class="formitm">
+		<label class="lab">备注：</label>
+		<div class="ipt"><textarea rows="10" name="remark" cols="30" maxlength="500"></textarea></div>
+	</div>
+	<div class="formitm">
+		<label class="lab">状态：</label>
+		<div class="ipt">
+			<select name="status">
+				<option value="1">已回访</option>
+				<option value="2">不回访</option>
+			</select>
+		</div>
+	</div>
+	<input type="hidden" name="id" value="${borrowBespeak.id!}"/>
+	<input type="hidden" name="borrowBespeakEditToken" value="${borrowBespeakEditToken!}"/>
+	</form>
+</div>
+

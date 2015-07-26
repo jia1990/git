@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>后台企业开户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+
+
+</head>
+<body style="padding:0 20px;">
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+			<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>公司名称：<input type="text" name="companyName" autocomplete="off" id="companyName"/></li>
+            		<li>法人代表姓名 ：<input type="text" name="companyLawPerson" autocomplete="off" id="companyLawPerson"/></li>
+            		<li>锁定状态：
+            		<select name="user.isLocked" class="type" id="lockType">
+	                  <option value="99" selected="selected">全部</option>
+	                  <option value="UY">挂起</option>
+	                  <option value="NN">未锁定</option>
+	                  <option value="AY">锁定</option>
+	                  <option value="FF">销户</option>
+	                </select> 
+	                </li> 
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/user/useAdminAddBtn.html'>
+		<select name="type" id="type">
+			<option value="请选择" selected="selected">请选择</option>
+			<#list borrowConfigList as item>
+				<#if item.type == "21">
+	             <option value="${item.id}">${item.name}</option>
+	            </#if>
+	        </#list>
+        </select>
+        <a style="color:#848484;font-size:14px;display: none;" id="tishi">请选择借款类型</a>
+		<a id="a" onclick="$.fn.dataGridOptions.addFun(param,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">后台开户</a>				
+		</@secAuthorizeUrl>
+		<@secAuthorizeUrl value='/user/userCompanyExport.html'>
+		<a onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>	
+		</@secAuthorizeUrl>
+	
+	</div>
+	<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  800;
+	var winHeight = 500;
+	var param = $("#type").val();
+	var addTitle = "添加用户"; //添加窗口标题
+	var addUrl =  "/modules/user/user/user/userAdminAddPage.html"; // 添加窗口链接地址
+	var lockTitle = "锁定用户";
+	var lockUrl =  "/modules/user/user/user/userAdminLockPage.html";
+	var lockWinParmeters = "'{0}','"+lockTitle+"',500,300,'"+lockUrl+"','确定'";
+	var editTitle = "修改用户信息";
+	var editUrl =  "/modules/user/user/user/userAdminEditPage.html?userNature=21";
+	var editParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"','确定'";
+	var emailWinParmeters = "/modules/user/user/user/sendMail.html";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'userAdminList.html?userNature=21&userType=11',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'userId',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'userId',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'userId', title: '编号', width: 50, fixed :true,checkbox : false},
+			{ field: 'companyName', title: '公司名称', width: 150, fixed :true,sortable: false },
+			/* { field: 'companyRegNo', title: '公司注册号', width: 100, sortable: false },
+			{ field: 'taxRegNo', title: '税务登记证号', width: 100, sortable: false }, 
+			{ field: 'address', title: '公司地址', width: 100, sortable: false },*/
+			{ field: 'companyLawPerson', title: '法人代表姓名', width: 100, sortable: false },
+			{ field: 'companyRegCapital', title: '注册资本', width: 100, sortable: false },
+			{ field: 'contactsRealName', title: '借款人', width: 100, sortable: false },
+			{ field: 'contactsPhone', title: '借款人手机', width: 100, sortable: false },
+			{ field: 'user.email', title: '借款人邮箱', width: 100, sortable: false },
+			{ field: 'borrowType', title: '可发标类型', width: 100, sortable: false, 
+				formatter: function(value,row,index){
+					var str = "";
+					/* if(value).indexOf('W') >= 0){
+						str = str + " 微商贷 ";
+					}
+					if((value).indexOf('N') >= 0){
+						str = str + " 能源宝";
+					} */
+					if(value == 'W'){
+						str = " 微商贷 ";
+					}
+					if(value == 'N'){
+						str = " 能源宝";
+					}
+					return str;
+        		}
+			}, 
+			/* { field: 'companyEmail', title: '公司邮箱', width: 100, sortable: false }, */
+			{ field: 'user.isLocked', title: '锁定状态', width: 100, sortable: false, formatter: function(value,row,index){
+				if (value == 'NN'){
+					return "未锁定";
+				} else if(value == 'AY'){
+					return "已锁定";
+				}else if(value == 'FF'){
+					return "已销户";
+				}
+				if(value == 'UY'){
+					return "挂起";
+				}
+				
+            } }, 
+			{	field : 'action',
+				title : '操作',
+				width :80,
+				fixed :true,
+				formatter : function(value, row, index) {
+					var str = '';
+					str += "<@secAuthorizeUrl value='/user/companyUserLockedBtn.html' >";
+					str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+lockWinParmeters+');" src="{1}" title="锁定用户"/>', row.userId, '${theme_dir}/css/images/extjs_icons/lock/lock.png');
+					str += "</@secAuthorizeUrl>";
+					str += '&nbsp;';
+					
+					str += "<@secAuthorizeUrl value='/user/companyUserEditBtn.html' >";
+					str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editParmeters+');" src="{1}" title="修改用户"/>', row.userId, '${theme_dir}/css/images/extjs_icons/pencil.png');
+					str += "</@secAuthorizeUrl>";
+					str += '&nbsp;';
+					if (!row.emailStatus) {
+						str += "<@secAuthorizeUrl value='/user/companyReSendMailBtn.html' >";
+						str += $.formatString('<img onclick="email_retry('+row.userId+')" class="email_retry'+row.userId+'" src="{1}" title="重新发送"/>', row.userId, '${theme_dir}/css/images/extjs_icons/email/email_go.png');
+						str += "</@secAuthorizeUrl>";
+					} 
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			},
+			
+		});
+	});
+	
+	//企业开户excel导出
+	function exportExcel(){
+		var url = "/modules/user/user/user/userCompanyExport.html";
+		var companyName = $("#companyName").val();
+		var companyLawPerson = $("#companyLawPerson").val();
+		var lockType = $("#lockType").val();
+		var sou = "?userNature=21&userType=11&companyName=" + companyName + "&companyLawPerson=" + companyLawPerson + "&user.isLocked=" + lockType;
+		window.location.href = url + sou;
+	}
+
+	function email_retry(id){
+		$.ajax({
+			type:"post",
+			url:"/modules/user/user/user/sendMail.html?id="+id,
+			dataType:"json",
+			success:function(data){
+				parent.$.messager.alert('提示','发送成功', 'info');
+			}
+		});
+	}
+		 $("#a").hide();
+	     $("#tishi").show(300);
+	     $("#type").change( function() {
+    		if($("#type").val() != "请选择"){
+    			$("#tishi").hide();
+    			$("#a").show(300);
+    			param = $("#type").val();
+    		}else{
+    			$("#a").hide();
+    			$("#tishi").show(300);
+    		}
+    	});
+	</script>
+</body>
+</html>

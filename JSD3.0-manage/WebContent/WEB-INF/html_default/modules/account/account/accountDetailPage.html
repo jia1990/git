@@ -1,0 +1,253 @@
+<style>
+.showItem{width:340px;float:left;}
+.showItem2{
+	width:370px;float:left;margin-top: 5px;}
+    
+.accountLogDiv{
+float: left;
+width: 350px;
+margin-bottom: 10px;
+-webkit-border-radius: 5px;
+-moz-border-radius: 5px;
+border-radius: 5px;
+font-family: "Microsoft YaHei","arial";
+font-size: small;
+line-height: 30px;
+}
+.accountLogDivB{
+margin: 20px;
+width: 740px;
+height:100px;
+border: 1px solid #ddd;
+margin-bottom: 10px;
+-webkit-border-radius: 5px;
+-moz-border-radius: 5px;
+border-radius: 5px;
+font-family: "Microsoft YaHei","arial";
+line-height: 30px;
+}
+.accountLogDiv span{
+display:inline-block;width:176px;text-align:right;
+}
+.accountLogDivB span{
+display:inline-block;width:176px;text-align:right;
+}
+.popShow{
+width: 740px;
+text-align: left;
+display: inline-block;
+color: #333;
+font-family: "Microsoft YaHei","arial";
+line-height: 33px;
+}
+.popShow span{display:inline-block;width:176px;text-align:right;}
+.box2{border:1px solid #ddd;overflow:hidden;border-radius:4px;margin-bottom:16px;}
+</style>
+<div class="accountLogDivB">
+		<div class="showItem2">
+			<span>用户名：</span>${user.userName!}
+		</div>
+		<div class="showItem2">
+			<span>真实姓名：</span>${user.realName!}
+		</div>
+
+
+		<div class="showItem2">
+			<span>账户总额：</span>
+			${accountModel.accountTotalStr!}
+		</div>
+		<#if userType=="10">
+		<div class="showItem2">
+			<span>待收总额：</span>
+			${accountModel.collectionTotalStr!}
+		</div>
+		<#elseif  userType=="11">
+		<div class="showItem">
+			<span>待还金额：</span>
+			${accountModel.repaymentTotalStr!}
+		</div>
+		<#elseif userType=="12">
+			<div class="showItem">
+				<span>担保公司还款金额：</span>
+				${accountModel.repaymentTotalStr!}
+			</div>
+		<#else>
+		</#if>
+
+</div>
+<div class="popShow">
+		
+		<#if userType=="10">
+		<div class="box2">
+			<div class="showItem useMoney">
+				<span>可用总额：</span>
+				${accountModel.usableMoneyTotal!}
+			</div>
+			<div class="accountLogDiv">
+			
+				<div class="showItem">
+					<span>利息可用总额：</span>
+					${accountModel.interestUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>奖励可用总额：</span>
+					${accountModel.awardUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>充值可用总额：</span>
+					${accountModel.rechargeUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>回款可用总额：</span>
+					${accountModel.returnCapitalUsableStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box2">
+			<div class="showItem freezeMoney">
+				<span>冻结总额：</span>
+				${accountModel.freezeUseMoneyTotal!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>冻结使用利息金额：</span>
+					${accountModel.freezeUseInterestStr!}
+				</div>
+				<div class="showItem">
+					<span>冻结使用充值金额：</span>
+					${accountModel.freezeUseRechargeStr!}
+				</div>
+				<div class="showItem">
+					<span>冻结使用回款本金金额：</span>
+					${accountModel.freezeUseReturnCapitalStr!}
+				</div>
+				<div class="showItem">
+					<span>冻结使用奖励金额：</span>
+					${accountModel.freezeUseAwardStr!}
+				</div>
+			</div>
+		</div>
+		
+		<div class="box2">
+			<div class="showItem rpMoney">
+				<span>钱袋子总额：</span>
+				${accountModel.rpDynamicTotalStr!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>冻结钱袋子金额：</span>
+					${accountModel.freezeRpDynamicStr!}
+				</div>
+				
+			</div>
+		</div>
+		
+		
+		
+	
+	<#elseif userType=="11">
+		<div class="box2" style="width:740px;">
+			<div class="showItem">
+				<span>可用总额：</span>
+				${accountModel.borrowerUsableMoney!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>借款人充值可用总额：</span>
+					${accountModel.borrowerRechargeUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>借款入账可用金额：</span>
+					${accountModel.borrowerEnterUsableStr!}
+				</div>
+			</div>
+		</div>
+		
+		<div class="box2" style="width:740px;">
+			<div class="showItem">
+				<span>冻结总额：</span>
+				${accountModel.freezeBorrowerMoneyTotal!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>借款人冻结充值金额：</span>
+					${accountModel.borrowerFreezeUseRechargeStr!}
+				</div>
+				<div class="showItem">
+					<span>借款人冻结入账金额：</span>
+					${accountModel.borrowerFreezeUseEnterStr!}
+				</div>
+			</div>
+		</div>
+	<#elseif userType=="12">
+		<div class="box2" style="width:740px;">
+			<div class="showItem">
+				<span>可用总额：</span>
+				${accountModel.borrowerUsableMoney!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>充值可用总额：</span>
+					${accountModel.borrowerRechargeUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>担保公司入账可用金额：</span>
+					${accountModel.borrowerEnterUsableStr!}
+				</div>
+			</div>
+		</div>
+		
+		<div class="box2" style="width:740px;">
+			<div class="showItem">
+				<span>冻结总额：</span>
+				${accountModel.freezeBorrowerMoneyTotal!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>担保公司冻结充值金额：</span>
+					${accountModel.borrowerFreezeUseRechargeStr!}
+				</div>
+				<div class="showItem">
+					<span>担保公司冻结入账金额：</span>
+					${accountModel.borrowerFreezeUseEnterStr!}
+				</div>
+			</div>
+		</div>
+	<#else>
+	<div class="box2" style="width:740px;">
+		<div class="showItem">
+			<span>可用总额：</span>
+			${accountModel.borrowerUsableMoney!}
+		</div>
+		<div class="accountLogDiv">
+			<div class="showItem">
+				<span>商城入账可用金额：</span>
+				${accountModel.borrowerEnterUsableStr!}
+			</div>
+			<div class="showItem">
+				<span>商城购买可用金额：</span>
+				${accountModel.borrowerRechargeUsableStr!}
+			</div>
+		</div>
+	</div>
+	<div class="box2" style="width:740px;">
+			<div class="showItem">
+				<span>冻结总额：</span>
+				${accountModel.freezeBorrowerMoneyTotal!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>商城冻结提现金额：</span>
+					${accountModel.borrowerFreezeUseRechargeStr!}
+				</div>
+				<div class="showItem">
+					<span>商城冻结入账金额：</span>
+					${accountModel.borrowerFreezeUseEnterStr!}
+				</div>
+			</div>
+	</div>
+	
+	</#if>
+	
+
+</div>

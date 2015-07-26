@@ -1,0 +1,91 @@
+package com.ddtkj.p2psys.account.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+public interface AccountDao extends BaseDao<Account>{
+	/**
+	 * 用户账户列表
+	 * 
+	 * @param account
+	 * @return
+	 */
+	PageDataList<AccountModel> list(AccountModel model);
+
+	/**
+	 * @param userId
+	 * @return
+	 */
+	Account getAccountByUserId(long userId);
+
+	/**
+	 * 投资人更新用户的账户信息
+	 * 
+	 * @param act
+	 */
+	void modify(Account act);
+	/**
+	 * 借款人更新账户信息
+	 * @param totalVar
+	 * @param useVar
+	 * @param nouseVar
+	 * @param repaymentVar
+	 */
+	void modify(double totalVar, double useVar, double nouseVar,double repaymentVar, long userId);
+    
+	/**
+     * 投资人账户可用余额(总和)
+     * 
+     * @param userId
+     * @return
+     */
+    double getAllUseMoney();
+    /**
+     * 查询账户列表
+     * @param model
+     * @return
+     */
+    List<AccountModel> accountList(AccountModel model);
+    /**
+     * 使用sql导出excel(资金管理)
+     * @param model
+     * @return
+     */
+    List excelListAccount(AccountModel model);
+    
+  //JSDP-164 wcw 20150527 start
+    /**
+     * 修改投资人账户资金
+     * @param account
+     * @param userId
+     */
+    void modifyInvesterAccount(Account account,long userId);
+    /**
+     * 修改借款人账户资金
+     * @param account
+     * @param userId
+     */
+    void modifyBorrowerAccount(Account account,long userId);
+  //JSDP-164 wcw 20150527 end
+    //JSDP-169 xingjia 20150529 start
+    
+    /**
+     * 借款人资金汇总
+     * @param model
+     * @return
+     */
+    Object[] accountTotal(AccountModel model);
+    
+    //JSDP-169 xingjia 20150529 end
+    
+    void updateCompareResult(String compareResult,long userId);
+}

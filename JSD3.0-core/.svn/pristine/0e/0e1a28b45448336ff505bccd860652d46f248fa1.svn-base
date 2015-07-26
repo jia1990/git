@@ -1,0 +1,67 @@
+
+package com.ddtkj.p2psys.autotender.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoTenderModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.SearchParam;
+
+/**
+ * @描述:自动投标记录dao
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-12   
+ */
+public interface BorrowAutoTenderDao extends BaseDao<BorrowAutoTender>{
+	
+	
+	/**
+	 * 查询自动投标记录,分页
+	 * @param  PageNumber
+	 * @param  pageSize
+	 * @param  borrowAutoTender
+	 * @return PageDataList<BorrowAutoTender> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<BorrowAutoTender> getAutoTenderList(BorrowAutoTender autoTender, int PageNumber, int pageSize);
+	
+	/**
+	 * 根据borrowId查询自动投标记录
+	 * @param borrowId
+	 * @return List<BorrowAutoTender>
+	 */
+	List<BorrowAutoTender> getListByBorrowId(long borrowId);
+	
+	/**
+	 * 批量插入数据
+	 * @param tenderList
+	 * @return
+	 */
+	void addBatchAutoTender(List<BorrowAutoTender> tenderList);
+	
+	/**
+	 * 记录列表(前台显示,有分页)
+	 * @param map
+	 * @param startPage
+	 * @return List<BorrowAutoTender>
+	 */
+	List<BorrowAutoTender> getAutoTenderList(Map<String, Object> map, int start, int end);
+	
+	/**
+	 * 总数(前台显示)
+	 * @param param 
+	 * @return int
+	 */
+	int getCount(Map<String, Object> map);
+	
+	public double getAutoTenderSum(BorrowAutoTenderModel model);
+
+	/* 
+	 * 自动投标记录导出SQL
+	 * JSDP-116 sxy 2015-06-18 start
+	 */
+	public List<BorrowAutoTender> excelBorrowAutoTenderDatalist(BorrowAutoTenderModel model);
+}

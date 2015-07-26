@@ -1,0 +1,93 @@
+package com.ddtkj.p2psys.transfer.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * 平台给借款人转账executer 【作为还款使用】   
+ * 
+ * @author wcw   //JSDP-37 wcw 2015-04-25 start
+ * @version 3.0
+ * @since 2015-4-25
+ */
+public class AccountTransferBorrowerExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.TRANSFER_BORROWER;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		// 操作金额
+		log.setBorrowerRechargeMoney(borrowerRechargeMoney);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户各类可用
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		// 账户各类冻结
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		// 账户待还总额
+		log.setRepaymentTotal(account.getRepaymentTotal());
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte) 0);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+	    // 账户各类可用金额
+	    account.setBorrowerRechargeUsable(BigDecimalUtil.add(account.getBorrowerRechargeUsable(), borrowerRechargeMoney));
+        //账户总额
+	    account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(), borrowerRechargeMoney));
+	    accountDao.update(account);
+	}
+
+	@Override
+	public void handleAccountSum() {
+		super.handleAccountSum();
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.TRANSFER_BORROWER_SUCC);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+	}
+
+	@Override
+	public void handleInterface() {
+
+	}
+
+	@Override
+	public void extend() {
+
+	}
+
+}

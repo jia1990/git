@@ -1,0 +1,1691 @@
+package com.ddtkj.p2psys.statistics.dao.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.statistics.dao.StatisticsDataDao;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.statistics.model.StatisticsDataModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * 数据统计
+ * 
+ * @author sxy
+ * @version 3.0
+ * @since 2015-04-22   JSDPBUG-99 20150505  sxy
+ */
+@Repository("statisticsDataDao")
+public class StatisticsDataDaoImpl extends BaseDaoImpl<StatisticsData> implements StatisticsDataDao {
+
+	/**
+	 * 根据标识和时间类型查询统计记录
+	 * 
+	 * @param sign
+	 * @param timeType
+	 * @return
+	 */
+	public StatisticsData getStatisticsDataCount(String sign, String timeType){
+		
+		QueryParam param = QueryParam.getInstance();
+		if(StringUtil.isNotBlank(sign)){
+			param.addParam("sign", sign);
+		}
+		if(StringUtil.isNotBlank(timeType)){
+			param.addParam("timeType", timeType);
+		}
+		
+		return findByCriteriaForUnique(param);
+		
+	};
+	
+	
+	@Override
+	public void callProcedureStatistics() {
+		/*Query query = em.createNativeQuery("{CALL proc_statistics()}");
+		query.executeUpdate();*/
+	}
+	
+
+	/**
+	 * 查询某段时间内的用户注册数——投资人
+	 * @author 孙晓勇 
+	 */
+	@Override
+	public int countUserByTypeAndTime(StatisticsDataModel model) {
+		
+		StringBuffer sb = new StringBuffer();
+		
+		sb.append(" SELECT count(*) FROM t_jsd_user t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id ");
+		
+		// 用户类型
+		if(StringUtil.isNotBlank(model.getUserType())){
+			sb.append(" AND t2.user_type = :userType ");
+		}
+		// 注册方式
+		if (StringUtil.isNotBlank(model.getRegisterWay())) {
+			sb.append(" AND t1.register_way = :registerWay ");
+		}
+		// 用户性质
+		/*if(StringUtil.isNotBlank(userType)){
+			sb.append(" AND t2.user_nature = :userNature ");
+		}*/
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(model.getTimeType())){
+			
+			// 昨日
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if (model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+
+				// sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+
+			}
+			
+		}
+		
+		sb.append(" AND t1.islocked != 'FF' ");
+		/*String sql = "SELECT t1.* FROM t_jsd_user t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND"
+				+ " t2.user_type = :userType AND t2.user_nature = :userNature AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d')";
+		
+		*/
+		Query query = em.createNativeQuery(sb.toString());
+		query.setParameter("userType", model.getUserType());
+		
+		if (StringUtil.isNotBlank(model.getRegisterWay())) {
+			query.setParameter("registerWay", model.getRegisterWay());
+		}
+		
+		//query.setParameter("userNature", userNature);
+		//query.setParameter("timeType", timeType);
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (int) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	
+
+	/**
+	 * 查询在某时间内的投资用户数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public int countTenderUserByTime(String timeType,String startTime,String endTime) {
+
+		StringBuffer sb = new StringBuffer();
+		sb.append(" SELECT COUNT(DISTINCT user_id) FROM t_jsd_borrow_tender t1 WHERE 1=1 ");
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(timeType)){
+			
+			// 昨日
+			if(timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(timeType.equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(timeType.equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if (timeType.equals(StatisticsData.DATA_TIME_MONTH)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+				
+				if(StringUtil.isNotBlank(startTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				if(StringUtil.isNotBlank(endTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				
+				//sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+			
+			}
+			
+		}
+		
+		Query query = em.createNativeQuery(sb.toString());
+		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (int) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	/**
+	 * 查询在某时间内的投资金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double countTenderMoneyByTime(StatisticsDataModel model) {
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append(" SELECT COALESCE(SUM(t1.money),0) FROM t_jsd_borrow_tender t1 WHERE 1=1 ");
+		
+		// 投资方式
+		if(StringUtil.isNotBlank(model.getTenderType())){
+			
+			sb.append(" AND t1.tender_type = " +Integer.parseInt(model.getTenderType())+ " ");
+		}
+		
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(model.getTimeType())){
+			
+			// 昨日
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)){
+				
+				if(StringUtil.isNotBlank(model.getStartTime())){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ model.getStartTime() +"','%y-%m-%d %H:%i:%s') ");
+				}
+				if(StringUtil.isNotBlank(model.getEndTime())){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ model.getEndTime() +"','%y-%m-%d %H:%i:%s') ");
+				}
+				
+				//sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+				
+			}
+			
+		}
+		
+		Query query = em.createNativeQuery(sb.toString());
+		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (double) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+
+	/**
+	 * 查询在某时间内的三项认证用户数(含全部、实名、手机、邮箱)
+	 * @return
+	 * @author sxy
+	 */
+	@Override
+	public int countIdentifiedUserByTime(StatisticsDataModel model) {
+		
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT count(*) "
+				+ " FROM t_jsd_user t1,t_jsd_user_identify t2,t_jsd_user_cache t3 "
+				+ " WHERE t1.user_id = t2.user_id AND t2.user_id = t3.user_id AND t1.user_id = t3.user_id "
+				//+ " AND t2.real_name_status = '83' AND t2.email_status = '81' AND t2.mobile_phone_status = '86' "
+				+ " AND t3.user_type = '10' AND t1.islocked != 'FF' "
+				+ " ");
+				// 认证类型
+				if(StringUtil.isNotBlank(model.getProveType())){
+					// 全部认证
+					if("prove_all".equals(model.getProveType())){
+						
+						sql.append(" AND t2.real_name_status = '83' AND t2.email_status = '81' AND t2.mobile_phone_status = '86' ");
+						// 时间类型
+				    	if(StringUtil.isNotBlank(model.getTimeType())){
+				    		
+				    		// 昨天记录
+				    		if(StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())){
+				    		
+				    			sql.append(" AND ");
+				    			sql.append(" (((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 2 DAY),'%y-%m-%d') < DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+				    			sql.append(" OR ");
+				    			sql.append(" ((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 2 DAY),'%y-%m-%d') < DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d'))) ");
+				    			
+				    		}
+				    		// 今天记录
+				    		if(StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())){
+				    			
+				    			sql.append(" AND ");
+				    			sql.append(" (((DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') <= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+				    			sql.append(" OR ");
+				    			sql.append(" ((DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') <= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d'))) ");
+				    			
+				    		}
+				    		// 一周内记录
+				    		if(StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())){
+				    			
+				    			sql.append(" AND ");
+				    			sql.append(" (((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') < DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+				    			sql.append(" OR ");
+				    			sql.append(" ((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') < DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d'))) ");
+				    			
+				    		}
+				    		// 本月记录
+				    		if(StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())){
+				    			
+				    			sql.append(" AND ");
+				    			sql.append(" (((DATE_FORMAT(t2.real_name_verify_time,'%y-%m') = DATE_FORMAT(NOW(),'%y-%m')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m') <= DATE_FORMAT(NOW(),'%y-%m')) ");
+				    			sql.append(" OR ");
+				    			sql.append(" ((DATE_FORMAT(t2.email_verify_time,'%y-%m') = DATE_FORMAT(NOW(),'%y-%m')) ");
+				    			sql.append(" AND ");
+				    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m') <= DATE_FORMAT(NOW(),'%y-%m'))) ");
+				    			
+				    		}
+				    		// 时间段记录
+				    		if(StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())){
+				    			
+					    		if(StringUtil.isNotBlank(model.getStartTime()) && StringUtil.isNotBlank(model.getEndTime())){
+
+					    			sql.append(" AND  ");
+					    			sql.append(" (((DATE_FORMAT('"+model.getStartTime()+"','%y-%m-%d %H:%i:%s') <= DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+model.getEndTime()+"','%y-%m-%d %H:%i:%s')) ");
+					    			sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+model.getEndTime()+"','%y-%m-%d %H:%i:%s')) ");
+					    			sql.append(" OR ((DATE_FORMAT('"+model.getStartTime()+"','%y-%m-%d %H:%i:%s') <= DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+model.getEndTime()+"','%y-%m-%d %H:%i:%s')) ");
+					    			sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+model.getEndTime()+"','%y-%m-%d %H:%i:%s'))) ");
+					    			
+								}
+				    		
+				    		}
+				    		
+				    	}
+						
+						
+					}
+					
+					// 实名认证
+					if("prove_realname".equals(model.getProveType())){
+						
+						sql.append(" AND t2.real_name_status = '83' ");
+						
+						// 昨日
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+							sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+						}
+						// 今日
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+							sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+						}
+						// 一周内
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+							sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+						}
+						// 本月
+						if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+							sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+						}
+						// 时间段
+						if (model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+							if (StringUtil.isNotBlank(model.getStartTime())) {
+								sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+							}
+							if (StringUtil.isNotBlank(model.getEndTime())) {
+								sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+							}
+
+						}
+						
+					}
+					
+					// 手机认证
+					if("prove_phone".equals(model.getProveType())){
+						sql.append(" AND t2.mobile_phone_status = '86' ");
+						
+						// 昨日
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+							sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+						}
+						// 今日
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+							sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+						}
+						// 一周内
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+							sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+						}
+						// 本月
+						if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+							sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+						}
+						// 时间段
+						if (model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+							if (null != model.getStartTime()) {
+								sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+							}
+							if (null != model.getEndTime()) {
+								sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+							}
+
+						}
+						
+					}
+					
+					// 邮箱认证
+					if("prove_email".equals(model.getProveType())){
+						
+						sql.append(" AND t2.email_status = '81' ");
+						
+						// 昨日
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+							sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+						}
+						// 今日
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+							sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+						}
+						// 一周内
+						if(model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+							sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+						}
+						// 本月
+						if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+							sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+						}
+						// 时间段
+						if (model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+							if (StringUtil.isNotBlank(model.getStartTime())) {
+								sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+							}
+							if (StringUtil.isNotBlank(model.getEndTime())) {
+								sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+							}
+
+						}
+						
+					}
+					
+				}
+		
+		
+		
+		
+		/*sb.append("SELECT count(*) FROM t_jsd_user t1,t_jsd_user_identify t2,t_jsd_user_cache t3 WHERE t1.user_id = t2.user_id AND t2.user_id = t3.user_id AND t1.user_id = t3.user_id ");
+		
+		if(StringUtil.isNotBlank(realName)){
+			sb.append(" AND t2.real_name_status = :realName ");
+		}
+		if(StringUtil.isNotBlank(email)){
+			sb.append(" AND t2.email_status = :email ");
+		}
+		if(StringUtil.isNotBlank(phone)){
+			sb.append(" AND t2.mobile_phone_status = :phone ");
+		}
+		if(StringUtil.isNotBlank(userType)){
+			sb.append(" AND t3.user_type = :userType ");
+		}
+		
+		// 时间类型（今日、昨日、一周）
+		if (StringUtil.isNotBlank(timeType)) {
+			
+			// 昨日
+			if (timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if (timeType.equals(StatisticsData.DATA_TIME_TODAY)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if (timeType.equals(StatisticsData.DATA_TIME_WEEK)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if (timeType.equals(StatisticsData.DATA_TIME_MONTH)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if (timeType.equals(StatisticsData.DATA_TIME_AREA)) {
+
+				// 实名认证
+				if(proveType.equals(StatisticsData.DATA_WAY_PROVE_REALNAME)){
+				
+					if(StringUtil.isNotBlank(startTime)){
+						sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+					}
+					if(StringUtil.isNotBlank(endTime)){
+						sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+					}
+					
+				}
+				// 手机认证
+				if(proveType.equals(StatisticsData.DATA_WAY_PROVE_PHONE)){
+					
+					if(StringUtil.isNotBlank(startTime)){
+						sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+					}
+					if(StringUtil.isNotBlank(endTime)){
+						sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+					}
+					
+				}
+				// 邮箱认证
+				if(proveType.equals(StatisticsData.DATA_WAY_PROVE_EMAIL)){
+					
+					if(StringUtil.isNotBlank(startTime)){
+						sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+					}
+					if(StringUtil.isNotBlank(endTime)){
+						sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+					}
+					
+				}
+
+			}*/
+
+			/*if(proveType.equals(StatisticsData.DATA_WAY_PROVE_REALNAME)){
+				// (1)实名认证
+				if(null != realName || StringUtil.isNotBlank(realName)){
+					
+					// 昨日
+					if (timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)) {
+						sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+					}
+					// 今日
+					if (timeType.equals(StatisticsData.DATA_TIME_TODAY)) {
+						sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+					}
+					// 一周内
+					if (timeType.equals(StatisticsData.DATA_TIME_WEEK)) {
+						sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+					}
+					// 本月
+					if (timeType.equals(StatisticsData.DATA_TIME_MONTH)) {
+						sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+					}
+					// 时间段
+					if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+									
+						if(StringUtil.isNotBlank(startTime)){
+							sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+						}
+						if(StringUtil.isNotBlank(endTime)){
+							sb.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+						}
+								
+					}
+					
+				}
+			}
+			if(proveType.equals(StatisticsData.DATA_WAY_PROVE_PHONE)){
+				// (2)手机认证
+				if(null != phone || StringUtil.isNotBlank(phone)){
+					
+					// 昨日
+					if (timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)) {
+						sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+					}
+					// 今日
+					if (timeType.equals(StatisticsData.DATA_TIME_TODAY)) {
+						sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+					}
+					// 一周内
+					if (timeType.equals(StatisticsData.DATA_TIME_WEEK)) {
+						sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+					}
+					// 本月
+					if (timeType.equals(StatisticsData.DATA_TIME_MONTH)) {
+						sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+					}
+					// 时间段
+					if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+						
+						if(StringUtil.isNotBlank(startTime)){
+							sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+						}
+						if(StringUtil.isNotBlank(endTime)){
+							sb.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+						}
+						
+					}
+				}
+			}
+			if(proveType.equals(StatisticsData.DATA_WAY_PROVE_EMAIL)){
+				// (3)邮箱认证
+				if(null != email || StringUtil.isNotBlank(email)){
+					
+					// 昨日
+					if (timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)) {
+						sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+					}
+					// 今日
+					if (timeType.equals(StatisticsData.DATA_TIME_TODAY)) {
+						sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+					}
+					// 一周内
+					if (timeType.equals(StatisticsData.DATA_TIME_WEEK)) {
+						sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+					}
+					// 本月
+					if (timeType.equals(StatisticsData.DATA_TIME_MONTH)) {
+						sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+					}
+					// 时间段
+					if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+						
+						if(StringUtil.isNotBlank(startTime)){
+							sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+						}
+						if(StringUtil.isNotBlank(endTime)){
+							sb.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+						}
+						
+					}
+					
+				}
+			}*/
+			
+
+		//}
+		sql.append(" AND t1.islocked != 'FF' ");
+		Query query = em.createNativeQuery(sql.toString());
+		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (int) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+
+	/**
+	 * 查询在某时间内的充值用户数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public int countRechargeUserByTime(String timeType,String startTime,String endTime) {
+
+		StringBuffer sb = new StringBuffer();
+		sb.append(" SELECT COUNT(DISTINCT user_id) FROM t_jsd_account_recharge t1 WHERE 1=1 ");
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(timeType)){
+			
+			// 昨日
+			if(timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(timeType.equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(timeType.equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if (timeType.equals(StatisticsData.DATA_TIME_MONTH)) {
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+				
+				if(StringUtil.isNotBlank(startTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				if(StringUtil.isNotBlank(endTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				
+				//sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+			
+			}
+			
+		}
+		Query query = em.createNativeQuery(sb.toString());
+	
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (int) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	/**
+	 * 查询在某时间内的充值金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double countRechargeMoneyByTime(StatisticsDataModel model) {
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append(" SELECT COALESCE(SUM(t1.recharge_amount),0.00) FROM t_jsd_account_recharge t1 WHERE 1=1 ");
+		
+		// 充值状态
+		if(StringUtil.isNotBlank(model.getRechargeStatus())){
+			sb.append(" AND t1.trade_status = '"+ model.getRechargeStatus() +"' ");
+		}
+		
+		// 充值方式
+		if(StringUtil.isNotBlank(model.getRechargeType())){
+			sb.append(" AND t1.recharge_type = '"+ model.getRechargeType() +"' ");
+		}
+		
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(model.getTimeType())){
+			
+			// 昨日
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if(model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)){
+				
+				if(StringUtil.isNotBlank(model.getStartTime())){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ model.getStartTime() +"','%y-%m-%d %H:%i:%s') ");
+				}
+				if(StringUtil.isNotBlank(model.getEndTime())){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ model.getEndTime() +"','%y-%m-%d %H:%i:%s') ");
+				}
+				
+				//sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+				
+			}
+			
+		}
+		Query query = em.createNativeQuery(sb.toString());
+		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (double) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	/**
+	 * 查询在某时间内的债权转让(售出)金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double creaditOutMoneyByTime(String timeType,String startTime,String endTime) {
+		
+		StringBuffer sb = new StringBuffer();
+		
+		sb.append(" SELECT COALESCE(SUM(t1.credit_price),0) FROM t_jsd_credit_assignment t1 WHERE 1=1 AND t1.status = '03' ");
+		
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(timeType)){
+			
+			// 昨日
+			if(timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.full_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(timeType.equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.full_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(timeType.equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.full_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if(timeType.equals(StatisticsData.DATA_TIME_MONTH)){
+				sb.append(" AND DATE_FORMAT(t1.full_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+				
+				if(StringUtil.isNotBlank(startTime)){
+					sb.append(" AND DATE_FORMAT(t1.full_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				if(StringUtil.isNotBlank(endTime)){
+					sb.append(" AND DATE_FORMAT(t1.full_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				
+				//sb.append(" AND DATE_FORMAT(t1.full_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+				
+			}
+			
+		}
+		Query query = em.createNativeQuery(sb.toString());
+		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (double) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	/**
+	 * 查询在某时间内的债权转让(转入)金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double creaditInMoneyByTime(String timeType,String startTime,String endTime) {
+		
+		StringBuffer sb = new StringBuffer();
+		
+		sb.append(" SELECT COALESCE(SUM(t1.buy_account),0.00) FROM t_jsd_buy_credit t1 WHERE 1=1 AND t1.status = '01' ");
+		
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(timeType)){
+			
+			// 昨日
+			if(timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(timeType.equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(timeType.equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if(timeType.equals(StatisticsData.DATA_TIME_MONTH)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+				
+				if(StringUtil.isNotBlank(startTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				if(StringUtil.isNotBlank(endTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				
+				//sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+				
+			}
+			
+		}
+		Query query = em.createNativeQuery(sb.toString());
+		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (double) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	
+	/**
+	 * 查询在某时间内的提现金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double countDrawMoneyByTime(String timeType,String startTime,String endTime) {
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append(" SELECT COALESCE(SUM(t1.draw_amount),0) FROM t_jsd_account_draw t1 WHERE 1 = 1 ");
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(timeType)){
+			
+			// 昨日
+			if(timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(timeType.equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(timeType.equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月
+			if(timeType.equals(StatisticsData.DATA_TIME_MONTH)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if(timeType.equals(StatisticsData.DATA_TIME_AREA)){
+				
+				if(StringUtil.isNotBlank(startTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ startTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				if(StringUtil.isNotBlank(endTime)){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ endTime +"','%y-%m-%d %H:%i:%s') ");
+				}
+				
+				//sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+				
+			}
+			
+		}
+		Query query = em.createNativeQuery(sb.toString());
+		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (double) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+
+	
+	
+	
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<User> excelStatisticsRegisterUserList(StatisticsDataModel model) {
+
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT u.user_id userId,u.user_name userName,u.real_name realName,");
+		sql.append(" CASE uc.sex WHEN  'M' THEN '男'  WHEN  'F' THEN '女'  ELSE '保密' END AS userSex,");
+		sql.append(" proName,cityName,areaName,u.email,u.mobile_phone,u.card_no,op.no,");
+		sql.append(" CASE uc.user_type+uc.user_nature  WHEN  '30' THEN '投资人' WHEN '31'  THEN '个人借款人' WHEN  '32'  THEN '企业借款' WHEN  '34' THEN '担保公司' WHEN  '33' THEN '分期宝用户' ELSE '不确定' END AS userType,");
+		sql.append(" CASE  ui.email_status  WHEN  '80' THEN '未认证' WHEN  '81' THEN '已认证' WHEN  '89' THEN '认证未通过' ELSE '不确定' END AS userEmailStatus,");
+		sql.append(" CASE  ui.mobile_phone_status  WHEN  '85' THEN '未认证' WHEN  '86' THEN '已认证'   WHEN  '87' THEN '认证未通过' ELSE '不确定' END AS  userPhoneStatus,");
+		sql.append(" CASE  ui.real_name_status  WHEN  '82' THEN '未认证' WHEN  '83' THEN '已认证' WHEN  '88' THEN '认证待审核'  WHEN  '84' THEN '认证未通过' ELSE '不确定' END AS userRealName, ");
+		sql.append(" DATE_FORMAT(u.add_time ,'%Y-%m-%d %T') registerTime,  ");
+		sql.append(" CASE  vip.vip_level  WHEN  'N1' THEN '普通用户'  WHEN  'V1' THEN '铜牌会员' ");
+		sql.append(" WHEN  'V2' THEN '银牌会员'  WHEN  'V3' THEN '金牌会员'  WHEN  'V4' THEN '钻石会员'  ELSE '普通用户' END AS vipLevel,");
+		sql.append(" DATE_FORMAT(vip.end_time,'%Y-%m-%d %T') vipEndTime,  ");
+		sql.append(" CASE u.islocked WHEN  'NN' THEN '未锁定' WHEN  'AY' THEN '已锁定' WHEN  'UY' THEN '挂起' WHEN  'FF' THEN '销户'   ELSE '不确定' END  AS isLock,  ");
+		sql.append(" CASE u.register_way WHEN  'P' THEN 'PC端' WHEN  'M' THEN '手机端'  ELSE '未知' END  AS registerWay  ");
+		sql.append(" FROM `t_jsd_user` u ");
+		sql.append(" LEFT JOIN `t_jsd_vip` vip ON  u.`user_id` = vip.`user_id` ,`t_jsd_user_identify` ui,  ");
+		sql.append(" `t_jsd_user_cache` uc LEFT JOIN `s_operator` op  ON   uc.`customer_user_id` = op.id   ");
+		sql.append("  LEFT JOIN ");
+		sql.append("   (SELECT  uc.user_id  proUserId,reg.name proName  FROM  t_jsd_dict_region reg ,`t_jsd_user_cache` uc WHERE uc.province = reg.id) AS pro   ");
+		sql.append("  ON   uc.user_id = pro.proUserId   ");
+		sql.append(" LEFT JOIN ");
+		sql.append("  (SELECT  uc.user_id  cityUserId,reg.name cityName  FROM  t_jsd_dict_region reg ,`t_jsd_user_cache` uc  WHERE uc.city = reg.id) AS city  ");
+		sql.append(" ON   uc.user_id = city.cityUserId  ");
+		sql.append(" LEFT JOIN ");
+		sql.append("   (SELECT  uc.user_id  areaUserId,reg.name  areaName FROM  t_jsd_dict_region reg ,`t_jsd_user_cache` uc  WHERE uc.area = reg.id) AS are ");
+		sql.append(" ON   uc.user_id = are.areaUserId ");
+		sql.append(" WHERE u.`user_id` = ui.`user_id`  AND u.`user_id` = uc.`user_id` ");
+
+		// 注册方式
+		if (StringUtil.isNotBlank(model.getRegisterWay())) {
+			sql.append(" AND u.register_way = '" + model.getRegisterWay()
+					+ "' ");
+		}
+		// 用户类型
+		if (StringUtil.isNotBlank(model.getUserType())) {
+			sql.append(" AND uc.user_type = '" + model.getUserType() + "' ");
+		}
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(u.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(u.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(u.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(u.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(u.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(u.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+
+		}
+
+		sql.append("  AND u.islocked != 'FF'");
+		sql.append("  ORDER BY u.user_id DESC");
+
+		Query query = em.createNativeQuery(sql.toString());
+
+		List userList = query.getResultList();
+		return userList;
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<AccountRecharge> excelStatisticsRechargeMoneyList(StatisticsDataModel model) {
+		
+		StringBuffer sql = new StringBuffer();
+		
+		if(model.getRechargeType().equals("1")){
+			sql.append(" SELECT ar.trade_no,u.user_name,u.real_name,ar.in_account_amount,ar.recharge_fee,ar.add_time,"
+					+" CASE ar.trade_status"
+					+" WHEN 00 THEN '充值转账成功'"
+					+" WHEN 55 THEN '充值转账提交中'"
+					+" WHEN 99 THEN '充值转账失败'"
+					+" WHEN 52 THEN '充值转账审核中'"
+					+" WHEN 53 THEN '充值转账审核失败'"
+					+" WHEN 01 THEN '补单转账成功'"
+					+" ELSE '无' END FROM t_jsd_account_recharge ar,t_jsd_user u WHERE u.user_id=ar.user_id");
+		}else{
+			
+			sql.append(" SELECT ar.trade_no tradeNo,CASE uc.user_type WHEN 10 THEN '投资人' "
+					+ " WHEN 11 THEN '借款人' WHEN 12 THEN '担保公司' WHEN 13 THEN '商城用户' "
+					+ " ELSE '无' END userType,u.user_name userName,u.real_name realName, "
+					+ "ar.in_account_amount inAccount,ar.recharge_fee rechargeFee,ar.add_time ADDTIME, "
+					+ " CASE ar.recharge_type WHEN 00 THEN '第三方充值' WHEN 01 THEN '转账充值' WHEN 02 THEN '平台充值' ELSE '其他' END rechargeType, "
+					+ " CASE ar.trade_status WHEN 00 THEN '成功' WHEN 01 THEN '补单成功' WHEN 99 THEN '失败' "
+					+ " WHEN 55 THEN '充值中' ELSE '无'END tradeStatus FROM t_jsd_account_recharge ar, "
+					+ " t_jsd_user u,t_jsd_user_cache uc WHERE u.user_id=ar.user_Id AND u.user_id=uc.user_id ");
+		}
+		
+		// 充值类型
+		if (StringUtil.isNotBlank(model.getRechargeType())) {
+			sql.append(" AND ar.recharge_type = '" + model.getRechargeType() + "' ");
+		}
+		// 充值状态
+		if (StringUtil.isNotBlank(model.getRechargeStatus())) {
+			sql.append(" AND ar.trade_status = '" + model.getRechargeStatus() + "' ");
+		}
+		// 用户类型
+		if (StringUtil.isNotBlank(model.getUserType())) {
+			sql.append(" AND uc.user_type = '" + model.getUserType() + "' ");
+		}
+		// 时间类型
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+			
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ar.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ar.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ar.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ar.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(ar.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(ar.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+			
+		}
+		
+		sql.append("  AND u.islocked != 'FF'");
+		sql.append("  ORDER BY ar.add_time DESC");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		List userList = query.getResultList();
+		return userList;
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	
+	
+
+	/**
+	 * 查询在某时间内的三项认证用户数(含全部、实名、手机、邮箱)
+	 * @return
+	 * @author sxy
+	 */
+	@Override
+	public List<User> excelStatisticsIdentifiedList(StatisticsDataModel model) {
+		
+		StringBuffer sql = new StringBuffer();
+		
+		sql.append(" SELECT t1.user_id, t1.user_name, t1.real_name, t1.mobile_phone, t1.card_no, ");
+		
+	    sql.append(" CASE t3.user_type+t3.user_nature  WHEN  '30' THEN '投资人' WHEN '31'  THEN '个人借款人' WHEN  '32'  THEN '企业借款' WHEN  '34' THEN '担保公司' WHEN  '33' THEN '分期宝用户' ELSE '不确定' END AS userType,");
+		
+		sql.append(" CASE  t2.email_status  WHEN  '80' THEN '未认证' WHEN  '81' THEN '已认证' WHEN  '89' THEN '认证未通过' ELSE '不确定' END AS userEmailStatus,");
+		sql.append(" CASE  t2.mobile_phone_status  WHEN  '85' THEN '未认证' WHEN  '86' THEN '已认证'   WHEN  '87' THEN '认证未通过' ELSE '不确定' END AS  userPhoneStatus,");
+		sql.append(" CASE  t2.real_name_status  WHEN  '82' THEN '未认证' WHEN  '83' THEN '已认证' WHEN  '88' THEN '认证待审核'  WHEN  '84' THEN '认证未通过' ELSE '不确定' END AS userRealName, ");
+		sql.append(" DATE_FORMAT(t1.add_time ,'%Y-%m-%d %T') registerTime,  ");
+		
+		sql.append(" t2.real_name_verify_time,t2.mobile_phone_verify_time,t2.email_verify_time,  ");
+		
+		sql.append(" CASE t1.islocked WHEN  'NN' THEN '未锁定' WHEN  'AY' THEN '已锁定' WHEN  'UY' THEN '挂起' WHEN  'FF' THEN '销户'   ELSE '不确定' END  AS isLock ");
+		
+		sql.append(" FROM t_jsd_user t1,t_jsd_user_identify t2,t_jsd_user_cache t3 ");
+		sql.append(" WHERE t1.user_id = t2.user_id AND t2.user_id = t3.user_id AND t1.user_id = t3.user_id ");
+		
+		// 认证类型
+		if (StringUtil.isNotBlank(model.getUserType())) {
+			
+			sql.append(" AND t3.user_type = '"+model.getUserType()+"' ");
+		}
+		
+		// 认证类型
+		if (StringUtil.isNotBlank(model.getProveType())) {
+			// 全部认证
+			if ("prove_all".equals(model.getProveType())) {
+
+				sql.append(" AND t2.real_name_status = '83' AND t2.email_status = '81' AND t2.mobile_phone_status = '86' ");
+				// 时间类型
+				if (StringUtil.isNotBlank(model.getTimeType())) {
+
+					// 昨天记录
+					if (StatisticsData.DATA_TIME_YESTERDAY.equals(model
+							.getTimeType())) {
+
+						sql.append(" AND ");
+						sql.append(" (((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 2 DAY),'%y-%m-%d') < DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+						sql.append(" OR ");
+						sql.append(" ((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 2 DAY),'%y-%m-%d') < DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d'))) ");
+
+					}
+					// 今天记录
+					if (StatisticsData.DATA_TIME_TODAY.equals(model
+							.getTimeType())) {
+
+						sql.append(" AND ");
+						sql.append(" (((DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') <= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+						sql.append(" OR ");
+						sql.append(" ((DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') <= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d'))) ");
+
+					}
+					// 一周内记录
+					if (StatisticsData.DATA_TIME_WEEK.equals(model
+							.getTimeType())) {
+
+						sql.append(" AND ");
+						sql.append(" (((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') < DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+						sql.append(" OR ");
+						sql.append(" ((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') < DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d'))) ");
+
+					}
+					// 本月记录
+					if (StatisticsData.DATA_TIME_MONTH.equals(model
+							.getTimeType())) {
+
+						sql.append(" AND ");
+						sql.append(" (((DATE_FORMAT(t2.real_name_verify_time,'%y-%m') = DATE_FORMAT(NOW(),'%y-%m')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m') <= DATE_FORMAT(NOW(),'%y-%m')) ");
+						sql.append(" OR ");
+						sql.append(" ((DATE_FORMAT(t2.email_verify_time,'%y-%m') = DATE_FORMAT(NOW(),'%y-%m')) ");
+						sql.append(" AND ");
+						sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m') <= DATE_FORMAT(NOW(),'%y-%m'))) ");
+
+					}
+					// 时间段记录
+					if (StatisticsData.DATA_TIME_AREA.equals(model
+							.getTimeType())) {
+
+						if (StringUtil.isNotBlank(model.getStartTime())
+								&& StringUtil.isNotBlank(model.getEndTime())) {
+
+							sql.append(" AND  ");
+							sql.append(" (((DATE_FORMAT('"
+									+ model.getStartTime()
+									+ "','%y-%m-%d %H:%i:%s') <= DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+									+ model.getEndTime()
+									+ "','%y-%m-%d %H:%i:%s')) ");
+							sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+									+ model.getEndTime()
+									+ "','%y-%m-%d %H:%i:%s')) ");
+							sql.append(" OR ((DATE_FORMAT('"
+									+ model.getStartTime()
+									+ "','%y-%m-%d %H:%i:%s') <= DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+									+ model.getEndTime()
+									+ "','%y-%m-%d %H:%i:%s')) ");
+							sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+									+ model.getEndTime()
+									+ "','%y-%m-%d %H:%i:%s'))) ");
+
+						}
+
+					}
+
+				}
+
+			}
+
+			// 实名认证
+			if ("prove_realname".equals(model.getProveType())) {
+
+				sql.append(" AND t2.real_name_status = '83' ");
+
+				// 昨日
+				if (model.getTimeType().equals(
+						StatisticsData.DATA_TIME_YESTERDAY)) {
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+				}
+				// 今日
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)) {
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 一周内
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)) {
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 本月
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+				}
+				// 时间段
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+					if (StringUtil.isNotBlank(model.getStartTime())) {
+						sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+								+ model.getStartTime()
+								+ "','%y-%m-%d %H:%i:%s') ");
+					}
+					if (StringUtil.isNotBlank(model.getEndTime())) {
+						sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+								+ model.getEndTime()
+								+ "','%y-%m-%d %H:%i:%s') ");
+					}
+
+				}
+
+			}
+
+			// 手机认证
+			if ("prove_phone".equals(model.getProveType())) {
+				sql.append(" AND t2.mobile_phone_status = '86' ");
+
+				// 昨日
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)) {
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+				}
+				// 今日
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)) {
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 一周内
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)) {
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 本月
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+				}
+				// 时间段
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+					if (StringUtil.isNotBlank(model.getStartTime())) {
+						sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+								+ model.getStartTime()
+								+ "','%y-%m-%d %H:%i:%s') ");
+					}
+					if (StringUtil.isNotBlank(model.getEndTime())) {
+						sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+								+ model.getEndTime()
+								+ "','%y-%m-%d %H:%i:%s') ");
+					}
+
+				}
+
+			}
+
+			// 邮箱认证
+			if ("prove_email".equals(model.getProveType())) {
+
+				sql.append(" AND t2.email_status = '81' ");
+
+				// 昨日
+				if (model.getTimeType().equals(
+						StatisticsData.DATA_TIME_YESTERDAY)) {
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+				}
+				// 今日
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)) {
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 一周内
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)) {
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 本月
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+				}
+				// 时间段
+				if (model.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+					if (StringUtil.isNotBlank(model.getStartTime())) {
+						sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+								+ model.getStartTime()
+								+ "','%y-%m-%d %H:%i:%s') ");
+					}
+					if (StringUtil.isNotBlank(model.getEndTime())) {
+						sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+								+ model.getEndTime()
+								+ "','%y-%m-%d %H:%i:%s') ");
+					}
+
+				}
+
+			}
+
+		}
+
+		sql.append(" AND t1.islocked != 'FF' ");
+
+		Query query = em.createNativeQuery(sql.toString());
+		
+		List userList = query.getResultList();
+		return userList;
+	}
+
+	/**
+	 * 投资金额统计
+	 * 
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<BorrowTender> excelStatisticsTenderMoneyList(StatisticsDataModel model) {
+
+		// JSDP-116 sxy 2015-05-18 start
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT t1.id, t1.borrow_id, "
+				+ " CASE  t2.type "
+				+ " WHEN  103 THEN '车贷宝' "
+				+ " WHEN  113 THEN '能源宝' "
+				+ " WHEN  105 THEN '分期宝' "
+				+ " WHEN  115 THEN '网商贷' "
+				+ " ELSE '其他' END AS type, "
+				+ " t1.user_id, "
+
+				// + " t2.time_limit, " //borrow_time_type
+				// + " CASE  t2.time_limit "
+				+ " CASE  t2.borrow_time_type "
+				+ " WHEN  0 THEN CONCAT(t2.time_limit, '月') "
+				+ " WHEN  1 THEN CONCAT(t2.time_limit, '天') "
+				+ " ELSE '其他' END AS timelimit, "
+
+				+ " t3.user_name, t3.add_time as time1, t3.real_name, "
+				+ " t6.no, t5.account_total, t1.money, t1.account, t1.repayment_account, "
+				//+ " t1.tender_type, "
+
+				+ " CASE  t1.tender_type "
+				+ " WHEN  0 THEN '网站投标' "
+				+ " WHEN  1 THEN '自动投标' "
+				+ " WHEN  2 THEN '手机投标' "
+				+ " ELSE '其他' END AS borrowtype, "
+
+				+ " t1.add_time as time2, t1.add_ip "
+
+				+ " FROM t_jsd_borrow_tender AS t1 "
+				+ " LEFT JOIN rd_borrow AS t2 ON t1.borrow_id = t2.id "
+				+ " LEFT JOIN t_jsd_user AS t3 ON t1.user_id = t3.user_id "
+				+ " LEFT JOIN t_jsd_user_cache AS t4 ON t3.user_id = t4.user_id "
+				+ " LEFT JOIN t_jsd_account AS t5 ON t3.user_id = t5.user_id "
+				+ " LEFT JOIN s_operator AS t6 ON t4.customer_user_id = t6.id "
+				+ " WHERE 1=1 ");
+
+		// 投资方式
+		if (StringUtil.isNotBlank(model.getTenderType())) {
+			sql.append(" AND t1.tender_type = '" + model.getTenderType()+ "' ");
+		}
+		// 用户类型
+		if (StringUtil.isNotBlank(model.getUserType())) {
+			sql.append(" AND t4.user_type = '" + model.getUserType() + "' ");
+		}
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+
+		}
+
+		sql.append("  AND t3.islocked != 'FF' ");
+		sql.append("  ORDER BY t1.id DESC ");
+
+		Query query = em.createNativeQuery(sql.toString());
+
+		List dataList = query.getResultList();
+		return dataList;
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	
+	/**
+	 * 明细——提现金额统计
+	 * 
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<AccountDraw> excelStatisticsDrawMoneyList(StatisticsDataModel model) {
+		
+		// JSDP-116 sxy 2015-05-18 start
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT  ad.id id,u.user_name userName,u.real_name realName,ad.bank_no bankNo,ad.bank_branch_name branchName,"
+				+"ad.bank_province province,ad.bank_city city,ad.bank_name bankName,"
+				+"ad.draw_amount drawAmount,ad.draw_in_account_amount inAccount,ad.draw_fee drawFee,ad.add_time ADDTIME,"
+				+" CASE ad.draw_handle_status"
+				+" WHEN 00 THEN '申请提现'"
+				+" WHEN 11 THEN '初审成功'"
+				+" WHEN 10 THEN '初审失败'"  
+				+" WHEN 21 THEN '复审成功'" 
+				+" WHEN 20 THEN '复审失败'"
+				+" WHEN 99 THEN '取消体现'"
+				+" WHEN 30 THEN '提现成功'"
+				+" WHEN 42 THEN '等待银行转账'"
+				+" WHEN 41 THEN '汇潮请求失败'" 
+				+" WHEN 88 THEN '银行处理失败'"
+				+" ELSE '无'"
+				+" END AS handleStatus"
+				+" FROM t_jsd_account_draw ad,t_jsd_user u,t_jsd_user_cache uc "
+				+" WHERE ad.user_id=u.user_id and u.user_id=uc.user_id ");
+		
+		
+		// 用户类型
+		if (StringUtil.isNotBlank(model.getUserType())) {
+			sql.append(" AND uc.user_type = '" + model.getUserType() + "' ");
+		}
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+			
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+			
+		}
+		
+		sql.append("  AND u.islocked != 'FF' ");
+		sql.append("  ORDER BY ad.id DESC ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		List dataList = query.getResultList();
+		return dataList;
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	
+	/**
+	 * 明细——债权(售出)金额统计
+	 * 
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<CreditAssignment> excelStatisticsCreaditOutMoneyList(StatisticsDataModel model) {
+		
+		// JSDP-116 sxy 2015-05-18 start
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT ca.id,u.user_name,b.name,"
+				+ "case ca.ca_type when 1 then '投资转出' when 2 then '购买转出' else '无' end ,"
+				+" CASE ca.level WHEN 00 THEN '还未初审' WHEN 1 THEN '普通' WHEN 2 THEN '优质' else '未指定的债权转让等级' END,"
+				+" ca.credit_value,ca.credit_price,ca.credit_dis,ca.credit_copies,ca.sold_account,ca.sell_copies,"
+				+" CASE ca.status"
+				+" WHEN 00 THEN '发布'"
+				+" WHEN 01 THEN '初审通过'"
+				+" WHEN 02 THEN '初审未通过'"
+				+" WHEN 03 THEN '复审通过'"
+				+" WHEN 04 THEN '复审未通过'"
+				+" WHEN 05 THEN '撤回'"
+				+" ELSE '未指定的债权状态'"
+				+" END caStatus,"
+				+" TRUNCATE(COALESCE(((ca.sell_copies/ca.credit_copies)*100),0.00),2) scales,"
+				+" CASE ca.is_breach"
+				+" WHEN 1 THEN '是，违约金:'+ca.breach_account"
+				+" ELSE '否' "
+				+" END isBreach,"
+				+" ca.buy_end_time,ca.add_time,ca.add_ip"
+				+" FROM  t_jsd_credit_assignment ca,t_jsd_user u,rd_borrow b"
+				+" WHERE u.user_id=ca.sell_user_id AND b.id=ca.borrow_id ");
+		
+		
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+			
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+			
+		}
+		// 状态为：复审通过
+		sql.append("  AND ca.status = '07' ");
+		
+		sql.append("  ORDER BY ca.id DESC ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		List dataList = query.getResultList();
+		return dataList;
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	
+	
+	/**
+	 * 明细——债权(买入)金额统计
+	 * 
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<CreditLog> excelStatisticsCreaditInMoneyList(StatisticsDataModel model) {
+		
+		// JSDP-116 sxy 2015-05-18 start
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT "
+				+"	cb.id,"
+				+"	b.name AS caName,"
+				+"  c.id AS caId,"
+				+"	case cb.status "
+				+"  when 00 then '未成交'"
+				+"  when 01 then '已成交'"
+				+"  when 02 then '撤回'"
+				+"  else '无' end ,"
+				+"	u2.user_name AS sellUserName,"
+				+"	u.user_name AS buyUserName,"
+				+"	cb.buy_time AS buyTime,"
+				+"	cb.buy_copies AS buyCopies,"
+				+"	cb.buy_value AS buyValue ,"
+				+"	cb.buy_account AS buyAccount,"
+				+"	cb.buy_fee AS buyFee,"
+				+"  CASE cb.buy_fee_status WHEN 1 THEN '已收取' WHEN 2 THEN '冻结中' WHEN 3 THEN '已退回' ELSE '未指定的状态' END  AS buyFeeStatusExport,"
+				+"	cb.sell_fee AS sellFee ,"
+				+"	CASE cb.sell_fee_status WHEN 1 THEN '已收取' WHEN 2 THEN '冻结中' WHEN 3 THEN '已退回' ELSE '未指定的状态' END AS sellFeeStatusExport ,"
+				+"	CASE cb.is_sell WHEN 1 THEN '售出' WHEN 2 THEN '未售出' ELSE '无' END AS isSellExport,"
+				+"	cb.add_time AS ADDTIME,"
+				+"	cb.add_ip AS addIp"
+				+" FROM"
+				+" t_jsd_buy_credit cb"
+				+" LEFT JOIN t_jsd_credit_assignment c ON cb.ca_id = c.id"
+				+" LEFT JOIN t_jsd_user u ON cb.buy_user_id = u.user_id"
+				+" LEFT JOIN rd_borrow b ON c.borrow_id = b.id"
+				+" LEFT JOIN t_jsd_user u2 ON c.sell_user_id = u2.user_id where 1=1 ");
+		
+		
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+			
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+			
+		}
+		
+		// 状态为：已成交
+		sql.append("  AND cb.status = '01' ");
+		
+		sql.append("  ORDER BY cb.id DESC ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		List dataList = query.getResultList();
+		return dataList;
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	
+	
+	
+}

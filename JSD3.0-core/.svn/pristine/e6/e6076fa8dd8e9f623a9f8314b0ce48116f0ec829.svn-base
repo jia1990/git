@@ -1,0 +1,47 @@
+package com.rongdu.p2psys.borrow.dao.jdbc;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowBespeakDao;
+import com.rongdu.p2psys.borrow.domain.BorrowBespeak;
+import com.rongdu.p2psys.borrow.model.BorrowBespeakModel;
+
+@Repository("borrowBespeakDao")
+public class BorrowBespeakImpl extends BaseDaoImpl<BorrowBespeak> implements BorrowBespeakDao {
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<BorrowBespeakModel> excelListBorrowBespeak(
+			BorrowBespeakModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("  SELECT  bspk.id,bspk.company_name,bspk.name bspkName,bspk.telephone, bspk.money ,  bspk.limit_time, reg.name regName, city.name cityName, are.name areName, ");
+		sql.append("  DATE_FORMAT(bspk.add_time , '%Y-%m-%d %T') borrowAddTime, ");
+		sql.append("  bspk.add_ip , ");
+		sql.append("  DATE_FORMAT( bspk.do_time , '%Y-%m-%d %T') borrowDoTime  , ");
+		sql.append("  CASE bspk.status WHEN  0 THEN '未处理' WHEN  1 THEN '已回访' WHEN  2 THEN '不回访' ELSE '未知状态' END AS bspkStatus");
+		sql.append("  FROM `rd_borrow_bespeak` bspk ");
+		sql.append("  LEFT JOIN t_jsd_dict_region reg ON   bspk.province = reg.id  ");
+		sql.append("  LEFT JOIN  t_jsd_dict_region city  ON   bspk.city = city.id  ");
+		sql.append( "  LEFT JOIN  t_jsd_dict_region are  ON   bspk.county = are.id  ");
+		sql.append("  WHERE 1=1 ");
+		if(!StringUtil.isBlank(model.getCompanyName())){
+			sql.append("  AND bspk.company_name like '%"+model.getCompanyName()+"%'  ");
+		}
+		if(!StringUtil.isBlank(model.getStatus())){
+			sql.append("  AND bspk.status = "+model.getStatus()+"  ");
+		}
+		sql.append("  ORDER BY bspk.add_time DESC");
+		
+	      Query query = em.createNativeQuery(sql.toString());
+	     
+			List borrowList = query.getResultList();
+			return borrowList;
+			//JSDP-116 fengguoqin 2015-05-19 end
+	}
+
+}

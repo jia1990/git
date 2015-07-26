@@ -1,0 +1,134 @@
+package com.ddtkj.p2psys.account.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * @描述：借款人提现复审失败
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月17日
+ */
+public class DrawFirstTrialFailInvesterExecuter extends BaseExecuter {
+	private String accountLogType = Constant.CASH_FIRST_TRIAL_FAIL;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId",
+				this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(
+				Constant.ADMIN_ID));
+		// 操作金额
+		log.setRechargeMoney(rechargeMoney);
+		log.setAwardMoney(awardMoney);
+		log.setInterestMoney(interestMoney);
+		log.setReturnCapitalMoney(returnCapitalMoney);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		// 账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		// 账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte) 0);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		// accountDao.modify(0, -money, money, user.getUserId());
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		// 账户各类可用金额
+		account.setRechargeUsable(BigDecimalUtil.add(
+				account.getRechargeUsable(), rechargeMoney));
+
+		account.setAwardUsable(BigDecimalUtil.add(account.getAwardUsable(),
+				awardMoney));
+
+		account.setInterestUsable(BigDecimalUtil.add(
+				account.getInterestUsable(), interestMoney));
+
+		account.setReturnCapitalUsable(BigDecimalUtil.add(
+				account.getReturnCapitalUsable(), returnCapitalMoney));
+		// 账户各类冻结金额
+		account.setFreezeUseAward(BigDecimalUtil.add(
+				account.getFreezeUseAward(), -awardMoney));
+
+		account.setFreezeUseReturnCapital(BigDecimalUtil.add(
+				account.getFreezeUseReturnCapital(), -returnCapitalMoney));
+
+		account.setFreezeUseInterest(BigDecimalUtil.add(
+				account.getFreezeUseInterest(), -interestMoney));
+
+		account.setFreezeUseRecharge(BigDecimalUtil.add(
+				account.getFreezeUseRecharge(), -rechargeMoney));
+
+		if (account.getRechargeUsable() < 0) {
+			throw new AccountException("充值可用金额不足！", 1);
+		}
+		if (account.getInterestUsable() < 0) {
+			throw new AccountException("利息可用金额不足！", 1);
+		}
+		if (account.getAwardUsable() < 0) {
+			throw new AccountException("奖励可用金额不足！", 1);
+		}
+		if (account.getReturnCapitalUsable() < 0) {
+			throw new AccountException("回款可用金额不足！", 1);
+		}
+		//JSDP-164 wcw 20150527 start
+		accountDao.modifyInvesterAccount(account, user.getUserId());
+		//accountDao.update(account);
+		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+
+	}
+
+	@Override
+	public void handlePoints() {
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.DRAW_FIRST_CHECK_FAIL);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+
+	}
+
+	@Override
+	public void handleInterface() {
+
+	}
+
+	@Override
+	public void extend() {
+
+	}
+}

@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource.html">
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/contact.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/account.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<title>晋商贷</title>
+<script>
+	$(function(){
+		$($(".y_bankLists li")[0]).css({border:"1px solid #0697da"});
+		$($(".y_bankLists li span")[0]).css({display:"block"});
+		$(".y_bankLists li").click(function(){
+		$(".bankselect").find("option").attr("selected","")
+		$(".bankselect").find("option").eq(0).attr("selected","selected")
+			$(".y_bankLists li").css({border:"1px solid #dcdcdc"});
+			$(".y_bankLists li span").css({display:"none"});
+			$(this).css({border:"1px solid #0697da"});
+			$(this).find("span").css({display:"block"});
+		})
+	})
+	$(function () {
+	if($(".y_account_right").height()>$(".y_account_nav").height()){
+		$(".y_account_nav").height($(".y_account_right").height()-24)
+	}
+	$(".bankselect").change(function(){
+		$(".y_bankLists li").css({border:"1px solid #dcdcdc"});
+			$(".y_bankLists li span").css({display:"none"})
+	})
+})
+</script>
+<style>
+.c_deal_content .y_account_nav dd span.c_member_icon{background:url(${webroot}${theme_dir}/images/contact/vip.png) no-repeat 0 2px;}
+.c_deal_content .y_account_nav .c_invest_this span.c_member_icon{background-position:0 -20px;}
+</style>
+</head>
+ <body>
+   <#include "../../include/headerMemberCenter.html">
+	<!--  -->
+	<div class="c_deal">
+		<div class="c_deal_content" style="overflow: hidden;">
+			<!-- 左侧导航 -->
+			<#assign mid="m_info" >
+			<#include "../account_menu.html">
+			<!-- 右侧 -->
+			<div class="c_deal_record y_account_right y_account_password_right">
+				<!-- 账户设置 -->
+				<div class="c_detail_title">
+					<a href="bank.html" class="c_detail_back">返回</a>
+					<span>我的银行卡</span>
+					<b></b>
+				</div>
+				<p class="y_reminder_p" style="margin-top: 0px;margin-bottom: 30px;padding-left: 34px;">请选择银行<em style="color:#ff7800;">（绑定提现银行卡，仅能添加与您实名认证信息一致的储蓄卡）</em></p>
+				
+					<#if dictList??>
+						<ul class="y_bankLists" style="overflow-y:scroll;height:290px;width:764px;">					
+						<#list dictList as item>
+							<#if item_index+1 lte 15 >
+							<li><img  class="imgBankName" data-val="${item.name!}"  src="${webroot}${theme_dir}/images/bank/${item.value!}.jpg"><span></span></li>
+							</#if>
+						</#list>
+						</ul>
+						
+						<#if (dictList?size>16)>
+						<label>其它银行</label>
+						<select class="bankselect" style="outline:none;margin-left:34px;margin-bottom:20px;border: 1px solid #c9c9cf;width:200px;height:30px;">
+						<option value="">请选择</option>
+						<#list dictList as item>
+						<#if item_index+1 gt 15 >
+							<option value="${item.name!}">${item.name!}</option>
+						</#if>	
+						</#list>
+						</select>
+						</#if>
+						
+					</#if>
+				
+				<p class="y_reminder_p" style="margin-top: 0px;margin-bottom: 30px;padding-left: 34px;">填写银行卡信息</p>
+				<form class="y_forms" style="padding-left: 205px;" id="addBankForm" method="post" action="${webroot}/member/cash/addBank.html" >
+						<!-- <p class="y_tishis">未绑定汇潮支付，不能添加银行卡，请先<a href="account_index_ICBCPAY.html">绑定汇潮支付</a></p> -->
+						
+						<input type="hidden" id="bank" name="bank" value="${dictList[0].value!}" class="{required:true}" />
+						
+						<label class="y_input_label">持卡人</label><input type="text" class="{required:true}" /><br/>
+						
+						<label class="y_input_label">卡号</label><input type="text" class="{required:true}"  name="bankNo" onKeyUp="value=value.replace(/[^0-9]/g,'')"/><br/>
+
+						<label class="y_input_label">支行</label><input type="text" class="{required:true}"  name="branch" /><br/>
+						
+						<label class="y_input_label" >省</label><select name="province" id="province_new" class="{required:true}" >
+							<option value="">请选择</option>
+						</select>
+						<label class="y_input_label"  style="width:30px;">市</label><select name="city" id="city_new" class="{required:true}">
+						<option value="" >请选择</option>
+						</select><label class="y_input_label"></label>
+						<br/>
+
+						<input type="hidden" name="user_id" value="${session_user.userId}" />
+						<input type="submit" value="确认提交" name="name" class="y_submits" style="margin-bottom:34px;margin-left: 156px;"/>
+				</form>
+			</div>
+		</div>
+	</div>
+	<#include "../../include/footer.html">
+ </body>
+ <script>
+ 	seajs.use("${webroot}${theme_dir}/media/js/member/cash_addBank")
+ </script>
+  <script>
+	$(function(){
+		$($(".y_account_nav dd")[2]).addClass("c_invest_this");
+	})
+</script>
+</html>

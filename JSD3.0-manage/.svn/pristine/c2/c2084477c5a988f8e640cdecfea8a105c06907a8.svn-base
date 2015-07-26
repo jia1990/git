@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>提现管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<style type="text/css">
+.searchBtn{
+display: inline-block;
+width: 80px;
+line-height: 30px;
+margin-left: 6px;
+text-align: center;
+background-color: #4B93CF;
+border-bottom: 3px solid #317CBA;
+font-size: 16px;
+color: #FFF;
+border-radius: 5px;
+}
+</style>
+</head>
+<body style="padding:0 20px;">
+<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+<div>本地：</div>
+	<div class="popShow" style="padding-bottom:0;height:50%">
+		<div class="showItem">
+			用户名：${draw.user.userName!}
+		</div>
+		<div class="showItem">
+			订单号：${draw.drawTradeNo!}
+		</div>
+		<div class="showItem">
+			真实姓名：${draw.user.realName!}
+		</div>
+		<div class="showItem">
+			银行卡账号：${draw.bankNo!}
+		</div>
+		<div class="showItem">
+			提现实际到账总额：￥${draw.drawAmount-draw.drawFee!}
+		</div>
+		<div class="showItem">
+			提现状态：
+			
+			<#if draw.drawHandleStatus == '00'>
+				申请处理中
+			<#elseif draw.drawHandleStatus == '11'>
+				初审通过
+			<#elseif draw.drawHandleStatus == '10'>
+				初审失败
+			<#elseif draw.drawHandleStatus == '21'>
+				复审通过
+			<#elseif draw.drawHandleStatus == '20'>
+				复审未通过
+			<#elseif draw.drawHandleStatus == '99'>
+				取消提现
+			<#elseif draw.drawHandleStatus=='88'>
+				银行处理失败
+			<#elseif draw.drawHandleStatus=='30'>
+				提现成功
+			<#elseif draw.drawHandleStatus == '42'>
+				等待银行转账
+			<#elseif draw.drawHandleStatus=='41'>
+				汇潮请求失败
+				<#elseif draw.drawHandleStatus=='31'>
+				补单成功
+			<#else>
+				错误状态
+			</#if>
+		</div>
+		<#if fillOrderLog??>
+		
+		<div class="showItem">
+			补单人：  ${fillOrderLog.optUser.name!}
+		</div>
+		<div class="showItem">
+			补单时间：  ${fillOrderLog.optTime?string("yyyy-MM-dd HH:mm:ss")}
+		</div>
+		
+	</#if>
+	
+	</div>
+	<div>一麻袋：</div>
+	<div class="popShow" style="padding-bottom:0;">
+		<div class="showItem">
+			昵称（网站用户名）：  ${ymdQueryReturnDetails.nickName!}
+		</div>
+		<div class="showItem">
+			订单号：${ymdQueryReturnDetails.outTradeNo!}
+		</div>
+		<div class="showItem">
+			返回状态：<#if ymdQueryReturn??&&ymdQueryReturn.resultCode??>
+						<#if ymdQueryReturn.resultCode=='00'>
+						        成功
+						<#else>
+						        失败
+						</#if>
+			       </#if>
+		</div>
+		<div class="showItem">
+			查询模式： <#if ymdQueryReturnDetails.mode=='withdrawal'>提现<#else>错误</#if>
+		</div>
+		<div class="showItem">
+			提现需到账金额：  ￥${ymdQueryReturnDetails.amount!}
+		</div>
+		<div class="showItem">
+			交易状态：  <#if ymdQueryReturnDetails.tradeStatus=='00'>
+			                                      提现成功
+			       <#elseif ymdQueryReturnDetails.tradeStatus=='66'>
+			                                     等待银行转账
+			       <#else>
+			       ${ymdQueryReturnDetails.tradeStatus}
+			                                       提现失败
+			       </#if>
+		</div>
+		<div class="showItem">
+			一麻袋数字账户：  ${ymdQueryReturn.numberId!}
+		</div>
+	</div>
+	
+	
+	
+	<#if ymdQueryReturn.resultCode=='00'&&ymdQueryReturnDetails.tradeStatus!='66'&&draw.drawHandleStatus == '42'>
+	<div class="popShow" style="padding-bottom:0;">
+		<!-- 如果两边的状态不一致则补单 -->
+		<a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.repairCashFun('${ymdQueryReturnDetails.tradeStatus!}','${ymdQueryReturn.resultCode!}','${ymdQueryReturnDetails.amount!!}','${ymdQueryReturnDetails.outTradeNo!}','${draw.drawTradeNo}','${draw.drawHandleStatus}','${drawSupplementSingle}','/modules/account/draw/accountDraw/repairCash.html');">补单</a>
+	</div>
+	</#if>
+</div>
+</body>
+
+</html>

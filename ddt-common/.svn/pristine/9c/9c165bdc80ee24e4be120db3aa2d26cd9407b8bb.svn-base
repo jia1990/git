@@ -1,0 +1,121 @@
+package com.rongdu.common.util;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import com.alibaba.fastjson.JSON;
+/**
+ * 解析json数据
+ * @author ljb
+ * @dateTime 2015-01-17 
+ */
+public class JsonParse {
+	
+	/**
+	 * 根据key，取传入的json字符串的值
+	 * @return object
+	 */
+	public static Object getValueByKey(String jsonString ,String key) {
+		if (key == null) { return null; }
+		Map<String, Object>	map = null;
+		try {
+			map=(Map<String, Object>) JSON.parse(jsonString);
+		} catch (Exception e) {
+		}
+		if(map==null) map=new HashMap<String, Object>();
+		Object obj = map.get(key);
+		return obj;
+	}
+	 private static class TrustAnyTrustManager implements X509TrustManager {
+		 
+	        public void checkClientTrusted(X509Certificate[] chain, String authType)
+	                throws CertificateException {
+	        }
+	 
+	        public void checkServerTrusted(X509Certificate[] chain, String authType)
+	                throws CertificateException {
+	        }
+	 
+	        public X509Certificate[] getAcceptedIssuers() {
+	            return new X509Certificate[] {};
+	        }
+	    }
+	 
+	    private static class TrustAnyHostnameVerifier implements HostnameVerifier {
+	        public boolean verify(String hostname, SSLSession session) {
+	            return true;
+	        }
+	    }
+	 public static byte[] post(String url, String content, String charset)
+	            throws NoSuchAlgorithmException, KeyManagementException,
+	            IOException {
+	        SSLContext sc = SSLContext.getInstance("SSL");
+	        sc.init(null, new TrustManager[] { new TrustAnyTrustManager() },
+	                new java.security.SecureRandom());
+	 
+	        URL console = new URL(url);
+	        HttpsURLConnection conn = (HttpsURLConnection) console.openConnection();
+	        conn.setSSLSocketFactory(sc.getSocketFactory());
+	        conn.setHostnameVerifier(new TrustAnyHostnameVerifier());
+	        conn.setDoOutput(true);
+	        conn.connect();
+	        DataOutputStream out = new DataOutputStream(conn.getOutputStream());
+	        out.write(content.getBytes(charset));
+	        // 刷新、关闭
+	        out.flush();
+	        out.close();
+	        InputStream is = conn.getInputStream();
+	        if (is != null) {
+	            ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+	            byte[] buffer = new byte[1024];
+	            int len = 0;
+	            while ((len = is.read(buffer)) != -1) {
+	                outStream.write(buffer, 0, len);
+	            }
+	            is.close();
+	            return outStream.toByteArray();
+	        }
+	        return null;
+	    }
+	
+	/**
+	 * 根据key，取传入的json字符串的值
+	 * @return List
+	 */
+	public static List getValueListByKey(String jsonString ,String key) { 	
+		Object obj = getValueByKey(jsonString,key);
+		if(obj==null) return new ArrayList();
+		List list =new ArrayList();
+		try {
+			list = (List) obj;
+		} catch (Exception e) {
+		}
+		return list;
+	} 
+	
+	/**
+	 * 根据key，取传入的json字符串的值
+	 * @return String
+	 */
+	public static String getValueStrByKey(String jsonString ,String key) {
+		return StringUtil.isNull(getValueByKey(jsonString,key));
+	} 
+}

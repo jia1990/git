@@ -1,0 +1,180 @@
+package com.ddtkj.p2psys.core.usercenter;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * 错误代码：
+ * 11开头代表用通用参数
+ * 12开头代表用户中心参数
+ * 13开头代表订单支付参数
+ * 
+ * 类别之后0代表参数为空，1代表参数格式错误
+ * 
+ * @author ZDF
+ * @date 2015年4月5日
+ *
+ */
+public class ErrorCode {
+	/** 错误代码：系统繁忙  */
+	public static final int SYS_BUSY = -1;
+	
+	/** 错误代码：请求成功 */
+	public static final int SUCCESS = 0;
+	
+	/** 错误代码：请求成功 */
+	public static final String SUCCESS_STRING = "ok";
+
+	/** 错误代码：appId为空 */
+	public static final int GLOBAL_APPID_NULL = 110001;
+	
+	/** 错误代码：appSecret为空 */
+	public static final int GLOBAL_APP_SECRET_NULL = 110002;
+	
+	/** 错误代码：accessToken为空 */
+	public static final int GLOBAL_ACCESS_TOKEN_NULL = 110003;
+	
+	/** 错误代码：签名为空 */
+	public static final int GLOBAL_SIGN_NULL = 110004;
+	
+	/** 错误代码：回调地址为空 */
+	public static final int GLOBAL_URL_NULL = 110005;
+	
+
+	/** 错误代码：appId未注册 */
+	public static final int GLOBAL_APPID_NOT_FOUND = 111001;
+	
+	/** 错误代码：client被停用 */
+	public static final int GLOBAL_APPID_UNABLE = 111002;
+	
+	/** 错误代码：appSecret错误 */
+	public static final int GLOBAL_APP_SECRET_ERROR = 111003;
+	
+	/** 错误代码：accessToken错误 */
+	public static final int GLOBAL_ACCESS_TOKEN_ERROR = 111004;
+	
+	/** 错误代码：签名错误 */
+	public static final int GLOBAL_SIGN_ERROR = 111005;
+	
+	
+	/** 错误代码：state为空 */
+	public static final int UC_STATE_NULL = 120001;
+	
+	/** 错误代码：openId为空 */
+	public static final int UC_OPEN_ID_NULL = 120002;
+	
+	/** 错误代码：userName为空 */
+	public static final int UC_USER_NAME_NULL = 120003;
+	
+	/** 错误代码：mobile为空 */
+	public static final int UC_MOBILE_NULL = 120004;
+	
+	/** 错误代码：email为空 */
+	public static final int UC_EMAIL_NULL = 120005;
+	
+	/** 错误代码：avatar为空 */
+	public static final int UC_AVATAR_NULL = 120006;
+	
+	
+	/** 错误代码：openId错误 */
+	public static final int UC_OPEN_ID_ERROR = 121001;
+	
+	/** 错误代码：userName不可用 */
+	public static final int UC_USER_NAME_DISABLE = 121002;
+	
+	/** 错误代码：userName错误 */
+	public static final int UC_USER_NAME_ERROR = 121003;
+	
+	/** 错误代码：mobile错误 */
+	public static final int UC_MOBILE_ERROR = 121004;
+	
+	/** 错误代码：mobile不可用 */
+	public static final int UC_MOBILE_DISABLE = 121005;
+	
+	/** 错误代码：email错误 */
+	public static final int UC_EMAIL_ERROR = 121006;
+	
+	/** 错误代码：avatar错误 */
+	public static final int UC_AVATAR_ERROR = 121007;
+	
+	
+	/** 错误代码：tradeType为空 */
+	public static final int PAY_TRADE_TYPE_NULL = 130001;
+	
+	/** 错误代码：orderNo为空 */
+	public static final int PAY_ORDER_NO_NULL = 130002;
+	
+	/** 错误代码：money为空 */
+	public static final int PAY_MONEY_NULL = 130003;
+	
+	/** 错误代码：product为空 */
+	public static final int PAY_PRODUCT_NULL = 130004;
+	
+	
+	/** 错误代码：money格式错误 */
+	public static final int PAY_MONEY = 131001;
+	
+	/** 错误代码：不支持的tradeType类型 */
+	public static final int PAY_TRADE_TYPE = 131002;
+	
+	/** 错误代码：订单校验失败 */
+	public static final int PAY_CHECK_FAILED = 131003;
+	
+	/** 错误代码：订单未找到 */
+	public static final int PAY_ORDER_NO_FOUND = 131004;
+	
+	/** 错误代码：下单失败 */
+	public static final int PAY_ORDER_FAILED = 131005;
+	
+	/**
+	 * 获取错误代码对应的错误信息
+	 * @author ZDF
+	 * @date 2015年4月5日
+	 * @param code
+	 * @return
+	 */
+	public static String message(int code) {
+		return errorCodes().get(code);
+	}
+	
+	/** 错误代码的显示名称 */
+	private static Map<Integer, String> errorCodes() {
+		Map<Integer, String> map = new LinkedHashMap<Integer, String>();
+		map.put(SYS_BUSY, "系统繁忙");
+		map.put(SUCCESS, "请求成功");
+		map.put(GLOBAL_APPID_NULL, "appId为空");
+		map.put(GLOBAL_ACCESS_TOKEN_NULL, "accessToken为空");
+		map.put(GLOBAL_APP_SECRET_NULL, "appSecret为空");
+		map.put(GLOBAL_SIGN_ERROR, "签名不匹配");
+		map.put(GLOBAL_URL_NULL, "url为空");
+		map.put(GLOBAL_APPID_NOT_FOUND, "appId未注册");
+		map.put(GLOBAL_APPID_UNABLE, "系统维护，暂停服务...");
+		map.put(GLOBAL_APP_SECRET_ERROR, "appSecret错误");
+		map.put(GLOBAL_ACCESS_TOKEN_ERROR, "accessToken错误");
+		
+		map.put(UC_STATE_NULL, "state为空");
+		map.put(UC_OPEN_ID_NULL, "openId为空");
+		map.put(UC_MOBILE_NULL, "mobile为空");
+		map.put(UC_OPEN_ID_ERROR, "openId错误");
+		map.put(UC_USER_NAME_NULL, "userName为空");
+		map.put(UC_USER_NAME_DISABLE, "userName不可用");
+		map.put(UC_USER_NAME_ERROR, "userName错误：不可包含中文字符，长度在6位以上");
+		map.put(UC_MOBILE_ERROR, "mobile错误");
+		map.put(UC_MOBILE_DISABLE, "mobile不可用");
+		map.put(UC_EMAIL_NULL, "email为空");
+		map.put(UC_EMAIL_ERROR, "email错误");
+		map.put(UC_AVATAR_ERROR, "avatar错误");
+		
+		map.put(PAY_TRADE_TYPE_NULL, "tradeType为空");
+		map.put(PAY_ORDER_NO_NULL, "orderNo为空");
+		map.put(PAY_MONEY_NULL, "money为空");
+		map.put(PAY_PRODUCT_NULL, "product为空");
+		map.put(PAY_MONEY, "money格式错误");
+		map.put(PAY_TRADE_TYPE, "不支持的tradeType类型");
+		map.put(PAY_CHECK_FAILED, "订单校验失败");
+		map.put(PAY_ORDER_NO_FOUND, "订单未找到 ");
+		map.put(PAY_ORDER_FAILED, "下单失败 ");
+		
+		return map;
+	}
+}

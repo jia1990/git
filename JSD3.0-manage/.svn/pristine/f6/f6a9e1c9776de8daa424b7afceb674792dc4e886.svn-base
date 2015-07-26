@@ -1,0 +1,149 @@
+
+<script type="text/javascript">
+$(function(){
+
+	// 图片大小限制提示
+	if($('#siteNid').val() == 'riskMoney'){			// 风险备用金图片
+		$('#remarkAlt').html('（建议大小：宽:550  高:600）');
+	}else{											// 其他
+		$('#remarkAlt').html('（建议大小：无）');
+	}
+	
+	
+	$.ajax({
+		url:"/modules/column/riskMoney/getArticlePic.html?id=${articleNew.id}",
+		type:"get",
+		dataType:"json",
+		success:function(data){
+			if(data.list.length > 0){
+				for(var i = 0;i < data.list.length; i++){
+					var sHtml = "";
+					sHtml += '<li data-mum="' + data.list[i].id + '">';
+					sHtml += '<a href="' + data.list[i].picUrl + '" class="fileshow" rel="group1" ondragstart="return false"><img src="' + data.list[i].picUrl + '" alt="" style="width:100px;height:100px;float:left;" ></a>';
+					sHtml += '<a class="closePic" style="float:left;" href="javascript:;" title="删除图片" ondragstart="return false">x</a>';
+					sHtml += '</li>';
+					$(".photoUpload").append(sHtml);
+					
+				}
+			}
+		}
+		
+	});
+	
+	seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");
+	
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/column/article/articleEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址
+});
+</script>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>
+
+
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">栏目：</label>
+		     <div class="ipt">
+		     	<input type="text" id="siteNewName" class="w400 easyui-validatebox" name="siteNewName" value="${siteNew.name!}" readonly="readonly">
+		     	<input type="hidden" id="siteId" name="siteId" value="${siteNew.id!}">
+		     	<input type="hidden" id="siteNid" name="siteNid" value="${siteNew.nid!}">
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" value="${articleNew.title}" class="w400 easyui-validatebox" data-options="required: true" maxlength="50"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+				<input type="radio" name="status" value="1" <#if articleNew.status?? && articleNew.status ==1>checked="checked"</#if>/>&nbsp;&nbsp;显示
+		     	<input type="radio" name="status" value="0" <#if articleNew.status?? && articleNew.status ==0>checked="checked"</#if>/>&nbsp;&nbsp;隐藏
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" class="easyui-numberbox" value="${articleNew.sort!}" data-options="required: true" maxlength="4"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="introduction"  maxlength="120">${articleNew.introduction!}</textarea>	
+		     </div>
+		</div>
+		<div><br /></div>
+		
+		<div class="borrowForm">
+
+			<table style="height:40px;">
+				<tr style="height:40px;">
+					<td class="borrowFormTitle">图片信息</td>
+					<td class="borrowForme"><span id="remarkAlt">()</span></td>
+				</tr>
+			</table>
+			<div class="guarantee_type">
+				<div id="uploadGuaranteeBox" data-arr="uploadFile" style="height: auto;">
+					<ul id="uploadPiclistRiskMoney" class="photoUpload" style="list-style: none; padding: 0; margin: 0;">
+				    	
+				    	<li class="add_btn" style="float: left;">
+				        	<i class="a"></i> <i class="b"></i>
+				            	<input type="file" name="file" id="uploadFile4" onchange="return ajaxFileUpload1('uploadFile4','/imageUp.jsp','riskMoney','3');" title="点击上传图片" />
+				        </li>
+				        
+				    </ul>
+				</div>
+			</div>
+
+		</div>
+		
+		
+		<input name="addTime" value="${articleNew.addTime?string('yyyy-MM-dd HH:mm:ss')}" type="hidden"/>
+		<input name="picPath" value="${articleNew.picPath!}" type="hidden"/>
+		<input name="addIp" value="${articleNew.addIp}" type="hidden"/>
+		<input name="clicks" value="${articleNew.clicks}" type="hidden"/>
+		<input name="id" value="${articleNew.id}" type="hidden"/>
+		<input name="content" value="风险备用金" type="hidden"/>
+
+		<input name="articleEditToken" value="${articleEditToken!}" type="hidden">
+	</form>
+</div>
+
+
+<!-- 编辑器 -->
+<!-- <script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+    var descriptionBox = UE.getEditor('detail', {
+        autoHeight: false,
+        initialFrameWidth:728,
+        toolbars: [
+                   ['undo', 'redo', 'justifyleft', 'justifyright','justifycenter', 'justifyjustify', 'forecolor', 'fontfamily', 
+                    'fontsize', 'paragraph', 'customstyle','anchor', 'bold', 'indent','italic','underline', 'strikethrough', 'subscript','fontborder', 
+                    'superscript', 'formatmatch', 'source', 'blockquote', 'pasteplain', 'selectall', 'print', 'horizontal', 'removeformat', 'time', 
+                     'date', 'unlink', 'insertrow', 'insertcol', 'mergeright', 'mergedown','deleterow', 'deletecol', 'splittorows', 'splittocols', 'splittocells',
+                       'deletecaption','inserttitle','mergecells', 'deletetable', 'cleardoc', 'insertparagraphbeforetable','simpleupload', 'insertimage','edittable',
+                       'edittd', 'link', 'spechars', 'searchreplace','backcolor','insertorderedlist','insertunorderedlist', 'fullscreen', 'directionalityltr', 'directionalityrtl', 
+                       'rowspacingtop', 'rowspacingbottom', 'pagebreak', 'imagenone', 'imageleft', 'imageright', 'attachment','imagecenter','lineheight','edittip ', 'autotypeset', 
+                       'touppercase', 'tolowercase', 'background', 'template','inserttable', 'drafts', 'charts'
+                   ]
+               ]
+        
+    });
+   
+</script>
+
+ -->
+

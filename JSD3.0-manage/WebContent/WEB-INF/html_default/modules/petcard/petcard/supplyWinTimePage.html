@@ -1,0 +1,53 @@
+<script type="text/javascript">
+$(function(){
+	$.fn.dataGridOptions.formSubFun("#form",'/modules/petcard/petcard/supplyWinTime.html');
+});
+</script>
+<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+<form id="form"  method="post" enctype="multipart/form-data">
+	<div>本地：</div>
+	<div class="popShow" style="padding-bottom:0;height:50%">
+		<div class="showItem">
+			卡号：${petCard.cardNo!}
+		</div>
+		<div class="showItem">
+			状态：
+			<#if petCard.status=="ua">
+				未激活
+			<#elseif petCard.status=="da">
+				已激活
+			<#elseif recharge.tradeStatus=="dd">
+				已失效
+			<#else>
+				
+			</#if>
+		</div>
+		
+	</div>
+	<div>云购：</div>
+	<div class="popShow" style="padding-bottom:0;">
+		<div class="showItem">
+			卡号：  ${petCard.cardNo!}
+		</div>
+		
+		<#if winqTime=="">
+		<#else>
+		<div class="showItem">
+			中奖时间：${winqTime!}
+		</div>
+		</#if>
+	</div>
+	
+	<input type="hidden" name="cardNo" value="${petCard.cardNo}">
+	<input type="hidden" name="winqTime" value="${winqTime!}">
+	<div class="showItem">
+		是否补单：
+		<input type="radio" name="isSupply" value="Y" />是
+		<input type="radio" name="isSupply" value="N" checked="checked"/>否
+	</div>
+	
+	</form>
+</div>
+	
+	
+</body>

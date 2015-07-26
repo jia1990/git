@@ -1,0 +1,93 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.webpetcard.domain;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：体验卡汇总实体  JSDP-171
+ * @作者：xingjia@ddtkj.com
+ * @创建时间：2015年7月11日 
+ */
+@Entity
+@Table(name = "t_jsd_pet_card_sum")
+public class PetCardSum {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = "id")
+	private long id;
+	private double ptAccountAll;//体验卡总额
+	private double ptAccountUnuse;//体验卡剩余可用金额
+	private double ptAccountUsed;//体验卡使用金额
+	private double ptAccountLose;//体验卡失效金额
+	private double ptAccountFzen;//体验卡冻结金额
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;//获取体验卡用户id
+	private String userName;//获取体验卡用户名
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public double getPtAccountAll() {
+		return ptAccountAll;
+	}
+	public void setPtAccountAll(double ptAccountAll) {
+		this.ptAccountAll = ptAccountAll;
+	}
+	public double getPtAccountUnuse() {
+		return ptAccountUnuse;
+	}
+	public void setPtAccountUnuse(double ptAccountUnuse) {
+		this.ptAccountUnuse = ptAccountUnuse;
+	}
+	public double getPtAccountUsed() {
+		return ptAccountUsed;
+	}
+	public void setPtAccountUsed(double ptAccountUsed) {
+		this.ptAccountUsed = ptAccountUsed;
+	}
+	public double getPtAccountLose() {
+		return ptAccountLose;
+	}
+	public void setPtAccountLose(double ptAccountLose) {
+		this.ptAccountLose = ptAccountLose;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	public double getPtAccountFzen() {
+		return ptAccountFzen;
+	}
+	public void setPtAccountFzen(double ptAccountFzen) {
+		this.ptAccountFzen = ptAccountFzen;
+	}
+	
+	
+
+}

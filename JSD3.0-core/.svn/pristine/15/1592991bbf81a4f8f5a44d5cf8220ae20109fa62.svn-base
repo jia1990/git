@@ -1,0 +1,130 @@
+package com.rongdu.p2psys.user.service.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.user.dao.UserLogisticsAddressDao;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+import com.rongdu.p2psys.user.service.UserLogisticsAddressService;
+
+@Service("userLogisticsAddressService")
+public class UserLogisticsAddressServiceImpl implements UserLogisticsAddressService{
+
+	@Resource
+	private UserLogisticsAddressDao userLogisticsAddressDao;
+	
+	@Override
+	public void addLogisticsAddress(UserLogisticsAddress userLogisticsAddress) {
+		
+		userLogisticsAddressDao.addLogisticsAddress(userLogisticsAddress);
+	}
+
+	@Override
+	public List<UserLogisticsAddress> list(long userId) {
+		// TODO Auto-generated method stub
+		return userLogisticsAddressDao.list( userId);
+	}
+
+	@Override
+	public int countLogisticsAddress(long userId) {
+		// TODO Auto-generated method stub
+		return userLogisticsAddressDao.countLogisticsAddress(userId);
+	}
+
+	@Override
+	public void modifyLogisticsAddress(UserLogisticsAddress userLogisticsAddress) {
+		
+		userLogisticsAddressDao.modifyLogiscAddress(userLogisticsAddress);
+	}
+
+	@Override
+	public void deleteLogisticsAddress(int id) {
+		// TODO Auto-generated method stub
+		 userLogisticsAddressDao.deleteLogisticsAddress(id);
+	}
+
+	@Override
+	public void modifyIsDefault(long userId,int id) {
+		// TODO Auto-generated method stub
+		userLogisticsAddressDao.modifyIsDefault(userId,id);
+	}
+
+	@Override
+	public UserLogisticsAddress queryLogisticsAddress(int id) {
+		// TODO Auto-generated method stub
+		return userLogisticsAddressDao.queryLogisticsAddress(id);
+	}
+
+	@Override
+	public PageDataList<UserLogisticsAddress> addressPageDataList(
+			Map<String, Object> map, int currentPage, int pageSize) {
+		
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pageSize);
+		String otherAddress = (String) map.get("otherAddress");
+		if(null != otherAddress){
+			if(!"all".equals(otherAddress)){
+				param.addParam("isDefault", 0);
+			}
+		}else{
+			param.addParam("isDefault", 1);
+		}
+		
+
+		String userType = (String) map.get("userType");
+		if(null != userType && !"".equals(userType)){
+			
+			// 投资人
+			if(userType.equals("10")){
+				//param.addParam("user.userCache.borrowType", Operators.EQ, null);
+				param.addParam("user.userCache.userType", Operators.EQ, 10);
+			}
+			// 借款人
+			if(userType.equals("11")){
+				param.addParam("user.userCache.userType", Operators.EQ, 11);
+				//param.addParam("user.userCache.borrowType", Operators.EQ, "F");
+				
+			}
+			
+		}
+		param.addParam("user.isLocked", Operators.NOTEQ, "FF");
+		
+		
+		UserLogisticsAddress addressEntity =  (UserLogisticsAddress) map.get("model");
+		if(null != addressEntity && null != addressEntity.getPhone()){
+			param.addParam("phone", Operators.LIKE, addressEntity.getPhone());
+		}
+		if(null != addressEntity && null!=addressEntity.getUser() && StringUtil.isNotBlank(addressEntity.getUser().getUserName())){
+			param.addParam("user.userName", Operators.LIKE, addressEntity.getUser().getUserName());
+		}
+
+		
+		return userLogisticsAddressDao.addressPageDataList(param);
+	}
+	
+	/**
+	 * 查询某用户的其他收货地址
+	 * @author sunxiaoyong@ddtkj.com
+	 */
+	@Override
+	public PageDataList<UserLogisticsAddress> otherAddressList(int userId) {
+		
+		return userLogisticsAddressDao.otherAddressList(userId);
+	}
+
+	@Override
+	public UserLogisticsAddress queryLogisticsAddressByUserId(long userId) {
+		
+		return userLogisticsAddressDao.queryLogisticsAddressByUserId(userId);
+	}
+
+	
+	
+}

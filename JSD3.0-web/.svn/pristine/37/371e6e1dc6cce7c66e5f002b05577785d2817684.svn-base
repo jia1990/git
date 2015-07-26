@@ -1,0 +1,407 @@
+<#include "header.htm"/>
+<#assign preview = preview?default(false)/>
+<#assign logModeration = moderationLoggingEnabled && isEdit?default(false) && isModerator && user.id != post.userId/>
+<#assign allowPoll = setType?default(true) && canCreatePolls?default(false)/>
+
+<script type="text/javascript">
+var CONTEXTPATH = "${contextPath}";
+var SERVLET_EXTENSION  = "${extension}";
+</script>
+<style>
+.forums_body_bg {
+background: #fff;
+width: 980px !important;
+padding: 0;}
+.bd-udit{width:998px;}
+@-moz-document url-prefix(){.bd-udit{ width:920px;}}
+
+</style>
+<style type="text/css">@import url( ${contextPath}/themes/bbs/templates/${templateName}/styles/tabs.css?${startupTime} );</style>
+<style type="text/css">@import url( ${contextPath}/themes/bbs/templates/${templateName}/styles/SyntaxHighlighter.css?${startupTime} );</style>
+
+<script type="text/javascript" src="${contextPath}/themes/bbs/templates/${templateName}/js/jquery.js?${startupTime}"></script>
+<script type="text/javascript" src="${contextPath}/themes/bbs/templates/${templateName}/js/post.js?${startupTime}"></script>
+
+
+<script type="text/javascript" src="${contextPath}/themes/bbs/templates/${templateName}/js/utils.js?${startupTime}"></script>
+
+
+<script type="text/javascript" charset="utf-8" src="${contextPath}/plugins/ueditor/ueditor.parse.js"> </script>
+<script type="text/javascript" charset="utf-8" src="${contextPath}/plugins/ueditor/ueditor.config.js"> </script>
+<script type="text/javascript" charset="utf-8" src="${contextPath}/plugins/ueditor/ueditor.all.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="${contextPath}/plugins/ueditor/zh-cn.js"></script>
+
+
+
+<#assign preview = preview?exists && preview/>
+<#assign isNewPost = isNewPost?exists && isNewPost/>
+<#assign isEdit = isEdit?if_exists/>
+<#assign isNewTopic = (!topic?exists || topic.id == -1)/>
+<#assign attachmentsEnabled = attachmentsEnabled?exists && attachmentsEnabled/>
+
+<#if !maxAttachments?exists>
+	<#assign maxAttachments = 0/>
+</#if>
+
+<#assign htmlChecked = "checked=\"checked\""/>
+<#assign bbChecked = ""/>
+<#assign signatureChecked = "checked=\"checked\""/>
+<#assign repliesChecked = "checked=\"checked\""/>
+<#assign smiliesChecked = ""/>
+
+<#if isNewPost && !preview && !post?exists>
+	<#if user.isHtmlEnabled()><#assign htmlChecked = ""/></#if>
+	<#if !user.isBbCodeEnabled()><#assign bbChecked = "checked=\"checked\""/></#if>
+	<#if !user.isSmiliesEnabled()><#assign smiliesChecked = "checked=\"checked\""/></#if>
+	<#if !user.getAttachSignatureEnabled()><#assign signatureChecked = ""/></#if>
+<#elseif post?exists>
+	<#if post.isHtmlEnabled()><#assign htmlChecked = ""/></#if>
+	<#if !post.isBbCodeEnabled()><#assign bbChecked = "checked=\"checked\""/></#if>
+	<#if !post.isSmiliesEnabled()><#assign smiliesChecked = "checked=\"checked\""/></#if>
+	<#if !post.isSignatureEnabled()><#assign signatureChecked = ""/></#if>
+</#if>
+
+<#if !user.isNotifyOnMessagesEnabled()><#assign repliesChecked = ""/></#if>
+
+<form action="${JForumContext.encodeURL("/jforum")}" method="post" enctype="multipart/form-data" name="post" id="post" onsubmit="return validatePostForm(this)">
+<input type="hidden" name="action" value="${action}" />
+<input type="hidden" name="module" value="${moduleName}" />
+<input type="hidden" name="preview" value="0"/>
+<#if forum?exists><input type="hidden" name="forum_id" value="${forum.id}" /></#if>
+<input type="hidden" name="start" value="${start?default("")}" />
+<#if isEdit><input type="hidden" name="post_id" value="${post.id}" /></#if>
+<#if !isNewTopic><input type="hidden" name="topic_id" value="${topic.id}" /></#if>
+
+<#if !session.deleted> 
+<table cellspacing="0" class="bd-udit" cellpadding="10" width="100%" align="center" border="0">
+	<tr>
+		<td class="bodyline">
+			<!-- Preview message -->
+			<table class="preview_message" width="100%" cellspacing="1" cellpadding="4" border="0" <#if !preview>style="display: none"</#if> id="previewTable">
+				<tr>
+					<th  class="preview_message_head">${I18n.getMessage("PostForm.preview")}</th>
+				</tr>
+				<tr>
+					<td class="row1">
+						<img src="${contextPath}/themes/bbs/templates/${templateName}/images/icon_minipost.gif" alt="Post" />
+						<span class="postdetails" id="previewSubject"> ${I18n.getMessage("PostForm.subject")}: <#if postPreview?exists>${postPreview.subject?html}</#if></span>
+					</td>
+				</tr>
+				<tr>
+					<td class="row1" height="100%">
+						<table width="100%" border="0" cellspacing="0" cellpadding="0" style="height:100%">
+							<tr>
+								<td><span id="previewMessage" class="postbody"><#if postPreview?exists>${postPreview.text}</#if></span></td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+				<tr>
+					<td class="spacerow" height="1"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/spacer.gif" alt="" width="1" height="1" /></td>
+				</tr>
+			</table>
+			<br clear="all" />
+			<table class="send_message" cellspacing="1" cellpadding="3" width="100%" border="0">
+					<tr>
+					<th class="send_message_head" colspan="2" height="25">
+						<b>
+						<#if forum?exists>
+							<#if (topic?exists && topic.id > -1)>
+							    <#if isEdit>
+							    	${I18n.getMessage("PostForm.edit")} "${topic.title?html}"
+							    <#else>
+									${I18n.getMessage("PostForm.reply")} "${topic.title?html}"
+								</#if>
+							<#else>
+								${I18n.getMessage("PostForm.title")}
+							</#if>
+						<#else>
+							<#if pmReply?default(false)>
+								${I18n.getMessage("PrivateMessage.reply")}
+							<#else>
+								${I18n.getMessage("PrivateMessage.title")}
+							</#if>
+						</#if>
+						</b>
+					</th>
+				</tr>
+                
+			<#if !forum?exists>
+					<tr>
+						<td class="row1" width="15%" align="right"><span class="gen">${I18n.getMessage("PrivateMessage.user")}</span></td>
+						<td class="row2" width="85%">
+							<#if pmRecipient?exists>
+								<#assign toUsername = toUsername/>
+								<#assign toUserId = toUserId/>
+								<#elseif preview>
+								<#assign toUsername = pm.toUser.username/>
+								<#assign toUserId = pm.toUser.id/>
+								<#elseif quote?default("") == "true" || pmReply?default(false)>
+								<#assign toUsername = pm.fromUser.username/>
+								<#assign toUserId = pm.fromUser.id/>
+							<#else>
+								<#assign toUsername = ""/>
+								<#assign toUserId = ""/>
+							</#if>
+
+							<input type="text" class="post" size="25" name="toUsername" value="${toUsername}"/>&nbsp;
+							<!--  <input type="button" value="${I18n.getMessage("PrivateMessage.findUser")}" name="findUser" class="liteoption" onclick="openFindUserWindow(); return false;" />-->
+							<input type="hidden" name="toUserId" value="${toUserId}" />
+						</td>
+					</tr>
+				</#if>
+
+				<#if errorMessage?exists>
+					<tr>
+						<td colspan="2" align="center"><span class="gen"><font color="#ff0000">${errorMessage}</font></span></td>
+					</tr>
+				</#if>
+
+				<tr>
+					<td class="row1" width="15%" align="right"><span class="gen">${I18n.getMessage("PostForm.subject")}</span></td>
+					<#if post?exists>
+						<#assign subject = post.subject?default("")?html/>
+						<#elseif pmReply?default(false)>
+						<#assign subject = pm.post.subject?html/>
+						<#elseif topic?exists>
+						<#assign subject = I18n.getMessage("Message.replyPrefix") + topic.title?default("")?html/>
+					</#if>
+					<td class="row2" width="85%">
+						<span class="gen">
+							<input class="subject" type="text" tabindex="2" maxlength="100" name="subject" value="${subject?default("")}" /> 
+						</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="row1" valign="top" align="right">
+						<span class="gen" style="width:80px; display:block;">${I18n.getMessage("PostForm.body")}</span>
+			   		<table cellspacing="0" cellpadding="1" border="0" align="right">
+							<tr>
+								<td valign="middle" align="right">
+									<br />
+									<table cellspacing="0" cellpadding="0" width="100%" border="0">
+										<tr align="center">
+											<td  colspan="4" ><span class="gen"></span></td>
+										</tr>
+										<tr align="center">
+											<td colspan="4">
+											</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</td>
+					<br/>
+					<td class="row2" valign="top">
+						<div class="gen">
+							<table cellspacing="0" cellpadding="2" border="0" width="100%">
+								<tr>
+									<td valign="top">
+										<textarea id="editor" tabindex="3" rows="15"  cols="35">
+											<#if post?exists>
+												<#if quote?exists>[引用：${quoteUser}]${post.text?html}]
+												<#else>${post.text?html}
+												</#if>
+											</#if>
+										</textarea> 
+										<script type="text/javascript">
+											UE.getEditor('editor');
+										</script>
+									</td>
+								</tr>
+							</table>
+						</div> 
+					</td>
+				</tr>
+				<!-- Options -->
+				<tr>
+					<td class="row1">&nbsp;</td>
+					<td class="row2">
+						<div id="tabs10">
+							<ul>
+							  
+								<#if attachmentsEnabled>
+								    <li target="postAttachments"><a href="javascript:void(0);" onClick="activateTab('postAttachments', this);"><span>${I18n.getMessage("post.attachments")}</span></a></li>
+								</#if>
+							</ul>
+						</div>
+
+						<!-- Post Options -->
+						
+
+						<!-- Attachments tab -->
+						<#if attachmentsEnabled || attachments?exists>
+							<div id="postAttachments" class="postTabContents" style="display: none; ">
+								<div>
+									<#include "post_attachments_tab.htm"/>
+								</div>
+							</div>
+						</#if>
+					</td>
+				</tr><#if needCaptcha?default(false)>
+					<tr>
+						<td class="row1" valign="middle"><span class="gensmall"><b>${I18n.getMessage("User.captchaResponse")}:</b></span></td>
+						<td class="row2">
+							<input type="text" class="post" style="width: 100px; font-weight: bold;" maxlength="25" size="25" name="captcha_anwser" /> 
+							<img src="${JForumContext.encodeURL("/captcha/generate/${timestamp}")}" border="0" align="middle" id="captcha_img" alt="Captcha unavailable" />
+							<br />
+							<span class="gensmall">${I18n.getMessage("User.hardCaptchaPart1")} <a href="#newCaptcha" onClick="newCaptcha()"><b>${I18n.getMessage("User.hardCaptchaPart2")}</b></a></span>
+						</td>
+					</tr>
+				</#if>
+
+				<#if logModeration>
+					<tr>
+						<td align="center" class="row1 gen"><b>${I18n.getMessage("ModerationLog.moderationLog")}</b></td>
+						<td class="row2 genmed">${I18n.getMessage("ModerationLog.changeReason")} <input type="text" name="log_description" size="50" /><input type="hidden" name="log_type" value="2" /></td>
+					</tr>
+				</#if>
+
+				<#if error?exists>
+					<tr>
+						<td class="row1">&nbsp;</td>
+						<td class="row2"><span class="gen"><font color="red"><b>${error}</b></font></span></td>
+					</tr>
+				</#if>
+				
+				<tr>
+                <td class="send_btb_bg">&nbsp;</td>
+					<td align="center" class="send_btb_bg">
+						<input class="send_btb" id="btnSubmit" accesskey="s" tabindex="6" type="submit"  value="${I18n.getMessage("PostForm.submit")}" name="post" />
+					</td>
+				<input type="hidden" name="message" id="message"/>
+				</tr>
+
+			</table>
+		</td>
+	</tr>
+</table>
+<#else>
+<br><br><br><br><br><br><br>
+<p align="center"><font color="red">尊敬的用户，因为某种因素，您已经被禁止发表任何言论，如有疑问，请与管理员或者在线客服联系，谢谢！</font><br><br>客服热线：4006-093-666（法定工作日：09:00-17:00）</p>
+<br><br><br><br><br><br><br>
+</#if>
+<script type="text/javascript">
+function validatePostForm(){
+	$('#message').val(UE.getEditor('editor').getContent());
+	return true;
+}
+
+function smiliePopup()
+{
+	var w = window.open("${JForumContext.encodeURL("/posts/listSmilies")}", "smilies", "width=300, height=300, toolbars=no, scrollbars=yes");
+	w.focus();
+}
+<!--
+<#if attachments?exists>
+	ignoreStart = true;
+	editAttachments();
+</#if>
+
+<#if preview>document.location = "#preview";</#if>
+-->
+</script>
+
+
+</form>
+<script>
+  var panelOpen = false;
+var total = 0;
+var ignoreStart = false;
+var maxAttachments = 3;
+var counter = 0;
+
+
+	var template = "<div id='attach_#counter#'><table width='100%' class='gensmall'><tr><td>${I18n.getMessage("Attachments.filename")}</td>";
+	template += "<td><input type='file' size='50' name='file_#counter#'></td></tr>";
+	template += "<tr><td>${I18n.getMessage("Attachments.description")}</td>";
+	template += "<td><input type='text' name='comment_#counter#' size='50'>";
+	template += "&nbsp;&nbsp;<a href='javascript:removeAttach(#counter#)' class='gensmall'>[${I18n.getMessage("Attachments.remove")}]</a></td></tr>";
+	template += "</table><div style='border-top: 1px dashed #000;'>&nbsp;</div></div>";
+
+	function addAttachmentFields()
+	{
+		if (counter < maxAttachments) {
+			var s = template.replace(/#counter#/g, total);
+			$("#attachmentFields").append(s);
+			$("#total_files").val(++total);
+
+			counter++;
+
+			defineAttachmentButtonStatus();
+		}
+	}
+
+	function removeAttach(index)
+	{
+		$("#attach_" + index).empty();
+		counter--;
+		defineAttachmentButtonStatus();
+	}
+
+	function defineAttachmentButtonStatus()
+	{
+		var disabled = !(counter < maxAttachments);
+		document.post.add_attach.disabled = disabled;
+		document.post.add_attach.style.color = disabled ? "#cccccc" : "#000000";
+	}
+
+
+<#if attachments?exists>
+	var templateEdit = "<table width='100%'><tr><td class='row2 gen'>${I18n.getMessage("Attachments.filename")}</td>";
+	templateEdit += "<td class='row2 gen'>#name#</td></tr>";
+	templateEdit += "<tr><td class='row2 gen'>${I18n.getMessage("Attachments.description")}</td>";
+	templateEdit += "<td class='row2' valign='middle'><input type='text' size='50' name='edit_comment_#id#' value='#value#'>";
+	templateEdit += "&nbsp;&nbsp;<span class='gensmall'><input type='checkbox' onclick='configureAttachDeletion(#id#, this);'>${I18n.getMessage("Attachments.remove")}</span></td></tr>";
+	templateEdit += "<tr><td colspan='2' width='100%' class='row3'></td></tr></table>";
+	
+	function editAttachments()
+	{
+		var data = new Array();
+		<#list attachments as a>
+			var attach_${a.id} = new Array();
+
+			attach_${a.id}["filename"] = "${a.info.realFilename}";
+			attach_${a.id}["description"] = "${a.info.comment}";
+			attach_${a.id}["id"] = "${a.id}";
+
+			data.push(attach_${a.id});
+		</#list>
+		
+		counter = data.length;
+		<#if attachmentsEnabled>defineAttachmentButtonStatus();</#if>
+		
+		for (var i = 0; i < data.length; i++) {
+			var a = data[i];
+			var s = templateEdit.replace(/#value#/, a["description"]);
+			s = s.replace(/#name#/, a["filename"]);
+			s = s.replace(/#id#/g, a["id"]);
+
+			var v = document.getElementById("edit_attach").innerHTML;
+			v += s;
+			document.getElementById("edit_attach").innerHTML = v;
+			document.post.edit_attach_ids.value += a["id"] + ",";
+		}
+	}
+
+	function configureAttachDeletion(id, f)
+	{
+		if (f.checked) {
+			document.post.delete_attach.value += id + ",";
+		}
+		else {
+			var p = document.post.delete_attach.value.split(",");
+			document.post.delete_attach.value = "";
+			for (var i = 0; i < p.length; i++) {
+				if (p[i] != id) {
+					document.post.delete_attach.value += p[i] + ",";
+				}
+			}
+		}
+	}
+</#if>
+</script>
+
+<#include "highlighter_js.htm"/>
+<#include "bottom.htm"/>

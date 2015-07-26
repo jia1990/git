@@ -1,0 +1,81 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityConsumeDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityConsumeModel;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityConsumeService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：活动红包消费service实现类    JSDP-184
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+@Service("rpActivityConsumeService")
+public class RpActivityConsumeServiceImpl implements RpActivityConsumeService {
+
+	@Resource
+	private RpActivityConsumeDao rpActivityConsumeDao;
+	@Override
+	public PageDataList<RpActivityConsumeModel> getPageList(
+			RpActivityConsumeModel model) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(model.getPage(), model.getSize());
+		//JSDP-203 xingjia 20150702 start
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName", Operators.LIKE, model.getUserName());
+		}
+		if(StringUtil.isNotBlank(model.getType()) && !"99".equals(model.getConsumeStatus())){
+			param.addParam("activityType", model.getType());
+		}
+		if(StringUtil.isNotBlank(model.getConsumeStatus()) && !"99".equals(model.getConsumeStatus())){
+			param.addParam("consumeStatus", model.getConsumeStatus());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			param.addParam("addTime", Operators.GTE, model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			param.addParam("addTime", Operators.LTE, model.getEndTime());
+		}
+		//JSDP-203 xingjia 20150702 end
+		PageDataList<RpActivityConsume> pageList = rpActivityConsumeDao.findPageList(param);
+		List<RpActivityConsume> rapList =  pageList.getList();
+		List<RpActivityConsumeModel> rcModelList = new ArrayList<RpActivityConsumeModel>();
+		PageDataList<RpActivityConsumeModel> pageModelList = new PageDataList<RpActivityConsumeModel>(); 
+		for(int i=0;i<rapList.size();i++){
+			RpActivityConsume rpActivityConsume = rapList.get(i);
+			RpActivityConsumeModel rcModel = RpActivityConsumeModel.instance(rpActivityConsume);
+			rcModel.setUserName(rpActivityConsume.getConsumeUser().getUserName());
+			rcModel.setRealName(rpActivityConsume.getConsumeUser().getRealName());
+			rcModelList.add(rcModel);
+		}
+		pageModelList.setPage(pageList.getPage());
+		pageModelList.setList(rcModelList);
+		return pageModelList;
+	}
+	@Override
+	public List<RpActivityConsumeModel> getSumListRpConsume(
+			RpActivityConsumeModel model) {
+		
+		return rpActivityConsumeDao.getSumListRpConsume(model);
+	}
+	@Override
+	public List excelListRpConsume(RpActivityConsumeModel model) {
+		
+		return rpActivityConsumeDao.excelListRpConsume(model);
+	}
+
+}

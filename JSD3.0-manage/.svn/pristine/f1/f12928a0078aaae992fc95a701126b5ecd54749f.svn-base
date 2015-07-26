@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@债权统计</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+</head>
+<style>
+	.userCount{
+		color:#666;
+	
+	}
+	.dataTable{
+		border:1px #ccc solid;
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		
+	}
+	.dataTable td{
+		border-right:1px #ccc solid;
+		/* border-left:1px #ccc solid; */
+		border-bottom:1px #ccc solid;
+	}
+	#titleTr{
+  		border-bottom-style:1px #000 solid;
+	}
+	
+	/* 统计  */
+	.UserDataTable{
+		border:1px #ccc solid;
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		
+	}
+	.UserDataTable tr{
+		height:50px;
+	}
+	.UserDataTable td{
+		border-right:1px #ccc solid;
+		border-bottom:1px #ccc solid;
+		font-family: "微软雅黑";
+		font-size:16px;
+		color:#666;
+		text-align:center;
+	}
+	
+	/* 查询统计  */
+	.UserDataTableSearch{
+		border:1px #ccc solid;
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		
+	}
+	.UserDataTableSearch tr{
+		height:80px;
+	}
+	.UserDataTableSearch td{
+		border-right:1px #ccc solid;
+		border-bottom:1px #ccc solid;
+		font-family: "微软雅黑";
+		font-size:16px;
+		color:#666;
+		text-align:center;
+	}
+	
+	a {
+		font-size:12px;
+	}
+	
+	
+	/* 查看按钮 */
+	.viewButton{
+		width:60px;
+		color:#666;
+		border:1px solid #ccc;
+		border-top-left-radius:3px;
+		border-top-right-radius:3px;
+		border-bottom-right-radius:3px;
+		border-bottom-left-radius:3px;
+	}
+	.viewButton:hover{
+		border:1px solid #60ADFB;
+		color:#fff;
+		background-color: #60ADFB;
+	}
+	
+	
+	
+</style>
+<body style="padding:0 20px;">
+<div class="countBd" style="padding-top:20px;">
+
+	<div class="countBdTitle" >
+		<!-- <label style="line-height:40px;color:#000;font-size:18px;">投资用户统计</label> -->
+		
+		<!-- ---------- 1表格 ---------- -->
+		<div style="padding-left:20px;">
+			
+			<table>
+			
+			<tr>
+				<td>
+				<table class="UserDataTable" cellpadding="0" cellspacing="0" width="700" height=200px; >
+					<tr height="60">
+						<td colspan="3" bgcolor="#EBEBEB" >
+						<span style="line-height:40px;color:#373737;font-size:18px;font-weight: 500;">债权售出金额统计(复审通过)</span>
+						</td>
+					</tr>
+					<!-- <tr>
+						<td width=50% title="债权售出金额">债权售出金额：</td>
+						<#if creaditOutMoneyAllCount == '000'>
+						<td>暂无数据...</td>
+						<#else>
+						<td>${creaditOutMoneyAllCount!} 元</td>
+						</#if>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('债权售出明细','1100','650','/modules/dataStatistics/creaditMoneyStatisticsListPage.html','0')">查看</button></td>
+					</tr> -->
+					<tr>
+						<td width=50% >昨日债权售出金额：</td>
+						<#if yesterdayCreaditOutMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${yesterdayCreaditOutMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('昨日债权售出明细','1200','650','/modules/dataStatistics/creaditOutMoneyStatisticsListPage.html','1','creadit_money_out')">查看</button></td>
+						</#if>
+					</tr>
+					<tr>
+						<td>今日债权售出金额：</td>
+						<#if todayCreaditOutMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${todayCreaditOutMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('今日债权售出明细','1200','650','/modules/dataStatistics/creaditOutMoneyStatisticsListPage.html','2','creadit_money_out')">查看</button></td>
+						</#if>
+					</tr>
+					<tr>
+						<td>一周债权售出金额：</td>
+						<#if weekCreaditOutMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${weekCreaditOutMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('一周债权售出明细','1200','650','/modules/dataStatistics/creaditOutMoneyStatisticsListPage.html','3','creadit_money_out')">查看</button></td>
+						</#if>
+					</tr>
+					<tr>
+						<td>本月债权售出金额：</td>
+						<#if monthCreaditOutMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${monthCreaditOutMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('本月债权售出明细','1200','650','/modules/dataStatistics/creaditOutMoneyStatisticsListPage.html','4','creadit_money_out')">查看</button></td>
+						</#if>
+					</tr>
+				</table>
+				
+				</td>
+					
+				<td width="100px;">&nbsp;</td>
+					
+				<td>
+				
+				<table class="UserDataTableSearch" cellpadding="0" cellspacing="0" width="700" height=200px; >
+					<tr height="60">
+						<td colspan="3" bgcolor="#EBEBEB">
+						<span style="line-height:40px;color:#373737;font-size:18px;font-weight: 500;">
+						某时间段债权售出用户统计
+						</span>
+						<p style="font-size:14px;text-align: right;color:#808080">若未选择时间则默认查询全部</p>
+						</td>
+					</tr>
+					<!-- 
+					<tr>
+						<td colspan="2"><p style="font-size:14px;text-align: left;color:#808080">若未选择时间则默认查询全部</p></td>
+					</tr> -->
+					
+					<tr>
+						<td colspan="3">
+						时间段查询：<input type="text" name="startTime1" id="startTime1" style="width:150px;" class="searchTime" title="大于等于此时间"/>
+						&nbsp;-&nbsp;<input type="text" name="endTime1" id="endTime1" style="width:150px;" class="searchTime" title="小于等于此时间"/>
+						<a href="javascript:void(0);" class="searchBtn searchCreaditOutBtn">查询</a>
+				
+						</td>
+					</tr>
+					
+					
+					<tr>
+						<td width=50%>债权售出金额：</td>
+						<td id="creaditOutMoneyStatisticsPageArea">${creaditOutMoneyStatisticsPageArea!}</td>
+						<td width="100px;">
+						
+							<span >
+							
+							</span>
+						
+							<span id="dataView1" style="display:none;">
+								<button class="viewButton" onclick="showStatisticsDetailList('债权售出明细','1200','650','/modules/dataStatistics/creaditOutMoneyStatisticsListPage.html','99','creadit_money_out')" >&nbsp;查看&nbsp;</button>
+							</span>
+						</td>
+					</tr>
+					
+				</table>
+				
+				</td>
+			
+			</tr>
+			
+			
+			</table>
+		</div>
+		<!-- ---------- 1表格 ---------- -->
+		<br />
+		<!-- ---------- 2表格 ---------- -->
+		<div style="padding-left:20px;">
+			<table>
+			
+			<tr>
+				<td>
+				<table class="UserDataTable" cellpadding="0" cellspacing="0" width="700" height=200px; >
+					<tr height="60">
+						<td colspan="3" bgcolor="#EBEBEB">
+						<span style="line-height:40px;color:#373737;font-size:18px;font-weight: 500;">债权买入金额统计(已成交)</span>
+						</td>
+					</tr>
+					<!-- <tr>
+						<td width=50% title="到目前为止投资用户数量">认证通过人数：</td>
+						<#if creaditInMoneyAllCount == '-1'>
+						<td>暂无数据...</td>
+						<#else>
+						<td>${creaditInMoneyAllCount!} 元</td>
+						</#if>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('手机认证通过','1100','650','/modules/creaditInMoneydataStatistics/proveStatisticsListPage.html','0')">查看</button></td>
+					</tr> -->
+					<tr>
+						<td width=50% >昨日债权买入金额：</td>
+						<#if yesterdayCreaditInMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${yesterdayCreaditInMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('昨日债权买入明细','1200','650','/modules/dataStatistics/creaditInMoneyStatisticsListPage.html','1','creadit_money_in')">查看</button></td>
+						</#if>
+					</tr>
+					<tr>
+						<td>今日债权买入金额：</td>
+						<#if todayCreaditInMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${todayCreaditInMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('今日债权买入明细','1200','650','/modules/dataStatistics/creaditInMoneyStatisticsListPage.html','2','creadit_money_in')">查看</button></td>
+						</#if>
+					</tr>
+					<tr>
+						<td>一周债权买入金额：</td>
+						<#if weekCreaditInMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${weekCreaditInMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('一周债权买入明细','1200','650','/modules/dataStatistics/creaditInMoneyStatisticsListPage.html','3','creadit_money_in')">查看</button></td>
+						</#if>
+					</tr>
+					<tr>
+						<td>本月债权买入金额：</td>
+						<#if monthCreaditInMoneyCount == '000'>
+						<td>暂无数据...</td>
+						<td>&nbsp;</td>
+						<#else>
+						<td>${monthCreaditInMoneyCount!} 元</td>
+						<td width="100px;"><button class="viewButton" onclick="showStatisticsDetailList('本月债权买入明细','1200','650','/modules/dataStatistics/creaditInMoneyStatisticsListPage.html','4','creadit_money_in')">查看</button></td>
+						</#if>
+					</tr>
+				</table>
+				
+				</td>
+					
+				<td width="100px;">&nbsp;</td>
+					
+				<td>
+				
+				<table class="UserDataTableSearch" cellpadding="0" cellspacing="0" width="700" height=200px; >
+					<tr height="60">
+						<td colspan="3" bgcolor="#EBEBEB">
+						<span style="line-height:40px;color:#373737;font-size:18px;font-weight: 500;">
+						某时间段债权买入金额统计
+						</span>
+						<p style="font-size:14px;text-align: right;color:#808080">若未选择时间则默认查询全部</p>
+						</td>
+					</tr>
+					<!-- 
+					<tr>
+						<td colspan="2"><p style="font-size:14px;text-align: left;color:#808080">若未选择时间则默认查询全部</p></td>
+					</tr> -->
+					
+					<tr>
+						<td colspan="3">
+						时间段查询：<input type="text" name="startTime2" id="startTime2" style="width:150px;" class="searchTime" title="大于等于此时间"/>
+						&nbsp;-&nbsp;<input type="text" name="endTime2" id="endTime2" style="width:150px;" class="searchTime" title="小于等于此时间"/>
+						<a href="javascript:void(0);" class="searchBtn searchCreaditInBtn">查询</a>
+				
+						</td>
+					</tr>
+					
+					
+					<tr>
+						<td width=50%>债权买入金额：</td>
+						<td id="creaditInMoneyStatisticsPageArea">${creaditInMoneyStatisticsPageArea!}</td>
+						<td width="100px;">
+						
+							<span >
+							
+							</span>
+						
+							<span id="dataView2" style="display:none;">
+								<button class="viewButton" onclick="showStatisticsDetailList('债权买入明细','1200','650','/modules/dataStatistics/creaditInMoneyStatisticsListPage.html','99','creadit_money_in')" >&nbsp;查看&nbsp;</button>
+							</span>
+						</td>
+					</tr>
+					
+				</table>
+				
+				</td>
+			
+			</tr>
+			
+			
+			</table>
+		</div>
+		<!-- ---------- 2表格 ---------- -->
+		
+	</div>
+	
+	
+	<!-- --------------------------------- -->
+
+	<!-- --------------------------------- -->
+	
+</div>
+<script src="/plugins/echarts/echarts-plain-original.js" charset="UTF-8"></script>
+<script src="/plugins/echarts/echarts.js" charset="UTF-8"></script>
+<script src="/plugins/echarts/echarts-all.js" charset="UTF-8"></script>
+<script type="text/javascript">
+var loading = "time="+$("#time a.current").data("val");
+ajaxUrl(loading);//初始化调用
+$("#time a").click(function(){
+	$(this).addClass("current").siblings().removeClass("current");
+	var param = "time="+$("#time a.current").data("val");
+	ajaxUrl(param);
+});
+//具体日期搜索
+$(".searchUserBtn").click(function(){
+	var param = "startTime="+$("#startTime").val()+"&endTime="+$("#endTime").val();
+	ajaxUrl(param);
+});
+function ajaxUrl(param){
+	$.ajax({
+		url:"/modules/home/investmentStatistics.html?"+param,
+		type:"get",
+		dataType:"json",
+		success:function(data){
+			
+			/* alert(data);
+			alert(data.length);
+			alert(data.dates.length);counts
+			 */
+			/* for(var i=0;i<data.dates.length;i++){
+				$("#tableData").append("<tr><td style='width:200px;'>"+data.dates[i]+"</td><td>"+data.counts[i]+"</td></tr>");
+			}
+			 */
+			/* for(var i=0;i<data.accounts.length;i++){
+				$("#tableData").append("<tr><td>"+data.accounts[i]+"</td></tr>");
+				//alert(data.dates[i]);
+			} */
+			
+			/* 
+			// 基于准备好的dom，初始化echarts图表
+	        var myChart = echarts.init(document.getElementById('investment')); 
+	        var option = {
+	        	color  : ['#70bc31'],
+	        	tooltip: {
+	                show: true
+	            },
+	        	toolbox: {
+	                show : true,
+	                feature : {
+	                    saveAsImage : {show: true,title : '保存为图片'}
+	                }
+	            },
+	            grid: {
+	            	x:50,
+	            	y:30,
+	            	x2:30,
+	            	y2:70
+	           	},
+	            xAxis : [
+	                {
+	                   type : 'category',
+	                   data : data.dates
+	                }
+	            ],
+	            yAxis : [
+	                {
+	                	'type':'value',
+	                    'name':'人数（人）',
+	                }
+	            ],
+	            series : [
+	                {
+	                    "name":"人数（人）",
+	                    "type":"bar",
+	                    "data":data.counts
+	                }
+	            ]
+	        };
+	        // 为echarts对象加载数据 
+	        myChart.setOption(option); */
+		} 
+	});
+}
+
+
+// ---------------------------------------
+// 具体地址查询
+/* $(".searchAdressBtn").click(function(){
+	var province = $("#province").val();
+	var city = $("#city").val();
+	var area = $("#county").val();
+	ajaxAddressUrl(province,city,area);
+});
+
+function ajaxAddressUrl(province,city,area){
+	$.ajax({
+		type:"post",//请求方式
+   		url:"/modules/user/user/user/getUserByAddress.html",//发送请求地址
+   		data:{//发送给数据库的数据
+   			province:province,
+   			city:city,
+   			area:area,
+   			userType:10		//投资人
+   	},
+   	//请求成功后的回调函数有两个参数
+   	success:function(data){
+   		
+   		//$("#address").html($("#province").text($("#province").val()));
+   		
+   		$("#total").html(data.userTotal);
+   		$("#man").html(data.manTotal);
+   		$("#woman").html(data.womanTotal);
+   		$("#secrecy").html(data.secrecyTotal);
+   		$("#unknown").html(data.unknownTotal);
+   	}
+   	});
+  
+} */
+// ---------------------------------------
+//  1、债权转让(售出)金额
+$(".searchCreaditOutBtn").click(function(){
+	var startTime1 = $("#startTime1").val();
+	var endTime1 = $("#endTime1").val();
+	/* alert("实名认证统计"); */
+	/* if(null != startTime1 || null != endTime1){
+		$.messager.alert('提示', '请选择时间！', 'info');
+	}
+	 */
+	
+	ajaxTenderUrl1(startTime1,endTime1);
+});
+
+function ajaxTenderUrl1(startTime1,endTime1){
+	$.ajax({
+		type:"post",//请求方式
+   		url:"/modules/dataStatistics/creaditOutMoneyStatisticsPageArea.html",//发送请求地址
+   		data:{//发送给数据库的数据
+   			startTime:startTime1,
+   			endTime:endTime1
+   	},
+   	//请求成功后的回调函数有两个参数
+   	success:function(data){
+   		/* alert("实名认证统计返回成功！"); */
+   		//$("#address").html($("#province").text($("#province").val()));
+   		$("#creaditOutMoneyStatisticsPageArea").html(data.creaditOutMoneyStatisticsPageArea + " 元");
+   		$("#dataView1").show();
+   	}
+   	});
+  
+}
+
+//  2、债权转让(买入)金额
+$(".searchCreaditInBtn").click(function(){
+	var startTime2 = $("#startTime2").val();
+	var endTime2 = $("#endTime2").val();
+	/* alert("手机认证统计"); */
+	/* if(null != startTime || null != endTime){
+		$.messager.alert('提示', '请选择时间！', 'info');
+	}
+	 */
+	
+	ajaxTenderUrl2(startTime2,endTime2);
+});
+
+function ajaxTenderUrl2(startTime2,endTime2){
+	$.ajax({
+		type:"post",//请求方式
+   		url:"/modules/dataStatistics/creaditInMoneyStatisticsPageArea.html",//发送请求地址
+   		data:{//发送给数据库的数据
+   			startTime:startTime2,
+   			endTime:endTime2
+   	},
+   	//请求成功后的回调函数有两个参数
+   	success:function(data){
+   		/* alert("手机认证统计返回成功！"); */
+   		//$("#address").html($("#province").text($("#province").val()));
+   		$("#creaditInMoneyStatisticsPageArea").html(data.creaditInMoneyStatisticsPageArea + " 元");
+   		$("#dataView2").show();
+   	}
+   	});
+  
+}
+
+
+//查看某时段债权转让金额
+var showStatisticsDetailList = function(title,width,height,url,timeType,creaditType) {
+	// 债权售出
+	var startTime1 = $("#startTime1").val();
+	var endTime1 = $("#endTime1").val();
+	// 债权买入
+	var startTime2 = $("#startTime2").val();
+	var endTime2 = $("#endTime2").val();
+	
+	var startTimeNew;
+	var endTimeNew;
+	
+	if(creaditType == 'creadit_money_out'){
+		startTimeNew = startTime1;
+		endTimeNew = endTime1;
+	}
+	if(creaditType == 'creadit_money_in'){
+		startTimeNew = startTime2;
+		endTimeNew = endTime2;
+	}
+	
+	if(null == startTimeNew || "" == startTimeNew || null == endTimeNew || "" == endTimeNew){
+		urlNew = url+'?timeType='+ timeType ;
+	}else{
+		urlNew = url+'?timeType='+ timeType +'&startTime='+ startTimeNew +'&endTime='+ endTimeNew;
+	}
+	
+	var dialog =  parent.sy.modalDialog({
+		title : title,
+		width : width,
+		height : height,
+		url : urlNew,
+		/* buttons : [{
+			text : '确定',
+			handler : function() {
+				dialog.find('iframe').get(0).contentWindow.getSelected(dialog, $('#email'));
+			}
+		}] */
+	});
+	
+	
+};
+
+
+
+
+</script>
+
+
+
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date3.js"></script><!-- 支持同页面多处使用 -->
+<script>
+/*
+ *初始化省份选择框
+ * */
+$.ajax({
+    type:"get",
+    url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+    dataType:"json",
+    success:function(json){
+    	
+    	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+    		 
+    		  var province=json[i];
+    		 $("#province").append("<option  value="+province.id+">"+province.name+"</option>");
+    	 }
+    }
+});
+
+//给省份下拉选择框注册change事件 
+ $("#province").change(function(){
+	 $("#city").empty();
+	 $("#city").append("<option value=''>请选择</option>");
+	 var id = $(this).val();
+	 if($(this).val() != ''){
+	 	getCity(id);
+	 }else{
+	 	 $("#county").empty();
+		 $("#county").append("<option value=''>请选择</option>");
+	 }
+ });
+
+
+/*省份发生变化
+ *AJAX一步后台获取与此省份关联的城市
+ * 
+ * */
+function  getCity(id){
+	//ajax逻辑
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",	        
+        data:{
+        	pId:id
+        },
+        success:function(json){
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		  var city=json[i];
+        		 $("#city").append("<option value="+city.id+">"+city.name+"</option>");
+        	 }
+        }
+    });
+	
+}
+
+/*给城市选择框注册change事件*/
+$("#city").change(function(){
+	 $("#county").empty();
+	 $("#county").append("<option value=''>请选择</option>");
+	var id = $(this).val();
+	if($(this).val() != ''){
+		getCounty(id);
+	}
+});
+
+/*城市发生变化
+ *AJAX一步后台获取与此市关联的县（区）
+ * 
+ * */
+function getCounty(id){
+	//ajax逻辑
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",	        
+        data:{
+        	pId:id
+        },
+        success:function(json){
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		  var county=json[i];
+        		 $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+        	 }
+        }
+    });
+	
+}
+
+
+
+</script>
+</body>
+</html>

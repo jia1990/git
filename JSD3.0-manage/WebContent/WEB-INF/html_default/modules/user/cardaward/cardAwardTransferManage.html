@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>云购购物卡转账记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var winWidth = 700;
+	var winHeight = 460;
+	
+	var editTransManualTitle = "手动补单";
+	var editTransManualUrl= "/modules/user/cardaward/manualTransferManage.html";
+	var editManualTransferParmeters = "'{0}','"+ editTransManualTitle+"',"+ winWidth+","+ winHeight+",'"+ editTransManualUrl +"'";
+	
+	var queryYunGouTitle = "云购转账查询";
+	var queryYunGouUrl = "/modules/user/cardaward/queryYunGou.html";
+	var queryYunGouParmeters = "'{0}','" + queryYunGouTitle + "',500,360,'" + queryYunGouUrl + "'";
+	
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'cardAwardTransferList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'desc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+			showFooter: true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 80,fixed:true, sortable:false },
+              { field: 'userName', title: '用户名', width: 120,fixed:true, sortable:false },
+              { field: 'realName', title: '真实姓名', width: 80,fixed:true, sortable:false },
+              { field: 'transNo', title: '订单号', width: 160, fixed:true,sortable:false },
+              { field: 'transMoney', title: '转账金额', width: 100,fixed:true, sortable:false },
+              { field: 'transType', title: '转账类型', width: 115,fixed:true, sortable:false ,formatter: function(value,row,index){
+	          	 	 if(value == "3"){
+	          	 		 return "抽奖云购卡转账";
+	          	 	 }else if(value == "4"){
+	          	 		 return "现金转账";
+	          	 	 } 	 
+              }},
+              { field: 'status', title: '是否兑换', width: 90,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == "22"){
+             		 return "未发送请求"; 
+             	  }else if(value == "11"){
+             	 	 return "已发送请求";
+             	  }
+              }},
+              { field: 'receiveStatus', title: '是否转账成功', width: 100,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == "22"){
+             		 return "转账失败"; 
+             	  }else if(value == "11"){
+             	 	 return "转账成功";
+             	  }
+              }},
+              { field: 'verifyTime', title: '审核时间', width: 150,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);  
+              }},
+              { field: 'operatorUserName', title: '审核人', width: 90,fixed:true, sortable:false }, 
+              { field: 'remark', title: '备注', width: 180,fixed:true, sortable:false },
+              { field: 'addTime', title: '添加时间', width: 150,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              }, 
+              { field: 'addIp', title: '添加IP', width: 140,fixed:true, sortable:false },
+              { field : 'action',
+                  title : '操作',
+                  width :90,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                      var str = '';
+                      if(row.receiveStatus == "22"){
+	                      str += "<@secAuthorizeUrl value='/manualCardTransfer.html'>";
+	                      str += $.formatString('<img onclick="$.fn.dataGridOptions.editFunTransfer('+editManualTransferParmeters+');" src="{1}" title="手动补单"/>', row.transNo, '${theme_dir}/css/images/extjs_icons/pencil.png');                
+	                      str += '&nbsp;'; 
+	                      str += "</@secAuthorizeUrl>";
+                      }
+                      str += '&nbsp;';
+                      str += "<@secAuthorizeUrl value='/queryYunGou.html'>";
+  	                  str += $.formatString('<img onclick="$.fn.dataGridOptions.viewFun('+queryYunGouParmeters+');" src="{1}" title="云购转账查询"/>', row.transNo, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                      str += "</@secAuthorizeUrl>";
+                      return str;
+                  }
+              }
+             ] ],
+         toolbar : '#toolbar'
+        }); 
+    });
+    
+    function exportExcel(){
+		var url = "/modules/user/cardaward/exportCardTransfer.html";
+		var userName = $("#userName").val();
+		var realName = $("#realName").val();
+		var status = $("#status").val();
+		var receiveStatus = $("#receiveStatus").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var transNo = $("#transNo").val();
+		var operatorUserName = $("#operatorUserName").val();
+		var sou = "?userName=" + userName + "&realName=" + realName + "&transNo=" + transNo + "&operatorUserName=" + operatorUserName + "&status=" + status + "&receiveStatus=" + receiveStatus + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询信息）</font></h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>真实姓名：<input type="text" name="realName" id="realName" autocomplete="off"/></li>
+            		<li>订单号：<input type="text" name="transNo" id="transNo" autocomplete="off"/></li>
+            		<li>审核人：<input type="text" name="operatorUserName" id="operatorUserName" autocomplete="off"/></li>
+            		<li>是否兑换：
+		                <select name="status" id="status" class="type" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="22">未发送请求</option>
+		                  <option value="11">已发送请求</option>
+		                </select>
+		            </li>	
+		            <li>是否转账成功：
+		                <select name="receiveStatus" id="receiveStatus" class="type" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="22">转账失败</option>
+		                  <option value="11">转账成功</option>
+		                </select>
+		            </li>	  
+		            <li>添加时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>        
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>          	
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+   </div>
+        <@secAuthorizeUrl value='/exportCardTransfer.html'>
+        <div id="toolbar" style="display: none;">		
+			<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>	
+			<span></span>   <!-- TODO : ajax参数化请求数据求和 ，类型分为现金、积分和实物-->
+		</div>
+	    </@secAuthorizeUrl>
+
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

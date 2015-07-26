@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<!--   v1.6.6.2 RDPROJECT-140 yl 2013-10-23 start-->
+<title>${web_title!meta_keywords}</title>
+<meta name="description" content="${web_description!meta_description}" />
+<meta name="keywords" content="${meta_keywords!meta_keywords}" />
+<!--   v1.6.6.2 RDPROJECT-140 yl 2013-10-23 end-->
+<meta property="qc:admins" content="126201426074113363757" />
+<link href="${webroot}${theme_dir}/media/css/base.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/button.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/style.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/jquery.slider.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/member.css" rel="stylesheet">
+
+<script type="text/javascript" src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script type="text/javascript" src="${webroot}${theme_dir}/media/js/layer.js"></script>
+<script type="text/javascript" src="${webroot}${theme_dir}/media/js/layer.ext.js"></script>
+<script src="${webroot}${theme_dir}/media/js/jquery.form.js"></script><!-- 表单异步函数 -->
+<script src="${webroot}${theme_dir}/media/js/sea.js"></script>
+<script src="${webroot}${theme_dir}/media/js/seajs-text.js"></script>
+<script src="${webroot}${theme_dir}/media/js/handlebars-v1.3.0.js"></script><!-- json渲染的插件 -->
+<script src="${webroot}${theme_dir}/media/js/validate/validate.js"></script>
+<script src="${webroot}${theme_dir}/media/js/validate/message_cn.js"></script>
+<script src="${webroot}${theme_dir}/media/js/validate/addtional-method.js"></script>
+</head>
+<body>
+     <div id="loginWrap" class="clearfix">
+    <div class="loginBd clearfix">
+      <div class="memberLogo"><a href="/" title="账户注册"><span>账户注册</span></a></div>
+      <a href="/" title="返回首页" class="backHomePage">返回首页</a>
+    </div>
+  </div> 
+    <div class="reg_wrap">
+      <ul class="reg_process clearfix">
+        <li><i>1</i>填写账户信息</li>
+        <li><i>2</i>账户注册验证</li>
+        <li class="hover"><i>3</i>账户注册成功</li>
+      </ul>
+      <div class="success_reg_con success_email">
+      <h2>恭喜您，<span>${msg?if_exists}</span></h2>
+      <#if pwd?? && pwd!="">
+        <p>您已经完成网站账户的注册，<span class="remain_time">5</span>秒后进入登录页面！登录后请尽快完善其他信息的设置。<br />也可以手动点击</p>
+        <a class="reg_link" href="/user/login.html">进入登录页面</a>
+      <#else>
+      	<p>您已经完成网站账户的注册，<span class="remain_time">5</span>秒后进入初始化密码页面！初始化密码登录后请尽快完善其他信息的设置。<br />也可以手动点击</p>
+        <a class="reg_link" href="/user/initLoginPwd.html?userId=${uId}">进入初始化密码页面</a>
+      </#if>
+      </div>
+    </div>
+<script>seajs.use('register');</script>
+<#include "../include/loginFooter.html">
+</body>
+</html>

@@ -1,0 +1,128 @@
+<script type="text/javascript">
+$(function(){
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/column/article/articleEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">栏目：</label>
+		     <div class="ipt">
+		     	<input type="text" id="siteNewName" class="w400 easyui-validatebox" name="siteNewName" value="${siteNew.name!}" readonly="readonly">
+		     	<input type="hidden" id="siteId" name="siteId" value="${siteNew.id!}">
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" value="${articleNew.title}" class="w400 easyui-validatebox" data-options="required: true" maxlength="50"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="0" <#if articleNew.status?? && articleNew.status ==0>checked="checked"</#if>/>&nbsp;&nbsp;隐藏
+				<input type="radio" name="status" value="1" <#if articleNew.status?? && articleNew.status ==1>checked="checked"</#if>/>&nbsp;&nbsp;显示
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" value="${articleNew.sort}" class="easyui-numberbox" data-options="required: true" maxlength="4"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">是否推荐：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isRecommend" value="0" <#if articleNew.isRecommend?? && articleNew.isRecommend ==0>checked="checked"</#if>/>&nbsp;&nbsp;否
+				<input type="radio" name="isRecommend" value="1" <#if articleNew.isRecommend?? && articleNew.isRecommend ==1>checked="checked"</#if>/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">是否置顶：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isTop" value="0" <#if articleNew.isTop?? && articleNew.isTop ==0>checked="checked"</#if>/>&nbsp;&nbsp;否
+				<input type="radio" name="isTop" value="1" <#if articleNew.isTop?? && articleNew.isTop ==1>checked="checked"</#if>/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file">	
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <div class="ipt">
+		     	<a href="${articleNew.picPath!}" class="fileshow"  rel="group1"  ondragstart="return false"><img src="${articleNew.picPath!}" title="点击预览"></a>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="introduction"  maxlength="120">${articleNew.introduction!}</textarea>	
+		     </div>
+		</div>
+ 		
+		
+		<div class="formitm">
+		     <label class="lab">内容：</label>
+		    <!-- <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="content">${articleNew.content!}</textarea>	
+		     </div> -->
+		     <div class="ipt">
+				<script id="content" name="content" type="text/plain">${articleNew.content!}</script>
+			 </div>
+		</div>
+		<input name="addTime" value="${articleNew.addTime?string('yyyy-MM-dd HH:mm:ss')}" type="hidden"/>
+		<input name="picPath" value="${articleNew.picPath!}" type="hidden"/>
+		<input name="addIp" value="${articleNew.addIp}" type="hidden"/>
+		<input name="clicks" value="${articleNew.clicks}" type="hidden"/>
+		<input name="id" value="${articleNew.id}" type="hidden"/>
+		
+		<input name="articleEditToken" value="${articleEditToken!}" type="hidden">
+	</form>
+</div>
+
+<!-- <div id="siteNewDialog">
+	<ul id="siteNewTree"></ul>
+</div> -->
+
+<script></script>
+<!-- 编辑器 -->
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+var descriptionBox = UE.getEditor('content', {
+    autoHeight: false,
+    initialFrameWidth:710,
+    toolbars: [
+               ['fullscreen', 'source', '|', 'undo', 'redo', '|',
+                'bold', 'italic', 'underline', 'fontborder', 'strikethrough', 'superscript', 'subscript', 'removeformat', 'formatmatch', 'autotypeset', 'blockquote', 'pasteplain', '|', 'forecolor', 'backcolor', 'insertorderedlist', 'insertunorderedlist', 'selectall', 'cleardoc', '|',
+                'rowspacingtop', 'rowspacingbottom', 'lineheight', '|',
+                'customstyle', 'paragraph', 'fontfamily', 'fontsize', '|',
+                'directionalityltr', 'directionalityrtl', 'indent', '|',
+                'justifyleft', 'justifycenter', 'justifyright', 'justifyjustify', '|', 'touppercase', 'tolowercase', '|',
+                'link', 'unlink', 'anchor', '|', 'imagenone', 'imageleft', 'imageright', 'imagecenter', '|',
+                'simpleupload', 'insertimage', 'insertvideo', 'attachment',  'insertcode',  'pagebreak', 'template', '|',
+                'horizontal', 'date', 'time', 'spechars', 'wordimage', '|',
+                'inserttable', 'deletetable', 'insertparagraphbeforetable', 'insertrow', 'deleterow', 'insertcol', 'deletecol', 'mergecells', 'mergeright', 'mergedown', 'splittocells', 'splittorows', 'splittocols', 'charts', '|',
+                'print', 'searchreplace', 'drafts'
+               ]
+           ]
+    
+});
+   
+</script>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>

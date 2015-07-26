@@ -1,0 +1,229 @@
+package com.rongdu.manage.action.system;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.p2psys.core.domain.Menu;
+import com.rongdu.p2psys.core.domain.Role;
+import com.rongdu.p2psys.core.service.MenuService;
+import com.rongdu.p2psys.core.service.RoleService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class MenuAction extends BaseAction implements ModelDriven<Menu> {
+
+	@Resource
+	private MenuService menuService;
+	@Resource
+	private RoleService roleService;
+
+	private Menu menu = new Menu();
+
+	public Menu getModel() {
+		return menu;
+	}
+
+	private Map<String, Object> data;
+
+	/**
+	 * 获取菜单集合
+	 * 
+	 * @return 菜单管理页面
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/menuManager")
+	public String menuManager() throws Exception {
+		return "menuManager";
+	}
+
+	/**
+	 * 获取菜单集合
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/menuList")
+	public void menuList() throws Exception {
+		long pid = paramLong("roleId");
+		Map<String, Object> params = new HashMap<String, Object>();
+		if(pid!=0){
+			List<Menu> menuList = menuService.menuListByRole(pid, false);
+			params.put("rows", menuList);
+		}else{
+			
+			List<Role> roleList = roleService.getRoleList(getOperatorId());
+			for(int i=0;i<roleList.size();i++){
+				Role role = roleList.get(i);
+				if(role.getId()==11){
+					List<Menu> allMenuList = menuService.menuUseList();
+					params.put("rows", allMenuList);
+				}else{
+					List<Menu> menuList = menuService.menuUseList(getOperatorId(), Menu.MENU_ALL);
+					params.put("rows", menuList);
+				}
+			}
+		}
+//		if(0 != getOperatorId() && 1==getOperatorId()){
+//			
+//			List<Menu> allMenuList = menuService.menuUseList();
+//			params.put("rows", allMenuList);
+//		}else{
+//			
+//			List<Menu> menuList = menuService.menuUseList(getOperatorId(), Menu.MENU_ALL);
+//			params.put("rows", menuList);
+//		}
+		
+		printJson(getStringOfJpaObj(params));
+	}
+
+	/**
+	 * 获取用户拥有的所有菜单集合
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/leftMenuList")
+	public void leftMenuList() throws Exception {
+		List<Menu> menuList = menuService.menuUseList(getOperatorId(), Menu.IS_MENU);
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("rows", menuList);
+		printJson(getStringOfJpaObj(params));
+	}
+
+	/**
+	 * 获取用户拥有的所有权限
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/myMenuList")
+	public void myMenuList() throws Exception {
+		List<Menu> menuList = menuService.menuUseList(getOperatorId(), Menu.MENU_ALL);
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("rows", menuList);
+		printJson(getStringOfJpaObj(params));
+	}
+
+	/**
+	 * 添加菜单页面
+	 * 
+	 * @return 返回页面
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/menuAddPage")
+	public String menuAddPage() throws Exception {
+		long pid = paramLong("id"); // 获取id，设置所添加菜单的下级pid
+		request.setAttribute("pid", pid);
+		saveToken("menuAddToken");
+		return "menuAddPage";
+	}
+
+	/**
+	 * 添加菜单
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/menuAdd")
+	public void menuAdd() throws Exception {
+		data = new HashMap<String, Object>();
+		try {
+			checkToken("menuAddToken");
+		} catch (Exception e) {
+			// TODO: handle exception
+			new BussinessException(e.getMessage(),1);
+		}
+		//TODO 查询此路径是否被使用
+		Menu menuOld = menuService.getMenuByHref(menu.getHref());
+		if(null != menuOld && !"/showSelfMenu.html".equals(menu.getHref())){
+			data.put("msg", "菜单路径重复使用！");
+			data.put("result", false);
+		}else{
+			menuService.menuAdd(menu);
+			data.put("msg", "添加菜单成功！");
+			data.put("result", true);
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 编辑菜单项页面
+	 * 
+	 * @return 返回页面
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/menuEditPage")
+	public String menuEditPage() throws Exception {
+		saveToken("menuEditToken");
+		long id = paramLong("id");
+		Menu menu = menuService.menuFind(id);
+		request.setAttribute("menuItem", menu);
+		request.setAttribute("isMenu", menu.isMenu());
+		return "menuEditPage";
+	}
+
+	/**
+	 * 编辑菜单项
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/menuEdit")
+	public void menuEdit() throws Exception {
+		data = new HashMap<String, Object>();
+		try {
+			checkToken("menuEditToken");
+		} catch (Exception e) {
+			// TODO: handle exception
+			new BussinessException(e.getMessage(),1);
+		}
+		menu.setUpdateUser(this.getOperatorUserName());
+		//TODO 查询此路径是否被使用
+		Menu menuOld = menuService.getMenuByHref(menu.getHref());
+		if( menuOld != null && !menu.getHref().equals(menuOld.getHref())){
+			if(null != menuOld && !"/showSelfMenu.html".equals(menu.getHref())){
+				data.put("msg", "菜单路径重复使用！");
+				data.put("result", false);
+			}else{
+				menuService.menuUpdate(menu);
+				data.put("msg", "修改菜单成功！");
+				data.put("result", true);
+			}
+		}else{
+			menuService.menuUpdate(menu);
+			data.put("msg", "修改菜单成功！");
+			data.put("result", true);
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 理论删除，将数据库中的状态修改掉
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/menu/menuDelete")
+	public void menuDelete() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		menuService.menuDelete(id);
+		data.put("result", true);
+		data.put("msg", "删除菜单成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 选择菜单时添加菜单所对应的按钮
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value="/modules/system/menu/menuAddOptBtnPage")
+	public String menuAddButtonPage() throws Exception{
+		long id = paramLong("id");
+		Menu menu = menuService.menuFind(id);
+		request.setAttribute("menuItem", menu);
+		saveToken("menuAddOptBtnToken");
+		return "menuAddOptBtnPage";
+	}
+
+}

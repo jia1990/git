@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>招标中的借款</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+    var winWidth =  800;
+    var winHeight = 280;
+    var borrowDetailTitle = "查看借款标";
+    var borrowDetailUrl =  "/modules/loan/borrow/showBorrowDetailPage.html";
+    var borrowDetailWinParmeters = "'{0}','"+borrowDetailTitle+"',700,360,'"+borrowDetailUrl+"'";
+    
+    
+    var borrowDesTitle = "修改标的借款详情";
+    var borrowDesUrl =  "/modules/loan/borrow/borrowUpdateDesPage.html";
+    var borrowDesWinParmeters = "'{0}','"+borrowDesTitle+"',710,500,'"+borrowDesUrl+"'";
+    
+    var delayBorrowShowTitle = "延长投标期限";
+    var delayBorrowShowUrl = "/modules/loan/borrow/delayBorrowShowPage.html";
+    var delayBorrowShowWinParmeters = "'{0}','"+delayBorrowShowTitle+"',700,360,'"+delayBorrowShowUrl+"'";
+    
+    var cancelTitle = "撤标";
+    var cancelUrl =  "/modules/loan/borrow/cancelBorrowPage.html";
+    var cancelWinParmeters = "'{0}','"+cancelTitle+"',1000,530,'"+cancelUrl+"'";
+    
+    var tenderListTitle="投标记录";
+    var tenderListUrl =  "/modules/loan/borrow/tenderDetailPage.html"; 
+ 	var tenderListWinParmeters = "'{0}','"+tenderListTitle+"',800,500,'"+tenderListUrl+"'";
+  
+  	var isRecommendUrl = "/modules/loan/borrow/recommendBorrow.html"; 
+  	var isRecommendWinParmeters = "'{0}','"+isRecommendUrl+"','确定要推荐吗？推荐后将不可恢复'";
+  
+  	var stopBorrowTitle="确定要截标吗？";
+  	var stopBorrowUrl = "/modules/loan/borrow/stopBorrowPage.html"; 
+  	var stopBorrowWinParmeters = "'{0}','"+stopBorrowTitle+"',800,500,'"+stopBorrowUrl+"','确定'";
+  
+  	var stopFlowTitle="确定要停止流转吗?停止流转后将不可恢复";
+  	var stopflowUrl = "/modules/loan/borrow/stopFlowPage.html"; 
+  	var stopflowWinParmeters = "'{0}','"+stopFlowTitle+"',800,500,'"+stopflowUrl+"','确定'";
+  
+  	var confirmUrl = "/modules/loan/borrow/registerBorrowResult.html";
+  	var openUrl= "/modules/loan/borrow/cancelBorrowSkip.html";
+  	var registerBorrowParmeters = "'{0}','" + openUrl+"'";
+  
+  	var cancelPwdUrl= "/modules/loan/borrow/cancelBorrowPwd.html";
+  	var cancelBorrowPwdParmeters = "'{0}','" + cancelPwdUrl+"'";
+    /*  //JSDP-116 sxy 2015-05-18 start   */
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'borrowBiddingList.html?status=1',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+      		singleSelect:true,
+            columns : [ [
+        	  { field: 'id', title: '编号', width: 50,fixed:true, sortable:false },              
+              { field: 'userName', title: '借款人', width: 80, sortable:false },
+              { field: 'name', title: '标名', width: 150, sortable:false,
+            	  formatter:function(value, row, index){
+  					
+  					var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+  					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+  					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}" title="预览标">'+row.name+'</a>', row.id, '${theme_dir}/css/images/extjs_icons/link.png');
+  					
+  					}
+              },  
+              { field: 'typeName', title: '类型', width: 60, sortable:false},
+              { field: 'accountStr', title: "<a title='元'>借款金额</a>", width: 80, sortable:false,formatter:function(value,row,index){
+                //return value+"元";
+                return value;
+              } },
+              { field: 'accountYesStr', title: "<a title='元'>已借金额</a>", width: 80, sortable:false,
+            	  formatter:function(value,row,index){
+            	  //return row.account * (row.scales/100)
+                  //return value+"元";
+                  return value;
+                  } 
+              },
+              { field: 'apr', title: '利率', width: 80, sortable:false,formatter: function(value,row,index){
+                return value+"%";
+              } }, 
+              { field: 'timeLimit', title: '借款期限', width: 80, sortable:false,
+                formatter: function(value,row,index){
+              if (row.borrowTimeType == 1){
+                return row.timeLimit + "天";
+              } else {
+                return value + "个月";
+              }
+            }   
+              },
+              { field: 'addTime', title: '发布时间', width: 180,fixed:true, sortable:false, 
+                  formatter: function(value,row,index){
+                    return getLocalTime(value,4);
+              }  
+              },{
+                field:'lookAction',title:'投标记录',width:60,fixed:true,sortable:false,formatter: function(value,row,index){
+                return $.formatString('<img onclick="$.fn.formOptions.viewFun('+tenderListWinParmeters+');" src="{1}" title="投标记录"/>', row.id, '${theme_dir}/css/images/extjs_icons/plugin.png');
+            }  
+              }, 
+              { field: 'scales', title: '进度', width: 50,fixed:true, sortable:false,formatter: function(value,row,index){
+                return value+"%";
+              }},
+              
+              { field : 'action',
+                title : '操作',
+                width :120,
+                fixed:true,
+                formatter : function(value, row, index) {
+                  var str = '';
+                  if(row.scales==100){
+                	  str +='满标待审核';
+                  }else{
+                	  var str = '';
+                      if(row.scales==100){
+                    	  str +='满标待审核';
+                      }else{
+                    	  str += "<@secAuthorizeUrl value='/viewBorrowBtn.html' >";
+                    	  str += $.formatString('<img onclick="$.fn.formOptions.viewFun('+borrowDetailWinParmeters+');" src="{1}" title="查看借款标"/>', row.id, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                    	  str += "</@secAuthorizeUrl>";
+                    	  str += '&nbsp;';
+                    	  str += "<@secAuthorizeUrl value='/borrow/editBorrowDesBtn.html' >";
+                    	  str +=$.formatString('<img onclick="$.fn.dataGridOptions.editFun('+borrowDesWinParmeters+');" src="{1}" title="修改借款详情"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+                    	  str += "</@secAuthorizeUrl>";
+                    	  str += '&nbsp;'; 
+                          if(row.type==110 || row.type==105){
+                            /*if(row.status==0){//审核
+                            }else{//停止流转
+                              str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+stopflowWinParmeters+');" src="{1}" title="停止流转"/>', row.id, '${theme_dir}/css/images/extjs_icons/book.png');
+                            } */
+                          }else{
+                          	  // 截标
+                              if(row.status==1 && (row.account>row.accountYes)&&(row.accountYes>0)){
+                              	str += '&nbsp;'; 
+                              	str += "<@secAuthorizeUrl value='/stopBorrowBtn.html' >";
+                                str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+stopBorrowWinParmeters+');" src="{1}" title="截标"/>', row.id, '${theme_dir}/css/images/extjs_icons/stop.png');
+                                str += "</@secAuthorizeUrl>";
+                              }
+                          }
+                          //延长投标期限
+                          if(row.status==1 && (row.account>row.accountYes)){
+	                          str += '&nbsp;';
+	                          str += "<@secAuthorizeUrl value='/delayBorrowShowBtn.html'>";
+	                          str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+delayBorrowShowWinParmeters+');" src="{1}" title="延长投标期限"/>', row.id, '${theme_dir}/css/images/extjs_icons/wrench.png');
+	                          str += "</@secAuthorizeUrl>";
+                          }
+                          // 撤标
+                          if(row.type!=115 && row.type!=113){
+                              str += '&nbsp;';
+                              str += "<@secAuthorizeUrl value='/cancleBorrowBtn.html' >";
+                              str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+cancelWinParmeters+');" src="{1}" title="撤标"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+                              str += "</@secAuthorizeUrl>";
+                          }
+                          // 取消定向标密码
+                          if(null != row.pwd && "" != row.pwd){
+                              str += '&nbsp;'; 
+                              str += "<@secAuthorizeUrl value='/dxPwdCancleBtn.html' >";
+                              str += $.formatString('<img onclick="$.fn.dataGridOptions.CancelBorrowPwdFun('+cancelBorrowPwdParmeters+');" src="{1}" title="取消定向密码"/>', row.id, '${theme_dir}/css/images/extjs_icons/wrench_orange.png');
+                              str += "</@secAuthorizeUrl>";
+                          }
+                      }
+                  }
+                  
+                  return str;
+                }
+            } ] ],
+            onLoadSuccess : function() {
+                $('#searchForm table').show();
+                parent.$.messager.progress('close');
+            },
+            toolbar : '#toolbar'
+        }); 
+        
+    });
+	//发标管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/loan/borrow/borrowBiddingExcel.html";
+		var userName = $("#userName").val();
+		var borrowName = $("#borrowName").val();
+		var typeName = $("#typeName option:selected").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&borrowName=" + borrowName +"&type=" + typeName + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+            <h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+              <ul>
+                <li>类型：<select name="type" class="type" id="typeName"><option value="">全部</option><#list borrowConfigList as item><option value="${item.id}">${item.name}</option></#list></select></li>
+                <li>借款人：<input type="text" name="userName" autocomplete="off" id="userName"/></li>
+                <li>标名：<input type="text" name="name" autocomplete="off" id="borrowName"/></li>
+                <!-- <li>时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+                -->
+                <li>时间：<input type="text" name="startTime" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime"  class="searchTime" style="width:140px;"/></li>
+                <li><a href="javascript:void(0);" class="searchBtn"   onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+              </ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+    <div id="toolbar" style="display: none;">
+		&nbsp;
+		<@secAuthorizeUrl value='/loan/borrowBiddingExcel.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

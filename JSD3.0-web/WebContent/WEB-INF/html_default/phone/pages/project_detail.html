@@ -1,0 +1,70 @@
+<html>
+<head>
+<title>3-借款明细</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" />
+<style type="text/css">
+
+ul{ margin: 0px 10px; padding: 0px;}
+ul li{  line-height: 40px; border-bottom: 1px dotted   #ddd; list-style: none; overflow: hidden;}
+ul li strong{ float: left; width: 80px; font-weight: normal; font-size: 13px;}
+ul li span{ margin-left: 80px; display: block; font-size: 13px; }
+.red{color: #f60;}
+}
+</style>
+</head>
+<body bgcolor="#FFFFFF" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0">
+
+<#function transCompanyType companyType>
+	<#if companyType??>
+	<#if companyType =="70">
+	<#return "独资企业">
+	<#elseif companyType =="71">
+	<#return "合伙企业">
+	<#elseif companyType =="72">
+	<#return "公司企业">
+	<#elseif companyType =="73">
+	<#return "个体工商户">
+	<#else>
+	<#return "保密">
+	</#if></#if>
+</#function>
+
+<#macro transCompanyType companyType>
+	<#if companyType??>
+	<#if companyType =="70">
+	 	独资企业
+	<#elseif companyType =="71">
+		合伙企业
+	<#elseif companyType =="72">
+		公司企业
+	<#elseif companyType =="73">
+		个体工商户
+	<#else>
+		保密
+	</#if>
+	</#if>
+</#macro>
+<ul>
+<li><strong>借款金额 :</strong><span class="red">${borrow.account!}</span></li>
+<li><strong>年化收益 :</strong><span class="red">${borrow.apr!}%</span></li>
+<li><strong>借款周期 :</strong><span class="red"><#if borrow??><#if borrow.borrowTimeType == 0>${borrow.timeLimit!}个月<#else>${borrow.timeLimit!}天</#if></#if></span></li>
+<li><strong>用户昵称 :</strong><span>${nickName!}</span></li>
+<li><strong>用户性别 :</strong><span>${sex!}</span></li>
+<li><strong>出生年月 :</strong><span>${birth!}</span></li>
+<li><strong>婚姻状况 :</strong><span>${marry!}</span></li>
+<li><strong>岗位职责 :</strong><span>${position!}</span></li>
+<li><strong>所在地区 :</strong><span>${area!}</span></li>
+<li><strong>借款用途 :</strong><span>${borrowUse!}</span></li>
+<li><strong>还款来源 :</strong><span>${sourcerepay!}</span></li>
+<li><strong>企业名称 :</strong><span>${companyName!}</span></li>
+<li><strong>公司类型 :</strong><span><@transCompanyType companyType=(uc.companyType!) /></span></li>
+<li><strong>所属行业 :</strong><span>${profressional!}</span></li>
+<li><strong>企业描述 :</strong><span>${companyDesc!}</span></li>
+<li><strong>经营状况 :</strong><span>${companyStatus!}</span></li>
+<li><strong>担保企业 :</strong><span><#if borrow?? && borrow.vouchFirm??>${borrow.vouchFirm.userName!}<#else>无</#if></span></li>
+<li><strong>借款详情 :</strong><span>${borrowContent!}</span></li>
+</ul>
+
+</body>
+</html>

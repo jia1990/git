@@ -1,0 +1,200 @@
+
+package com.ddtkj.p2psys.autotender.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoSetDao;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoSetService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+
+@Service("borrowAutoSetService")
+public class BorrowAutoSetServiceImpl implements BorrowAutoSetService {
+	
+	private static Logger logger = Logger.getLogger(BorrowAutoSetServiceImpl.class);
+
+	@Resource
+	private BorrowAutoSetDao borrowAutoSetDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private UserIdentifyDao userIdentifyDao;
+
+
+	@Override
+	public PageDataList<BorrowAutoSetModel> getBorrowAutoSetPageDataList(
+			BorrowAutoSetModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if (model != null) {
+			if (StringUtil.isNotBlank(model.getUserName())) {
+				param.addParam("user.userName", Operators.LIKE, model.getUserName());
+			}
+			if (StringUtil.isNotBlank(model.getRealName())) {
+				param.addParam("user.realName", model.getRealName());
+			}
+			if (model.isEnergyEnable() == true) {
+				param.addParam("energyEnable", model.isEnergyEnable());
+			}
+			if (model.isCarEnable() == true) {
+				param.addParam("carEnable", model.isCarEnable());
+			}
+			if (StringUtil.isNotBlank(model.getStatus()) && !"99".equals(model.getStatus())) {
+				param.addParam("status", model.getStatus());
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		param.addOrder(OrderType.ASC, "totalRank");
+		param.addParam("user.isLocked", Operators.NOTEQ, UserConstant.USER_LOCK_LOGOUT);
+		PageDataList<BorrowAutoSet> pList = borrowAutoSetDao.findPageList(param);
+		PageDataList<BorrowAutoSetModel> pageDataList = new PageDataList<BorrowAutoSetModel>();
+		List<BorrowAutoSetModel> modelList = new ArrayList<BorrowAutoSetModel>();
+		pageDataList.setPage(pList.getPage());
+		if(pList.getList().size() > 0){
+			for(int i = 0; i < pList.getList().size(); i++){
+				BorrowAutoSet autoset = pList.getList().get(i);
+				BorrowAutoSetModel autosetModel = BorrowAutoSetModel.instance(autoset); 
+				User user = userDao.find(autoset.getUser().getUserId());
+				autosetModel.setUserName(user.getUserName());
+				autosetModel.setRealName(user.getRealName());
+				modelList.add(autosetModel);
+				//JSDP-83 wcw 2015-04-29 start
+				autosetModel=null;
+				//JSDP-83 wcw 2015-04-29 end
+			}
+			//JSDP-83 wcw 2015-04-29 start
+			pList=null;
+			//JSDP-83 wcw 2015-04-29 end
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+
+	
+	@Override
+	public List<BorrowAutoSet> getBorrowAutoSetList(long user_id) {
+		return borrowAutoSetDao.getBorrowAutoSetList(user_id);
+	}
+	
+	@Override
+	public void updateAutoTime(BorrowAutoSet autoset) {
+		borrowAutoSetDao.updateAutoTime(autoset);
+		logger.info("");
+		borrowAutoSetDao.callProcedure(autoset);
+	}
+
+	@Override
+	public void addBorrowAutoSet(BorrowAutoSet autoset) {
+		borrowAutoSetDao.save(autoset);
+		logger.info("");
+		borrowAutoSetDao.callProcedure(autoset);
+	}
+	
+	@Override
+	public void modifyBorrowAutoSet(BorrowAutoSet auto) {
+		Date updateTime = borrowAutoSetDao.find(auto.getId()).getUpdateTime();
+		auto.setUpdateTime(updateTime);
+		auto.setAddTime(new Date());
+		auto.setAddIp(Global.getIP());
+		borrowAutoSetDao.update(auto);
+		logger.info("更新自动投标存储过程！user_id="+auto.getUser().getUserId());
+	}
+
+	@Override
+	public BorrowAutoSet getBorrowAutoSetById(long id) {
+		return (BorrowAutoSet) borrowAutoSetDao.find(id);
+	}
+
+	@Override
+	public int countBorrowAutoSet(Borrow borrow) {
+		return borrowAutoSetDao.countBorrowAutoSet(borrow);
+	}
+
+	@Override
+	public List<BorrowAutoSet> getBorrowAutoSetList(Borrow borrow) {
+		return borrowAutoSetDao.getBorrowAutoSetList(borrow);
+	}
+
+	@Override
+	public void callProcedure(BorrowAutoSet auto) {
+		borrowAutoSetDao.callProcedure(auto);
+	}
+ 
+	@Override
+	public BorrowAutoSet findByUserId(long user_id) {
+		BorrowAutoSet auto = borrowAutoSetDao.findObjByProperty("user.userId", user_id);
+		User user = userDao.find(user_id);
+		if(auto == null){
+			auto = new BorrowAutoSet(user);
+			borrowAutoSetDao.save(auto);
+		}
+		auto.setUser(user);
+		return auto;
+	}
+
+	@Override
+	public void modifyStatus(BorrowAutoSet auto) { 
+		logger.info("更新自动投标存储过程状态！user_id="+auto.getUser().getUserId()+",修改后的status="+auto.getStatus());
+		auto.setStatus(auto.getStatus());
+		borrowAutoSetDao.updateAutoStatusByUserId(auto.getStatus(), auto.getUser().getUserId());
+		if (BorrowAutoSet.AUTO_TENDER_SET_ENABLE.equals(auto.getStatus())){
+			auto.setAddIp(Global.getIP());
+			auto.setAddTime(new Date());
+			auto.setUpdateTime(new Date());
+			borrowAutoSetDao.updateAutoTime(auto);
+			borrowAutoSetDao.callProcedure(auto);
+		}
+	}
+
+	@Override
+	public BorrowAutoSet init(User user) {
+		BorrowAutoSet auto = borrowAutoSetDao.findObjByProperty("user.userId", user.getUserId());
+		if(auto == null){
+			auto = new BorrowAutoSet(user);
+			auto.setVipLevel(user.getMemberLevel());
+			if (StringUtil.isBlank(user.getMemberLevel()) || MemberVip.MEMBER_LEVEL_N1.equals(user.getMemberLevel())) {
+				auto.setIsVip("N");	
+			} else {
+				auto.setIsVip("Y");	
+			}
+			auto.setStatus(BorrowAutoSet.AUTO_TENDER_SET_DISABLE);
+			borrowAutoSetDao.save(auto);				
+		}
+		auto.setUser(user);
+		return auto;		
+	}
+	
+	@Override
+	public BorrowAutoSet updateBorrowAutoSet(BorrowAutoSet auto) {
+		return borrowAutoSetDao.update(auto);
+	}
+	
+	// JSDP-116 sxy 2015-06-18 start
+	@Override
+	public List<BorrowAutoSet> excelBorrowAutoSetDatalist(
+			BorrowAutoSetModel borrowAutoSetModel) {
+		return borrowAutoSetDao.excelBorrowAutoSetDatalist(borrowAutoSetModel);
+	}
+	// JSDP-116 sxy 2015-06-18 start
+	
+}

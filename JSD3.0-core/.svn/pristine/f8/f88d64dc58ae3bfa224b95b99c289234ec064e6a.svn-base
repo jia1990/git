@@ -1,0 +1,298 @@
+package com.ddtkj.p2psys.credit.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @描述：债权转让实体
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月9日 
+ */
+@Entity
+@Table(name="t_jsd_credit_assignment")
+public class CreditAssignment implements Serializable{
+	
+	private static final long serialVersionUID = 4670937164401085977L;
+	
+	public static final String CREDIT_PUBLISH="00";/* 00:发布*/
+	public static final String CREDIT_CHECK1_SUCCESS="01";	/* 01：初审通过 */
+	public static final String CREDIT_CHECK1_FAIL="02"; /*02:初审未通过*/ 
+	public static final String CREDIT_CHECK2_SUCCESS="03";	/* 03：复审通过 */
+	public static final String CREDIT_CHECK2_FAIL="04"; /*04:复审未通过*/
+	public static final String CREDIT_REPEAL="05";	/* 05：撤回*/
+	public static final String CREDIT_CHECK2_HOLD="06"; /*06:待复审*/
+	public static final String CREDIT_FINISH="07"; /*07:已结束*/
+	//JSDP-35 gjh 2015-4-30 start
+	public static final String CREDIT_RECALL_CHECK="08"; /*08:撤销申请*/
+	//JSDP-35 gjh 2015-4-30 end
+	
+	public static final String CREDIT_ALL="99";	/* 99：所有*/
+	public static final int CREDIT_LEVEL1= 1;	/* 1：普通*/
+	public static final int CREDIT_LEVEL2= 2;	/* 2：优质*/
+	public static final int CREDIT_LEVEL_ALL= 99;	/* 99：所有*/
+	
+	public static final int CREDIT_TYPE_TENDER = 1;	/* 1：投资转出*/
+	public static final int CREDIT_TYPE_BUY = 2;	/* 2：购买的债权转出*/
+	public static final int CREDIT_TYPE_ALL = 99;	/* 99：所有*/
+	public static final int CREDIT_HAS_BREACH = 1;	/* 1：违约提前转出*/
+	public static final int CREDIT_FULLVERIFY_YES = 2;	/* 2：债权需要手动复审*/
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ;  // 标识ID
+	@ManyToOne
+	@JoinColumn(name="sell_user_id")
+	private User user ;  // 出售债权用户
+	@ManyToOne
+	@JoinColumn(name="borrow_id")
+	private Borrow borrow ;  //债权相关标
+	private int caType ; // 1 投资转出  2  购买的债权转出
+	@ManyToOne
+	@JoinColumn(name="tender_id")
+	private BorrowTender tender ;
+	@ManyToOne
+	@JoinColumn(name="cl_id")
+	private CreditLog creditLog ;  // 债权再转出 购买ID
+	private double creditValue ;  // 债权预期价值也就是 公允价值
+	private double creditPrice ;  // 债权发布价格
+	private double creditDis ;  // 债权折让费率
+	private double creditCopies ;  // 债权转让份数
+	private int creditStartPeriod ;  // 转让开始期数
+	private int creditEndPeriod ;  // 转让结束期数
+	private int sellCopies ;  	// 已出售份数
+	private double soldAccount ;  // 已销售金额
+	private double copiesInsterest ; //本期要转让利息  （购买者实际所得利息-购买该债权所付的利息=转出者本期损失的利息）
+	private double haveInsterest ; // 本期应得利息 （转出者本期所得利息）
+	private double creditAccount ; // 转出本金
+	private Date buyEndTime ;  // 转让期限
+	private int isBreach ; // 是否违约提前转出
+	private double 	breachAccount; // 提前转出违约金
+	private String status ;   // 债权状态  00发布，01审核通过，02审核未通过，03复审通过，04复审不能过，05撤回 06:待复审
+	private int level ;  // 债权等级  1普通  2优质
+	private Date verifyTime ; //初审时间
+	private double sellFee ; // 手续费
+	@ManyToOne
+	@JoinColumn(name="verify_user_id") 
+	private Operator operator ;  //  初审用户
+	private String verifyRemark ;  // 初审备注
+	private Date fullVerifyTime ; // 复审时间
+	@ManyToOne
+	@JoinColumn(name="full_verify_user_id")
+	private Operator fullOperator ;  // 复审用户
+	private String fullVerifyRemark ; //复审备注
+	private Date addTime ;  //记录 添加时间
+	private String addIp ;  //记录IP
+	
+	private String tradeNo;//批次号
+	
+	
+	
+	
+	public String getTradeNo() {
+		return tradeNo;
+	}
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public Borrow getBorrow() {
+		return borrow;
+	}
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+	public double getCreditValue() {
+		return creditValue;
+	}
+	public void setCreditValue(double creditValue) {
+		this.creditValue = creditValue;
+	}
+	public double getCreditPrice() {
+		return creditPrice;
+	}
+	public void setCreditPrice(double creditPrice) {
+		this.creditPrice = creditPrice;
+	}
+	public double getCreditDis() {
+		return creditDis;
+	}
+	public void setCreditDis(double creditDis) {
+		this.creditDis = creditDis;
+	}
+	public double getCreditCopies() {
+		return creditCopies;
+	}
+	public void setCreditCopies(double creditCopies) {
+		this.creditCopies = creditCopies;
+	}
+	public int getCreditStartPeriod() {
+		return creditStartPeriod;
+	}
+	public void setCreditStartPeriod(int creditStartPeriod) {
+		this.creditStartPeriod = creditStartPeriod;
+	}
+	public int getCreditEndPeriod() {
+		return creditEndPeriod;
+	}
+	public void setCreditEndPeriod(int creditEndPeriod) {
+		this.creditEndPeriod = creditEndPeriod;
+	}
+	public double getSoldAccount() {
+		return soldAccount;
+	}
+	public void setSoldAccount(double soldAccount) {
+		this.soldAccount = soldAccount;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public int getLevel() {
+		return level;
+	}
+	public void setLevel(int level) {
+		this.level = level;
+	}
+	public Date getVerifyTime() {
+		return verifyTime;
+	}
+	public void setVerifyTime(Date verifyTime) {
+		this.verifyTime = verifyTime;
+	}
+	public Operator getOperator() {
+		return operator;
+	}
+	public void setOperator(Operator operator) {
+		this.operator = operator;
+	}
+	public String getVerifyRemark() {
+		return verifyRemark;
+	}
+	public void setVerifyRemark(String verifyRemark) {
+		this.verifyRemark = verifyRemark;
+	}
+	public Date getFullVerifyTime() {
+		return fullVerifyTime;
+	}
+	public void setFullVerifyTime(Date fullVerifyTime) {
+		this.fullVerifyTime = fullVerifyTime;
+	}
+	public Operator getFullOperator() {
+		return fullOperator;
+	}
+	public void setFullOperator(Operator fullOperator) {
+		this.fullOperator = fullOperator;
+	}
+	public String getFullVerifyRemark() {
+		return fullVerifyRemark;
+	}
+	public void setFullVerifyRemark(String fullVerifyRemark) {
+		this.fullVerifyRemark = fullVerifyRemark;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public double getCopiesInsterest() {
+		return copiesInsterest;
+	}
+	public void setCopiesInsterest(double copiesInsterest) {
+		this.copiesInsterest = copiesInsterest;
+	}
+	public BorrowTender getTender() {
+		return tender;
+	}
+	public void setTender(BorrowTender tender) {
+		this.tender = tender;
+	}
+	public double getHaveInsterest() {
+		return haveInsterest;
+	}
+	public void setHaveInsterest(double haveInsterest) {
+		this.haveInsterest = haveInsterest;
+	}
+	public double getCreditAccount() {
+		return creditAccount;
+	}
+	public void setCreditAccount(double creditAccount) {
+		this.creditAccount = creditAccount;
+	}
+	public int getCaType() {
+		return caType;
+	}
+	public void setCaType(int caType) {
+		this.caType = caType;
+	}
+	public CreditLog getCreditLog() {
+		return creditLog;
+	}
+	public void setCreditLog(CreditLog creditLog) {
+		this.creditLog = creditLog;
+	}
+	public int getIsBreach() {
+		return isBreach;
+	}
+	public void setIsBreach(int isBreach) {
+		this.isBreach = isBreach;
+	}
+	public double getBreachAccount() {
+		return breachAccount;
+	}
+	public void setBreachAccount(double breachAccount) {
+		this.breachAccount = breachAccount;
+	}
+	public int getSellCopies() {
+		return sellCopies;
+	}
+	public void setSellCopies(int sellCopies) {
+		this.sellCopies = sellCopies;
+	}
+	public double getSellFee() {
+		return sellFee;
+	}
+	public void setSellFee(double sellFee) {
+		this.sellFee = sellFee;
+	}
+	public Date getBuyEndTime() {
+		return buyEndTime;
+	}
+	public void setBuyEndTime(Date buyEndTime) {
+		this.buyEndTime = buyEndTime;
+	}
+
+	
+}

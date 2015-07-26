@@ -1,0 +1,75 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.worker;
+
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com  JSDBET-943
+ * @创建时间：2015年4月14日 
+ */
+public class TransferHelper {
+
+	public static TransferWorker getWorker(AccountTransferModel at){
+		int transferType=at.getTransferType();
+		switch (transferType) {
+			case 00:
+				return new BaseTransferWorker(at);
+			case 01:
+				return new RechargeTransferWorker(at);
+			case 02:
+				return new BorrowRepayTransferWorker(at);
+			default:
+				throw new RuntimeException("不正确的转账类型:" + transferType);
+		    }
+		}
+	//JSDP-55 gjh 2015-04-22 start
+	public static TransferWorker getWorker(AccountTransferModel atm,AccountTransfer at){
+		int transferType=at.getTransferType();
+		//JSDP-37 wcw 2015-04-25 start
+		switch (transferType) {
+		case 00: //汇潮转账【单纯第三方转账，不设计本地交易】
+			return new BaseTransferWorker(atm,at);
+		case 01://充值卡转账【包括本地转账以及第三方转账】
+			return new RechargeTransferWorker(atm);
+		case 02: //还款转账【包括本地转账以及第三方转账】
+			return new BorrowRepayTransferWorker(atm,at);
+		//JSDP-156 xingjia 2015-05-22 start
+		case 04://3.0向云购转账
+			return new YunGouTransferWorker(atm);
+		//JSDP-156 xingjia 2015-05-22 start
+		//JSDP-37 wcw 2015-04-25 end
+		default:
+			throw new RuntimeException("不正确的转账类型:" + transferType);
+		}
+	}
+	//JSDP-55 gjh 2015-04-22 start
+	
+	//JSDP-171 xingjia 20150605 start
+	public static TransferWorker getWorker(AccountRechargeModel arm,AccountRecharge recharge){
+		int rechargeType = Integer.parseInt(recharge.getRechargeType()); 
+		switch(rechargeType){
+		case 01:
+			return new RechargeTransferSecWorker(arm,recharge);
+		default:
+			throw new RuntimeException("不正确的转账类型:" + rechargeType);
+		
+		}
+	}
+	//JSDP-171 xingjia 20150605 end
+	//JSDP-203 xingjia 20150702 start
+	//JSDP-184 xingjia 20150623 start
+	public static TransferWorker getWorker(RpActivityProduceModel rpm,RpActivityProduce activityRedPacket){
+		
+		return new RpActivityTransferWorker(rpm,activityRedPacket);
+	}
+	//JSDP-184 xingjia 20150623 end
+	//JSDP-203 xingjia 20150702 end
+}

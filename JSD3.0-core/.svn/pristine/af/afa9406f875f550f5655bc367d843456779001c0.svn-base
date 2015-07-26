@@ -1,0 +1,35 @@
+package com.ddtkj.p2psys.account.service.impl;
+
+
+import javax.annotation.Resource;
+import org.springframework.stereotype.Service;
+import com.ddtkj.p2psys.account.dao.AccountExtraDao;
+import com.ddtkj.p2psys.account.domain.AccountExtra;
+import com.ddtkj.p2psys.account.service.AccountExtraService;
+
+/**
+ * @描述：静态红包账户资金
+ * @作者:fengguoqin@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Service("accountExtraService")
+public class AccountExtraServiceImpl implements AccountExtraService{
+	@Resource
+	private AccountExtraDao accountExtraDao;
+
+	@Override
+	public AccountExtra getAccountExtraByUserId(long userId) {
+		return accountExtraDao.getAccountExtraByUserId(userId);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.account.service.AccountExtraService#addAccountExtra(com.ddtkj.p2psys.account.domain.AccountExtra)
+	 */
+	@Override
+	public AccountExtra addAccountExtra(AccountExtra accountExtra) {
+		return accountExtraDao.addAccountExtra(accountExtra);
+	}
+	
+
+	
+}

@@ -1,0 +1,54 @@
+package com.ddtkj.p2psys.returnmoney.service;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+import com.ddtkj.p2psys.returnmoney.model.ReturnMoneyModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2014年12月30日 
+ */
+public interface ReturnMoneyService {
+    
+	/**
+	 * 回款列表
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<ReturnMoneyModel>  list(ReturnMoneyModel model);
+	/**
+	 * 审核回款奖励
+	 * @param rmodel
+	 * @return
+	 */
+	String auditReturn(ReturnMoneyModel rmodel);
+	/**
+	 * 审核查看回款记录
+	 * @param id
+	 * @return
+	 */
+	ReturnMoneyUse auditReturnView(int id);
+	
+	/**
+	 * 获取平台总奖励
+	 * @author guojunhui@ddtkj.com
+	 * @return 返回总奖励数
+	 */
+	double getContinueInvestAwardCount(String startDate,String endDate);
+	
+	/**
+	 * 投资人 回款续投奖励
+	 * @author 李建云
+	 * 
+	 * */
+	double getContinueInvestAwardCountByUserId(long userId);
+	
+	/**
+	 * 获取用户上个月回款续投金额
+	 * @author 李建云
+	 */
+	double getContinuedInvestMoneyCount(long userId,Date startDate,Date endDate);
+}

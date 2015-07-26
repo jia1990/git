@@ -1,0 +1,108 @@
+package com.ddtkj.p2psys.redpacket.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * @描述：活动产生动态红包(夺宝骑兵)  JSDP-203
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年7月14日
+ */
+public class RpDynamicProduceIndianaJonesExecuter extends BaseExecuter {
+
+	private String accountLogType = null;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		if(null != logType){
+			accountLogType = logType;
+		}
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		//操作金额
+		log.setRpDynamicMoney(money);
+		log.setAwardMoney(awardMoney);
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		log.setRpDynamicUsable(account.getRpDynamicTotal()-account.getFreezeRpDynamic());
+		log.setFreezeRpDynamic(account.getFreezeRpDynamic());
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		/*log.setMoney(super.money);
+		log.setTotal(account.getTotal());
+		log.setUseMoney(account.getUseMoney());
+		log.setNoUseMoney(account.getNoUseMoney());
+		log.setCollection(account.getCollection());*/
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)0);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		//JSDP-203 xingjia 20150724 start
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+        account.setRpDynamicTotal(BigDecimalUtil.add(account.getRpDynamicTotal(),money));
+        accountDao.update(account);
+        //JSDP-203 xingjia 20150724 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+		
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+		
+	}
+	
+	@Override
+	public void handleReturnMoney() {
+		
+	}
+
+	@Override
+	public void extend() {
+		
+	}
+}

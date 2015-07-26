@@ -1,0 +1,146 @@
+package com.ddtkj.p2psys.webpetcard.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述：储值卡model
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月2日 
+ * @JIRA JSDP-171
+ */
+public class PetCardModel extends PetCard{
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = 6;
+	
+	/** 开始时间 */
+	private String startTime;
+	/** 结束时间 */
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 */
+	private int time;
+	
+	private String CardNo;
+	private String paw;
+	private String status;
+	private String ip;
+	private String[] moneys;
+	private String[] ids;
+	
+	/** id */
+	private int idInt;
+	
+	public int getIdInt() {
+		return idInt;
+	}
+
+	public void setIdInt(int idInt) {
+		this.idInt = idInt;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getCardNo() {
+		return CardNo;
+	}
+
+	public void setCardNo(String cardNo) {
+		CardNo = cardNo;
+	}
+
+	public String getPaw() {
+		return paw;
+	}
+	public void setPaw(String paw) {
+		this.paw = paw;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getIp() {
+		return ip;
+	}
+
+	public void setIp(String ip) {
+		this.ip = ip;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public PetCard prototype(){
+		PetCard petCard = new PetCard();
+		BeanUtils.copyProperties(this, petCard);
+		return petCard;
+	}
+	
+	public static PetCardModel instance(PetCard petCard){
+		PetCardModel model = new PetCardModel();
+		BeanUtils.copyProperties(petCard, model);
+		return model;
+	}
+
+	public String[] getMoneys() {
+		return moneys;
+	}
+
+	public void setMoneys(String[] moneys) {
+		this.moneys = moneys;
+	}
+
+	public String[] getIds() {
+		return ids;
+	}
+
+	public void setIds(String[] ids) {
+		this.ids = ids;
+	}
+	
+	
+}

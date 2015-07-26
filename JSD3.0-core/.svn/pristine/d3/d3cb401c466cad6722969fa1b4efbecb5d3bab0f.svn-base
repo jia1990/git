@@ -1,0 +1,389 @@
+package com.rongdu.p2psys.borrow.model;
+
+import java.util.Date;
+import java.util.Map;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.model.interest.EachPlan;
+import com.rongdu.p2psys.borrow.model.interest.InterestCalculator;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月25日18:32:09
+ */
+public class BorrowCollectionModel extends BorrowCollection {
+
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1061654557916046476L;
+
+	/** 当前页码 */
+	private int page;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	//JSDP-206  wcw 2015-07-02 start 
+	private int count;
+	//JSDP-206  wcw 2015-07-02 end 
+	//用于显示和导出
+	/**
+	 * 预还金额()
+	 */
+	private String repaymentAccountStr;
+	/**
+	 * 已还金额()
+	 */
+	private String repaymentYesAccountStr;
+	/**
+	 * 本金()
+	 */
+	private String capitalStr;
+	/**
+	 * 利息()
+	 */
+	private String interestStr;
+	
+	
+	public String getRepaymentAccountStr() {
+		return repaymentAccountStr;
+	}
+
+	public void setRepaymentAccountStr(String repaymentAccountStr) {
+		this.repaymentAccountStr = repaymentAccountStr;
+	}
+
+	public String getRepaymentYesAccountStr() {
+		return repaymentYesAccountStr;
+	}
+
+	public void setRepaymentYesAccountStr(String repaymentYesAccountStr) {
+		this.repaymentYesAccountStr = repaymentYesAccountStr;
+	}
+
+	public String getCapitalStr() {
+		return capitalStr;
+	}
+
+	public void setCapitalStr(String capitalStr) {
+		this.capitalStr = capitalStr;
+	}
+
+	public String getInterestStr() {
+		return interestStr;
+	}
+
+	public void setInterestStr(String interestStr) {
+		this.interestStr = interestStr;
+	}
+
+	/** 用户名 **/
+	private String userName;
+	/** 投资者用户名 **/
+    private String investUserName;
+	/** 名称 **/
+	private String name;
+	/** 借款标ID **/
+	private long borrowId;
+	/** 借款标名 **/
+	private String borrowName;
+	/** 借款标名隐藏后**/
+	private String borrowNameHide;
+	/** 还款方式 **/
+	private int borrowStyle;
+	/** 标类 0月标 1天标 **/
+	private int borrowTimeType;
+	public int getBorrowTimeType() {
+		return borrowTimeType;
+	}
+
+	public void setBorrowTimeType(int borrowTimeType) {
+		this.borrowTimeType = borrowTimeType;
+	}
+	
+	/** 2015年5月10日  孙晓勇 */
+	/** 注册开始时间 */
+	private String registerStartTime;	//
+	/** 注册结束时间 */
+	private String registerEndTime;
+	
+	public String getRegisterStartTime() {
+		return registerStartTime;
+	}
+
+	public void setRegisterStartTime(String registerStartTime) {
+		this.registerStartTime = registerStartTime;
+	}
+
+	public String getRegisterEndTime() {
+		return registerEndTime;
+	}
+
+	public void setRegisterEndTime(String registerEndTime) {
+		this.registerEndTime = registerEndTime;
+	}
+
+	/** 借款期限 **/
+	private int timeLimit;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/**日期范围：0：全部，1：最近七天 2：最近一个月  3：最近两个月，4 最近三个月**/
+	private int time;
+	/** 实际利息 **/
+	private double actualInterest;
+	/** 待还的一些统计信息 **/
+	private Map<String, Object> collectData; 
+	
+	/** 下一次待收的时间**/
+	private Date nextCollectTime;
+	/**下一个待收日待收的金额 **/
+	private double nextCollextAccount;
+	/** 下一个待收日待收的次数 **/
+	private int nextCollextCount;
+	private String typeName;//标的类型名称
+	private String validTime;//借款期限
+	private String contractNo;//合同编号
+	//JSDP-85 gjh 2015-5-4 start
+	/** 对比结果*/
+	private String contrastResult;//1本地异常   2 第三方异常
+	//JSDP-85 gjh 2015-5-4 end
+	
+	public String getContractNo() {
+		return contractNo;
+	}
+
+	public void setContractNo(String contractNo) {
+		this.contractNo = contractNo;
+	}
+
+	public String getValidTime() {
+		return validTime;
+	}
+
+	public void setValidTime(String validTime) {
+		this.validTime = validTime;
+	}
+
+	public double getNextCollextAccount() {
+		return nextCollextAccount;
+	}
+
+	public void setNextCollextAccount(double nextCollextAccount) {
+		this.nextCollextAccount = nextCollextAccount;
+	}
+
+	public int getNextCollextCount() {
+		return nextCollextCount;
+	}
+
+	public void setNextCollextCount(int nextCollextCount) {
+		this.nextCollextCount = nextCollextCount;
+	}
+
+	public static BorrowCollectionModel instance(BorrowCollection borrowCollection) {
+		BorrowCollectionModel borrowCollectionModel = new BorrowCollectionModel();
+		BeanUtils.copyProperties(borrowCollection, borrowCollectionModel);
+		return borrowCollectionModel;
+	}
+
+	public BorrowCollection prototype() {
+		BorrowCollection borrowCollection = new BorrowCollection();
+		BeanUtils.copyProperties(this, borrowCollection);
+		return borrowCollection;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size > 0 ? size : Page.ROWS;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public long getBorrowId() {
+        return borrowId;
+    }
+
+    public void setBorrowId(long borrowId) {
+        this.borrowId = borrowId;
+    }
+
+    public String getBorrowName() {
+		return borrowName;
+	}
+
+	public void setBorrowName(String borrowName) {
+		this.borrowName = borrowName;
+	}
+
+	public int getBorrowStyle() {
+		return borrowStyle;
+	}
+
+	public void setBorrowStyle(int borrowStyle) {
+		this.borrowStyle = borrowStyle;
+	}
+
+	public int getTimeLimit() {
+		return timeLimit;
+	}
+
+	public void setTimeLimit(int timeLimit) {
+		this.timeLimit = timeLimit;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public double getActualInterest() {
+		return actualInterest;
+	}
+
+	public void setActualInterest(double actualInterest) {
+		this.actualInterest = actualInterest;
+	}
+
+	public Map<String, Object> getCollectData() {
+		return collectData;
+	}
+
+	public void setCollectData(Map<String, Object> collectData) {
+		this.collectData = collectData;
+	}
+
+	public Date getNextCollectTime() {
+		return nextCollectTime;
+	}
+
+	public void setNextCollectTime(Date nextCollectTime) {
+		this.nextCollectTime = nextCollectTime;
+	}
+
+	public String getBorrowNameHide() {
+		if (StringUtil.isNotBlank(borrowName)&& borrowName.length()>7) {
+			return borrowName.substring(0, 6) + "***";
+		}
+		return "";
+	}
+
+	public void setBorrowNameHide(String borrowNameHide) {
+		this.borrowNameHide = borrowNameHide;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+    public String getInvestUserName() {
+        return investUserName;
+    }
+    
+    public void setInvestUserName(String investUserName) {
+        this.investUserName = investUserName;
+    }
+
+	public String getTypeName() {
+		return typeName;
+	}
+
+	public void setTypeName(String typeName) {
+		this.typeName = typeName;
+	}
+	//JSDP-85 gjh 2015-5-4 start
+	public String getContrastResult() {
+		return contrastResult;
+	}
+
+	public void setContrastResult(String contrastResult) {
+		this.contrastResult = contrastResult;
+	}
+	//JSDP-85 gjh 2015-5-4 end
+	//JSDP-206  wcw 2015-07-02 start 
+	public int getCount() {
+		return count;
+	}
+
+	public void setCount(int count) {
+		this.count = count;
+	}
+	//JSDP-206  wcw 2015-07-02 end 
+	public BorrowCollection fillCollection(BorrowCollection bc,double capital,double interest,double repaymentAccount) {
+		BorrowCollection c = new BorrowCollection();
+		c.setBorrow(bc.getBorrow());
+		c.setTender(bc.getTender());
+		c.setInterest(interest);
+		c.setCapital(capital);
+		c.setRepaymentAccount(repaymentAccount);
+		c.setPeriod(bc.getPeriod());
+		c.setAddTime(new Date());
+		c.setAddIp(bc.getAddIp());
+		c.setStatus(0);
+		c.setRepaymentTime(bc.getRepaymentTime());
+		c.setRepaymentYesAccount(0.00);
+		c.setLateDays(0);
+		c.setLateInterest(0.00);
+		c.setUser(bc.getUser());
+		c.setManageFee(bc.getManageFee());
+		//还款存入交易批次号，防止重复转账
+		c.setRepayTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_REFUND));
+		//还款存入交易订单号
+		c.setRepayCapitalOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_REPAY));
+		c.setRepayInterestOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_REPAY));
+		c.setRepayInterestFeeOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTER_INTEREST_MANAGE_FEE));
+		c.setRepayLateInterestOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROW_REPAY_LATE_INTEREST));
+		return c;
+	}
+}

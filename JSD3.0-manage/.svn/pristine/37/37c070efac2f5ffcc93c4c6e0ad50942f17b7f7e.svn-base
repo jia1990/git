@@ -1,0 +1,143 @@
+package com.ddtkj.manage.action.webpetcard;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardLog;
+import com.ddtkj.p2psys.webpetcard.model.PetCardLogModel;
+import com.ddtkj.p2psys.webpetcard.service.PetCardLogService;
+import com.ddtkj.p2psys.webpetcard.service.PetCardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：体验卡消费记录action
+ * @作者:sunxiaoyong@ddtkj.com
+ * @创建时间:  2015年6月4日 
+ * @JARA JSDP-171 
+ */
+public class ManagePetCardLogAction extends BaseAction<PetCardLogModel> implements ModelDriven<PetCardLogModel>{
+	// JSDP-171 sxy 2015-06-03 start
+
+	private static Logger logger = Logger.getLogger(ManagePetCardLogAction.class);
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	private Map<String,Object> data = new HashMap<String, Object>();
+	
+	@Resource
+	PetCardService petCardService;
+	@Resource
+	PetCardLogService petCardLogService;
+	@Resource
+	UserService userService;
+	
+	/**
+	 * 体验卡消费记录展示页面
+	 * 
+	 * @author sxy
+	 * @return
+	 */
+	@Action("/modules/petcard/petcardlog/petCardLogManagePage")
+	public String petCardLogManagePage() throws Exception {
+		return "petCardLogManagePage";
+	}
+	/**
+	 * 体验卡消费记录查询方法
+	 * 
+	 * @author sxy
+	 */
+	@Action("/modules/petcard/petcardlog/petCardLogManageList")
+	public void petCardLogManageList() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		map.put("model", model);
+		
+		String userName = paramString("userName");
+		String status = paramString("status");
+		
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		// 用户名
+		if(StringUtil.isNotBlank(userName)){
+			model.setUserName(userName);
+		}
+		// 状态
+		if(StringUtil.isNotBlank(status)){
+			model.setStatus(status);
+		}
+		
+		//PageDataList<PetCardLogModel> pagaDataList = petCardService.petCardLogList(pageNumber, pageSize, model);
+		PageDataList<PetCardLog> pagaDataList = petCardLogService.petCardLogListForSQL(pageNumber, pageSize, model);
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	
+	
+	/**
+	 * 查看体验卡消费记录页面
+	 * 
+	 * @author sxy
+	 * @return
+	 */
+	@Action("/modules/petcard/petcardlog/viewPetCardLogPage")
+	public String viewPetCardLogPage() throws Exception{
+		// 根据ID查询体验卡信息
+		//PetCardLog petCardLog = petCardLogService.getPetCardLogById(model.getId());
+		int id = paramInt("id");
+		PetCardLog petCardLog = petCardLogService.getPetCardLogById(id);
+		// 查询用户名
+		//User user = userService.find(petCardLog.getConsumeUser().getUserId());
+		//request.setAttribute("user", user);
+		// 根据卡号查询体验卡信息
+		//PetCard petCard = petCardService.getPetCardByCardNo(petCardLog.getCardNo());
+		//request.setAttribute("petCard", petCard);
+		request.setAttribute("petCardLog", petCardLog);
+		return "viewPetCardLogPage";
+	}
+	
+	
+	/**
+	 * 体验卡消费记录数据导出
+	 * 
+	 * @author sxy
+	 * @throws Exception
+	 */
+	@Action("/modules/petcard/petcardlog/petCardLogExcel")
+	public void petCardLogExcel() throws Exception{
+		
+		// 新导出
+		response.setContentType("application/msexcel;charset=UTF-8");
+		List<PetCardLog> newList = petCardLogService.excelPetCardLogList(model);
+		String title = "晋商贷体验卡消费的Excel表";
+		String[] hearders = new String[] { "编号", "消费金额", "消费用户", "状态", "消费时间", "备注"};// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]" };// 对象属性数组
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		logger.info("体验卡数据导出成功！");
+	}
+	// JSDP-171 sxy 2015-06-03 end
+	
+}

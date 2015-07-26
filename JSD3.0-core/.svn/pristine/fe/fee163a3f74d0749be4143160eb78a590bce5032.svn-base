@@ -1,0 +1,379 @@
+package com.rongdu.p2psys.borrow.service.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowConfigDao;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.borrow.model.BorrowRepaymentModel;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.core.Global;
+
+@Service("borrowCollectionService")
+public class BorrowCollectionServiceImpl implements BorrowCollectionService {
+
+	@Resource
+	private BorrowCollectionDao borrowCollectionDao;
+	@Resource
+	private BorrowConfigDao borrowConfigDao;
+	@Override
+	public void save(List<BorrowCollection> list) {
+		borrowCollectionDao.save(list);
+	}
+
+	@Override
+	public double getReceivedInterestSum(long userId) {
+		return borrowCollectionDao.getReceivedInterestSum(userId);
+	}
+
+	@Override
+	public double getOverDueInterestSum(long userId) {
+		return borrowCollectionDao.getOverDueInterestSum(userId);
+	}
+	/**
+	 * 根据标获取用户的待收
+	 * 
+	 * @param tender 投标类
+	 * @return List<BorrowCollection>
+	 */
+	@Override
+	public List<BorrowCollection> getListByUserAndBorrow(BorrowTender tender) {
+		QueryParam param = QueryParam.getInstance().addParam("tender.id", tender.getId());
+		return borrowCollectionDao.findByCriteria(param);
+	}
+
+	@Override
+	public PageDataList<BorrowCollectionModel> list(BorrowCollectionModel model) {
+	    PageDataList<BorrowCollection> pList = borrowCollectionDao.getList(model);
+		PageDataList<BorrowCollectionModel> modelList = new PageDataList<BorrowCollectionModel>();
+		List<BorrowCollectionModel> list = new ArrayList<BorrowCollectionModel>();
+		modelList.setPage(pList.getPage());
+		if (pList.getList().size() > 0) {
+			for (int i = 0; i < pList.getList().size(); i++) {
+				BorrowCollection c = (BorrowCollection) pList.getList().get(i);
+				BorrowCollectionModel cm = BorrowCollectionModel.instance(c);
+				cm.setBorrowId(c.getBorrow().getId());
+				cm.setBorrowName(c.getBorrow().getName());
+				cm.setTimeLimit(c.getBorrow().getTimeLimit());
+				cm.setBorrowStyle(c.getBorrow().getStyle());
+				cm.setUserName(c.getBorrow().getUser().getUserName());
+				cm.setInvestUserName(c.getUser().getUserName());
+				cm.setBorrowTimeType(c.getBorrow().getBorrowTimeType());
+				BorrowConfig bconfig = borrowConfigDao.find((long)c.getBorrow().getType());
+				cm.setTypeName(bconfig.getName());
+				if(c.getBorrow().getBorrowTimeType()==0){
+					cm.setValidTime(c.getBorrow().getValidTime()+"月");
+				}else{
+					cm.setValidTime(c.getBorrow().getValidTime()+"天");
+				}
+				
+				cm.setContractNo(c.getBorrow().getDealNo());
+				cm.setActualInterest(BigDecimalUtil.sub(c.getInterest(), c.getManageFee()));
+				//JSDP-85 gjh 2015-5-7 start
+				cm.setUser(c.getUser());
+				//JSDP-85 gjh 2015-5-7 end
+				//用于展示和导出
+				DecimalFormat df = new DecimalFormat("#0.00");
+                cm.setRepaymentAccountStr(df.format(c.getRepaymentAccount()));//应还本金(预还金额)
+                cm.setRepaymentYesAccountStr(df.format(c.getRepaymentYesAccount()));//已还金额
+                cm.setCapitalStr(df.format(c.getCapital()));//本金
+                cm.setInterestStr(df.format(c.getInterest()));//利息
+                //fengguoqin@ddtkj.com JSDP-205  2015.7.2  start
+				cm.setType(c.getType());
+				 //fengguoqin@ddtkj.com JSDP-205  2015.7.2  end
+				list.add(cm);
+			}
+		}
+		modelList.setList(list);
+		return modelList;
+	}
+	// JSDP-206  wcw 2015-07-02 start 
+	@Override
+	public PageDataList<BorrowCollectionModel> getBorrowCollectionList(BorrowCollectionModel model) {
+	    PageDataList<BorrowCollection> pList = borrowCollectionDao.getBorrowCollectionList(model);
+		PageDataList<BorrowCollectionModel> modelList = new PageDataList<BorrowCollectionModel>();
+		List<BorrowCollectionModel> list = new ArrayList<BorrowCollectionModel>();
+		modelList.setPage(pList.getPage());
+		if (pList.getList().size() > 0) {
+			for (int i = 0; i < pList.getList().size(); i++) {
+				BorrowCollection c = (BorrowCollection) pList.getList().get(i);
+				if("FF".equals(c.getUser().getIsLocked())){
+					continue;
+				}
+				BorrowCollectionModel cm = BorrowCollectionModel.instance(c);
+				cm.setBorrowId(c.getBorrow().getId());
+				cm.setBorrowName(c.getBorrow().getName());
+				cm.setTimeLimit(c.getBorrow().getTimeLimit());
+				cm.setBorrowStyle(c.getBorrow().getStyle());
+				cm.setUserName(c.getBorrow().getUser().getUserName());
+				cm.setInvestUserName(c.getUser().getUserName());
+				cm.setBorrowTimeType(c.getBorrow().getBorrowTimeType());
+				BorrowConfig bconfig = borrowConfigDao.find((long)c.getBorrow().getType());
+				cm.setTypeName(bconfig.getName());
+				if(c.getBorrow().getBorrowTimeType()==0){
+					cm.setValidTime(c.getBorrow().getValidTime()+"月");
+				}else{
+					cm.setValidTime(c.getBorrow().getValidTime()+"天");
+				}
+				
+				cm.setContractNo(c.getBorrow().getDealNo());
+				cm.setActualInterest(BigDecimalUtil.sub(c.getInterest(), c.getManageFee()));
+				//JSDP-85 gjh 2015-5-7 start
+				cm.setUser(c.getUser());
+				//JSDP-85 gjh 2015-5-7 end
+				//用于展示和导出
+				DecimalFormat df = new DecimalFormat("#0.00");
+                cm.setRepaymentAccountStr(df.format(c.getRepaymentAccount()));//应还本金(预还金额)
+                cm.setRepaymentYesAccountStr(df.format(c.getRepaymentYesAccount()));//已还金额
+                cm.setCapitalStr(df.format(c.getCapital()));//本金
+                cm.setInterestStr(df.format(c.getInterest()));//利息
+				
+				list.add(cm);
+			}
+		}
+		modelList.setList(list);
+		return modelList;
+	}
+	// JSDP-206  wcw 2015-07-02 end
+	@Override
+	public BorrowCollection getNextCollectionByUserId(long userId) {
+		return borrowCollectionDao.getNextCollectionByUserId(userId);
+	}
+	@Override
+	public int countCollect(long userId,long collectionStatus) {
+		return borrowCollectionDao.countCollect(userId,collectionStatus);
+	}
+	@Override
+	public int countCollected(long userId) {
+		return borrowCollectionDao.countCollected(userId);
+	}
+	
+	@Override
+	public BorrowCollectionModel getCollectStatistics(long userId) {
+		BorrowCollectionModel bm = borrowCollectionDao.getCollectStatistics(userId);
+		BorrowCollection bc = borrowCollectionDao.getNextCollectionByUserId(userId);
+		if (bc != null) {
+			bm.setNextCollectTime(bc.getRepaymentTime());
+			bm = borrowCollectionDao.getBCMByCollectTime(bm, bc.getRepaymentTime(), userId);
+		}
+		double jan = borrowCollectionDao.getCollectByMonth(1, userId);
+		double feb = borrowCollectionDao.getCollectByMonth(2, userId);
+		double mar = borrowCollectionDao.getCollectByMonth(3, userId);
+		double apr = borrowCollectionDao.getCollectByMonth(4, userId);
+		double may = borrowCollectionDao.getCollectByMonth(5, userId);
+		double jun = borrowCollectionDao.getCollectByMonth(6, userId);
+		double jul = borrowCollectionDao.getCollectByMonth(7, userId);
+		double aug = borrowCollectionDao.getCollectByMonth(8, userId);
+		double sep = borrowCollectionDao.getCollectByMonth(9, userId);
+		double oct = borrowCollectionDao.getCollectByMonth(10, userId);
+		double nov = borrowCollectionDao.getCollectByMonth(11, userId);
+		double dec = borrowCollectionDao.getCollectByMonth(12, userId);
+		bm.getCollectData().put("jan", jan);
+		bm.getCollectData().put("feb", feb);
+		bm.getCollectData().put("mar", mar);
+		bm.getCollectData().put("apr", apr);
+		bm.getCollectData().put("may", may);
+		bm.getCollectData().put("jun", jun);
+		bm.getCollectData().put("jul", jul);
+		bm.getCollectData().put("aug", aug);
+		bm.getCollectData().put("sep", sep);
+		bm.getCollectData().put("oct", oct);
+		bm.getCollectData().put("nov", nov);
+		bm.getCollectData().put("dec", dec);
+		return bm;
+	}
+
+    @Override
+    public List<BorrowCollectionModel> investCollectionList(User user) {
+        List<BorrowCollection> pList = borrowCollectionDao.getMemberCollectionList(user);
+        List<BorrowCollectionModel> modelList = new ArrayList<BorrowCollectionModel>();
+        if (pList.size() > 0) {
+            for (int i = 0; i < pList.size(); i++) {
+                BorrowCollection c = pList.get(i);
+                BorrowCollectionModel cm = BorrowCollectionModel.instance(c);
+                cm.setBorrowName(c.getBorrow().getName());
+                cm.setTimeLimit(c.getBorrow().getTimeLimit());
+                cm.setBorrowStyle(c.getBorrow().getStyle());
+                cm.setUserName(c.getBorrow().getUser().getUserName());
+                cm.setActualInterest(BigDecimalUtil.sub(c.getInterest(), c.getManageFee()));
+                cm.setUser(null);
+                modelList.add(cm);
+            }
+        }
+        return modelList;
+    }
+
+    @Override
+    public double accumulatedNetIncome(User user) {
+        return borrowCollectionDao.accumulatedNetIncome(user);
+    }
+
+    @Override
+    public double inInvestAmount(User user, int status) {
+        return borrowCollectionDao.inInvestAmount(user, status);
+    }
+
+    @Override
+	public double sumTodayInterest(User user) {
+        return borrowCollectionDao.sumTodayInterest(user);
+    }
+
+    @Override
+    public double getInterestByUser(User user) {
+        return borrowCollectionDao.getInterestByUser(user);
+    }
+    
+    @Override
+	public double getInterestByUser(User user, Date startTime, Date endTime) {
+		// TODO Auto-generated method stub
+		return borrowCollectionDao.getInterestByUser(user, startTime, endTime);
+	}
+    
+    @Override
+	public double getInterestByUser(User user, int type) {
+		// TODO Auto-generated method stub
+		return borrowCollectionDao.getInterestByUser(user, type);
+	}
+    
+    @Override
+    public List<Object[]> getInterestByUserAndDate(User user, String date) {
+        return borrowCollectionDao.getInterestByUserAndDate(user, date);
+    }
+    @Override
+    public double getCapitalByUser(User user) {
+        return borrowCollectionDao.getCapitalByUser(user);
+    }
+    @Override
+	public double getCapitalByUser(User user, int type) {
+		// TODO Auto-generated method stub
+		return borrowCollectionDao.getCapitalByUser(user,type);
+	}
+    @Override
+    public List<Object[]> getCapitalByUserAndDate(User user, String date) {
+        return borrowCollectionDao.getCapitalByUserAndDate(user, date);
+    }
+
+    @Override
+    public List<String> getCollectionDate(User user) {
+        return borrowCollectionDao.getCollectionDate(user);
+    }
+
+    @Override
+    public double sumInterest() {
+        // TODO Auto-generated method stub
+        return borrowCollectionDao.sumInterest();
+    }
+
+	@Override
+	public int getCollectedSum(long userId, Date startTime,Date endTime,int type) {
+		// TODO Auto-generated method stub
+		return borrowCollectionDao.getCollectedSum(userId, startTime,endTime,type);
+	}
+
+	@Override
+	public double getBorrowCollectedInterest(long userId, Date startTime,
+			Date endTime) {
+		// TODO Auto-generated method stub
+		return borrowCollectionDao.getBorrowCollectedInterest(userId, startTime,endTime);
+	}
+
+	@Override
+	public double getBorrowCollectedLateInterest(long userId, Date startTime,
+			Date endTime) {
+		// TODO Auto-generated method stub
+		return borrowCollectionDao.getBorrowCollectedLateInterest(userId, startTime,endTime);
+	}
+
+	 @Override
+    public List<BorrowCollection> getCollectionListByStatus(int status){
+    	// 还款时间提前
+    	int aheadTime = Global.getInt("aheadtime");
+    	return borrowCollectionDao.getCollectionListByStatus(status, aheadTime);
+    }
+
+	@Override
+	public PageDataList<BorrowCollectionModel> getCollectionListByCaId(long caId) {
+		
+		
+		return null;
+	}
+
+	@Override
+	public String collectionTotal(BorrowCollectionModel model) {
+		return borrowCollectionDao.collectionTotal(model);
+	}
+	//JSDP-85 gjh 2015-5-4 start
+	@Override
+	public PageDataList<BorrowCollectionModel> contrast(
+			PageDataList<BorrowCollectionModel> list) throws Exception {
+		for(BorrowCollectionModel bcm:list.getList()){
+			
+			YmdQuery ymdQuery=new YmdQuery();
+			ymdQuery.setTradeNo(bcm.getRepayTradeNo());
+			ymdQuery.setMode("trade");
+			YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+			ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+			List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+			System.out.println(queryDetaillist.size()>0?queryDetaillist.get(0):"空");
+			if(bcm.getStatus() == 1 && queryDetaillist.size() == 0){
+				bcm.setRepayContrastResult("2");
+			}else if(bcm.getStatus() == 0 && queryDetaillist.size() > 0){
+				bcm.setRepayContrastResult("1");
+			}else{
+				bcm.setRepayContrastResult("0");
+			}
+			BorrowCollection bc = bcm.prototype();
+			borrowCollectionDao.update(bc);
+		}
+		return list;
+	}
+
+	@Override
+	public List<BorrowCollection> findByProperty(String property,
+			Object value) {
+		
+		return borrowCollectionDao.findByProperty(property, value);
+	}
+	@Override
+	public BorrowCollection find(long id) {
+		
+		return borrowCollectionDao.find(id);
+	}
+	//JSDP-85 gjh 2015-5-4 end
+	
+	@Override
+	public List<BorrowCollection> excelBorrowCollectionList(BorrowCollectionModel model) {
+		//JSDP-116 sxy 2015-05-15 start
+		return borrowCollectionDao.excelBorrowCollectionList(model);
+		//JSDP-116 sxy 2015-05-15 start
+	}
+	
+	@Override
+	public int getCollectionListCount(BorrowCollectionModel bcm){
+		return borrowCollectionDao.getCollectionCount(bcm);
+	}
+	
+	
+	
+}

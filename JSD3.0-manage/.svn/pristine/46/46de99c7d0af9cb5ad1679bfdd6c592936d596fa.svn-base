@@ -1,0 +1,554 @@
+package com.ddtkj.manage;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import jxl.Cell;
+import jxl.Sheet;
+import jxl.Workbook;
+import jxl.write.Label;
+import jxl.write.WritableSheet;
+import jxl.write.WritableWorkbook;
+
+import org.apache.log4j.Logger;
+
+public class ExcelHelper {
+
+	public static final String UID="serialVersionUID"; 
+	private static Logger logger = Logger.getLogger(ExcelHelper.class);
+	
+
+	
+	public static void writeExcel(String file,List list,String[] fields,String[] titles) throws Exception {
+		OutputStream os=getOutputStream(file);
+		WritableWorkbook wwb = Workbook.createWorkbook(os);
+//		WritableWorkbook book = Workbook.createWorkbook( new  File("E:/"+file+".xls"));
+		Label label = null;
+
+		int totle = list.size();//获取List集合的size
+		int mus = 60000;//每个工作表格最多存储60000条数据（注：excel表格一个工作表可以存储65536条）
+		int avg = totle / mus;//sheet页数
+		for (int i = 0; i < avg + 1; i++) {//1.循环sheet页
+			WritableSheet ws = wwb.createSheet("列表" + (i + 1), i); //创建一个可写入的工作表
+			//添加表头
+			for(int k=0;k<titles.length;k++){
+				label=new Label(k,0,titles[k]);
+				ws.addCell(label);
+			}
+			int num = i * mus;//每个sheet页的总行数
+			int index = 0;//每个sheet页除表头外开始的行数
+			for (int m = num; m < list.size(); m++) {//2.循环对象
+				if (index == mus) {//判断index == mus的时候跳出当前for循环
+					break;
+				}
+				Object[] o=(Object[]) list.get(m);
+				if(o==null){
+					continue;
+				}
+				for(int j=0;j<fields.length;j++){//3.循环对象属性
+					Object value="";
+					String field = fields[j]+"";
+					if(field == null || field.equals("serialVersionUID")){
+						continue;
+					}
+					try {
+						value =  o[j];
+					} catch (Exception e) {
+					}
+					label=new Label(j,index+1, value+"");
+					//向sheet页中插入数据
+					ws.addCell(label);
+				}
+				index++;
+			}
+		}
+		wwb.write();
+		wwb.close();
+	}
+	
+	//JSDP-116 xingjia 2015-05-19 start
+	/**
+	 * 对于去字段值不按照顺序的
+	 * @param file
+	 * @param list
+	 * @param fields
+	 * @param titles
+	 * @throws Exception
+	 */
+	public static void writeExcelt(String file,List list,String[] fields,String[] titles) throws Exception {
+		OutputStream os=getOutputStream(file);
+		WritableWorkbook wwb = Workbook.createWorkbook(os);
+//		WritableWorkbook book = Workbook.createWorkbook( new  File("E:/"+file+".xls"));
+		Label label = null;
+
+		int totle = list.size();//获取List集合的size
+		int mus = 60000;//每个工作表格最多存储60000条数据（注：excel表格一个工作表可以存储65536条）
+		int avg = totle / mus;//sheet页数
+		for (int i = 0; i < avg + 1; i++) {//1.循环sheet页
+			WritableSheet ws = wwb.createSheet("列表" + (i + 1), i); //创建一个可写入的工作表
+			//添加表头
+			for(int k=0;k<titles.length;k++){
+				label=new Label(k,0,titles[k]);
+				ws.addCell(label);
+			}
+			int num = i * mus;//每个sheet页的总行数
+			int index = 0;//每个sheet页除表头外开始的行数
+			for (int m = num; m < list.size(); m++) {//2.循环对象
+				if (index == mus) {//判断index == mus的时候跳出当前for循环
+					break;
+				}
+				Object[] object=(Object[]) list.get(m);
+				if(object==null){
+					continue;
+				}
+				for(int j=0;j<fields.length;j++){//3.循环对象属性
+					Object value="";
+					
+					String field = fields[j]+"";
+					Integer fieldt = Integer.parseInt(fields[j]);
+					if(field == null || field.equals("serialVersionUID")){
+						continue;
+					}
+					try {
+						value =  object[fieldt];
+					} catch (Exception e) {
+					}
+					label=new Label(j,index+1, value+"");
+					//向sheet页中插入数据
+					ws.addCell(label);
+				}
+				index++;
+			}
+		}
+		wwb.write();
+		wwb.close();
+	}
+	//JSDP-116 xingjia 2015-05-19 end
+//	public static List[] read(String xls) throws Exception {  
+//		List[] data=null; 
+//		File file=new File(xls);
+//		if(file.exists()){
+//			data=read(file);
+//		}
+//		return data;
+//	}
+//	
+//	public static List[] read(File file) throws Exception {  
+//		List[] data=null; 
+//        Workbook wb = null;  
+//        try {  
+//            wb = Workbook.getWorkbook(file);  
+//            if (wb != null) {  
+//                Sheet[] sheets = wb.getSheets();
+//                if (sheets != null && sheets.length >= 0) {  
+//                	int rows = sheets[0].getRows(); 
+//                	data = new List[rows]; 
+//                    for (int j=0;j<rows;j++) {  
+//                    	List<String> rowData=new ArrayList();
+//                        Cell[] cells = sheets[0].getRow(j);  
+//                        if (cells != null && cells.length != 0) { 
+//                            for (int k=0;k<cells.length;k++) {  
+//                                String cell = cells[k].getContents();
+//                                rowData.add(cell);
+//                            } 
+//                        }  
+//                        data[j]=rowData;
+//                    } 
+//                } 
+//            }  
+//        } catch (Exception e) {  
+//        	logger.info(e.getMessage());
+//        } finally {  
+//            wb.close();  
+//        }  
+//        return data;  
+//    }  
+	/**
+	 * 封装导表中数字改为对应含义，金钱保留俩位小数，时间戳转为时间格式
+	 * @param clazz
+	 * @param field
+	 * @param o
+	 * @return
+	 */
+//	private static String getValue(Class clazz,String field,Object o){
+//		String value ="";
+//		if(clazz.equals(AccountRecharge.class)){
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//			if(field.equals("status")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("1")){
+//					value="充值成功";
+//				}else if(value.equals("2")){
+//					value="充值失败";
+//				}else if(value.equals("0")){
+//					value="未审核";
+//				}
+//			}
+//		}else if(clazz.equals(UserBorrowModel.class)){
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//			if(field.equals("status")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("0")){
+//					value="等待初审";
+//				}else if(value.equals("1")){
+//					value="初审通过";
+//				}else if(value.equals("2")){
+//					value="等待复审";
+//				}else if(value.equals("3")){
+//					value="复审通过";
+//				}else if(value.equals("4")){
+//					value="复审未通过";
+//				}else if(value.equals("59")){
+//					value="用户取消";
+//				}else if(value.equals("6")){
+//					value="还款中";
+//				}else if(value.equals("7")){
+//					value="部分还款";
+//				}else if(value.equals("8")){
+//					value="还款成功";
+//				}
+//			}
+//		}else if(clazz.equals(AccountTransfer.class)){
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//			if(field.equals("sts")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("0")){
+//					value="审核中";
+//				}else if(value.equals("1")){
+//					value="转账成功";
+//				}
+//			}else if(field.equals("trans_type")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("0")){
+//					value="现金转账";
+//				}else if(value.equals("1")){
+//					value="积分兑换云购卡";
+//				}
+//			}
+//		}else if(clazz.equals(AccountTransferJsd.class)){
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//			if(field.equals("sts")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("0")){
+//					value="审核中";
+//				}else if(value.equals("1")){
+//					value="审核失败";
+//				}else if(value.equals("2")){
+//					value="转账成功";
+//				}else if(value.equals("3")){
+//					value="转账失败";
+//				}
+//			}
+//		}else if(clazz.equals(AccountCash.class)){
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//			if(field.equals("status")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("0") || value.equals("5") || value.equals("7")){
+//					value="审核中";
+//				}else if(value.equals("1")){
+//					value="提现审核成功";
+//				}else if(value.equals("3")){
+//					value="财务复审未通过";
+//				}else if(value.equals("4")){
+//					value="用户取消";
+//				}
+//			}
+//		}else if(clazz.equals(HuikuanModel.class)){
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//			if(field.equals("status")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("0")){
+//					value="回款待审核";
+//				}else if(value.equals("1")){
+//					value="回款审核成功";
+//				}else if(value.equals("2") || value.equals("4")){
+//					value="回款审核失败";
+//				}else if(value.equals("5")){
+//					value="回款撤回";
+//				}
+//			}
+//		}else if(clazz.equals(FreezeModel.class) || clazz.equals(DetailUser.class)){
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//			if(field.equals("status")){
+//				if(value.isEmpty()){
+//					value="";
+//				}else if(value.equals("0")){
+//					value="未启用";
+//				}else if(value.equals("1")){
+//					value="启用中";
+//				}
+//			}
+//		}else{
+//			value=ReflectUtils.invokeGetMethod(clazz, o, field).toString();
+//		}
+//		if(field.equals("is_auto_tender")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else if(value.equals("0")){
+//				value="网站投标";
+//			}else if(value.equals("1")){
+//				value="自动投标";
+//			}else if(value.equals("2")){
+//				value="手动投标";
+//			}
+//		}else if(field.equals("type")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("1")){
+//					value="网上充值";
+//				}
+//				if(value.equals("2")){
+//					value="线下充值";
+//				}
+//			}
+//		}else if(field.equals("type_id")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("1")){
+//					value="后台管理员";
+//				}
+//				if(value.equals("2")){
+//					value="普通用户";
+//				}
+//				if(value.equals("3")){
+//					value="客服";
+//				}
+//			}
+//		}else if(field.equals("phone_status") || field.equals("video_status") 
+//				|| field.equals("scene_status") || field.equals("real_status") 
+//				|| field.equals("email_status") || field.equals("vip_status")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("1")){
+//					value = "已认证";
+//				}
+//				if(value.equals("2")){
+//					value = "审核中";
+//				}
+//				if(value.equals("-1")){
+//					value = "审核失败";
+//				}else if(value.equals("0")){
+//					value = "未认证";
+//				}
+//			}
+//		}else if(field.equals("sts")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("0")){
+//					value="未申请";
+//				}
+//				if(value.equals("1")){
+//					value="待审核";
+//				}
+//				if(value.equals("2")){
+//					value="审核成功";
+//				}
+//				if(value.equals("3")){
+//					value="审核失败";
+//				}
+//			}
+//		}else if(field.equals("op")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("1")){
+//					value="增加";
+//				}
+//				if(value.equals("2")){
+//					value="扣除";
+//				}
+//			}
+//		}else if(field.equals("sex")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("1")){
+//					value="男";
+//				}
+//				if(value.equals("2")){
+//					value="女";
+//				}
+//			}
+//		}else if(field.equals("card_type")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("385")){
+//					value="身份证";
+//				}
+//			}
+//		}else if(field.equals("nation")){
+//			if(value.isEmpty()){
+//				value="汉族";
+//			}else{
+//				int intValue = Integer.parseInt(value);
+//				switch (intValue){ 
+//				case 329 : value = "汉族"; 
+//				break; 
+//				case 330 : value = "蒙古族";  
+//				break;
+//				case 331 : value = "满族";  
+//				break;
+//				case 332 : value = "朝鲜族";  
+//				break;
+//				case 333 : value = "赫哲族";  
+//				break;
+//				case 334 : value = "达斡尔族";  
+//				break;
+//				case 335 : value = "鄂温克族";  
+//				break;
+//				case 336 : value = "鄂伦春族";  
+//				break;
+//				case 337 : value = "回族";  
+//				break;
+//				case 338 : value = "东乡族";  
+//				break;
+//				case 339 : value = "土族";  
+//				break;
+//				case 340 : value = "撒拉族";  
+//				break;
+//				case 341 : value = "保安族";  
+//				break;
+//				case 342 : value = "裕固族";  
+//				break;
+//				case 343 : value = "维吾尔族";  
+//				break;
+//				case 344 : value = "哈萨克族";  
+//				break;
+//				case 345 : value = "柯尔克孜族";  
+//				break;
+//				case 346 : value = "锡伯族";  
+//				break;
+//				case 347 : value = "塔吉克族";  
+//				break;
+//				case 348 : value = "乌孜别克族";  
+//				break;
+//				case 349 : value = "俄罗斯族";  
+//				break;
+//				case 350 : value = "塔塔尔族";  
+//				break;
+//				case 351 : value = "藏族";  
+//				break;
+//				case 352 : value = "门巴族";  
+//				break;
+//				case 353 : value = "珞巴族";  
+//				break;
+//				case 354 : value = "羌族";  
+//				break;
+//				case 355 : value = "彝族";  
+//				break;
+//				case 356 : value = "白族";  
+//				break;
+//				case 357 : value = "哈尼族";  
+//				break;
+//				case 358 : value = "傣族";  
+//				break;
+//				case 359 : value = "傈僳族";  
+//				break;
+//				case 360 : value = "佤族";  
+//				break;
+//				case 361 : value = "拉祜族";  
+//				break;
+//				case 362 : value = "纳西族";  
+//				break;
+//				case 363 : value = "景颇族";  
+//				break;
+//				case 364 : value = "布朗族";  
+//				break;
+//				case 365 : value = "阿昌族";  
+//				break;
+//				case 366 : value = "普米族";  
+//				break;
+//				case 376 : value = "壮族";  
+//				break;
+//				default : value = "汉族"; 
+//				break; 
+//				} 
+//			}
+//		}else if(field.equals("real_type")){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				if(value.equals("1")){
+//					value="ID5认证";
+//				}
+//				if(value.equals("0")){
+//					value="手动认证";
+//				}
+//			}
+//		}
+//		if(field!=null&&isTime(field)){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				value=DateUtils.dateStr4(value);
+//			}
+//		}
+//		//判断是否包含金钱，如有，将其保留两位有效数字
+//		if(field!=null&&isMoney(field)){
+//			if(value.isEmpty()){
+//				value="";
+//			}else{
+//				value=NumberUtils.format2Str(NumberUtils.getDouble(value));
+//			}
+//		}
+//		return value;
+//	}
+	
+	private static boolean isTime(String field){
+		// v1.6.6.2 RDPROJECT-277 xx 2013-10-24 start
+		String[] times = new String[] { "addtime", "addTime", "repay_time", "verify_time","request_date", "repay_yestime",
+				"repayment_time", "repayment_yestime", "registertime", "vip_verify_time", "full_verifytime",
+				"last_tender_time","kefu_addtime",
+		// v1.6.7.1 RDPROJECT-384 wcw 2013-11-20 start
+				"realname_verify_time","video_verify_time","scene_verify_time",
+				"phone_verify_time","pwd_modify_time","vip_end_time","request_date" };
+		// v1.6.7.1 RDPROJECT-384 wcw 2013-11-20 end
+		boolean isTime=false;
+		for(String s:times){
+			if(s.equals(field)){
+				isTime=true;
+				break;
+			}
+		}
+		return isTime;
+	}
+	/**
+	 * 判断是否是金钱
+	 * @param field
+	 * @return
+	 */
+	private static boolean isMoney(String field){
+		String[] money = new String[]{"sum","use_money","collection","total","no_use_money","money","rewardSum"};
+		boolean isMoney = false;
+		for(String s:money){
+			if(s.equals(field)){
+				isMoney = true;
+				break;
+			}
+		}
+		return isMoney;
+	}
+	
+	public static OutputStream getOutputStream(String file) throws Exception{
+		File f = new File(file);
+		f.createNewFile();
+		OutputStream os=new FileOutputStream(f);
+		return os;
+	}
+
+}

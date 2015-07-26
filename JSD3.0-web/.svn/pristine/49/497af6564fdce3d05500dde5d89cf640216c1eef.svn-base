@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html">
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/contact.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/account.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/loan.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+
+<title>晋商贷-账户设置</title>
+<style>
+.c_mobile_valid li{border:none;}
+.c_mobile_info, .c_tel_info{width:auto;}
+.c_login_pwd li{height:auto;}
+.c_update_detail{display:none;margin-bottom:40px;}
+.c_login_pwd .y_forms .y_spans{float: right;margin-left: 0;display:inline-block;width:310px;text-align:left;margin-top: 8px;}
+select:focus{outline:none;}
+.c_qa,.c_lock_info{width: 212px;height: 38px;padding: 0 4px;border:1px solid #C8C8C8;margin-right: 10px;}
+.c_lock_info{padding:0;width: 222px;}
+.c_qa_msg{color:#e86969;}
+.c_find_way{margin: 0 100px;margin-left: 256px;_margin-left:128px;}
+.c_find_way dd{float:left;margin-right:80px;cursor:default;}
+.c_find{font-style:normal;cursor:pointer;font-size:14px;}
+.c_find:hover{color:#12ADFF;}
+.c_account_tel{margin-top: 40px;}
+.c_account_tel dd{height:50px;padding-left: 60px;}
+.c_account_tel .c_get_code,.c_account_tel .c_telphone{margin:0;}
+.c_finds li{border:0;}
+.c_flow_text{position: absolute;top: 30px;}
+.c_send_success{margin:40px 0 0 70px;font-size:14px;color:#555;}
+.c_send_success input{margin-right:10px;width:212px;height:40px;border:1px solid #C8C8C8;padding:0 4px;}
+.c_go_look input{margin-left: 194px;_margin-left:97px;margin-top:30px;}
+.c_email_number{width:212px;height:40px;border:1px solid #C8C8C8;padding:0 4px;margin-right: 10px;}
+.c_mobile_confirm{margin-left:104px;_margin-left:52px;}
+.c_valid_hide .c_pwd_error{width: 360px;float: right;margin-left: 0;margin-top: 20px;color:#e86969;}
+select:focus{outline:none;}
+.c_qa,.c_lock_info{width: 240px;height: 36px;padding: 0 4px;border:1px solid #C8C8C8;margin-right: 10px;}
+.c_lock_info{padding:0;width: 222px;}
+.c_tel_info .c_qa_msg,.c_tel_info .c_tel_msg, .c_email_msg{float: right;width: 320px;margin-left: 0;color: #e86969;}
+.c_tel_msg{color:#e86969;}
+.c_new_tel{width: 212px;height: 38px;padding: 0 4px;border: 1px solid #C8C8C8;margin-right:10px;}
+.c_tel_valid_info{font-size:12px;padding-left: 76px;height: 30px;margin-top: 6px;padding-left: 104px;}
+.y_accountright_bottom .y_account_div_a a{color:#fff;border-radius:2px;background:#12ADFF;}
+.y_accountright_bottom .y_account_div_a a:hover{background:#12ADFF;}
+.c_deal_content .y_account_nav dd span.c_member_icon{background:url(${webroot}${theme_dir}/images/contact/vip.png) no-repeat 0 2px;}
+.c_deal_content .y_account_nav .c_invest_this span.c_member_icon{background-position:0 -20px;}
+
+
+.updateEmall_div a{color:#fff;border-radius:2px;background:#12ADFF;}
+.updateEmall_div a:hover{background:#12ADFF;}
+.updateEmall_div{float:right;}
+.updateEmall_div a{display: block;border: 1px solid #0697da;font-size: 12px;color: #fff;height: 22px;width: 88px;float: left;margin-left: 15px;line-height: 22px;text-align: center;margin-top: 11px;}
+.updateEmall_div a:hover{background: #12ADFF;color: #fff;}
+
+.y_alertsBoxCon{text-align:center;}
+.y_alertsBoxCon a{display:inline-block;width:80px;height:30px;line-height:30px;margin-top:10px;text-align:center;background:#12adff;color:#fff;border-radius:2px;}
+
+/*826   fgq  3.18 进度条*/
+.progress-bar, .progress-bar b{display: block;} 
+.progress-bar {position:relative;background:#fff; height: 10px;width: 240px;border:1px solid #ccc;border-radius:30px;} 
+.progress-bar b {position:absolute;background:#6FCA01;height: 10px;border-radius:30px;}
+</style>
+
+
+</head>
+ <body>
+
+<#include "../../include/headerMemberCenter.html">
+	<!--  -->
+	<div class="c_deal">
+		<div class="c_deal_content" style="overflow: hidden;">
+			<!-- 左侧导航 -->
+			<#assign mid="m_info" >
+			<#include "../account_menu.html">
+			<!-- 右侧 -->
+			<input type="hidden" id="sflag" value="${flag}"/>
+			<div class="c_deal_record y_account_right">
+				<!-- 账户设置 -->
+				<div class="c_deal_title">账户设置</div>
+				<ul class="y_account_right_top"  >
+				<!-- //JSDP-206  wcw 2015-07-02 start  -->
+				   <li>
+						<a href="identifedRealName.html" class="y_account_rightula y_account_rightula1"></a> <h4>实名认证</h4> <a href="identifedRealName.html" class="y_account_rightula22">未认证</a>
+						<p>充值提现，必须完成实名认证</p>
+					</li>
+					<li>
+						<a href="identifedPhoneView.html" class="y_account_rightula y_account_rightula3"></a> <h4>手机认证</h4><a href="identifedPhoneView.html" class="y_account_rightula22">未认证</a>
+						<p>账户资金变动，实时通知</p>
+					</li>
+					<li style="border:0;padding-right:0;">
+						<a href="/user/activeEmail.html" class="y_account_rightula y_account_rightula2"></a><h4>邮箱认证</h4><a href="/user/activeEmail.html" class="y_account_rightula22">未认证</a>
+						<p>找回密码，接收最新消息</p>
+					</li>
+					<!-- //JSDP-206  wcw 2015-07-02 end  -->
+				</ul>
+
+				<!-- 保护账户安全 -->
+				<!-- 826  fgq  安全等级进度条 -->
+			 	<div class="c_deal_title" style="color:#666;">
+				 	<span style="color:#333;">保护账户安全</span>
+				 	<span style="margin:0 10px 0 20px;">您的安全等级：</span>
+				 	<span class="progress-bar" style="display:inline-block;margin-right:24px;"><b style="width:80px;" class="progress-bar-bfind"></b></span>
+				 	<i class="progress-bar-ifind"></i>
+			 	</div>
+			 	
+ 		
+				<ul class="y_accountright_bottom y_account_password_right c_login_pwd" >
+					<li>
+						<div class="loginPwd">
+							<em>登陆密码</em>
+							<span>登录晋商贷时需要输入的密码</span>
+							<!-- <div class="y_account_div_a" style="display: none">
+								<a href="javascript:void(0);">修改</a>
+							</div> -->
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_update_detail  c_update_login_pwd">
+						</div>
+						<div class="c_mobile_valid" style="display:none">
+							<ul class="c_mobile_step">
+							<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证身份</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+							<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 0;">重置登录密码</div></i><b></b></li>
+							<li class="c_step_last c_step_this"><span>3</span><div class="c_flow_text">修改成功</div></li>
+							<div class="c_clear"></div>
+							</ul>
+						<div class="c_pwd_success">登录密码修改成功<a href="/member/useridentify/identify.html">返回账户设置</a></div>
+						</div>
+						
+					</li>
+					<li>
+						<div class="setpaypwd">
+							<em>交易密码</em>
+							<span>在账户资金变动、修改账户信息时需要输入的密码</span>
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_update_detail c_update_detail1">
+						</div>
+						<div class="c_update_detail c_update_detail2">
+							<dl class="c_find_way">
+								<dd><input type="radio" name="c_pwd_find" checked/>手机</dd>
+								<dd><input type="radio" name="c_pwd_find"  class="findPwdByEmail"/>邮箱</dd>
+								<dd><input type="radio" name="c_pwd_find" />密保</dd>
+								<div class="c_clear"></div>
+							</dl>
+							<div class="c_find_detail">
+								<!-- 交易密码找回 -->
+							</div>
+						</div>
+					</li>
+					<li>
+						<div class="questiondiv">
+							<em>密保问题</em>
+							<span>轻松找回交易密码</span>
+							<div class="c_clear"></div>
+						</div>
+						<!-- 设置密保 -->
+						<div class="c_update_detail updateQuestion">
+						</div>
+					</li>
+					<li>
+					
+					<input type="text" value="${user.mobilePhone!}" id="userphone" style="display: none"></input>
+						<div class="modifyPhone">
+							<em>更改手机</em>
+							<span>轻松更改手机号</span>
+							<!-- <div class="y_account_div_a">
+								<a href="javascript:void(0);">修改</a>
+							</div> -->
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_update_detail c_update_detail_upmobile">
+							<!-- 第一步 -->
+							<dl class="c_update_type">
+								<dd><input type="radio" name="c_update_tel" checked/>手机</dd>
+								<dd><input type="radio" name="c_update_tel" />邮箱</dd>
+								<div class="c_clear"></div>
+							</dl>
+							<div class="c_update_way">
+								<!-- 通过手机号更改 -->
+							
+							</div>
+						</div>
+					</li>
+					<li>
+					<input type="text" value="${user.email!}" id="userEmail" style="display: none"></input>
+						<div class="chankEmail">
+							<em>更改邮箱</em>
+							<span  id="updateEmail">轻松更改邮箱</span>
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_update_detail c_update_detail_upemail">
+							<dl class="c_update_type2">
+								<dd><input type="radio" name="c_update_email" checked/>邮箱</dd>
+								<dd><input type="radio" name="c_update_email" />手机</dd>
+								<div class="c_clear"></div>
+							</dl>
+							<div class="c_update_way2">
+								<!-- 通过邮箱找回 -->
+							
+							</div>
+						</div>
+					</li>
+					<!-- <li>
+						<div>
+							<em>QQ合作登陆</em>
+							<span>您已成功绑定QQ登陆</span>
+							<div class="y_account_div_a">
+								<a href="">重新绑定</a><a href="">解除绑定</a>
+							</div>
+							<div class="c_clear"></div>
+						</div>
+					</li> -->
+				</ul>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+	
+	 <p  class="pss" style="display:none;">尊敬的用户，由于充值与监管账户有关联，请确保<span>监管账户开通</span>，否则会导致充值失败，请先开通监管账户。
+<br/>
+<a href="${weburl}/member/security/realNameIdentify.html">马上去开通</a>
+</p>
+  <script>seajs.use('member/identify');</script> 
+ <script>
+	$(function(){
+		$($(".y_account_nav dd")[0]).addClass("c_invest_this");
+	})
+</script>
+	<#include "../../include/b_foot.html">
+ </body>
+</html>

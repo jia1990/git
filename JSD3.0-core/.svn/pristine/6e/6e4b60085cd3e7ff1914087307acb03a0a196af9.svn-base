@@ -1,0 +1,98 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.util.BigDecimalUtil;
+
+/**
+ * @描述:投资人利息管理费规则
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月18日
+ */
+public class InvestorInterestManageFeeRuleCheck extends RuleCheck {
+
+	public InvestorInterestManageFeeRuleCheck() {
+	}
+
+	public static final int STATUS_OPEN = 1;// 开启
+	public static final int STATUS_CLOSE = 0;// 关闭
+
+	@Override
+	public boolean checkRule() {
+
+		return false;
+	}
+
+	private int status;// 1,开启，0，关闭
+	private double rate;// 管理利率
+
+	public int getStatus() {
+		return status;
+	}
+
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	public double getRate() {
+		return rate;
+	}
+
+	public void setRate(double rate) {
+		this.rate = rate;
+	}
+
+	/**
+	 * 获取利息管理费
+	 * 
+	 * @return map key(status,rate)
+	 * */
+	public Map<String, Object> investorInterestManageFee() {
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		data.put("status", status);
+		data.put("rate", rate);
+		return data;
+	}
+
+	/**
+	 * 获取利息管理费
+	 * 
+	 * @interest 投资产生的代收利息
+	 * @return 利息管理费用
+	 * */
+
+	public double investorInterestManageFee(double interest) {
+		double r = 0.0d;
+		if (STATUS_OPEN == status) {
+			r = BigDecimalUtil.round(interest * rate, 2);
+		}
+		return r;
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = InvestorInterestManageFeeRuleCheck.class
+				.getResourceAsStream("投资人利息管理费规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll("\\s* ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(json);
+		Object jsonObj = JSON.parseObject(json,
+				InvestorInterestManageFeeRuleCheck.class);
+		InvestorInterestManageFeeRuleCheck test = (InvestorInterestManageFeeRuleCheck) jsonObj;
+
+		// System.out.println(test);
+		System.out.println(BigDecimalUtil.round(10.364, 2));
+	}
+}

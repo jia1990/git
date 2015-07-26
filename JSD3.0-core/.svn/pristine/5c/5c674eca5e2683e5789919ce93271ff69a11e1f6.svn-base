@@ -1,0 +1,176 @@
+package com.ddtkj.p2psys.autotender.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述:自动投标记录表, 作为投标记录的补充表, 方便查询
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-12   
+ */
+@Entity
+@Table(name = "t_jsd_borrow_auto_tender")
+public class BorrowAutoTender implements Serializable {
+
+	private static final long serialVersionUID = -4220031729976713569L;
+	
+	/** 自动投标状态 : 成功 */
+	public static final String AUTO_TENDER_RESULT_SUCCESS = "11";
+	/** 自动投标状态 : 失败 */
+	public static final String AUTO_TENDER_RESULT_FAIL = "22";
+	/** 自动投标状态 : 所有状态 */
+	public static final String AUTO_TENDER_RESULT_ALL = "99";
+	
+	/** 开启自动投标  */
+	public static final int AUTO_TENDER_ENABLE = 1;
+	/** 借款标状态：自动投标状态 */
+	public static final int AUTO_TENDER_STATUS_YES = 19;
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;					//主键
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "auto_id")
+	private BorrowAutoSet auto;		//自动投标设置ID
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;					//用户ID
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "borrow_id")
+	private Borrow borrow;				//借款标ID
+	
+	private String userName;			//用户名
+	private String borrowName;			//借款标标名
+	private String tenderBilNo;			//登记债权时候的订单号
+	private int style;					//还款方式
+	private double apr;					//利率
+	private int borrowTimeType;			//是否天标(1天标, 0月标)
+	private int timeLimit;				//借款期限
+	private double money;				//实际投标金额
+	private String status;				//自动投标结果(11成功, 22失败)
+	private Date addTime;				//自动投标时间
+	private String addIp;				//自动投标IP
+	private String remark;				//备注, 用作消息提示
+	
+	public BorrowAutoTender() {
+		super();
+	}
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public BorrowAutoSet getAuto() {
+		return auto;
+	}
+	public void setAuto(BorrowAutoSet auto) {
+		this.auto = auto;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public Borrow getBorrow() {
+		return borrow;
+	}
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	public String getBorrowName() {
+		return borrowName;
+	}
+	public void setBorrowName(String borrowName) {
+		this.borrowName = borrowName;
+	}
+	public String getTenderBilNo() {
+		return tenderBilNo;
+	}
+	public void setTenderBilNo(String tenderBilNo) {
+		this.tenderBilNo = tenderBilNo;
+	}
+
+	public int getStyle() {
+		return style;
+	}
+	public void setStyle(int style) {
+		this.style = style;
+	}
+	public double getApr() {
+		return apr;
+	}
+	public void setApr(double apr) {
+		this.apr = apr;
+	}
+	public int getBorrowTimeType() {
+		return borrowTimeType;
+	}
+
+	public void setBorrowTimeType(int borrowTimeType) {
+		this.borrowTimeType = borrowTimeType;
+	}
+	public int getTimeLimit() {
+		return timeLimit;
+	}
+	public void setTimeLimit(int timeLimit) {
+		this.timeLimit = timeLimit;
+	}
+	public double getMoney() {
+		return money;
+	}
+	public void setMoney(double money) {
+		this.money = money;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	
+}

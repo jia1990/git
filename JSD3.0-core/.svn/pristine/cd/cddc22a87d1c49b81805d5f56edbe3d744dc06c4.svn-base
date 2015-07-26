@@ -1,0 +1,48 @@
+package com.rongdu.p2psys.core.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.core.cache.MemcacheException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.dao.LogTemplateDao;
+import com.rongdu.p2psys.core.domain.LogTemplate;
+import com.rongdu.p2psys.core.service.LogTemplateService;
+
+@Service("logTemplateService")
+public class LogTemplateServiceImpl implements LogTemplateService {
+
+	@Resource
+	private LogTemplateDao logTemplateDao;
+
+	@Override
+	public PageDataList<LogTemplate> logTemplateList(int pageNumber, int pageSize, LogTemplate logTemplate) {
+		return logTemplateDao.logTemplateList(pageNumber, pageSize, logTemplate);
+	}
+
+	@Override
+	public void logTemplateAdd(LogTemplate logTemplate) {
+		logTemplateDao.save(logTemplate);
+	}
+
+	@Override
+	public LogTemplate logTemplateEditPage(long id) {
+		return logTemplateDao.find(id);
+	}
+
+	@Override
+	public LogTemplate logTemplateEdit(LogTemplate logTemplate) {
+		
+		LogTemplate logTemplates = logTemplateDao.update(logTemplate);
+		if(null != logTemplates){
+			if(!GlobalCache.modifyLogTemplate(logTemplates)){	
+				throw  new MemcacheException("更新缓存异常");
+			}
+		}
+		
+		return logTemplates;
+	}
+
+}

@@ -1,0 +1,29 @@
+package com.ddtkj.p2psys.returnmoney.dao;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+import com.rongdu.common.dao.BaseDao;
+
+public interface ReturnMoneyDao extends BaseDao<ReturnMoneyUse>{
+
+	/**
+	 * 获取平台总奖励
+	 * @author guojunhui@ddtkj.com
+	 * @return 返回总奖励数
+	 */
+	double getContinueInvestAwardCount(String startDate,String endDate);
+	
+	/**
+	 * 投资人 回款续投奖励
+	 * @author 李建云
+	 * 
+	 * */
+	double getContinueInvestAwardCountByUserId(long userId);
+	
+	/**
+	 * 获取用户上个月回款续投金额
+	 * @author 李建云
+	 */
+	double getContinuedInvestMoneyCount(long userId,Date startDate,Date endDate);
+}

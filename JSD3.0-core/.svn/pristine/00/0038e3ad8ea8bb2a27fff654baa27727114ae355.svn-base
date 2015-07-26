@@ -1,0 +1,113 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.redpacket.dao.RpActivityDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.model.RpActivityModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：红包活动的service接口     JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+@Service("rpActivityService")
+public class RpActivityServiceImpl implements RpActivityService {
+
+	@Resource
+	private RpActivityDao rpActivityDao;
+	@Override
+	public PageDataList<RpActivityModel> pageDataList(RpActivityModel model) {
+		
+		QueryParam param = QueryParam.getInstance();
+		if(StringUtil.isNotBlank(model.getActivityName())){
+			param.addParam("activityName", Operators.LIKE, model.getActivityName());
+		}
+		if(StringUtil.isNotBlank(model.getActivityStartTime())){
+			param.addParam("startTime", Operators.GTE, model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getActivityEndTime())){
+			param.addParam("endTime", Operators.LTE, model.getEndTime());
+		}
+		if(StringUtil.isNotBlank(model.getStatus()) && !"99".equals(model.getStatus())){
+			param.addParam("status", model.getStatus());
+		}
+		
+		
+		PageDataList<RpActivity> pageDataList = rpActivityDao.findPageList(param);
+		List<RpActivity> rpActivityList = pageDataList.getList();
+		ArrayList<RpActivityModel> rpmList = new ArrayList<RpActivityModel>();
+		for(int i =0;i<rpActivityList.size();i++){
+			RpActivity rpa = rpActivityList.get(i);
+			RpActivityModel rpm = RpActivityModel.instance(rpa);
+			if(null != rpa.getOperator()){
+				rpm.setOptName(rpa.getOperator().getUserName());
+			}
+			if(null != rpa.getUpdateOperator()){
+				rpm.setUpdateOptName(rpa.getUpdateOperator().getUserName());
+			}
+			rpmList.add(rpm);
+		}
+		PageDataList<RpActivityModel> pageDataRpmList = new PageDataList<RpActivityModel>();
+		pageDataRpmList.setList(rpmList);
+		pageDataRpmList.setPage(pageDataList.getPage());
+		
+		return pageDataRpmList;
+	}
+	@Override
+	public RpActivity addRpActivity(RpActivity rpActivity) {
+		RpActivity rpa = rpActivityDao.save(rpActivity);
+		if(null != rpa){
+			return rpa;
+		}
+		return null;
+	}
+	@Override
+	public RpActivity findRpActivityById(long id) {
+		RpActivity rpActivity = rpActivityDao.find(id);
+		if(null != rpActivity){
+			return rpActivity;
+		}
+		return null;
+	}
+	@Override
+	public RpActivity updateRpActivity(RpActivity rpActivity) {
+		RpActivity rpa = rpActivityDao.update(rpActivity);
+		if(null != rpa){
+			return rpa;
+		}
+		return null;
+	}
+	@Override
+	public RpActivity delRpActivity(RpActivity rpActivity) {
+		rpActivity.setStatus(RpActivity.ACTIVITY_STATUS_DEL);
+		RpActivity rpa = rpActivityDao.update(rpActivity);
+		if(null != rpa){
+			return rpa;
+		}
+		return null;
+	}
+	@Override
+	public List<RpActivity> getActivitingList() {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("startTime", Operators.LTE, DateUtil.dateStr4(Calendar.getInstance().getTime()));
+		param.addParam("endTime",Operators.GTE,DateUtil.dateStr4(Calendar.getInstance().getTime()));
+		param.addParam("status", RpActivity.ACTIVITY_STATUS_OPEN);
+		
+		return rpActivityDao.findByCriteria(param);
+	}
+
+
+}

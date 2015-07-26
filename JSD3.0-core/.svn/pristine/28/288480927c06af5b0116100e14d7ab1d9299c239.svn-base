@@ -1,0 +1,80 @@
+package com.ddtkj.p2psys.authorize.model;
+
+import com.ddtkj.p2psys.core.cache.MemCachedUtil;
+import com.rongdu.common.util.StringUtil;
+
+
+/**
+ * 授权服务
+ * 使用Spring缓存授权信息
+ * @author sxy
+ * @date 2014年12月26日
+ *
+ */
+public class OAuthCache {
+	
+
+	/**
+	 * 缓存授权码
+	 * @param authCode
+	 * @param userInfo
+	 */
+	public void addAuthCode(String authCode, ClientUserModel userInfo) {
+		String authCodeStr=(String) MemCachedUtil.memCachedClient.get(authCode);
+		if(StringUtil.isNotBlank(authCodeStr)){
+			MemCachedUtil.memCachedClient.replace(authCode, userInfo);
+		}else{
+		    MemCachedUtil.memCachedClient.set(authCode, userInfo);
+		}
+	}
+
+	/**
+	 * 缓存AccessToken
+	 * @param accessToken
+	 * @param userInfo
+	 */
+	public void addAccessToken(String accessToken, ClientUserModel userInfo) {
+		String authCodeStr=(String) MemCachedUtil.memCachedClient.get(accessToken);
+		if(StringUtil.isNotBlank(authCodeStr)){
+			MemCachedUtil.memCachedClient.replace(accessToken, userInfo);
+		}else{
+		    MemCachedUtil.memCachedClient.set(accessToken, userInfo);
+		}
+	}
+
+	/**
+	 * 根据授权码获取用户信息
+	 * @param authCode
+	 * @return
+	 */
+	public ClientUserModel getUserInfoByAuthCode(String authCode) {
+		return (ClientUserModel) MemCachedUtil.memCachedClient.get(authCode);
+	}
+
+	/**
+	 * 根据AccessToken获取用户信息
+	 * @param accessToken
+	 * @return
+	 */
+	public ClientUserModel getUserInfoByAccessToken(String accessToken) {
+		return (ClientUserModel)  MemCachedUtil.memCachedClient.get(accessToken);
+	}
+
+	/**
+	 * 判断授权码是否存在
+	 * @param authCode
+	 * @return
+	 */
+	public boolean checkAuthCode(String authCode) {
+		return MemCachedUtil.memCachedClient.get(authCode) != null;
+	}
+
+	/**
+	 * 判断AccessToken是否存在
+	 * @param accessToken
+	 * @return
+	 */
+	public boolean checkAccessToken(String accessToken) {
+		return MemCachedUtil.memCachedClient.get(accessToken) != null;
+	}
+}

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>短信接口查询</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var winWidth = 680;
+	var winHeight = 600;
+
+	var viewErrorLogTitle = "查看错误日志";
+	var viewErrorLogUrl = "/modules/system/errorlog/viewErrorLogManage.html";
+	var viewErrorLogParmeters = "'{0}','" + viewErrorLogTitle + "',720,530,'" + viewErrorLogUrl + "'";
+
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'errorLogList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'desc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [[
+			  { field: 'id', title: '编号', width: 80,fixed:true, sortable:false },
+              { field: 'name', title: '异常名称', width: 180, fixed:true,sortable:false ,formatter: function(value,row,index){
+            	  return hideTitleName(row.name,15);	
+              }},
+              { field: 'level', title: '异常等级', width: 100,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  if (value==1){
+            		  return "微小";
+            	  }else if(value==2){
+            		  return "轻微";
+            	  }else if(value==3){
+            		  return "重要";
+            	  }else if(value==4){
+            		  return "严重";
+            	  }else if(value==5){
+            		  return "危险";
+            	  }else{
+            		  return "未定义的异常等级";
+            	  }
+              }},
+              { field: 'type', title: '异常模块', width: 120,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  if (value=="A"){
+            		  return "充值模块";
+            	  }else if(value=="B"){
+            		  return "提现模块";
+            	  }else if(value=="C"){
+            		  return "投标模块";
+            	  }else if(value=="D"){
+            		  return "还款模块";
+            	  }else if(value=="E"){
+            		  return "会员模块";
+            	  }else if(value=="F"){
+            		  return "积分模块";
+            	  }else if(value=="G"){
+            		  return "债权模块";
+            	  }else if(value=="H"){
+            		  return "奖励模块";
+            	  }else if(value=="I"){
+            		  return "标模块";
+            	  }else if(value=="J"){
+            		  return "分期宝模块";
+            	  }else if(value=="K"){
+            		  return "账户模块";
+            	  }else{
+            		  return "未定义的异常模块";
+            	  }
+              }},
+              { field: 'errorCode', title: '异常编码', width: 120,fixed:true, sortable:false },
+              { field: 'exception', title: '异常信息', width: 240,fixed:true, sortable:false },
+              { field: 'eid', title: '异常实体ID', width: 100,fixed:true, sortable:false },
+              { field: 'errorModuleName', title: '异常关联模块名', width: 120,fixed:true, sortable:false },
+              { field: 'platform', title: '异常出现平台', width: 100,fixed:true, sortable:false ,formatter: function(value,row,index){
+              		if (value=="W"){
+              			return "前台";
+              		}else if(value=="M"){
+              			return "后台";
+              		}else if(value=="O"){
+              			return "其他";
+              		}
+              }},
+              { field: 'addUserName', title: '添加用户名', width: 120,fixed:true, sortable:false },
+              { field: 'addIp', title: '添加IP', width: 120,fixed:true, sortable:false },
+              { field: 'addTime', title: '添加时间', width: 120,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4); 
+              }}, 
+              { field : 'action',
+                  title : '操作',
+                  width :100,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                      var str = '';  
+                      str += "<@secAuthorizeUrl value='/system/errorLogView.html'>";
+                      str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewErrorLogParmeters + ');" src="{1}" title="查看错误日志信息"/>', row.id, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                      str += "</@secAuthorizeUrl>";
+  	                  return str;
+                  }
+              }
+             ]],
+             onLoadSuccess : function() {
+ 				$('#searchForm table').show();
+ 				parent.$.messager.progress('close');
+ 				$(this).datagrid('tooltip');
+ 			}
+        }); 
+    });
+    
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询信息）</font></h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>异常名称：<input type="text" name="name" id="name" autocomplete="off"/></li>
+            		<li>异常关联模块：<input type="text" name="errorModuleName" id="errorModuleName" autocomplete="off"/></li>
+            		<li>异常等级：
+		                <select name="level" id="level" class="type" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="1">微小</option>
+		                  <option value="2">轻微</option>
+		                  <option value="3">重要</option>
+		                  <option value="4">严重</option>
+		                  <option value="5">危险</option>
+		                </select>
+		            </li>	 
+		            <li>异常出现平台：
+		                <select name="platform" id="platform" class="type" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="W">前台</option>
+		                  <option value="M">后台</option>
+		                  <option value="O">其他</option>
+		                </select>
+		            </li>			            
+		            <li>操作用户名：<input type="text" name="addUserName" id="addUserName" autocomplete="off"/></li>
+		            <li>添加时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>        
+		            <li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>          	
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+   </div>
+   
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

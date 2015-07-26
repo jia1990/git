@@ -1,0 +1,83 @@
+package com.ddtkj.p2psys.member.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * 
+ * @描述：会员vip实体类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月11日
+ */
+@Entity
+@Table(name = "t_jsd_vip")
+public class MemberVip  implements Serializable{
+
+	private static final long serialVersionUID = -8067197882938468623L;
+	/*状态常量*/
+	public static final String   MEMBER_DISABLED= "N";//会员过期
+	public static final String  MEMBER_USABLE="Y";//会员可用
+	public static final String MEMBER_LEVEL_V1="V1";//铜牌VIP
+	public static final String MEMBER_LEVEL_V2="V2";//银牌VIP
+	public static final String MEMBER_LEVEL_V3="V3";//金牌VIP
+	public static final String MEMBER_LEVEL_V4="V4";//钻石VIP
+	public static final String MEMBER_LEVEL_N1="N1";//普通会员
+	
+	@Id
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name="user_id")
+	private User user;//会员id
+	private String vipLevel;//会员级别 铜牌VIP:V1 银牌VIP:V2 金牌VIP:V3 钻石VIP:V4
+	private Date startTime;//开始时间
+	private Date endTime;//结束时间
+	private String usable;//是否可用  可用:Y过期:N
+	
+	
+	public MemberVip() {
+	}
+
+	public String getVipLevel() {
+		return vipLevel;
+	}
+	public void setVipLevel(String vipLevel) {
+		this.vipLevel = vipLevel;
+	}
+	public Date getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+	public Date getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+	public String getUsable() {
+		return usable;
+	}
+	public void setUsable(String usable) {
+		this.usable = usable;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+	
+	
+	
+}

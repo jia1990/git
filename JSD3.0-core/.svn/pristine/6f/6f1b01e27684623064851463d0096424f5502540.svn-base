@@ -1,0 +1,378 @@
+package com.ddtkj.p2psys.account.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月8日
+ */
+@Entity
+@Table(name = "t_jsd_account_draw")
+public class AccountDraw implements Serializable {
+  
+	private static final long serialVersionUID = -5642776265169416467L;
+	/* 00:申请处理中*/
+	public static final String DRAW_CASH_APPLY="00";
+	/* 11：初审通过 */
+	public static final String DRAW_CASH_CHECK1_SUCCESS="11";
+	 /*10:初审未通过*/ 
+	public static final String DRAW_CASH_CHECK1_FAIL="10";
+	/* 21：复审通过 */
+	public static final String DRAW_CASH_CHECK2_SUCCESS="21";
+	 /*20:复审未通过*/ 
+	public static final String DRAW_CASH_CHECK2_FAIL="20";
+	/* 99：取消提现*/
+	public static final String DRAW_CASH_CANCLE="99";
+	/* 30 提现成功*/
+	public static final String DRAW_CASH_SUCCESS="30";
+	
+	/* 31 补单成功**/
+	public static final String DRAW_CASH_REPAIR_SUCCESS="31";
+	/* 42 提现请求汇潮成功*/
+	public static final String DRAW_CASH_REQUEST_YMD_SUCCESS="42";
+	/* 41 提现请求汇潮失败*/
+	public static final String DRAW_CASH_FAIL="41";
+	/*88:银行处理失败*/
+	public static final String DRAW_CASH_BANK_FAIL="88";
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id; // 标识ID
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user; // 用户ID
+	//状态  00:申请处理中11：初审通过  10:初审未通过21：复审通过  20:复审未通过
+	//99：取消提现88:银行处理失败30:提现成功41：提现汇潮请求失败42：提现汇潮请求成功
+	//31:提现补单成功
+	private String drawHandleStatus;// 提现处理状态  
+	private String bankName;// 银行名称
+	private String bankBranchName;// 银行支行名称
+	private String bankProvince;// 银行卡开户省
+	private String bankCity;// 银行卡开户市
+	private String bankNo;// 银行卡卡号
+	private double drawAmount;// 提现金额
+	private double drawInAccountAmount; //提现实际到账金额
+	private double drawFee;// 提现手续费（平台收取提现人的）
+	private int drawType;// 提现方式（提现方式：0--T+0，1---T+1 2---T+5）
+	private String drawWay;//提现入口  手机:A PC端:P
+	private String drawTradeNo;// 提现交易流水号
+	private int firstTrialOperId;// 初审操作员
+	private Date firstTrialTime;// 初审时间
+	private String firstTrialFailRemark;// 初审失败原因描述
+	private int recheckOperId;// 复审操作员
+	private Date recheckTime;// 复审时间
+	private String recheckFailRemark;// 复审失败原因描述
+	private double drawFeeRate;// 平台提现费率
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime;// 记录添加时间
+	private String addIp;// 记录添加IP
+	private double useRecharge;//使用充值可用金额
+	private double useInterest;//使用利息可用金额
+	private double useReturnMoney;//使用回款可用金额
+	private double useAward;//使用奖励可用金额
+	
+	private double borrowerUseRecharge;//借款人使用可用充值金额
+	private double borrowerUseEnter; //借款人使用借款入账金额
+	
+	private int isUseStaticRp; //是否使用静态红包 0：不使用  1：使用
+	private double useStaticRp;//使用静态红包金额
+	
+	//JSDP-117 wcw 2015-05-15 start
+	private String drawApplyRpTradeNo; //提现申请红包转账订单号
+	
+	private String drawVerifyFailRpTradeNo; //提现审核红包转账订单号
+	//JSDP-117 wcw 2015-05-15 end
+
+	public AccountDraw() {
+		super();
+	}
+
+	public AccountDraw(User user, double drawAmount) {
+		super();
+		this.user = user;
+		this.drawAmount = drawAmount;
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+
+	public String getDrawHandleStatus() {
+		return drawHandleStatus;
+	}
+
+	public void setDrawHandleStatus(String drawHandleStatus) {
+		this.drawHandleStatus = drawHandleStatus;
+	}
+
+	public String getBankName() {
+		return bankName;
+	}
+
+	public void setBankName(String bankName) {
+		this.bankName = bankName;
+	}
+
+	public String getBankBranchName() {
+		return bankBranchName;
+	}
+
+	public void setBankBranchName(String bankBranchName) {
+		this.bankBranchName = bankBranchName;
+	}
+
+	public String getBankProvince() {
+		return bankProvince;
+	}
+
+	public void setBankProvince(String bankProvince) {
+		this.bankProvince = bankProvince;
+	}
+
+	public String getBankCity() {
+		return bankCity;
+	}
+
+	public void setBankCity(String bankCity) {
+		this.bankCity = bankCity;
+	}
+
+
+	public String getBankNo() {
+		return bankNo;
+	}
+
+	public void setBankNo(String bankNo) {
+		this.bankNo = bankNo;
+	}
+
+	public double getDrawAmount() {
+		return drawAmount;
+	}
+
+	public void setDrawAmount(double drawAmount) {
+		this.drawAmount = drawAmount;
+	}
+
+	public double getDrawFee() {
+		return drawFee;
+	}
+
+	public void setDrawFee(double drawFee) {
+		this.drawFee = drawFee;
+	}
+
+	public int getDrawType() {
+		return drawType;
+	}
+
+	public void setDrawType(int drawType) {
+		this.drawType = drawType;
+	}
+
+	public String getDrawTradeNo() {
+		return drawTradeNo;
+	}
+
+	public void setDrawTradeNo(String drawTradeNo) {
+		this.drawTradeNo = drawTradeNo;
+	}
+
+
+	public int getFirstTrialOperId() {
+		return firstTrialOperId;
+	}
+
+	public void setFirstTrialOperId(int firstTrialOperId) {
+		this.firstTrialOperId = firstTrialOperId;
+	}
+
+	public Date getFirstTrialTime() {
+		return firstTrialTime;
+	}
+
+	public void setFirstTrialTime(Date firstTrialTime) {
+		this.firstTrialTime = firstTrialTime;
+	}
+
+	public String getFirstTrialFailRemark() {
+		return firstTrialFailRemark;
+	}
+
+	public void setFirstTrialFailRemark(String firstTrialFailRemark) {
+		this.firstTrialFailRemark = firstTrialFailRemark;
+	}
+
+	public int getRecheckOperId() {
+		return recheckOperId;
+	}
+
+	public void setRecheckOperId(int recheckOperId) {
+		this.recheckOperId = recheckOperId;
+	}
+
+	public Date getRecheckTime() {
+		return recheckTime;
+	}
+
+	public void setRecheckTime(Date recheckTime) {
+		this.recheckTime = recheckTime;
+	}
+
+	public String getRecheckFailRemark() {
+		return recheckFailRemark;
+	}
+
+	public void setRecheckFailRemark(String recheckFailRemark) {
+		this.recheckFailRemark = recheckFailRemark;
+	}
+
+	public double getDrawFeeRate() {
+		return drawFeeRate;
+	}
+
+	public void setDrawFeeRate(double drawFeeRate) {
+		this.drawFeeRate = drawFeeRate;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	public double getUseRecharge() {
+		return useRecharge;
+	}
+
+	public void setUseRecharge(double useRecharge) {
+		this.useRecharge = useRecharge;
+	}
+
+	public double getUseInterest() {
+		return useInterest;
+	}
+
+	public void setUseInterest(double useInterest) {
+		this.useInterest = useInterest;
+	}
+
+	public double getUseReturnMoney() {
+		return useReturnMoney;
+	}
+
+	public void setUseReturnMoney(double useReturnMoney) {
+		this.useReturnMoney = useReturnMoney;
+	}
+
+	public double getUseAward() {
+		return useAward;
+	}
+
+	public void setUseAward(double useAward) {
+		this.useAward = useAward;
+	}
+
+
+	public double getBorrowerUseRecharge() {
+		return borrowerUseRecharge;
+	}
+
+	public void setBorrowerUseRecharge(double borrowerUseRecharge) {
+		this.borrowerUseRecharge = borrowerUseRecharge;
+	}
+
+	public double getBorrowerUseEnter() {
+		return borrowerUseEnter;
+	}
+
+	public void setBorrowerUseEnter(double borrowerUseEnter) {
+		this.borrowerUseEnter = borrowerUseEnter;
+	}
+
+	public double getDrawInAccountAmount() {
+		return drawInAccountAmount;
+	}
+
+	public void setDrawInAccountAmount(double drawInAccountAmount) {
+		this.drawInAccountAmount = drawInAccountAmount;
+	}
+
+	public int getIsUseStaticRp() {
+		return isUseStaticRp;
+	}
+
+	public void setIsUseStaticRp(int isUseStaticRp) {
+		this.isUseStaticRp = isUseStaticRp;
+	}
+
+	public double getUseStaticRp() {
+		return useStaticRp;
+	}
+
+	public void setUseStaticRp(double useStaticRp) {
+		this.useStaticRp = useStaticRp;
+	}
+
+	public String getDrawWay() {
+		return drawWay;
+	}
+
+	public void setDrawWay(String drawWay) {
+		this.drawWay = drawWay;
+	}
+	//JSDP-117 wcw 2015-05-15 start
+	public String getDrawApplyRpTradeNo() {
+		return drawApplyRpTradeNo;
+	}
+
+	public void setDrawApplyRpTradeNo(String drawApplyRpTradeNo) {
+		this.drawApplyRpTradeNo = drawApplyRpTradeNo;
+	}
+
+	public String getDrawVerifyFailRpTradeNo() {
+		return drawVerifyFailRpTradeNo;
+	}
+
+	public void setDrawVerifyFailRpTradeNo(String drawVerifyFailRpTradeNo) {
+		this.drawVerifyFailRpTradeNo = drawVerifyFailRpTradeNo;
+	}
+	//JSDP-117 wcw 2015-05-15 end
+}

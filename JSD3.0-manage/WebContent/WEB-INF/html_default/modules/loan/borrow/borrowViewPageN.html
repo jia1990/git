@@ -1,0 +1,248 @@
+<script type="text/javascript">
+	$(function() {
+	    //$.fn.dataGridOptions.formSubFun("#form",'/modules/loan/borrow/updateBorrow.html');	
+	    $("#isDXB").click(function(){
+	    	if($('#isDXB').attr("checked"))
+			{	
+		        $('#pwd').attr("disabled",false);
+		    }else{
+		        $('#pwd').attr("disabled",true);
+		        $('#pwd').val("");
+		    }
+	    });
+	    $('#changetoDay').click(function(){
+			if(!$('#borrow_day').is(":animated")){
+				var borrowTimeType=$('#borrowTimeType').val();
+				if(borrowTimeType==0){
+					$(this).addClass("dayhover")
+					$('#borrowTimeType').val('1');
+					$('#time_limit_day_box').html('<@linkage name="timeLimit" id="time_limit_day" class="select_low"  type="value" nid="borrow_time_limit_day"/>');
+					$('#borrow_day').show();
+					$('#time_limit_day').addClass("J_input")
+					$('#time_limit_box').html('')
+					$('#style').html('<option value="2">一次性还</option>');
+					$('#changetoDay').html('按月');
+				}else{
+					$(this).removeClass("dayhover")
+					$('#borrowTimeType').val('0');
+					$('#time_limit_day_box').html('')
+					$('#time_limit_box').html('<@linkage name="timeLimit" id="time_limit" class="J_input select_low" type="value" nid="borrow_time_limit"/>')
+					$('#borrow_day').hide();
+					$('#time_limit').addClass("J_input");
+					$('#time_limit').show();
+					$('#style').html('<option value="1">等额本息</option><option value="2">一次性还</option><option value="3">每月付息</option>');
+					$('#changetoDay').html('按天');
+				}
+				borrowTimeType=$('#borrowTimeType').val();
+			}
+	    });
+	    
+	    $(".costWay").click(function(){
+			if($('.way2').attr("checked")){
+				$("#manageCost").hide();
+				$("#danwei1").hide();
+				$("#manageCost2").show();
+				$("#danwei2").show();
+				$("#cost1").attr("name","borrowManageRate2");
+				$("#cost1").val(0);
+				$("#cost2").val("");
+				$("#cost2").attr("name","borrowManageRate");
+				
+		 	}else{
+		 		$("#manageCost2").hide();
+		 		$("#danwei2").hide();
+		 		$("#manageCost").show();
+		 		$("#danwei1").show();
+		 		$("#cost1").attr("name","borrowManageRate");
+				$("#cost2").attr("name","borrowManageRate2");
+				$("#cost2").val(0);
+				$("#cost1").val("");
+		 	}
+		 });
+	    
+	});
+</script>
+<form id="form" method="post" enctype="multipart/form-data">
+<div class="borrowForm" style="border-top:none;">
+<#if map??&&map.get("award")??>
+	<#assign award=map.get("award")?eval />
+</#if>
+<#if map??&&map.get("partAccount")??>
+	<#assign partAccount=map.get("partAccount") />
+</#if>
+<#if map??&&map.get("funds")??>
+	<#assign funds=map.get("funds") />
+</#if>
+	<h1 class="borrowFormTitle">基本信息</h1>
+	<ul>
+		<li><span>借款标题：</span><input disabled="disabled" type="text" name="name" maxlength="20" value="${borrow.name!}" autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true,validType:'maxLength[25]'"></li>
+		<li><span>借款人邮箱：</span>${user.email}</li>
+		<li><span>借款总金额：</span><input disabled="disabled" type="text" name="account" maxlength="7" value="${borrow.account!}" autocomplete="off" onkeyup="value=value.replace(/[^0-9]/g,'')" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'accout[500,5000000]'"><em>元</em></li>
+		<li><span>借款年利率：</span><input disabled="disabled" type="text" name="apr" maxlength="15" value="${borrow.apr!}" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'apr[1,24]'"><em>%</em></li>
+		<li><span>合同号：</span><input disabled="disabled" type="text" name="dealNo" maxlength="15" value="${borrow.dealNo!}" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>担保公司：</span>
+		<#if borrow.vouchFirm?? >
+			<input disabled="disabled" type="text" name="dealNo" maxlength="15" value="${borrow.vouchFirm.userCache.companyName!}" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" data-options="required: true">
+		<#else>
+			无担保公司
+		</#if>
+		</li>
+		
+		<li><span>资产包性质：</span>
+		<label><input disabled="disabled" type="radio" name="portfolioProp" value="抵押" <#if borrow.portfolioProp=="抵押">checked="true"</#if>>抵押</label>
+		<label><input disabled="disabled" type="radio" name="portfolioProp" value="质押"<#if borrow.portfolioProp=="质押">checked="true"</#if>>质押</label>
+		<label><input disabled="disabled" type="radio" name="portfolioProp" value="过户"<#if borrow.portfolioProp=="过户">checked="true"</#if>>过户</label>
+		</li>
+		<li><span>借款用途：</span><input disabled="disabled" type="text" name="dealNo" maxlength="15" value="${borrow.borrowUse!}" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" data-options="required: true"></li>
+		<li><span>借款期限：</span>
+			<#if borrow.type==101>
+	        <input disabled="disabled" type="text"  class="borrowFormTxt J_input easyui-validatebox" value="满标即还" readonly="readonly" />
+	        <#else>
+	        <#if borrow.borrowTimeType==0>
+	        <input disabled="disabled" type="text" name="dealNo" maxlength="15" value="${borrow.timeLimit!}个月" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" data-options="required: true">
+	        
+	        <#else>
+	        <input disabled="disabled" type="text" name="dealNo" maxlength="15" value="${borrow.timeLimit!}天" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" data-options="required: true">
+	        
+	        </#if>
+	        </#if>
+		</li>
+		<li id="borrow_day" style="display:none;">
+			<span>是否天标：</span>
+			<input disabled="disabled" type="hidden" name="borrowTimeType" id="borrowTimeType" value="0" />
+			<input disabled="disabled" type="checkbox" checked="checked" disabled="disabled">
+		</li>
+		<li>
+			<span>还款方式：</span>
+			<#if borrow.type!=101>
+			<@linkage name="style" id="style" disabled="disabled" default="${borrow.style}" nid="borrow_style" type="value" class="J_input" />
+	        <#elseif borrow.type==101>
+	        <select name="style">
+	        	<option value="2">
+	        		一次性还
+	        	</option>
+	        </select>
+	        <#else>
+	        <@linkage name="style" id="style" disabled="disabled" nid="borrow_style" type="value" class="J_input" />
+	        </#if>
+		</li>
+		<!--<li><span>投标奖励比例：</span><input disabled="disabled" type="text" name="partAccount" <#if borrow.partAccount==0>value=""<#else>value="${borrow.partAccount!}"</#if> autocomplete="off" class="borrowFormTxt1 easyui-validatebox" size="15" data-options="validType:'rewardRatio[0.1,6]'"><em>%</em></li>
+		 <li><span>还款结束后奖励：</span><input disabled="disabled" type="hidden" name="lateAward" class="w300 easyui-validatebox" value="${borrow.lateAward!}" size="15"></li> -->
+		<li><span>是否是定向标：</span><input disabled="disabled" id="isDXB" type="checkbox" name="isDXB" value="1" size="15" class="easyui-validatebox" <#if borrow.pwd?exists&&borrow.pwd!="">checked="true"</#if>> </li>
+		<li><span>定向标密码：</span><input disabled="disabled" type="text" name="pwd"  size="15" class="borrowFormTxt easyui-validatebox" id="pwd" <#if borrow.pwd?exists&&borrow.pwd!="">value="${borrow.pwd}"<#else>disabled="disabled"</#if>> </li>
+		<#if borrow.type!=110>
+		<li><span>最低投标金额：</span>
+			<#if borrow?exists>
+	        <@linkage name="lowestAccount" disabled="disabled" class="J_input" id="lowest_account" default="${borrow.lowestAccount}" nid="borrow_lowest_account"  type="value"/>
+	        <#else>
+	        <@linkage name="lowestAccount" disabled="disabled" class="J_input" id="lowest_account" nid="borrow_lowest_account" type="value" />
+	        </#if>
+        </li>
+		<li><span>最多投标总额：</span>
+			<#if borrow?exists>
+	        <@linkage name="mostAccount" disabled="disabled" class="J_input" id="most_account" default="${borrow.mostAccount}" nid="borrow_most_account" type="value" />
+	        <#else>
+	        <@linkage name="mostAccount" disabled="disabled" class="J_input" id="most_account" nid="borrow_most_account" type="value" />
+	        </#if>
+	        <input disabled="disabled" type="hidden" id="typeStr" name="typeStr" value="${borrow.type}" />
+		</li>
+		</#if>
+		<#if borrow.type==110>
+		<li><span>每份投标金额：</span><input disabled="disabled" type="text" name="flowMoney" value="${borrow.flowMoney}" class="borrowFormTxt easyui-validatebox" size="15"><em>元</em></li>
+		<li><span>单笔最低投标金额：</span><@linkage name="lowestSingleLimit" disabled="disabled" class="J_input" id="lowest_single_limit" default="${borrow.lowestSingleLimit}" nid="borrow_most_account"  type="value"/></li>
+		<li><span>单笔最多投标总额：</span><@linkage name="mostSingleLimit" disabled="disabled" class="J_input" id="most_single_limit" default="${borrow.mostSingleLimit}" nid="borrow_most_account" type="value" /></li>
+		</#if>
+		<li><span>有效时间：</span><@linkage name="validTime" disabled="disabled" id="valid_time" default="${borrow.validTime}" nid="borrow_valid_time" class="J_input"  type="value" /></li>
+		<#if borrow.type!=101>
+		<!-- <li><span>借款手续费：</span><input disabled="disabled" type="text" value="${borrow.borrowManageRate!}" name="borrowManageRate" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width:60px" data-options="required: true,validType:'manageFee[0,90]'"><em>%</em></li>
+		 -->
+		<li><span>手续费收取：</span>
+			<input type="radio" name="borrowManageCostWay" id="costWay" disabled="disabled" class="costWay way1" value="1" <#if borrow.borrowManageCostWay=="1">checked="checked"</#if>>比例收取&nbsp;&nbsp;
+			<input type="radio" name="borrowManageCostWay" id="costWay" disabled="disabled" class="costWay way2" value="2" <#if borrow.borrowManageCostWay=="2">checked="checked"</#if>>固定金额
+		</li>
+		<li id="borrowManageCost"><span>借款手续费：</span>
+			<#if borrow.borrowManageCostWay == "1">
+				<label id="manageCost"><input type="text" id="cost1" disabled="disabled" name="borrowManageRate" value="${borrow.borrowManageRate!}" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width: 60px" data-options="required: true,validType:'manageFee[0,90]'"><em id="danwei1">%</em></label>
+				<label id="manageCost2" hidden="hidden"><input type="text" disabled="disabled" id="cost2" name="borrowManageRate2" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width: 60px" data-options="required: true" onkeyup="value=value.replace(/[^0-9]/g,'')" maxlength="11"><em id="danwei2">元</em></label>
+				
+			<#else>
+				<label id="manageCost" hidden="hidden" ><input type="text" id="cost1" disabled="disabled" name="borrowManageRate2"  autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width: 60px" data-options="required: true,validType:'manageFee[0,90]'"><em id="danwei1">%</em></label>
+				<label id="manageCost2"><input type="text" id="cost2" disabled="disabled" name="borrowManageRate" value="${borrowManageCost!}" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width: 60px" data-options="required: true" onkeyup="value=value.replace(/[^0-9]/g,'')" maxlength="11"><em id="danwei2">元</em></label>
+				
+			</#if>
+		</li>
+		
+		
+		<li><span>担保年化费：</span><input disabled="disabled" type="text" value="${borrow.guaranteeRate!}" name="guaranteeRate" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width:60px" data-options="required: true,validType:'manageFee[0,90]'"><em>%</em></li>
+		</#if>
+		<li><span>是否测试标：</span><input disabled="disabled" id="isTest" type="checkbox" name="isTest" value="1" size="15" class="easyui-validatebox" <#if borrow.isTest==1>checked="true"</#if>> </li>
+		<li><span>标的星级：</span><input disabled="disabled"  type="text" size="15" class="borrowFormTxt easyui-validatebox" maxlength="1" value="${borrow.star!}" name="star" data-options="required: true,validType:'maxNum[0,5]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>财务实力评分：</span><input disabled="disabled"  type="text" size="15" maxlength="3"  class="borrowFormTxt easyui-validatebox" value="${borrow.financeScore!}" name="financeScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>经营状况评分：</span><input disabled="disabled"  type="text" size="15" maxlength="3" class="borrowFormTxt easyui-validatebox" value="${borrow.statusScore}" name="statusScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>偿债保障评分：</span><input disabled="disabled"  type="text" size="15" maxlength="3" class="borrowFormTxt easyui-validatebox" value="${borrow.sinkScore!}" name="sinkScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>添加时间：</span>${borrow.addTime?string("yyyy-MM-dd HH:mm:ss")}</li>
+		<li><span>IP：</span>${borrow.addIp}</li>
+		<input disabled="disabled" type="hidden" name="userId" value="${user.userId}">
+		<input disabled="disabled" type="hidden" name="id" value="${borrow.id}">
+		<input disabled="disabled" type="hidden" name="type" value="${borrow.type}">
+		<input disabled="disabled" type="hidden" name="period" value="${borrow.period!}">
+	</ul>
+	<div class="borrowFormMuti"><span>借款详情：</span><!-- <textarea disabled="disabled" id="content" name="content" maxlength="5000" class="easyui-validatebox borrowFormTextarea" data-options="required: true">${borrow.content!}</textarea> -->
+		<div class="ipt" style="padding-left:85px;">
+			<script id="content" name="content" type="text/plain">${borrow.content!}</script>
+		 </div>
+	</div>
+</div>
+<#if borrow.type!=101>
+
+<div class="borrowForm" style="border-bottom:0;">
+	<h2 class="borrowFormTitle">担保函</h2>
+	<div class="guarantee_type">
+		<span>担保函：</span>
+        <div id="uploadGuaranteeShowBox" style="height: auto;">
+        	<ul id="uploadPiclist2" class="photoUpload editGuaranteeShow" style="list-style: none; padding: 0; margin: 0;">
+                <#list uploadList as item>
+                <li data-mum="${item.id}">
+                    <a href="${item.picPath}" class="fileshow" rel="guaranteePic"><img src="${item.picPath}" alt=""/></a>
+                    <!--  <a class="closePic" style="float:left;" href="javascript:;" title="删除图片">x</a>   -->                  
+                </li>
+				</#list>
+            </ul>
+       </div>
+	</div>	
+</div>
+
+</#if>
+<input name="borrowVerifyToken" value="${borrowVerifyToken!}" type="hidden" />
+</form>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>
+
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+var descriptionBox = UE.getEditor('content', {
+    autoHeight: false,
+    initialFrameWidth:610,
+    toolbars: [
+               ['fullscreen', 'source', '|', 'undo', 'redo', '|',
+                'bold', 'italic', 'underline', 'fontborder', 'strikethrough', 'superscript', 'subscript', 'removeformat', 'formatmatch', 'autotypeset', 'blockquote', 'pasteplain', '|', 'forecolor', 'backcolor', 'insertorderedlist', 'insertunorderedlist', 'selectall', 'cleardoc', '|',
+                'rowspacingtop', 'rowspacingbottom', 'lineheight', '|',
+                'customstyle', 'paragraph', 'fontfamily', 'fontsize', '|',
+                'directionalityltr', 'directionalityrtl', 'indent', '|',
+                'justifyleft', 'justifycenter', 'justifyright', 'justifyjustify', '|', 'touppercase', 'tolowercase', '|',
+                'link', 'unlink', 'anchor', '|', 'imagenone', 'imageleft', 'imageright', 'imagecenter', '|',
+                'simpleupload', 'insertimage', 'insertvideo', 'attachment',  'insertcode',  'pagebreak', 'template', '|',
+                'horizontal', 'date', 'time', 'spechars', 'wordimage', '|',
+                'inserttable', 'deletetable', 'insertparagraphbeforetable', 'insertrow', 'deleterow', 'insertcol', 'deletecol', 'mergecells', 'mergeright', 'mergedown', 'splittocells', 'splittorows', 'splittocols', 'charts', '|',
+                'print', 'searchreplace', 'drafts'
+               ]
+           ]
+    
+});
+   
+</script>

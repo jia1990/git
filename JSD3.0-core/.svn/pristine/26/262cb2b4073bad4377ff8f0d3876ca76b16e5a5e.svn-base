@@ -1,0 +1,135 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.redpacket.dao.RpUseLogDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpUseLog;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.ddtkj.p2psys.redpacket.model.RpUserLogModel;
+import com.ddtkj.p2psys.redpacket.service.RpUseLogService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.sun.tools.internal.ws.processor.model.Model;
+
+/**
+ * @描述：
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2014年12月31日 
+ */
+@Service("rpUseLogService")
+public class RpUseLogServiceImpl implements RpUseLogService{
+
+	@Resource
+	private RpUseLogDao rpUseLogDao ;
+	
+	
+	@Override
+	public double getAllUseDynamicTotal(long userid) {
+
+		return rpUseLogDao.getAllUseDynamicTotal(userid);
+	}
+	@Override
+	public PageDataList<RpUserLogModel> getPageDataList(
+			RpUserLogModel rpUserLogModel, long userId) {
+		
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addOrder(OrderType.DESC, "addTime");
+
+		param.addPage(rpUserLogModel.getPage());
+		
+		PageDataList<RpUseLog> pageDateList = rpUseLogDao.findPageList(param);
+		
+		PageDataList<RpUserLogModel> pageDateList_ = new PageDataList<RpUserLogModel>();
+		List<RpUserLogModel> list = new ArrayList<RpUserLogModel>();
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				RpUseLog rpProduce = (RpUseLog) pageDateList.getList().get(i);
+				RpUserLogModel uam = new RpUserLogModel();
+				BeanUtils.copyProperties(rpProduce, uam);
+				//JSDP-128  fengguoqin 5.22 start
+				uam.setBorrowName(rpProduce.getBorrow().getName());
+				//JSDP-128  fengguoqin 5.22 end
+				list.add(uam);
+			}
+		}
+		pageDateList_.setPage(pageDateList.getPage());
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+	
+	//JSDP-167 xingjia 2015-05-28 start
+	@Override
+	public PageDataList<RpUserLogModel> getPageDataList(
+			RpProduceModel rpProduceModel) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(rpProduceModel.getPage(), rpProduceModel.getSize());
+		if(StringUtil.isNotBlank(rpProduceModel.getType())  && !"99".equals(rpProduceModel.getType())){
+			param.addParam("rpType", rpProduceModel.getType());
+		}
+		
+		if(StringUtil.isNotBlank(rpProduceModel.getUserName())){
+			param.addParam("user.userName", Operators.LIKE, rpProduceModel.getUserName());
+		}
+		
+		if(StringUtil.isNotBlank(rpProduceModel.getStartTime()) && !"undefined".equals(rpProduceModel.getStartTime())){
+			//JSDP-182 xingjia 20150615 start
+			Date start = DateUtil.valueOf(rpProduceModel.getStartTime());
+			param.addParam("addTime", Operators.GTE, start);
+		}
+		if(StringUtil.isNotBlank(rpProduceModel.getEndTime()) && !"undefined".equals(rpProduceModel.getEndTime())){
+			Date end = DateUtil.valueOf(rpProduceModel.getEndTime());
+			param.addParam("addTime", Operators.LT, end);
+			//JSDP-182 xingjia 20150615 end
+		}
+		
+		PageDataList<RpUseLog> rpUseLogPageList = rpUseLogDao.findPageList(param);
+		
+		List<RpUseLog> rpList = rpUseLogPageList.getList();
+		List<RpUserLogModel> rpModelList = new ArrayList<RpUserLogModel>();
+		
+		PageDataList<RpUserLogModel> rpModelPageList = new PageDataList<RpUserLogModel>();
+		for(int i=0;i<rpList.size();i++){
+			RpUseLog rp = rpList.get(i);
+			RpUserLogModel rpModel = RpUserLogModel.instance(rp); 
+			if(rp.getRpType()==1){
+				rpModel.setType("静态红包");
+				rpModel.setRpUsedMoney(rp.getAccount()+"");
+
+			}else if(rp.getRpType()==2){
+				rpModel.setType("动态红包");
+				rpModel.setRpUsedMoney(rp.getAccount()+"");
+
+			}
+			rpModel.setUserName(rp.getUser().getUserName());
+			rpModel.setRealName(rp.getUser().getRealName());
+			rpModelList.add(rpModel);
+		}
+		rpModelPageList.setList(rpModelList);
+		rpModelPageList.setPage(rpUseLogPageList.getPage());
+		return rpModelPageList;
+	}
+	//JSDP-167 xingjia 2015-05-28 end
+	  //JSDP-228  fengguoqin 2015.07.28 start
+	@Override
+	public double getAllUsedRpTotal(long userId, int type) {
+		return rpUseLogDao.getAllUsedRpTotal(userId, type);
+	}
+	  //JSDP-228  fengguoqin 2015.07.28 end
+
+}

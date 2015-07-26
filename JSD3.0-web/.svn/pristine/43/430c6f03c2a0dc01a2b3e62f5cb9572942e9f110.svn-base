@@ -1,0 +1,376 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<style>
+.updateEmall_div a{color:#fff;border-radius:2px;background:#12ADFF;}
+.updateEmall_div a:hover{background:#12ADFF;}
+.updateEmall_div{float:right;}
+.updateEmall_div a{display: block;border: 1px solid #0697da;font-size: 12px;color: #fff;height: 22px;width: 88px;float: left;margin-left: 15px;line-height: 22px;text-align: center;margin-top: 11px;}
+.updateEmall_div a:hover{background: #12ADFF;color: #fff;}
+.y_alertsBoxCon{text-align:center;}
+.y_alertsBoxCon a{display:inline-block;width:80px;height:30px;line-height:30px;margin-top:10px;text-align:center;background:#12adff;color:#fff;border-radius:2px;}
+/*826   fgq  3.18 进度条*/
+.progress-bar, .progress-bar b{display: block;} 
+.progress-bar {position:relative;background:#fff; height: 10px;width: 240px;border:1px solid #ccc;border-radius:30px;} 
+.progress-bar b {position:absolute;background:#6FCA01;height: 10px;border-radius:30px;}
+</style>
+
+<#include "../../include/resource1.html"> 
+<#include "../../include/resource2.html"> 
+<body>
+	<#assign nid="my_account"> 
+	<#include "../../include/b_header.html">
+	<div class="c_deal">
+		<div class="c_deal_content">
+			<!-- 左侧导航 -->
+			<#assign mid="m_accountset"> 
+			<#include "../account_menu.html">
+			<!-- 右侧 -->
+			<input type="hidden" id="sflag" value="${flag}"/>
+			<div class="c_deal_record y_account_right">
+				<!-- 账户设置 -->
+				<div class="c_deal_title">账户设置</div>
+				<ul class="y_account_right_top">
+				</ul>
+					<!-- 保护账户安全 -->
+				<!-- 826  fgq  安全等级进度条 -->
+			 	<div class="c_deal_title" style="color:#666;">
+				 	<span style="color:#333;">保护账户安全</span>
+				 	<span style="margin:0 10px 0 20px;">您的安全等级：</span>
+				 	<span class="progress-bar" style="display:inline-block;margin-right:24px;"><b style="width:80px;" class="progress-bar-bfind"></b></span>
+				 	<i class="progress-bar-ifind"></i>
+			 	</div>
+				<ul class="y_accountright_bottom y_account_password_right c_login_pwd">
+					<li>
+						<div>
+							<em>登录密码</em>
+							<span>登录晋商贷时需要输入的密码</span>
+							<div class="y_account_div_a">
+								<a href="javascript:void(0);">修改</a>
+							</div>
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_update_detail">
+							<form class="y_forms" action="/member_borrow/security/borrowModifyPwd.html" method="post" id="pwd_forms">
+								<label class="y_input_top_font" style='color:#e86969'>8-16个字符，建议使用字母加数字或符号的组合密码</label><br/>
+								<div><label class="y_input_label">当前密码</label><input type="password" name="password" class="y_input_now"/><span class="y_spans"><div></div></span></div>
+								<div><label class="y_input_label">新密码</label><input type="password" name="newPwd" id="newPwd" class="y_input_new"/><span class="y_spans"><div></div></span></div>
+								<div><label class="y_input_label">确认密码</label><input type="password" name="confirmNewPwd"  class="y_input_new_yes"/><span class="y_spans"><div></div></span></div>
+								<div><input type="submit" value="确认" class="y_submits"/></div>
+							</form>
+						</div>
+						
+						<div class="c_mobile_valid" style="display:none">
+							<ul class="c_mobile_step">
+							<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证身份</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+							<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 0;">重置登录密码</div></i><b></b></li>
+							<li class="c_step_last c_step_this"><span>3</span><div class="c_flow_text">修改成功</div></li>
+							<div class="c_clear"></div>
+							</ul>
+						<div class="c_pwd_success">登录密码修改成功<a href="/member/useridentify/identify.html">返回账户设置</a></div>
+						</div>
+					</li>
+					<li>
+						<div class="setpaypwd">
+							<em>交易密码</em>
+							<span>在账户资金变动、修改账户信息时需要输入的密码</span>
+						</div>
+						<div class="c_update_detail c_update_detail1">
+						</div>
+						<div class="c_update_detail c_update_detail2">
+							<dl class="c_find_way">
+								<dd><input type="radio" name="c_pwd_find" checked/>手机</dd>
+								<dd><input type="radio" name="c_pwd_find" />邮箱</dd>
+								<dd><input type="radio" name="c_pwd_find" />密保</dd>
+								<div class="c_clear"></div>
+							</dl>
+							<div class="c_find_detail">
+								<!-- 交易密码找回 -->
+							</div>
+						</div>
+					</li>
+					<li>
+						<div class="questiondiv">
+							<em>密保问题</em>
+							<span>轻松找回交易密码</span>
+						</div>
+						<!-- 设置密保 -->
+						<div class="c_update_detail updateQuestion">
+						</div>
+					<li>
+					<input type="text" value="${user.mobilePhone!}" id="userphone" style="display: none"></input>
+						<div>
+							<em>更改手机</em>
+							<span>轻松更改手机号</span>
+							<div class="y_account_div_a">
+								<a href="javascript:void(0);">修改</a>
+							</div>
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_update_detail c_update_detail_upmobile">
+							<!-- 第一步 -->
+							<dl class="c_update_type">
+								<dd><input type="radio" name="c_update_tel" checked/>手机</dd>
+								<dd><input type="radio" name="c_update_tel" />邮箱</dd>
+								<div class="c_clear"></div>
+							</dl>
+							<div class="c_update_way">
+								<!-- 通过手机号更改 -->
+								<div class="c_by_way">
+									<!-- 第一步 -->
+									<div class="c_mobile_valid" style="display:block;">
+										<ul class="c_mobile_step">
+											<li class="c_step_this" style="width:310px;"><span>1</span><div class="c_flow_text">验证手机</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改手机</div></i><b></b></li>
+											<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<dl class="c_tel_info c_account_tel">
+											<dd>
+												<label style="float:left;">手机号码</label>
+												<span class="c_telphone">${user.mobilePhone!}</span>
+											</dd>
+											<dd>
+												<label style="float:left;">验&nbsp;&nbsp;证&nbsp;码</label>
+												<input type="text" id="updatemobilecode" class="c_code_msg" style="margin-right: 10px;float:left;" />
+												<span class="c_get_code c_get_msgs upgetcode" style="float: left;margin-top:3px;">获取短信验证码</span>
+												<i style="float:right; line-height: 38px;margin-right: 50px;color:#e86969;" class="update_phone_11"></i>
+												<b></b>
+											</dd>
+											<dd style="display:none;font-size:12px;padding-left: 76px;height: 30px;margin-top: 6px;padding-left: 60px;line-height: 16px;"><i class="c_valid_instruc" style="margin:0;"></i>验证码已发送到您的手机，2分钟内输入有效，请勿泄露。</dd>
+											<dd><input type="button" class="c_mobile_confirm updatemobile_next" value="下一步" style="margin-left:80px;"></dd>
+											<dd style="margin-top:40px;padding: 0;"><span style="color:#0697da;margin:0;">温馨提示：</span>若您收不到短信或手机号码已停止使用，可点此联系客服：<a style="color:#005ea7;cursor:pointer;" onclick="javascript:window.open('http://b.qq.com/webc.htm?new=0&sid=4000803000&eid=218808P8z8p8K808R8x8x&o=&q=7&ref='+document.location, '_blank', 'height=544, width=644,toolbar=no,scrollbars=no,menubar=no,status=no');">联系客服</a>申请人工更换绑定手机</dd>
+										</dl>
+									</div>
+									<!-- 第二步 -->
+									<div class="c_mobile_valid" style="display:none" >
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证手机</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two c_step_this"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改手机</div></i><b></b></li>
+											<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_mobile_info" style="border: none;">原手机号码验证通过，请填写您的新手机号码。</div>
+										<dl class="c_tel_info c_set_pwd">
+											<form>
+												<dd style="margin-bottom:20px;"><label>填写新手机</label><input type="text" class="c_new_tel"/><span class="c_tel_msg" style="width:360px;"></span></dd>
+												<dd style="height: 40px;">
+													<label style="float:left;">手机验证码</label>
+													<input type="text" class="c_code_msg submobilecode" style="margin-right:20px;float:left;" />
+													<span class="c_get_code newmpgetcode" style="float: left;margin-top:3px;margin-left:0px;">获取短信验证码</span>
+													<i style="float:right; line-height: 38px;margin-right: 90px;color:#e86969;"  class="update_phone_12"></i>
+													<b class="c_no_recieve"></b>
+												</dd>
+												<dd class="c_tel_valid_info" style="display:none;"><i class="c_valid_instruc"></i>验证码已发送到您的手机，2分钟内输入有效，请勿泄露。</dd>
+												<dd><input type="button" class="c_mobile_confirm submobile_next" value="确认"></dd>
+											</form>
+										</dl>
+									</div>
+									<!-- 第三步 -->
+									<div class="c_mobile_valid" style="display:none;">
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证手机</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left:12px;">修改手机</div></i><b></b></li>
+											<li class="c_step_last c_step_this"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_pwd_success">手机号码修改成功<a href="/member_borrow/account/asetpre.html">返回账户设置</a></div>
+									</div>
+								</div>
+								<!-- 通过邮箱更改 -->
+								<div class="c_by_way" style="display:none;">
+									<!-- 第一步 -->
+									<div class="c_mobile_valid">
+										<ul class="c_mobile_step">
+											<li class="c_step_this" style="width:310px;"><span>1</span><div class="c_flow_text">验证邮箱</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改手机</div></i><b></b></li>
+											<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_mobile_info" style="width:690px;margin-left:0;">我们需要给您的邮箱<a href="javascript:;" style="color:#0697da;display:inline;"  class="userEmail">${user.email!}</a>发送一封验证邮件,请获取验证码后,完成邮箱验证
+										</div>
+										<div class="c_send_success">
+											<label style="float:left;">邮箱验证码：</label><input type="text" id="upMemailcode" class="c_email_input" style="float:left;">
+											<span class="c_get_code upMsendEmail" style="float: left;margin-left:0px;margin-top: 3px;">获取邮件验证码</span>
+											<i style="float:right; line-height: 38px;margin-right: 90px;color:#e86969;"  class="update_phone_21"></i>
+											<div style="clear:both;"></div>
+										</div>
+										<div class="c_go_look"><input type="button" class="c_mobile_confirm upMemal_next" value="下一步"></div>
+									</div>
+									<!-- 第二步 -->
+									<div class="c_mobile_valid" style="display:none;">
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证邮箱</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two c_step_this"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改手机</div></i><b></b></li>
+											<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_mobile_info" style="border: none;">邮箱验证已通过，请填写您的新手机号码。</div>
+										<dl class="c_tel_info c_set_pwd">
+											<form>
+												<dd style="margin-bottom:20px;"><label>填写新手机</label><input type="text" class="c_new_tel"/><span class="c_tel_msg c_tel_msg1" style="width:360px;"></span></dd>
+												<dd style="height: 40px;">
+													<label style="float:left;">手机验证码</label>
+													<input type="text" class="c_code_msg subEmobilecode" style="margin-right:20px;float:left;" />
+													<span class="c_get_code newEMPgetcode" style="float: left;margin-left:0px;margin-top: 3px;">获取短信验证码</span>
+													<i style="float:right; line-height: 38px;margin-right: 90px;color:#e86969;" class="update_phone_22"></i>
+												</dd>
+												<dd><input type="button" class="c_mobile_confirm subEmobile_next" value="确认"></dd>
+											</form>
+										</dl>
+									</div>
+									<!-- 第三步 -->
+									<div class="c_mobile_valid" style="display:none;">
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证邮箱</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left:12px;">修改手机</div></i><b></b></li>
+											<li class="c_step_last c_step_this"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_pwd_success">手机号码修改成功<a href="/member_borrow/account/asetpre.html">返回账户设置</a></div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</li>
+					<li>
+					<input type="text" value="${user.email!}" id="userEmail" style="display: none"></input>
+						<div class="chankEmail">
+							<em>更改邮箱</em>
+							<span  id="updateEmail">轻松更改邮箱</span>
+						</div>
+						<div class="c_update_detail c_update_detail_upemail">
+							<dl class="c_update_type2">
+								<dd><input type="radio" name="c_update_email" checked/>邮箱</dd>
+								<dd><input type="radio" name="c_update_email" />手机</dd>
+								<div class="c_clear"></div>
+							</dl>
+							<div class="c_update_way2">
+								<!-- 通过邮箱找回 -->
+								<div class="c_by_way2">
+									<!-- 第一步 -->
+									<div class="c_mobile_valid" style="display:block;">
+										<ul class="c_mobile_step">
+											<li class="c_step_this" style="width:310px;"><span>1</span><div class="c_flow_text">验证邮箱</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改邮箱</div></i><b></b></li>
+											<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_mobile_info" style="width:690px;margin-left:0;">我们给您的邮箱<a href="javascript:;" style="color:#0697da;display:inline;"  class="userEmail">${user.email!}</a>发送了一封验证邮件,请获取验证码，完成邮箱验证。
+										</div>
+										<div class="c_send_success">
+											<label style="float:left;">邮箱验证码：</label><input type="text" id="upemailcode" class="c_email_input" style="float:left;">
+											<span class="c_get_code oldsendEmail" style="float: left;margin-left:0px;margin-top: 3px;margin-right:10px;">获取邮件验证码</span>
+											<i style="float:left; line-height: 38px;color:#e86969;" class="update_email_11"></i>
+											<div style="clear:both;"></div>
+										</div>
+										<div class="c_go_look"><input type="button" class="c_mobile_confirm upemail_next" value="下一步"></div>
+									</div>
+									<!-- 第二步 -->
+									<div class="c_mobile_valid" style="display:none;">
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证邮箱</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two c_step_this"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改邮箱</div></i><b></b></li>
+											<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_mobile_info" style="width:690px;margin-left:0;">原邮箱已验证通过，请填写您的新邮箱</div>
+										<dl class="c_tel_info" style="margin-top:40px;">
+											<dd><label style="display:inline-block;width:84px;text-align:right;float:left;">新邮箱</label>
+											<input type="text" class="c_email_number" style="float:left;" />  
+											<span class="c_email_msg_email"  style="float:left;margin-left:0;color: #e86969;"></span>
+											<div class="c_clear"></div>
+											</dd>
+											<dd class="c_send_success" style="margin-left: 0;margin-top: 20px;">
+												<label style="display:inline-block;width:84px;text-align:right;float:left;">邮箱验证码</label>
+												<input type="text" id="newEmailcode" class="c_email_input" style="float:left;">
+												<span class="c_get_code newsendEmail" style="float: left;margin-left:0px;margin-top: 3px;">获取邮件验证码</span>
+												<i style="float:left; line-height: 38px;margin-right: 70px;color:#e86969;"  class="update_email_12"></i>
+												<div class="c_clear"></div>
+											</dd>
+											<dd><input type="button" class="c_mobile_confirm upNewEmail" value="更换"></dd>
+										</dl>
+									</div>
+									<!-- 第三步 -->
+									<div class="c_mobile_valid" style="display:none;">
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证邮箱</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left:12px;">修改邮箱</div></i><b></b></li>
+											<li class="c_step_last c_step_this"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_pwd_success">邮箱修改成功<a href="/member_borrow/account/asetpre.html">返回账户设置</a></div>
+									</div>
+								</div>
+								<!-- 通过手机找回 -->
+								<div class="c_by_way2" style="display:none;">
+									<!-- 第一步 -->
+									<div class="c_mobile_valid">
+											<ul class="c_mobile_step">
+												<li class="c_step_this" style="width:310px;"><span>1</span><div class="c_flow_text">验证手机</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+												<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改邮箱</div></i><b></b></li>
+												<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+												<div class="c_clear"></div>
+											</ul>
+											<dl class="c_tel_info c_account_tel">
+												<dd>
+													<label style="float:left;">手机号码</label>
+													<span class="c_telphone">${user.mobilePhone!}</span>
+												</dd>
+												<dd>
+													<label style="float:left;">验&nbsp;&nbsp;证&nbsp;码</label>
+													<input type="text" class="c_code_msg" id="upEmobilecode" style="margin-right: 10px;float:left;" />
+													<span class="c_get_code c_get_msgs upEgetcode" style="float: left;margin-top: 3px;">获取短信验证码</span>
+													<i style="float:right; line-height: 38px;margin-right: 50px;color:#e86969;" class="update_email_21"></i>
+													<div style="clear:both;"></div>
+												</dd>
+												<dd style="display:none;font-size:12px;padding-left: 76px;height: 30px;margin-top: 6px;padding-left: 60px;line-height: 16px;"><i class="c_valid_instruc" style="margin:0;"></i>验证码已发送到您的手机，2分钟内输入有效，请勿泄露。</dd>
+												<dd><input type="button" class="c_mobile_confirm upEmobile_next" value="下一步" style="margin-left:80px;"></dd>
+												<dd style="margin-top:40px;padding: 0;"><span style="color:#0697da;margin:0;">温馨提示：</span>若您收不到短信或手机号码已停止使用，可点此联系客服：<a style="color:#005ea7;cursor:pointer;" onclick="javascript:window.open('http://b.qq.com/webc.htm?new=0&sid=4000803000&eid=218808P8z8p8K808R8x8x&o=&q=7&ref='+document.location, '_blank', 'height=544, width=644,toolbar=no,scrollbars=no,menubar=no,status=no');">联系客服</a>申请人工更换绑定手机</dd>
+											</dl>
+									</div>
+									<!-- 第二步 -->
+									<div class="c_mobile_valid" style="display:none;">
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证手机</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two c_step_this"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left: 14px;">修改邮箱</div></i><b></b></li>
+											<li class="c_step_last"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_mobile_info" style="width:690px;margin-left:0;">手机验证已通过，请填写您的新邮箱</div>
+										<dl class="c_tel_info" style="margin-top:40px;">
+											<dd><label style="display:inline-block;width:84px;text-align:right;float:left;">新邮箱</label><input type="text" id="upEmailForMA" class="c_email_number" style="float:left;" />
+											<span class="c_email_msg_phone" style="color:#e86969;;float:left; margin-left: 0px;"></span><div class="c_clear"></div></dd>
+											
+											<dd class="c_send_success" style="margin-left: 0;margin-top: 20px;">
+												<label style="display:inline-block;width:84px;text-align:right;float:left">邮箱验证码</label>
+												<input type="text" id="newMEmailcode" class="c_email_input" style="float:left;">
+												<span class="c_get_code newsendEmail3" style="float: left;margin-left:0px;margin-top: 3px;">获取邮件验证码</span>
+												<i style="float:right; line-height: 38px;margin-right: 70px;color:#e86969;" class="update_email_22"></i>
+												<div class="c_clear"></div>
+											</dd>
+											<dd><input type="button" class="c_mobile_confirm upMNewEmail" value="更换"></dd>
+										</dl>
+									</div>
+									<!-- 第三步 -->
+									<div class="c_mobile_valid" style="display:none ;">
+										<ul class="c_mobile_step">
+											<li class="" style="width:310px;"><span>1</span><div class="c_flow_text">验证手机</div><b style="width: 280px;left: 48px;"></b><div class="c_clear"></div></li>
+											<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;"><div class="c_flow_text" style="left:12px;">修改邮箱</div></i><b></b></li>
+											<li class="c_step_last c_step_this"><span>3</span><div class="c_flow_text">修改成功</div></li>
+											<div class="c_clear"></div>
+										</ul>
+										<div class="c_pwd_success">邮箱修改成功<a href="/member_borrow/account/asetpre.html">返回账户设置</a></div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+	<script>seajs.use('member_borrow/accset');</script>
+	<#include "../../include/b_foot.html">
+ </body>
+</html>

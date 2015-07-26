@@ -1,0 +1,100 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.question.service.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.question.dao.QuestionDao;
+import com.ddtkj.p2psys.question.domain.Question;
+import com.ddtkj.p2psys.question.service.QuestionService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @描述：问题业务层实现
+ * @作者：guojunhui@ddtkj.com
+ * @创建时间：2015-7-22 
+ */
+@Repository("QuestionService")
+public class QuestionServiceImpl implements QuestionService{
+
+	@Resource
+	private QuestionDao questionDao;
+	
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#getQuestionListAll()
+	 */
+	@Override
+	public List<Question> findAll() {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("isDelete", 0);
+		return questionDao.findByCriteria(param);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#find(long)
+	 */
+	@Override
+	public Question find(long id) {
+		// TODO Auto-generated method stub
+		return questionDao.find(id);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#getPageList(com.ddtkj.p2psys.question.domain.Question)
+	 */
+	@Override
+	public PageDataList<Question> getPageList(Question question,int page,int rows) {
+		QueryParam param = QueryParam.getInstance().addPage(page, rows);
+		if(null != question && StringUtil.isNotBlank(question.getContent())){
+			param.addParam("content",Operators.LIKE ,"%"+question.getContent()+"%");
+		}
+		param.addParam("isDelete", 0);
+		return questionDao.findPageList(param);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#save(com.ddtkj.p2psys.question.domain.Question)
+	 */
+	@Override
+	public Question save(Question question) {
+		question.setAddIp(Global.getIP());
+		question.setAddTime(new Date());
+		return questionDao.save(question);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#update(com.ddtkj.p2psys.question.domain.Question)
+	 */
+	@Override
+	public Question update(Question question) {
+		question.setUpdateIp(Global.getIP());
+		question.setUpdateTime(new Date());
+		return questionDao.update(question);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#delete(com.ddtkj.p2psys.question.domain.Question)
+	 */
+	@Override
+	public void delete(Question question) {
+		questionDao.delete(question);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#getQuestionCount()
+	 */
+	@Override
+	public int getQuestionCount() {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("isDelete", 0);
+		return questionDao.countByCriteria(param);
+	}
+}

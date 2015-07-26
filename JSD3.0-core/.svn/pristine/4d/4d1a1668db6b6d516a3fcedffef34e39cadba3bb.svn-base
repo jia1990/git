@@ -1,0 +1,123 @@
+package com.rongdu.p2psys.account.model.payment;
+
+import java.io.PrintWriter;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.struts2.ServletActionContext;
+
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * 充值方式
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年3月7日
+ */
+public class BasePaymentWay implements PaymentWay {
+
+	protected User user;
+	protected AccountRecharge recharge;
+	protected BasePayment payment;
+
+	/**
+	 * @param request
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	public BasePayment paymentRequest(HttpServletRequest request, AccountRechargeModel model) throws Exception {
+		double rechargefee = 0;
+		double fee = BigDecimalUtil.mul(model.getMoney(), rechargefee);
+		user = (User) request.getSession().getAttribute(Constant.SESSION_USER);
+		long userId = user.getUserId();
+		recharge = model.prototype(user, fee);
+		payment = payment(request, userId);
+		payment.sign();
+		request.setAttribute("payment", payment);
+		return payment;
+	}
+
+	/**
+	 * @param request
+	 * @return
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public BasePayment callbackRequest(HttpServletRequest request) throws Exception {
+		String reponseMsg = "";
+		User u = new User(1L);
+		AccountLog log = new AccountLog(u, Constant.RECHARGE, u);
+		AccountService accountService = (AccountService) BeanUtil.getBean("accountService");
+		user = (User) request.getSession().getAttribute(Constant.SESSION_USER);
+		long userId = user.getUserId();
+		payment = callback(request, userId);
+		payment.encryptLocalReturnSign();
+		String tranNo = payment.tranNo();
+		try {
+			if (StringUtil.isBlank(tranNo)) {
+				throw new Exception("重复回调！");
+			}
+			if (Global.TRADE_NO_SET.add(tranNo)) {
+				throw new Exception("重复回调！");
+			}
+			if (payment.reponseSuccess()) {
+				//accountService.newRecharge(payment.tranNo(), payment.remoteReturnSign, log, payment.pay);
+				reponseMsg = responseSuccess();
+			} else {
+				//accountService.failRecharge(payment.tranNo(), payment.remoteReturnSign, log);
+				reponseMsg = responseFail();
+			}
+		} catch (Exception e) {
+			//accountService.failRecharge(payment.tranNo(), payment.remoteReturnSign, log);
+			reponseMsg = responseFail();
+		} finally {
+			Global.TRADE_NO_SET.remove(payment.tranNo());
+		}
+		HttpServletResponse response = ServletActionContext.getResponse();
+		PrintWriter p = response.getWriter();
+		p.print(reponseMsg);
+		p.flush();
+		p.close();
+		return payment;
+	}
+
+	/**
+	 * @return
+	 */
+	public AccountRecharge getRecharge() {
+		return recharge;
+	}
+
+	@Override
+	public BasePayment payment(HttpServletRequest request, long userId) throws Exception {
+		return null;
+	}
+
+	@Override
+	public BasePayment callback(HttpServletRequest request, long userId) throws Exception {
+		return null;
+	}
+
+	@Override
+	public String responseSuccess() throws Exception {
+		return null;
+	}
+
+	@Override
+	public String responseFail() throws Exception {
+		return null;
+	}
+
+}

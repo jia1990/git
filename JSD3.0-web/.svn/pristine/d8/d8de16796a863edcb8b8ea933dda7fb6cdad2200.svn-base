@@ -1,0 +1,357 @@
+package com.rongdu.p2psys.web.borrow;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.BorrowRepaymentModel;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.disruptor.DisruptorUtils;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+import com.rongdu.p2psys.user.domain.UserCredit;
+import com.rongdu.p2psys.user.domain.UserCreditApply;
+import com.rongdu.p2psys.user.model.UserCreditApplyModel;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserCreditApplyService;
+import com.rongdu.p2psys.user.service.UserCreditService;
+
+/**
+ * 我的借款
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月17日
+ */
+public class MyBorrowAction extends BaseAction implements ModelDriven<BorrowModel> {
+
+	private static Logger logger = Logger.getLogger(MyBorrowAction.class);
+	
+	private BorrowModel model = new BorrowModel();
+
+	@Override
+	public BorrowModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private UserCreditService userCreditService;
+	@Resource
+	private UserCreditApplyService userCreditApplyService;
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private UserCacheService userCacheService;
+	private User user;
+	private Map<String, Object> data;
+    @Resource
+	private YmdService ymdService;
+	/**
+	 * 我的借款
+	 * 
+	 * @return
+	 */
+	@Action("/member/borrow/mine")
+	public String myBorrow() throws Exception {
+
+		return "mine";
+	}
+
+	/**
+	 * 我的借款列表 ajax数据接口 status(标状态) start_time end_time(开始结束时间) name(标名)
+	 * 
+	 * @return
+	 */
+	@Action("/member/borrow/mineList")
+	public void mineList() throws Exception {
+		user = getSessionUser();
+		model.setUser(user);
+		PageDataList<BorrowModel> pageDataList = borrowService.getListOfBorrow(model);
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 撤标 初审之前
+	 * 
+	 * @throws Exception if has error
+	 */
+	@Action("/member/borrow/cancel")
+	public void cancel() throws Exception {
+		Borrow borrow = borrowService.find(model.getId());
+		borrow.setRepaymentAccount(-1); //标记前台撤标
+		borrowService.cancel(borrow);
+		redirect("/member/borrow/mine.html"); //重定向到撤标之后的页面
+	}
+
+	/**
+	 * 我的待还
+	 * 
+	 * @return String
+	 * @throws Exception if has error
+	 */
+	@Action(value="/member/borrow/repayment",results = { @Result(name = "main", type = "ftl", location = "/member/borrow/repayment"),
+			@Result(name = "repayment_firm", type = "ftl", location = "/member_borrow/borrow/repayment.html")})
+	public String repayment() throws Exception {
+		
+		request.setAttribute("borrowId", paramLong("borrowId"));
+		user = getSessionUser();
+		UserCache uc = user.getUserCache();
+		if ("11".equals(uc.getUserType())) {
+			return "repayment_firm";
+		} 
+		return "repayment";
+	}
+
+	/**
+	 * 我的待还列表 ajax数据接口 status 0待还 1已还 start_time end_time (发布时间) name 标名
+	 * 
+	 * @return
+	 * @throws Exception if has error
+	 */
+	@Action("/member/borrow/repaymentList")
+	public void repaymentList() throws Exception {
+		user = getSessionUser();
+		BorrowRepaymentModel m = (BorrowRepaymentModel) paramModel(BorrowRepaymentModel.class);
+		m.setBorrowId(paramLong("borrowId"));
+		m.setUser(user);
+		int status = this.paramInt("status");
+		m.setStatus(status);
+		PageDataList<BorrowRepaymentModel> pageDataList = borrowRepaymentService.getList(m);
+		Account account = accountService.findByUser(this.getSessionUserId());
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		data.put("account", account);
+		data.put("api_code", Global.getValue("api_code"));
+		data.put("is_open_deposit", Global.getValue("is_open_deposit"));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 标准版正常还款
+	 * @throws Exception if has error
+	 */
+	@Action("/member/borrow/repay")
+	public void repay() throws Exception {
+		user = getSessionUser();
+		model.checkPayPwd(user);
+		BorrowRepayment borrowRepayment = borrowRepaymentService.findById(model.getRepaymentId());
+		borrowService.doRepay(borrowRepayment);
+		printSuccess();
+	}
+	/**
+	 * 正常还款
+	 * @throws Exception if has error
+	 */
+	@SuppressWarnings("unchecked")
+	@Action(value="/invest/ymdRepaySkip",results={
+			@Result(name = "result", type = "ftl", location = "/tpp/result.html")
+			})
+	public String ymdRepaySkip() throws Exception {
+	    boolean isOpenApi = BaseTPPWay.isOpenApi();
+	    String apiCode = BaseTPPWay.apiCode();
+        if(!isOpenApi || !apiCode.equals("3")){
+            logger.info("项目第三方资金托管非汇潮接口！");
+            throw new BussinessException("汇潮接口未启用！", "/member/main.html");
+        }
+		user = getSessionUser();
+		BorrowRepayment repayment = borrowRepaymentService.findById(model.getRepaymentId());
+		User borrowUser=repayment.getBorrow().getUser();
+		if(user.getUserId()!=borrowUser.getUserId()){
+			throw new BussinessException("还款用户不是该标借款人，不能进行还款！", "/member/main.html");
+		}
+		String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+		request.setAttribute("resultFlag", resultFlag);
+		try {
+			
+			//JSDBET-802 wcw 2015-3-12 start
+			//本地账户余额与一麻袋账户余额对账
+			accountService.accountCompare(this.getSessionUserId());
+			//JSDBET-802 wcw 2015-3-12 end
+			//DisruptorUtils.repay(repayment, resultFlag);
+			//还款
+			ymdService.repaySkip(repayment, (byte)0, resultFlag);
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		} catch (Exception e) {
+			Global.RESULT_MAP.put(resultFlag, e.getMessage());
+		}
+		request.setAttribute("back_url", "/member_borrow/borrow/repayment.html?borrowId="+repayment.getBorrow().getId());
+        return "result";
+	}
+	
+	/**
+	 * 担保公司代偿还款
+	 * @throws Exception if has error
+	 */
+	@SuppressWarnings("unchecked")
+	@Action(value="/invest/compensatoryRepaySkip",results={
+			@Result(name = "result", type = "ftl", location = "/tpp/result.html")
+			})
+	public String compensatoryRepaySkip() throws Exception {
+	    boolean isOpenApi = BaseTPPWay.isOpenApi();
+	    String apiCode = BaseTPPWay.apiCode();
+        if(!isOpenApi || !apiCode.equals("3")){
+            logger.info("项目第三方资金托管非汇潮接口！");
+            throw new BussinessException("汇潮接口未启用！", "/member/main.html");
+        }
+		user = getSessionUser();
+		BorrowRepayment repayment = borrowRepaymentService.findById(model.getRepaymentId());
+		int currPeriod = borrowRepaymentService.getCurrPeriod(repayment.getBorrow().getId());
+		if(currPeriod != repayment.getPeriod()){
+			String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+			request.setAttribute("resultFlag", resultFlag);
+			request.setAttribute("left_url", "/member_borrow/borrow/repayment.html?borrowId="+repayment.getBorrow().getId()); // 成功返回地址
+			request.setAttribute("right_url", "/member/main.html"); // 成功返回地址
+			request.setAttribute("left_msg", "还款详情"); 
+			request.setAttribute("right_msg", "账户主页"); 
+			request.setAttribute("r_msg", "您本次还款的期数有误，请核查后进行还款！");
+			Global.RESULT_MAP.put(resultFlag, "success");
+			return "result";
+		}
+		try {
+			String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+			request.setAttribute("resultFlag", resultFlag);
+			DisruptorUtils.doCompensateSuccess(repayment, resultFlag);
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		request.setAttribute("back_url", "/member_borrow/borrow/repayment.html?borrowId="+repayment.getBorrow().getId());
+        return "result";
+	}
+	/**
+	 * 前台逾期垫付
+	 * @throws Exception
+	 */
+	@Action("/member/borrow/overduePayment")
+	public void overduePayment() throws Exception {
+		user = getSessionUser();
+		model.checkPayPwd(user);
+		BorrowRepayment borrowRepayment = borrowRepaymentService.findById(model.getRepaymentId());
+		borrowService.overduePayment(borrowRepayment);
+		printSuccess();
+	}
+	
+	/**
+	 * 提前还款
+	 * @throws Exception if has error
+	 */
+	@Action("/member/borrow/doPriorRepay")
+	public void doPriorRepay() throws Exception {
+		user = getSessionUser();
+		model.checkPayPwd(user);
+		BorrowRepayment borrowRepayment = borrowRepaymentService.findById(model.getRepaymentId());
+		borrowService.doPriorRepay(borrowRepayment);
+		printSuccess();
+	}
+
+	/**
+	 * 下载协议
+	 * 
+	 * @return
+	 */
+	@Action("/member/borrow/protocol")
+	public String protocol() throws Exception {
+
+		return null;
+	}
+
+	/**
+	 * 信用额度申请记录
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/borrow/creditApply")
+	public String creditApply() throws Exception {
+		user = getSessionUser();
+		long userId = user.getUserId();
+		// 申请中
+		int applyIngCount = userCreditApplyService.count(userId, 2);
+		// 申请记录
+		request.setAttribute("applyIngCount", applyIngCount);
+		return "creditApply";
+	}
+
+	/**
+	 * 信用额度列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/borrow/creditApplyList")
+	public void creditApplyList() throws Exception {
+		user = getSessionUser();
+		long userId = user.getUserId();
+		PageDataList<UserCreditApply> applyList = userCreditApplyService.list(userId, model);
+		data = new HashMap<String, Object>();
+		data.put("data", applyList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 信用额度申请
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/borrow/doCreditApply")
+	public void doCreditApply() throws Exception {
+		user = getSessionUser();
+		AccountModel accountModel = new AccountModel();
+		accountModel.validAttestionForAmountApply(getSessionUserIdentify(), model.getAmount());
+		UserCredit uCredit = userCreditService.findByUserId(user.getUserId());
+		UserCreditApplyModel userCreditApplyModel=new UserCreditApplyModel();
+		userCreditApplyModel.validRemarkAndContentForAmountApply(model.getRemark(), model.getContent());
+		UserCreditApply CreditApply = new UserCreditApply(user, model.getAmount(), 2, uCredit, model.getContent(),
+				model.getRemark());
+		userCreditService.applyUserCredit(CreditApply);
+		printSuccess();
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+}

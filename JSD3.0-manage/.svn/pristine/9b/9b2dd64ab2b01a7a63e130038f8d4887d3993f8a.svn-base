@@ -1,0 +1,234 @@
+package com.rongdu.manage.action.user;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.model.ScoreModel;
+import com.rongdu.p2psys.user.domain.UserFreeze;
+import com.rongdu.p2psys.user.model.UserFreezeModel;
+import com.rongdu.p2psys.user.service.UserFreezeService;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class ManageFreezeAction extends BaseAction implements ModelDriven<UserFreezeModel> {
+
+	@Resource
+	private UserFreezeService freezeService;
+	
+	private UserService userService;
+
+	private UserFreezeModel model = new UserFreezeModel();
+
+	private Map<String, Object> data;
+
+	public UserFreezeModel getModel() {
+		return model;
+	}
+
+	/**
+	 * 冻结列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeManager")
+	public String freezeManager() throws Exception {
+		return "freezeManager";
+	}
+
+	/**
+	 * 冻结列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeList")
+	public void freezeList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		PageDataList<UserFreezeModel> freezeList = freezeService.freezeList(pageNumber, pageSize, model);
+		data.put("total", freezeList.getPage().getTotal()); // 总行数
+		data.put("rows", freezeList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 用户冻结信息导出
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeExcel")
+	public void freezeExcel() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		int pageNumber = 1;// 当前页数
+		int pageSize = 99999999;// 每页总数
+		PageDataList<UserFreezeModel> pagaDataList = freezeService.freezeList(pageNumber, pageSize, model);		
+		List<UserFreezeModel> list = pagaDataList.getList();
+		List<UserFreezeModel> newList = new ArrayList<UserFreezeModel>();		
+		for(int i=0;i<list.size();i++){
+			UserFreezeModel ufm = list.get(i);
+			ufm.setMarkNew("");
+			if(ufm.getMark().indexOf("recharge") > 0){
+				ufm.setMarkNew(ufm.getMarkNew() + " 充值 ");
+			}
+			if(ufm.getMark().indexOf("cash") > 0){
+				ufm.setMarkNew(ufm.getMarkNew() + " 提现 ");
+			}
+			if(ufm.getMark().indexOf("tender") > 0){
+				ufm.setMarkNew(ufm.getMarkNew() + " 投标 ");
+			}
+			if(ufm.getMark().indexOf("AY") > 0){
+				ufm.setMarkNew(ufm.getMarkNew() + " 锁定用户 ");
+			}
+			if(ufm.getMark().indexOf("NN") > 0){
+				ufm.setMarkNew(ufm.getMarkNew() + " 解锁用户 ");
+			}
+			if(ufm.getStatus() == 0){
+				ufm.setStatusNew("未启用");
+			}else if(ufm.getStatus() == 1){
+				ufm.setStatusNew("启用");
+			}
+			if("NN".equals(ufm.getIsLocked())){
+				ufm.setIsLockedNew("未锁定");
+			}else if("AY".equals(ufm.getIsLocked())){
+				ufm.setIsLockedNew("已锁定");
+			}else if("UY".equals(ufm.getIsLocked())){
+				ufm.setIsLockedNew("挂起");
+			}else if("FF".equals(ufm.getIsLocked())){
+				ufm.setIsLockedNew("已销户");
+			}
+			newList.add(ufm);
+		}
+		String title = "用户认证信息Excel表";
+		
+		String[] hearders = new String[] {"编号","用户名","冻结标示","备注","添加时间","添加IP","状态","是否锁定"};// 表头数组
+		String[] fields = new String[] { "id","userName","markNew","remark","addTime","addIp","statusNew","isLockedNew"};// 对象属性数组
+		int sheetRows = 50000;
+		int sheetPage = newList.size() / sheetRows;
+		if (newList.size() % sheetRows > 0) {
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserFreezeModel> tdList = new ArrayList<UserFreezeModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserFreezeModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		
+	}
+
+	/**
+	 * 新增用户冻结页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeAddPage")
+	public String freezeAddPage() throws Exception {
+		//initRSAME();
+		//saveToken("freezeAddToken");
+		return "freezeAddPage";
+	}
+
+	/**
+	 * 新增用户冻结保存
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeAdd")
+	public void freezeAdd() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		Operator operator = getOperator();
+		
+		String userName = paramString("userName");
+		
+		if(null != userName && !"".equals(userName)){
+			model.setUserName(userName);
+		}
+		//checkToken("freezeAddToken");
+		data = freezeService.freezeAdd(model, operator);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 修改页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeEditPage")
+	public String freezeEditPage() throws Exception {
+		//initRSAME();
+		//saveToken("freezeEditToken");
+		long id = paramLong("id");
+		UserFreeze freeze = freezeService.find(id);
+		UserFreezeModel model = UserFreezeModel.instance(freeze);
+		String userName = model.getUser().getUserName();
+		request.setAttribute("freeze", freeze);
+		request.setAttribute("name", userName);
+		return "freezeEditPage";
+	}
+
+	/**
+	 * 修改保存
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeEdit")
+	public void freezeEdit() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		if (model.getMark() == null) {
+			throw new UserException("冻结点不能为空！", 1);
+		}
+		//checkToken("freezeEditToken");
+		freezeService.freezeEdit(model, getOperator());
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 删除(启用，未启用)
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/user/freeze/freezeDelete")
+	public void freezeDelete() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		int status = paramInt("status");
+		freezeService.freezeDelete(id, status);
+		data.put("result", true);
+		data.put("msg", "更新成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+}

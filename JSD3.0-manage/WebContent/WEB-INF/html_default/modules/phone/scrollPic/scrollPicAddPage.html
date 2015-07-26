@@ -1,0 +1,82 @@
+
+<script type="text/javascript">
+$(function(){
+	
+	// 图片大小限制提示
+	$('#imgSize').html('建议大小：(720 * 360)');
+	
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/phone/scrollPic/scrollPicAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址
+    
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">名称：</label>
+		     <div class="ipt">
+		     	<!-- <input type="text" class="w400 easyui-validatebox" id="name" name="name" value="手机轮展图" readonly="readonly">
+		     	<b>*</b> -->
+		     	手机轮展图
+		     </div>
+		</div>
+		<!-- 添加时间开始 -->
+		<div class="formitm" id="time" >
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="onlineTime" id="startTime" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="nolineTime" id="endTime" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间结束 -->
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" class="w400 easyui-validatebox" data-options="required: true" maxlength="50"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="1"/>&nbsp;&nbsp;显示
+		     	<input type="radio" name="status" value="2" checked="checked"/>&nbsp;&nbsp;隐藏
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" class="easyui-numberbox" value="${sortId!1}" data-options="required: true" maxlength="4"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file">	<br /><a id="imgSize"></a>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">图片链接：</label>
+		     <div class="ipt">
+		     	<input type="text" name="linkPath" class="w400 easyui-validatebox" data-options="required: true" maxlength="128"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="introduction"  maxlength="250"></textarea>	
+		     </div>
+		</div>
+		
+		   <input name="scrollPicAddToken" value="${scrollPicAddToken!}" type="hidden"> 	
+	</form>
+</div>
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>
+

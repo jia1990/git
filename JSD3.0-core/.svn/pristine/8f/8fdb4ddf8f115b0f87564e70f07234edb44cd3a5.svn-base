@@ -1,0 +1,90 @@
+package com.ddtkj.p2psys.phone.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.activity.domain.ActivityPublish;
+import com.ddtkj.p2psys.activity.model.ActivityPublishModel;
+import com.ddtkj.p2psys.phone.domain.PhoneActivity;
+import com.ddtkj.p2psys.phone.model.PhoneActivityModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * 活动Service
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 2.0
+ * @since 2015年1月10日
+ */
+public interface PhoneActivityService {
+
+	/**
+	 * 列表
+	 * 
+	 * @param nid
+	 * @param size
+	 * @return
+	 */
+	List<PhoneActivityModel> listBySize(String type, int size);
+
+	/**
+	 * 分页
+	 * 
+	 * @param nid
+	 * @param page
+	 * @return
+	 */
+	PageDataList<PhoneActivityModel> list(String type, int page);
+	/**
+     * 分页
+     * @param model
+     * @return
+     */
+	PageDataList<PhoneActivityModel> list(PhoneActivityModel model);
+
+	/**
+	 * 活动列表
+	 * 
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<PhoneActivityModel> activityList(PhoneActivityModel model, int pageNumber, int pageSize);
+	/**
+	 * 活动列表-手机端
+	 * 
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<PhoneActivityModel> phoneActivityList(PhoneActivityModel model, int pageNumber, int pageSize);
+	
+	/**
+	 * 添加活动
+	 */
+	void activityAdd(PhoneActivity activity);
+
+	/**
+	 * 根据ID查询实体
+	 * 
+	 * @param id
+	 * @return
+	 */
+	PhoneActivity find(long id);
+
+	/**
+	 * 修改活动
+	 * 
+	 * @param PhoneActivity
+	 */
+	void activityEdit(PhoneActivity phoneActivity);
+
+	
+	/**
+	 * 修改活动
+	 * @param PhoneActivity 文章对象
+	 */
+	void update(PhoneActivity activity);
+
+}

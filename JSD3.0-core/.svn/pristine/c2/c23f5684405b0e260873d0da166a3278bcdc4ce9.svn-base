@@ -1,0 +1,78 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.core.quartz.recharge;
+
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.core.quartz.LoanTask;
+
+/**
+ * @描述：充值回调队列
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年5月25日 
+ */
+public class RechargeJobQueue<T> {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Queue<T> queue = new ConcurrentLinkedQueue();
+	private LoanTask task;
+
+	public RechargeJobQueue(LoanTask task) {
+		super();
+		this.task = task;
+	}
+
+	public synchronized void offer(T model) {
+		if (!queue.contains(model)) {
+			queue.offer(model);
+			synchronized (task.getLock()) {
+				task.execute();
+			}
+		}
+	}
+
+	public synchronized void offer(List<T> ts) {
+		for (int i = 0; i < ts.size(); i++) {
+			T t = ts.get(i);
+			if (!queue.contains(t)) {
+				queue.offer(t);
+			}
+		}
+		synchronized (task.getLock()) {
+			task.execute();
+		}
+	}
+
+	public synchronized T poll() {
+		return queue.poll();
+	}
+
+	public synchronized T peek() {
+		return queue.peek();
+	}
+
+	public synchronized void remove(T model) {
+		queue.remove(model);
+	}
+
+	public int size() {
+		return queue.size();
+	}
+
+	public static RechargeJobQueue<RechargeBean> RECHARGE = null;
+
+	public static void init(AccountRechargeService accountRechargeService) {
+		RECHARGE = new RechargeJobQueue<RechargeBean>(new RechargeTask(accountRechargeService));
+	}
+
+	public static void stop() {
+		RECHARGE.task.stop();
+	}
+
+	public void doAutoQueue() {
+	}
+
+}

@@ -1,0 +1,101 @@
+<script type="text/javascript">
+$(function(){
+		$.fn.dataGridOptions.formSubFun("#form",'/modules/market/activity/activityAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址		
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" class="w400 easyui-validatebox" data-options="required: true" maxlength="30"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab" >副标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="subhead" class="w400 easyui-validatebox"  maxlength="40"/>
+		     </div>
+		</div>
+		<!-- 添加时间开始 -->
+		<div class="formitm">
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="onlineTime" id="startTime" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="nolineTime" id="endTime" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间结束 -->
+		<!-- <div class="formitm">
+		     <label class="lab">类型：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="type" value="0" checked="checked"/>&nbsp;&nbsp;普通
+		     </div>
+		</div> -->
+		<input type="hidden" name="type" value="0" />
+		
+		<div class="formitm" >
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" class="easyui-numberbox" maxlength="4" onkeyup="this.value=this.value.replace(/\D/g,'')"/>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">是否显示：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="2"/>&nbsp;&nbsp;隐藏
+				<input type="radio" name="status" value="1" checked="checked"/>&nbsp;&nbsp;显示
+		     </div>
+		</div>
+		
+		<div class="formitm" id="isRecommend">
+		     <label class="lab">是否推荐：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isRecommend" value="0" checked="checked"/>&nbsp;&nbsp;否
+				<input type="radio" name="isRecommend" value="1"/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm" id="isTop">
+		     <label class="lab">是否置顶：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isTop" value="0" checked="checked"/>&nbsp;&nbsp;否
+				<input type="radio" name="isTop" value="1"/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm" id="file">
+		     <label class="lab" id="file_label">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"><br />(建议：900 * 240)
+		     </div>
+		     
+		</div>
+		
+		<div class="formitm" id="content">
+		     <label class="lab">链接：</label>
+		     <div class="ipt">
+		     	<input type="text" name="content" class="w400 easyui-validatebox" data-options="required: true" maxlength="300"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		<div class="formitm" id="introduction">
+		     <label class="lab" id="introduction_label">简介：</label>
+		     <div class="ipt">
+		     	<textarea type="areatext" class="w400 easyui-validatebox" name="introduction" maxlength="120"></textarea>	
+		     </div>
+		</div>
+		
+		 <input type="hidden" value="${activityAddToken!}" name="activityAddToken">
+	</form>
+</div>
+<!-- <div id="siteNewDialog">
+	<ul id="siteNewTree"></ul>
+</div> -->
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>

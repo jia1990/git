@@ -1,0 +1,191 @@
+package com.ddtkj.p2psys.account.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.alibaba.fastjson.annotation.JSONField;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：充值记录实体
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月8日
+ */
+@Entity
+@Table(name = "t_jsd_account_recharge")
+public class AccountRecharge implements Serializable {
+
+	private static final long serialVersionUID = 6582763674871973154L;
+	
+	public static final String RECHARGE_APPLY_STATUS="55"; //充值中状态
+	
+	public static final String RECHARGE_SUCCESS_STATUS="00"; //充值成功状态
+	
+	public static final String RECHARGE_REPAIR_SUCCESS_STATUS="01"; //充值补单成功状态
+
+	public static final String RECHARGE_FAIL_STATUS="99"; //充值失败状态
+	
+	public static final String RECHARGE_WAIT_VERIFY_STATUS = "52";//转账充值待审核状态
+	
+	public static final String RECHARGE_FAIL_VERIFY_STATUS="53";//转账充值审核失败
+	@JSONField
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user; // 用户ID
+	@Id
+	private String tradeNo; // 订单号
+	private String tradeStatus; // 状态 00:充值成功 55:充值中 99:失败  01：充值补单成功
+	private double rechargeAmount; // 充值金额
+	private String returnMsg; // 第三方交易返回(按照JSON格式的保存托管方本次交易返回的信息)
+	//JSDP-37 wcw 2015-04-25 start
+	private String rechargeType; // 充值类型：在线第三方充值 默认值00   充值转账  01  平台转账  02
+	//JSDP-37 wcw 2015-04-25 end
+	private String userRemark; // 备注
+	private String rechargeWay; // 充值入口 手机:A PC端:P
+	private String isfree; // 充值是否收费
+	private double rechargeFee; // 充值手续费
+	private double rechargeRate; // 充值费率
+	private double inAccountAmount; // 实际到账金额
+	private String sendCleartextInfo; // 签名明文信息
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime; // 添加时间
+	private String addIp; // 添加IP
+	public AccountRecharge() {
+		super();
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getTradeNo() {
+		return tradeNo;
+	}
+
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+
+
+	public double getRechargeAmount() {
+		return rechargeAmount;
+	}
+
+	public void setRechargeAmount(double rechargeAmount) {
+		this.rechargeAmount = rechargeAmount;
+	}
+
+	public String getReturnMsg() {
+		return returnMsg;
+	}
+
+	public void setReturnMsg(String returnMsg) {
+		this.returnMsg = returnMsg;
+	}
+
+
+	public String getTradeStatus() {
+		return tradeStatus;
+	}
+
+	public void setTradeStatus(String tradeStatus) {
+		this.tradeStatus = tradeStatus;
+	}
+
+	public String getRechargeType() {
+		return rechargeType;
+	}
+
+	public void setRechargeType(String rechargeType) {
+		this.rechargeType = rechargeType;
+	}
+
+	public String getUserRemark() {
+		return userRemark;
+	}
+
+	public void setUserRemark(String userRemark) {
+		this.userRemark = userRemark;
+	}
+
+	public String getRechargeWay() {
+		return rechargeWay;
+	}
+
+	public void setRechargeWay(String rechargeWay) {
+		this.rechargeWay = rechargeWay;
+	}
+
+
+	public String getIsfree() {
+		return isfree;
+	}
+
+	public void setIsfree(String isfree) {
+		this.isfree = isfree;
+	}
+
+	public double getRechargeFee() {
+		return rechargeFee;
+	}
+
+	public void setRechargeFee(double rechargeFee) {
+		this.rechargeFee = rechargeFee;
+	}
+
+	public double getInAccountAmount() {
+		return inAccountAmount;
+	}
+
+	public void setInAccountAmount(double inAccountAmount) {
+		this.inAccountAmount = inAccountAmount;
+	}
+
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	
+	
+	public double getRechargeRate() {
+		return rechargeRate;
+	}
+
+	public void setRechargeRate(double rechargeRate) {
+		this.rechargeRate = rechargeRate;
+	}
+
+	public String getSendCleartextInfo() {
+		return sendCleartextInfo;
+	}
+
+	public void setSendCleartextInfo(String sendCleartextInfo) {
+		this.sendCleartextInfo = sendCleartextInfo;
+	}
+}

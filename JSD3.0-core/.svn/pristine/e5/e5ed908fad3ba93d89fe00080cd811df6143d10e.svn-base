@@ -1,0 +1,100 @@
+package com.ddtkj.p2psys.redpacket.service;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.redpacket.domain.Activity;
+import com.ddtkj.p2psys.redpacket.model.RedPacketModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+/**
+ * 活动Service 
+ * 
+ * @author YJF
+ *
+ */
+
+public interface ActivityService {
+	
+
+	/**
+	 * 查询  根据ID查询
+	 */
+	public Activity getEntityById(long id) ;
+	/**
+	 * 查询 根据是否开启查询红包类型
+	 */
+	public PageDataList<Activity> getEntityByName(String name,int currentPage,int pagenum) ;
+	/**
+	 * 查询 根据红包的TypeCode
+	 * 
+	 * @param typecode  红包编码code
+	 */
+	public PageDataList<Activity> getEntityByTypeCode(String typecode,int currentPage,int pagenum) ;
+	/**
+	 *  查询 根据红包的TypeCode
+	 * 
+	 * @param typecode 红包编码code
+	 * @return model 数据
+	 */
+	public PageDataList<RedPacketModel> getModelByTypeCode(String typecode,int currentPage,int pagenum);
+	/**
+	 * 分页 多条件查询等复杂查询
+	 */
+	public PageDataList	<Activity> getEntityPageDataList(QueryParam param,int currentPage,int pagenum);
+	/**
+	 *  查询当前时间有没有活动
+	 *  date  指定时间
+	 *  
+	 */
+	public PageDataList<Activity> getEntityListBetweenTime(Date date,int currentPage,int pagenum) ;
+	/**
+	 *  查询当前时间  符合某个类型的活动
+	 *  @param date 指定时间
+	 */
+	public Activity getEntityByTimeAndRPTypeCode(Date date,String typecode) ;
+	/**
+	 *  查询当前时间  符合某个类型的活动  返回model
+	 * @param date  指定时间
+	 * @param typecode  红包编码code
+	 * @return  model数据
+	 */
+	public RedPacketModel getModelByTimeAndRPTypeCode(Date date, String typecode);
+
+	
+	/**
+	 * 保存 活动
+	 * @param rp
+	 * @return
+	 */
+	public Activity save(Activity rp) ;
+	/**
+	 * 修改 活动
+	 * @param rp
+	 * @return
+	 */
+	public Activity update(Activity rp) ;
+	/**
+	 * 删除 活动
+	 * @param rp
+	 */
+	public void delete(Activity rp) ;
+	
+	/**
+	 * 返回所有的活动 
+	 * @return
+	 */
+	public List<Activity> getAll();
+	/**
+	 * 分页根据条件查询信息
+	 * @param map
+	 * @param currentPage
+	 * @param pagenum
+	 * @return
+	 */
+	public PageDataList	<Activity> getPageDataList(Map<String,Object> map,int currentPage,int pagenum);
+	
+	
+}

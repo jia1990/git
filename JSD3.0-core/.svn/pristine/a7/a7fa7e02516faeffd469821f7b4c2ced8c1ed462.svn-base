@@ -1,0 +1,55 @@
+package com.rongdu.p2psys.core.notice.sms;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Notice;
+import com.rongdu.p2psys.core.service.NoticeService;
+
+public class SmsNoticeTask extends AbstractSmsLoanTask {
+	private Logger logger = Logger.getLogger(SmsNoticeTask.class);
+
+	@Resource
+	private NoticeService noticeService;
+
+	public NoticeService getNoticeService() {
+		return noticeService;
+	}
+
+	public void setNoticeService(NoticeService noticeService) {
+		this.noticeService = noticeService;
+	}
+
+	public SmsNoticeTask(NoticeService noticeService) {
+		super();
+		smsTask.setName("smsNoticeTask");
+		this.noticeService = noticeService;
+	}
+
+	@Override
+	public void doLoan() {
+		logger.debug("smsNoticeTask start");
+		while (SmsNoticeJobQueue.SMSNOTICE != null && SmsNoticeJobQueue.SMSNOTICE.size() > 0) {
+			Notice notice = SmsNoticeJobQueue.SMSNOTICE.peek();
+			if (notice != null) {
+				try {
+					noticeService.sendNotice(notice);
+				} catch (Exception e) {
+					logger.error(e.getMessage(), e);
+					e.printStackTrace();
+				} finally {
+					SmsNoticeJobQueue.SMSNOTICE.remove(notice);
+					Global.removeTransfer();
+				}
+			}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return SmsNoticeTask.MESSAGE_STATUS;
+	}
+
+}

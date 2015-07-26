@@ -1,0 +1,111 @@
+package com.rongdu.p2psys.core.service.impl;
+
+import java.util.Calendar;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.core.cache.MemcacheException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.p2psys.core.dao.RuleDao;
+import com.rongdu.p2psys.core.dao.RuleLogDao;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.domain.RuleLog;
+import com.rongdu.p2psys.core.service.RuleService;
+
+@Service("ruleService")
+public class RuleServiceImpl implements RuleService {
+
+	@Resource
+	private RuleDao ruleDao;
+	@Resource
+	private RuleLogDao ruleLogDao;
+
+	@Override
+	public Rule findById(Long id) {
+		return ruleDao.find(id);
+	}
+
+	@Override
+	public Rule findByNid(String nid) {
+		return ruleDao.findObjByProperty("nid", nid);
+	}
+
+	/**
+	 * 根据状态获取列表
+	 * 
+	 * @param status status
+	 * @return List
+	 */
+	public List<Rule> list(int status) {
+		return ruleDao.findByProperty("status", status);
+	}
+
+	/**
+	 * 查询所有的规则
+	 * 
+	 * @param status
+	 * @return
+	 */
+	public List<Rule> findAll() {
+		return ruleDao.findAll();
+	}
+
+	@Override
+	public Rule getRule(Long id) {
+		return ruleDao.find(id);
+	}
+
+	@Override
+	public Rule updateRule(Rule rule,long userId) {
+		// TODO Auto-generated method stub
+		
+		
+		rule.setAddTime(Calendar.getInstance().getTime());
+		
+		RuleLog ruleLog = new RuleLog();
+		
+		Rule ruleO = ruleDao.find(rule.getId());
+		StringBuffer ruleOld = new StringBuffer();
+		ruleOld.append("修改前的规则--规则名："+ruleO.getName()+"--规则类型："+ruleO.getNid()+"--规则约束："+ruleO.getRuleCheck()+"--添加时间："+ruleO.getAddTime()+"--备注："+ruleO.getRemark());
+		
+		StringBuffer ruleNew = new StringBuffer();
+		ruleNew.append("修改后的规则--规则名："+rule.getName()+"--规则类型："+rule.getNid()+"--规则约束："+rule.getRuleCheck()+"--添加时间："+rule.getAddTime()+"--备注："+rule.getRemark());
+		
+		
+		ruleLog.setRuleOld(ruleOld.toString());
+		ruleLog.setRuleNew(ruleNew.toString());
+		ruleLog.setUpdateOpt(userId);
+		ruleLog.setUpdateTime(Calendar.getInstance().getTime());
+		
+		Rule updateRule = ruleDao.update(rule);
+		if(null != updateRule){
+			ruleLogDao.save(ruleLog);
+		}
+		if(!GlobalCache.modifyRuleCheck(rule.getNid(),rule)){	
+			throw  new MemcacheException("更新缓存异常");
+		}	
+		return updateRule;
+	}
+
+	@Override
+	public PageDataList<Rule> getPageList(Rule rule, int currentPage,
+			int pageSize) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pageSize);
+		if(null != rule && null != rule.getNid()){
+			param.addParam("nid", Operators.LIKE, rule.getNid());
+		}
+		if(null !=rule && null !=rule.getName()){
+			param.addParam("name", Operators.LIKE, rule.getName());
+		}
+		PageDataList<Rule> pageDataRuleList = ruleDao.findPageList(param);
+		return pageDataRuleList;
+	}
+
+}

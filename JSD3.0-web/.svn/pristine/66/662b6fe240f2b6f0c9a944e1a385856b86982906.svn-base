@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html"> 
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/contact.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/borrow_money.js"></script>
+<title>晋商贷-我的交易-我的投资</title>
+<style>
+.c_data_display dd.record_dd1{width: 120px;}
+.c_data_display dd.record_dd5{width: 110px;}
+.c_data_display dd {width: 90px;}
+.c_recharge ul label {float: left;color: #333;font-size: 14px;margin-right: 14px;}
+.c_recharge ul li {font-size: 14px;color: #333;float: left;padding: 0 10px;margin-right: 10px;cursor: pointer;height: 30px;}
+.c_recharge ul .c_recharge_this {height: 22px;border: 1px solid #0697da;color: #0697da;}
+.c_recharge ul span {color: #333;font-size: 14px;color: #0697da;cursor: pointer;}
+.c_recharge b {font-family: Simsun;font-size: 12px;color: #0697da;cursor: pointer;}
+.c_recharge_sear {font-size: 12px;float: left;display: inline-block;width: 62px;height: 22px;line-height: 22px;border-radius: 2px;-webkit-border-radius: 2px;-o-border-radius: 2px;text-align: center;background: #ff7800;color: #fff;margin: 0 10px;}
+.c_recharge_limit{height:30px;}
+.c_recharge_limit input {float: left;}
+.c_recharge_limit i {float: left;padding: 0 6px 0 4px;}
+</style>
+</head>
+ <body>
+  <#include "../../include/headerMemberCenter.html">
+	<!--  -->
+	<div class="c_deal" style="margin-bottom:100px;">
+		<div class="c_deal_content">
+			<!-- 左侧导航 -->
+			<#assign mid="m_invest">
+			   <#include "../trade_menu.html">
+			<!-- 右侧 -->
+			<div class="c_deal_record">
+				<div class="c_deal_title">投资记录</div>
+				<div class="c_invest_info">
+				<!-- //JSDP-206  wcw 2015-07-02 start  -->
+				<ul class="c_deal_detal">
+					<li><span>投资总金额</span><i class="c_invest_total">0</i></li>
+					<li><span>待收本金</span><i class="c_wait_capital">0</i></li>
+					<li><span>待收利息</span><i class="c_wait_interest">0</i></li>
+					<li><span>已赚利息</span><i class="c_yes_interest">0</i></li>
+					<li><span>已赚奖励</span><i class="c_yes_award">0</i></li>
+				</ul>
+				<dl class="c_deal_state">
+					<dd class="c_my_state">我的交易状态：</dd>
+					<dd>待收款<span class="c_collection_count">（0期）</span></dd>
+					<dd>已收款<span class="c_yes_collection_count">（0期）</span></dd>
+					<dd>所有<span class="c_count">（0期）</span></dd>
+				</dl>
+				<!-- //JSDP-206  wcw 2015-07-02 end -->
+				</div>
+				<div class="c_look_deal">
+					<ul class="c_deal_menu">
+						<li class="c_menu_this">所有投资记录</li>
+						<li class="c_due_in"><a href="${webroot}/member/invest/collection.html" style="font-size:12px;color:#246bad;">查看待收明细</a></li>
+					</ul>
+					<div class="c_menu_content">
+						<div class="c_deal_operate" style="display:block;">
+								<div class="c_recharge" style="width:720px;">
+									<ul class="c_date_range">
+										<label>日期范围</label>
+										<li class="c_recharge_this" data-val="9" >全部</li>
+										<li data-val="7" >最近7天</li>
+										<li data-val="1" >1个月</li>
+										<li data-val="2" >2个月</li>
+										<li data-val="3" >3个月</li>
+										<span>具体日期<b>&gt;&gt;</b></span>
+										<div class="c_clear"></div>
+									</ul>
+									<ul class="c_recharge_limit" style="display:none;">
+										<label>起止日期</label>
+										<input type="text" class="dateInput" name="startTime" id="startTime" value="${startTime?default('')}"/>
+										<i>-</i>
+										<input type="text" class="dateInput" name="endTime" id="endTime" value="${endTime?default('')}"/>
+										<a class="c_recharge_sear" id="searchBtn" >搜索</a>
+										<span><b>&lt;&lt;</b>具体日期</span>
+										<div class="c_clear"></div>
+									</ul>
+									<ul id="type"class="c_recharge_type" style="margin-top:10px;">
+										<label >交易类型</label>
+										<li class="c_recharge_this" data-val="" >全部</li>
+										<li data-val="113" >能源宝</li>
+										<li data-val="103" >车贷宝</li>
+										<li data-val="115" >微企贷</li>
+										<li data-val="105" >分期宝</li>
+										<!-- <li data-val="120" >债权转让</li> --><!-- 此处先不用 -->
+										<div class="c_clear"></div>
+									</ul>
+								</div>
+							<div class="c_data_display">
+														
+							</div>
+							<div id="kkpager" style="height:60px;"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+	<#include "../../include/footer.html">
+ </body>
+<script>seajs.use('member/myInvest');</script>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/media/js/date.js"></script>
+ <script>
+	$(function(){
+		$($(".c_aside_nav dd")[0]).addClass("c_invest_this");
+		
+	})
+</script>
+</html>

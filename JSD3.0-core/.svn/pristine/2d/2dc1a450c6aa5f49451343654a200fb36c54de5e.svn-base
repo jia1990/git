@@ -1,0 +1,92 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+
+import com.alibaba.fastjson.JSON;
+
+public class ID5RuleCheck extends RuleCheck{
+	private Zcxy zcxy;
+	
+	public static class Zcxy implements java.io.Serializable{
+		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -5522677869089242079L;
+		private byte status;//规则是否启用 1 启用 0 不启用
+		private String userName;//用户名
+		private String password;//密码
+		private String count;//ID5实名次数
+		private String url;//ID5url
+		public byte getStatus() {
+			return status;
+		}
+		public void setStatus(byte status) {
+			this.status = status;
+		}
+		
+		public String getUserName() {
+			return userName;
+		}
+		public void setUserName(String userName) {
+			this.userName = userName;
+		}
+		public String getPassword() {
+			return password;
+		}
+		public void setPassword(String password) {
+			this.password = password;
+		}
+		public String getCount() {
+			return count;
+		}
+		public void setCount(String count) {
+			this.count = count;
+		}
+		public String getUrl() {
+			return url;
+		}
+		public void setUrl(String url) {
+			this.url = url;
+		}
+        		
+	}
+	
+	public static void main(String[] args) throws Exception {
+		// 测试使用
+		InputStream in = RedPacketConsumeRuleCheck.class
+				.getResourceAsStream("ID5实名认证规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<ID5RuleCheck> clazz = ID5RuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		ID5RuleCheck test = (ID5RuleCheck) jsonObj;
+
+		System.out.println(test.toString());
+
+	}
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+
+	public Zcxy getZcxy() {
+		return zcxy;
+	}
+
+	public void setZcxy(Zcxy zcxy) {
+		this.zcxy = zcxy;
+	}
+
+	
+}

@@ -1,0 +1,1029 @@
+package com.rongdu.manage.action.user;
+
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.log4j.Logger;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.ip.IPUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.service.BorrowConfigService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.util.mail.Mail;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.domain.UserUpload;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserService;
+import com.rongdu.p2psys.user.service.UserUploadService;
+
+/**
+ * 
+ * @author zf
+ * @version 2.0
+ * @since 2014年6月5日
+ */
+public class ManageUserCacheAction extends BaseAction<UserCache> implements ModelDriven<UserCache> {
+    @Resource
+    private UserService userService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private UserUploadService userUploadService;
+	@Resource
+	private RegionService regionService;
+	@Resource
+	private BorrowConfigService borrowConfigService;
+
+	private static final Logger logger = Logger.getLogger(ManageUserCacheAction.class);
+	private Map<String, Object> data;
+	
+	private long[] delIds;
+
+	public long[] getDelIds() {
+		return delIds;
+	}
+
+	public void setDelIds(long[] delIds) {
+		this.delIds = delIds;
+	}
+
+	/**
+     * 获得后台开户清单页面
+     * @return String
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/userAdminManager")
+    public String userAdminManager() throws Exception {
+    	List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		request.setAttribute("borrowConfigList", borrowConfigList);
+    	//说明   20为个人借款开户  21为公司借款开户  22为担保公司开户，需在数据库中配置
+    	
+    	if ("22".equals(model.getUserNature())){ 		//担保公司 
+    		return "userVouchManager";
+    	}/*else if("20".equals(model.getUserNature())){ 	//自然人用户
+            return "userPersonManager";
+    	}else if("21".equals(model.getUserNature())){ 	//自然人用户
+            return "userStoreManager";
+    	}*/else{
+    		return "userAdminManager"; 					//企业用户
+    	}
+    }
+    /**
+     * 担保用户开户
+     */
+    @Action(value = "/modules/user/user/user/userVouchManager")
+    public String userVouchManager() {
+    	List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		request.setAttribute("borrowConfigList", borrowConfigList);
+    	return "userVouchManager";
+    }
+    /**
+     * 个人借款后台开户
+     */
+    @Action(value = "/modules/user/user/user/userPersonManager")
+    public String userPersonManager(){
+    	List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		request.setAttribute("borrowConfigList", borrowConfigList);
+    	return "userPersonManager";
+    }
+    /**
+     * 商城用户开户
+     */
+    @Action(value = "/modules/user/user/user/userStoreManager")
+    public String userStoreManager(){
+    	List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		request.setAttribute("borrowConfigList", borrowConfigList);
+    	return "userStoreManager";
+    }
+    /**
+     * 获得后台开户清单列表
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/userAdminList")
+    public void userAdminList() throws Exception {
+        data = new HashMap<String, Object>();
+        int pageNumber = paramInt("page"); 			// 当前页数
+        int pageSize = paramInt("rows"); 			// 每页总数
+        PageDataList<UserCacheModel> pagaDataList = userCacheService.userList(pageNumber, pageSize, model);
+        int totalPage = pagaDataList.getPage().getTotal(); // 总页数
+        data.put("total", totalPage);
+        data.put("rows", pagaDataList.getList());
+        printJson(getStringOfJpaObj(data));
+    }
+    
+    /**
+     * 担保用户导出excel
+     * @throws Exception
+     */
+    @Action("/modules/user/user/user/userVouchExport")
+    public void userVouchExport() throws Exception {
+/*		PageDataList<UserCacheModel> pageDataList = userCacheService.userList(1, 99999999, model);
+		List<UserCacheModel> newList = pageDataList.getList();
+		String title = "担保用户的Excel表";
+
+		for (int i = 0; i < newList.size(); i++) {
+			UserCacheModel ucm = newList.get(i);
+			ucm.setIsLockedNew(ucm.convertIsLock(ucm.getUser().getIsLocked())); // 锁定状态
+		}*/
+    	List<UserCache> list = userCacheService.excelListUser(model);
+		String[] hearders = new String[] { "编号", "公司名称", "营业执照号", "税务登记号","组织机构代码", "公司法人", "锁定状态" }; // 表头数组
+		String[] fields = new String[] { "0","1","2","3","4","5","10" };// 对象属性数组
+		/*int sheetRows = 50000;	//导出一页的条数
+		int sheetPage = newList.size() / sheetRows;
+		if (newList.size() % sheetRows > 0) {
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserCacheModel> tdList = new ArrayList<UserCacheModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserCacheModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcelt(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+    }
+    
+    /**
+     * 商城用户导出excel
+     * @throws Exception
+     */
+    @Action("/modules/user/user/user/userStoreExport")
+    public void userStoreExport() throws Exception {
+    	PageDataList<UserCacheModel> pageDataList = userCacheService.userList(1, 99999999, model);
+    	List<UserCacheModel> newList = pageDataList.getList();
+    	String title = "商城用户的Excel表";
+    	
+    	for (int i = 0; i < newList.size(); i++) {
+    		UserCacheModel ucm = newList.get(i);
+    		ucm.setIsLockedNew(ucm.convertIsLock(ucm.getUser().getIsLocked())); // 锁定状态
+    	}
+    	String[] hearders = new String[] { "编号", "公司名称", "营业执照号", "税务登记号","组织机构代码", "公司法人", "锁定状态" }; // 表头数组
+    	String[] fields = new String[] { "userId", "companyName","companyRegNo", "companyTaxNo", "companyOrgCode","companyLawPerson", "isLockedNew" };// 对象属性数组
+    	int sheetRows = 50000;	//导出一页的条数
+    	int sheetPage = newList.size() / sheetRows;
+    	if (newList.size() % sheetRows > 0) {
+    		sheetPage += 1;
+    	}
+    	List<TableData> tableDatas = new ArrayList<TableData>();
+    	for(int i = 0; i < sheetPage; i++){
+    		List<UserCacheModel> tdList = new ArrayList<UserCacheModel>();
+    		for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+    			UserCacheModel sm = newList.get(j);
+    			tdList.add(sm);
+    		}
+    		TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+    		td.setSheetTitle(title + "--第" + (i+1) + "页");
+    		tableDatas.add(td);
+    	}
+    	JsGridReportBase report = new JsGridReportBase(request, response);
+    	report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+    	
+    }
+    
+    /**
+     * 企业用户导出excel
+     * @throws Exception
+     */
+    @Action("/modules/user/user/user/userCompanyExport")
+    public void userCompanyExport() throws Exception {
+    	
+    	/*PageDataList<UserCacheModel> pageDataList = userCacheService.userList(1, 99999999, model);
+    	List<UserCacheModel> newList = pageDataList.getList();
+    	String title = "企业用户的Excel表";
+    	
+    	for(int i=0;i<newList.size();i++){
+    		UserCacheModel ucm = newList.get(i);
+    		User user = newList.get(i).getUser();
+    		ucm.setUser(user);
+    		ucm.setIsLockedNew(ucm.convertIsLock(ucm.getUser().getIsLocked()));	//锁定状态
+    		
+    		ucm.setCompanyName(ucm.getCompanyName());
+    		ucm.setCompanyLawPerson(ucm.getCompanyLawPerson());
+    		
+    		ucm.setRealName(ucm.getUser().getRealName());
+    		ucm.setMobilephone(ucm.getUser().getMobilePhone());
+    		ucm.setEmail(ucm.getUser().getEmail());
+    	}*/
+    	// JSDP-227 sxy 20150722 start
+    	String borrowType = paramString("borrowType");
+    	if(StringUtil.isNotBlank(borrowType) && !"99".equals(borrowType)){
+    		model.setBorrowType(borrowType);
+    	}
+    	List<UserCache> list = userCacheService.excelListUser(model);
+    	String[] hearders = new String[] {"编号","公司名称","法人代表姓名","注册资本","借款人","借款人手机","借款人邮箱","锁定状态","借款类型"};	// 表头数组
+    	String[] fields = new String[] {"0","1","5","6","7","8","9","10","11" };// 对象属性数组
+    	/*int sheetRows = 50000;	//导出一页的条数
+    	int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserCacheModel> tdList = new ArrayList<UserCacheModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserCacheModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+    	String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcelt(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+    }
+    
+    
+    /**
+     * 个人用户导出excel
+     * @throws Exception
+     */
+    @Action("/modules/user/user/user/userPersonExport")
+    public void userPersonExport() throws Exception {
+    	
+    	if(null != paramString("realName") && !"".equals(paramString("realName"))){
+    		model.getUser().setRealName(paramString("realName"));
+    	}
+    	if(null != paramString("phone") && !"".equals(paramString("phone"))){
+    		model.getUser().setMobilePhone(paramString("phone"));
+    	}
+    	
+    /*	PageDataList<UserCacheModel> pageDataList = userCacheService.userList(1, 99999999, model);
+    	List<UserCacheModel> newList = pageDataList.getList();
+    	String title = "个人用户的Excel表";
+    	
+    	for(int i=0;i<newList.size();i++){
+    		UserCacheModel ucm = newList.get(i);
+    		User user = newList.get(i).getUser();
+    		ucm.setUser(user);
+    		ucm.setIsLockedNew(ucm.convertIsLock(ucm.getUser().getIsLocked()));//锁定状态
+    		
+    		ucm.setCompanyName(ucm.getCompanyName());
+    		ucm.setCompanyLawPerson(ucm.getCompanyLawPerson());
+    		ucm.setRealName(ucm.getUser().getRealName());
+    		ucm.setMobilephone(ucm.getUser().getMobilePhone());
+    		ucm.setEmail(ucm.getUser().getEmail());
+    	}*/
+    	List<UserCache> list = userCacheService.excelListUser(model);
+    	String[] hearders = new String[] {"编号","借款人","手机","邮箱","锁定状态"};// 表头数组
+		/*u.user_id 0,uc.company_name 1,uc.company_reg_no 2,uc.company_tax_no 3,uc.company_org_code4,uc.company_law_person 5,uc.company_reg_capital6,u.user_name7,u.mobile_phone  8,u.email9, u.isLocked 10 */
+		String[] fields = new String[] { "0","7","8","9","10" };// 对象属性数组
+ 		/*int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserCacheModel> tdList = new ArrayList<UserCacheModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserCacheModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcelt(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+    }
+
+    /**
+     * 添加用户页面
+     * @return String
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/userAdminAddPage")
+    public String userAdminAddPage() throws Exception {
+    	//initRSAME();
+		saveToken("userAdminAddToken");
+    	int borrowType = paramInt("id");
+    	if ("22".equals(model.getUserNature())){ 		//担保公司
+    		return "userVouchAddPage";
+    	}else if("20".equals(model.getUserNature())){ 	//自然人用户
+    		if(borrowType == Borrow.TYPE_MORTGAGE){
+    			return "userPersonAddPageC"; 
+    		}else if(borrowType == Borrow.TYPE_AMORTIZE){
+    			return "userPersonAddPageF";
+    		}else{
+    			return "userPersonAddPage";
+    		}
+    	}else if("21".equals(model.getUserNature())){ 	//商户
+    		return "userStoreAddPage";
+    	}else{
+    		if(borrowType == Borrow.TYPE_NETWORK){
+    			return "userAdminAddPageW"; 	// 企业微商贷用户
+    		}else if(borrowType == Borrow.TYPE_MORTGAGE_ENERGY){
+    			return "userAdminAddPageN"; 	// 企业能源宝用户
+    		}else if(borrowType == Borrow.TYPE_MORTGAGE){
+    			return "userPersonAddPageC"; 	// 个人车贷宝用户
+    		}else if(borrowType == Borrow.TYPE_AMORTIZE){
+    			return "userPersonAddPageF";	// 个人分期宝用户
+    		}
+    		/*
+    		 else{
+    			return "userPersonAddPage";		//个人用户
+    		}else{
+				return "userAdminAddPage"; 		//企业用户
+			}*/
+    	}
+		return null;
+    }
+
+    /**
+     * 添加企业用户
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/userAdminAdd")
+    public void userAdminAdd() throws Exception {
+    	data = new HashMap<String, Object>();
+    	String userName = paramString("user.email");	//用户名设置为用户邮箱，真实姓名的话有可能重复
+    	
+    	String companyRegCapital = paramString("companyRegCapital");
+    	try {
+        	List<UserUpload> list = new ArrayList<UserUpload>();
+        	if (request.getParameter("fileIndex") != null) {
+        		String[] picPath = imgsUpload(); 
+        		
+        		if(picPath.length>0){
+//        			throw new RuntimeException("经营执照，税务登记证，组织结构证都必须上传");
+        			model.setJyzzPicPath(picPath[0]);
+        			model.setSwdjPicPath(picPath[1]);
+        			model.setZzjgPicPath(picPath[2]);
+        			model.setKhxkPicPath(picPath[3]);
+        			model.setDkkPicPath(picPath[4]);
+        			model.setGrzxPicPath(picPath[5]);
+        		}
+                String[] picPaths = request.getParameterValues("picPath");
+    			if (picPaths != null) {
+//    				throw new BussinessException("必须上传至少一张公司照！", 1);
+    				for (String path : picPaths) {
+    					UserUpload uu = new UserUpload();
+    					uu.setPicPath(path);
+    					list.add(uu);
+    				}
+    			}
+        	}
+        	model.getUser().setIsLocked(UserConstant.USER_LOCK_NO);
+        	model.getUser().setAddIp(getRequestIp());
+        	model.getUser().setUserName(userName);
+        	model.setCompanyRegCapital(NumberUtil.getDouble(companyRegCapital));
+	    	//查询身份证号是否重复
+	    	//查询邮箱是否重复
+	    	//
+	    	User  userByemail = userService.getUserByEmail(model.getUser().getEmail());
+	    	if(null != userByemail){
+	    		throw new BussinessException("邮箱已被使用！",1);
+	    	}
+	    	User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+	    	if(null != userByPhone){
+	    		throw new BussinessException("借款人手机已被使用！",1);
+	    	}
+	    	User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+	    	if(null != userByCardNo){
+	    		throw new BussinessException("身份证已被使用！",1);
+	    	}
+	    	
+	    	logger.info("添加用户操作");
+	    	checkToken("userAdminAddToken");
+        	userCacheService.save(model, list);
+            printResult("添加成功，激活邮件已发送！", true);
+        } catch (Exception e) {
+        	User  userByemail = userService.getUserByEmail(model.getUser().getEmail());
+	    	if(null != userByemail){
+	    		throw new BussinessException("邮箱已被使用！",1);
+	    	}
+	    	User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+	    	if(null != userByPhone){
+	    		throw new BussinessException("借款人手机已被使用！",1);
+	    	}
+	    	User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+	    	if(null != userByCardNo){
+	    		throw new BussinessException("身份证已被使用！",1);
+	    	}
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+    
+    /**
+     * 添加自然人用户
+     * @return void 
+     * @throws Exception   
+     */ 
+    @Action(value = "/modules/user/user/user/userPersonAdd")
+    public void userPersonAdd() throws Exception {
+    	data = new HashMap<String, Object>();
+        String ip = IPUtil.getRemortIP(request);
+        int borrowType = paramInt("borrowType");
+        	try {
+				List<UserUpload> list = new ArrayList<UserUpload>();
+				if (request.getParameter("fileIndex") != null) {
+					String[] picPath = imgsUpload();
+					if(borrowType == Borrow.TYPE_MORTGAGE){
+						if (picPath[2] != null) {
+//        				throw new RuntimeException("银行卡流水必须上传");
+							model.setLiveImgPicPath(picPath[2]);
+						} 	
+					}
+					if(borrowType == Borrow.TYPE_AMORTIZE){
+						if (picPath[0] != null && picPath[1] != null) {
+//        				throw new RuntimeException("学生证,学信网必须上传");
+							model.setStudentCardPicPath(picPath[0]);
+							model.setHirerightPicPath(picPath[1]);
+						}
+					}
+					if(picPath[3]!=null){
+						model.setZzjgPicPath(picPath[3]);
+					}
+					if(picPath[4]!=null){
+						model.setDkkPicPath(picPath[4]);
+					}
+				    String[] picPaths = request.getParameterValues("picPath");
+					if (picPaths != null) {
+//            		throw new BussinessException("至少上传一张身份证件照！",1);
+						//model.setCardPositive(picPaths[1]);
+						model.setCardOpposite(picPaths[0]);
+						for (String path : picPaths) {
+							UserUpload uu = new UserUpload();
+							uu.setPicPath(path);
+							list.add(uu);
+						}
+					}
+				}
+				//model.setCompanyType("5");
+				model.getUser().setAddIp(ip);
+				model.setUserType("11");
+				
+				User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+				if(null != userByCardNo){
+					throw new BussinessException("借款人身份证已被使用！",1);
+				}
+				User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+				if(null != userByPhone){
+					throw new BussinessException("借款人手机已被使用！",1);
+				}
+				User userByEmail = userService.getUserByEmail(model.getUser().getEmail());
+				if(userByEmail != null){
+					throw new BussinessException("借款人邮箱已被使用！",1);
+				}
+				User userByUserName = userService.getUserByUserName(model.getUser().getEmail());
+				if(userByUserName != null){
+					throw new BussinessException("借款人邮箱已被使用！",1);
+				}
+				checkToken("userAdminAddToken");
+				userCacheService.save(model, list);
+				printResult("添加成功，激活邮件已发送！", true);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				logger.info("后台开户异常信息=="+e.getMessage());
+				e.printStackTrace();
+				throw new RuntimeException(e.getMessage());
+			}
+    }
+    
+    /**
+     * 添加担保公司
+     */
+    @Action("/modules/user/user/user/userVouchAdd")
+    public void userVouchAdd() throws Exception{
+    	
+    	data = new HashMap<String, Object>();
+    	model.getUser().setIsLocked(UserConstant.USER_LOCK_NO);
+    	model.getUser().setAddIp(getRequestIp());
+    	//查询身份证号是否重复
+    	//查询邮箱是否重复
+    	//
+    	User  userByemail = userService.getUserByEmail(model.getUser().getEmail());
+    	if(null != userByemail){
+    		throw new BussinessException("负责人邮箱已被使用！",1);
+    	}
+    	User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+    	if(null != userByPhone){
+    		throw new BussinessException("负责人手机已被使用！",1);
+    	}
+    	User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+    	if(null != userByCardNo){
+    		throw new BussinessException("负责人身份证已被使用！",1);
+    	}
+    	checkToken("userAdminAddToken");
+    	userCacheService.save(model, null);
+    	printResult("添加成功，激活邮件已发送！", true);
+    }
+    
+    /**
+     * 添加商户
+     */
+    @Action("/modules/user/user/user/userStoreAdd")
+    public void userStoreAdd() throws Exception{
+    	
+    	data = new HashMap<String, Object>();
+    	model.getUser().setIsLocked(UserConstant.USER_LOCK_NO);
+    	model.getUser().setAddIp(getRequestIp());
+    	//查询身份证号是否重复
+    	//查询邮箱是否重复
+    	//
+    	User  userByemail = userService.getUserByEmail(model.getUser().getEmail());
+    	if(null != userByemail){
+    		throw new BussinessException("负责人邮箱已被使用！",1);
+    	}
+    	User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+    	if(null != userByPhone){
+    		throw new BussinessException("负责人手机已被使用！",1);
+    	}
+    	User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+    	if(null != userByCardNo){
+    		throw new BussinessException("负责人身份证已被使用！",1);
+    	}
+    	checkToken("userAdminAddToken");
+    	userCacheService.save(model, null);
+    	printResult("添加成功，激活邮件已发送！", true);
+    }
+    
+    
+    
+    /**
+     * 锁定用户页面
+     * 
+     * @return String
+     * @throws Exception if has error
+     * @author sunxiaoyong 2014年12月23日
+     */
+    @Action(value = "/modules/user/user/user/userAdminLockPage")
+    public String userAdminLockPage() throws Exception {
+    	//initRSAME();
+    	saveToken("userAdminLockToken");
+    	long userId = paramLong("id");
+		User user = userService.find(userId);
+		request.setAttribute("user", user);
+		request.setAttribute("isLocked", user.getIsLocked());
+    	return "userAdminLockPage";
+    	
+    }
+
+    /**
+     * 锁定用户	用户登录锁定：UY; 后台管理员锁定：AY; 用户注销锁定：FF; 账户未锁定：NN;
+     * 
+     * @throws Exception if has error
+     * @author sunxiaoyong 2014年12月23日
+     */
+	@Action(value = "/modules/user/user/user/userAdminLock")
+    public void userAdminLock() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		User user = userService.find(model.getUserId());
+		
+		if( !paramString("isLocked").equals(user.getIsLocked()) && UserConstant.USER_LOCK_ADMIN.equals(paramString("isLocked"))){
+			user.setIsLocked(paramString("isLocked"));
+			user.setLockTime(Calendar.getInstance().getTime());
+			user.setLoginCount(0);
+		}else{
+			user.setIsLocked(paramString("isLocked"));
+			user.setLockRemark(null);
+		}
+		
+		if(""!=paramString("lockRemark")){
+			user.setLockRemark(paramString("lockRemark"));
+		}
+		checkToken("userAdminLockToken");
+		userService.updateUser(user);
+
+		data.put("msg", "修改成功！");
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		
+    }
+    
+    /**
+     * 修改用户页面
+     * 
+     * @return String
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/userAdminEditPage")
+    public String userAdminEditPage() throws Exception {
+    	//initRSAME();
+    	saveToken("userAdminEditToken");
+    	long userId = paramLong("id");
+        UserCache userCache = userCacheService.findById(userId);
+        request.setAttribute("maritalStatus", userCache.getMaritalStatus());
+        
+        //由于初始化造成错误所以重新命名，但不影响修改
+        request.setAttribute("legalDrawP", userCache.getLegalDraw());
+        
+        request.setAttribute("userCache", userCache);
+        if ("22".equals(model.getUserNature())){ 		//担保公司
+        	return "userVouchEditPage";
+        }else if("21".equals(model.getUserNature())&&"13".equals(userCache.getUserType())){ 	//商户
+    		return "userStoreEditPage";
+    	}else if("21".equals(model.getUserNature())&&"11".equals(userCache.getUserType())){ 	//企业借款人
+    		// JSDP-227 sxy 20150722 start
+    		if(userCache.getBorrowType().contains("N")){
+        		return "userAdminEditPageN";
+        	}else if(userCache.getBorrowType().contains("W")){
+        		return "userAdminEditPageW";
+        	}else{
+        		return "userAdminEditPage";
+        	}
+    		// JSDP-227 sxy 20150722 start
+    	}else if("20".equals(model.getUserNature())){ 	//自然人
+        	if(userCache.getBorrowType().contains("C") && userCache.getBorrowType().contains("F")){
+        		return "userPersonEditPage";
+        	}else if(userCache.getBorrowType().contains("C")){
+        		return "userPersonEditPageC";
+        	}else{
+        		return "userPersonEditPageF";
+        	}
+        	
+        }else{
+        	return null;
+        }
+    }
+    /**
+     * 修改用户页面
+     * 
+     * @return String
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/userPersonEditTypePage")
+    public String userPersonEditTypePage() throws Exception {
+    	//initRSAME();
+    	saveToken("userAdminEditToken");
+    	long userId = paramLong("id");
+    	UserCache userCache = userCacheService.findById(userId);
+    	request.setAttribute("userCache", userCache);
+    	
+    	return "userPersonEditPage";
+    
+    }
+
+    
+    /**
+     * 修改用户（后台企业开户、担保公司开户）
+     * 
+     * @throws Exception if has error
+     * @author sunxiaoyong 2014年12月24日
+     * 
+     */
+    @Action(value = "/modules/user/user/user/userAdminEdit")
+    public void userAdminEdit() throws Exception {
+    	
+        data = new HashMap<String, Object>();
+        try {
+        	long userId = paramLong("id");
+            UserCache userCache =  userCacheService.findById(userId);
+            User user = userCache.getUser();
+            List<UserUpload> list = new ArrayList<UserUpload>();
+        	if (request.getParameter("fileIndex") != null) {
+	            String[] picPath = imgsUpload();
+	            if (picPath[0] != null) {
+	            	userCache.setJyzzPicPath(picPath[0]);
+	        	}
+	            if (picPath[1] != null) {
+	            	userCache.setSwdjPicPath(picPath[1]);
+	            }
+	            if (picPath[2] != null) {
+	            	userCache.setZzjgPicPath(picPath[2]);
+	            }
+	            if (picPath[3] != null) {
+	            	userCache.setKhxkPicPath(picPath[3]);
+	            }
+	            if (picPath[4] != null) {
+	            	userCache.setDkkPicPath(picPath[4]);
+	            }
+	            if (picPath[5] != null) {
+	            	userCache.setGrzxPicPath(picPath[5]);
+	            }
+				String[] picPaths = request.getParameterValues("picPath");
+				
+				if (picPaths != null) {
+					for (String path : picPaths) {
+						UserUpload uu = new UserUpload();
+						uu.setPicPath(path);
+						uu.setUser(user);
+						list.add(uu);
+					}
+				}
+        	}
+        	
+        	User userOld = userService.find(userId);
+            //判断是否作出了修改，判断是否已经存在
+        	if(model.getUserType().equals("13")){
+            	if(!userOld.getCardNO().equals(model.getUser().getCardNO())){
+            		User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+            		if(null != userByCardNo){
+            			throw new BussinessException("负责人身份证已被使用！",1);
+            		}
+            	}
+            	if(!userOld.getMobilePhone().equals(model.getUser().getMobilePhone())){
+            		User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+                	if(null != userByPhone){
+                		throw new BussinessException("负责人手机已被使用！",1);
+                	}
+            	}
+            }
+        	
+            if(model.getUserType().equals("12")){
+            	if(!userOld.getCardNO().equals(model.getUser().getCardNO())){
+            		User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+            		if(null != userByCardNo){
+            			throw new BussinessException("负责人身份证已被使用！",1);
+            		}
+            	}
+            	if(!userOld.getMobilePhone().equals(model.getUser().getMobilePhone())){
+            		User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+                	if(null != userByPhone){
+                		throw new BussinessException("负责人手机已被使用！",1);
+                	}
+            	}
+            }
+            
+           if(model.getUserType().equals("11")){
+        	   if(!userOld.getMobilePhone().equals(model.getUser().getMobilePhone())){
+        		   User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+        		   if(null != userByPhone){
+        			   throw new BussinessException("借款人手机已被使用！",1);
+        		   }
+        	   }
+        	   if(!userOld.getCardNO().equals(model.getUser().getCardNO())){
+        		   User userByCardNo = userService.getUserByCardNo(model.getUser().getCardNO());
+        		   if(null != userByCardNo){
+        			   throw new BussinessException("借款人身份证已被使用！",1);
+        		   }
+        	   }
+           }
+        	
+        	
+            user.setRealName(model.getUser().getRealName());						// 真实姓名
+            user.setMobilePhone(model.getUser().getMobilePhone());					// 手机号码
+            
+            if(null != model.getUser().getEmail()){
+                user.setEmail(model.getUser().getEmail());							// 借款人邮箱（暂只显示）
+            }
+            
+            userCache.setUser(user);												
+            																		// QY：企业  DB：担保
+            userCache.setProvince(model.getProvince());								// 省(QY DB)
+            userCache.setCity(model.getCity());										// 市(QY DB)
+            userCache.setArea(model.getArea());										// 区(QY DB)
+            
+            userCache.setCompanyName(model.getCompanyName());						// 公司名称(QY DB)
+            userCache.setCompanyRegCapital(model.getCompanyRegCapital());
+            userCache.setCompanyType(model.getCompanyType());						// 公司类型(QY DB无)
+            userCache.setCompanyRegNo(model.getCompanyRegNo());						// 公司注册号(QY DB无)
+            userCache.setCompanyTaxNo(model.getCompanyTaxNo());						// 公司税务登记号(QY DB)
+            userCache.setCompanyOrgCode(model.getCompanyOrgCode());					// 公司组织机构代码(QY DB)
+            userCache.setCompanyStatus(model.getCompanyStatus());					// 公司经营状况(QY DB)
+            userCache.setAddress(model.getAddress());								// 公司地址(QY DB)
+            userCache.setCompanyDesc(model.getCompanyDesc());						// 公司描述(QY DB无)
+            userCache.setSourceRepay(model.getSourceRepay());						// 还款来源QY DB)
+            userCache.setCompanyLawPerson(model.getCompanyLawPerson());				// 公司法人代表姓名(QY DB)
+            userCache.setCompanyLawPersonCardno(model.getCompanyLawPersonCardno());	// 公司法人代表证件号(QY DB)
+            userCache.setZzjgPicPath(model.getZzjgPicPath());						// 组织机构证图片路径(QY DB无)
+            
+            userCache.setCompanyEmail(model.getCompanyEmail());						// 公司邮箱(QY DB)
+            userCache.setCompanyPhone(model.getCompanyPhone());						// 公司电话(QY DB)
+            userCache.setCompanyFax(model.getCompanyFax());							// 公司传真(QY DB)
+            
+            userCache.setRiskSolutions(model.getRiskSolutions());					// 风险方案(QY无 DB)
+            userCache.setBorrowType(model.getBorrowType());
+            
+            
+            //将新增的值赋值
+            userCache.setMaritalStatus(model.getMaritalStatus());
+            userCache.setLegalDraw(model.getLegalDraw());
+            userCache.setPosition(model.getPosition());
+            userCache.setProfessional(model.getProfessional());
+            
+            checkToken("userAdminEditToken");
+            userCacheService.update(userCache, list, delIds);
+            printResult("修改用户成功", true);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+    
+    /**
+     * 修改后台自然人用户 信息
+     * 
+     * @throws Exception if has error
+     * @author sunxiaoyong 2014年12月24日
+     * 
+     */
+    @Action(value = "/modules/user/user/user/userPersonEdit")
+    public void userPersonEdit() throws Exception {
+    	
+        data = new HashMap<String, Object>();
+        
+        try {
+        	long userId = paramLong("id");
+            UserCache userCache =  userCacheService.findById(userId);
+            User user = userCache.getUser();
+            
+            User userByPhone = userService.getUserByMobilePhone(model.getUser().getMobilePhone());
+            
+            if(userByPhone != null){
+            	if(user.getMobilePhone() != userByPhone.getMobilePhone()){	//判断修改的手机号与原手机号是否相同，若相同则允许修改
+            		throw new BussinessException("手机号已存在！", 1);
+            	}
+            }
+            
+            List<UserUpload> list = new ArrayList<UserUpload>();
+        	if (request.getParameter("fileIndex") != null) {
+	            String[] picPath = imgsUpload();
+	            if (picPath[0] != null) {
+	            	userCache.setStudentCardPicPath(picPath[0]);
+	        	}
+	            if (picPath[1] != null) {
+	            	userCache.setHirerightPicPath(picPath[1]);
+	            }
+	            if (picPath[2] != null){
+	            	userCache.setLiveImgPicPath(picPath[2]);
+	            }
+	            if (picPath[3] != null) {
+	            	userCache.setZzjgPicPath(picPath[3]);
+	            }
+	            if (picPath[4] != null) {
+	            	userCache.setDkkPicPath(picPath[4]);
+	            }	       
+				String[] picPaths = request.getParameterValues("picPath");
+				
+				if (picPaths != null) {
+					for (String path : picPaths) {
+						UserUpload uu = new UserUpload();
+						uu.setPicPath(path);
+						uu.setUser(user);
+						list.add(uu);
+					}
+				}
+        	}
+            user.setRealName(model.getUser().getRealName());			// 真实姓名
+            user.setMobilePhone(model.getUser().getMobilePhone());		// 手机号码
+            
+            if(null != model.getUser().getEmail()){
+            	user.setEmail(model.getUser().getEmail());				// 借款人邮箱（暂只显示）
+            }
+            if(null != model.getUser().getCardNO()){
+            	user.setCardNO(model.getUser().getCardNO());			// 身份证号（暂只显示）
+            }
+            
+            userCache.setUser(user);   
+            userCache.setProvince(model.getProvince());					// 省 
+            userCache.setCity(model.getCity());							// 市
+            userCache.setArea(model.getArea());							// 区
+            userCache.setCollege(model.getCollege());
+            userCache.setMajor(model.getMajor());
+            userCache.setStudentId(model.getStudentId());
+            //将新增的值赋值
+            userCache.setMaritalStatus(model.getMaritalStatus());
+            userCache.setPosition(model.getPosition());
+            userCache.setProfessional(model.getProfessional());
+            userCache.setSourceRepay(model.getSourceRepay());
+            //userCache = model;
+            checkToken("userAdminEditToken");
+            userCacheService.update(userCache, list, delIds);
+            printResult("修改用户成功", true);
+        } catch (Exception e) {
+        	throw new RuntimeException(e.getMessage());
+        }
+        
+    }
+    
+    /**
+     * 重新发送邮件
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/sendMail")
+    public void sendMail() throws Exception {
+    	Long userId = paramLong("id");
+    	User user = userService.find(userId);
+    	Global.setTransfer("activeUrl", "/user/doRegisterStep1.html?id=" + Mail.getInstance().getdecodeIdStr(user));
+        Global.setTransfer("user", user);
+        AbstractExecuter executer = ExecuterHelper.doExecuter("userRegisterExecuter");
+        executer.execute(0, user);
+    }
+    
+    /**
+     * 获取后台开户用户实物照
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/user/user/user/getUserPic")
+    public void getUserPic() throws Exception {
+    	User user = userService.find(paramLong("id"));
+    	List<UserUpload> list = userUploadService.findByUser(user);
+    	data = new HashMap<String, Object>();
+    	data.put("list", list);
+		printJson(getStringOfJpaObj(data));
+    }
+    
+    /**
+     * 添加用户时获取区域
+     */
+    @Action(value = "/modules/user/user/user/regionList")
+    public void getRegion()throws Exception {
+    	String pId = paramString("pId");
+		List<Region> regionList = null;
+		if (pId == null || pId=="") {
+			regionList = regionService.getRegionList(1);
+		} else {
+			int fid = Integer.parseInt(pId);
+			regionList = regionService.getRegionList(fid);
+		}
+		printJson(getStringOfJpaObj(regionList));
+    }
+
+
+    
+    /**
+     * 根据地区查询用户信息
+     * @author 孙晓勇
+     */
+    @Action(value = "/modules/user/user/user/getUserByAddress")
+    public void getUserByAddress()throws Exception {
+    	
+    	data = new HashMap<String, Object>();
+    	
+    	String province = paramString("province");
+    	String city = paramString("city");
+    	String area = paramString("area");
+    	String userType = paramString("userType");
+    	
+    	//投资人注册人数
+    	int userTotal = userService.getUserRegisterByAddress(province, city, area, userType, null);
+    	//投资人注册人数——性别为男
+    	int m = userService.getUserRegisterByAddress(province, city, area, userType, "M");
+    	//投资人注册人数——性别为女
+    	int f = userService.getUserRegisterByAddress(province, city, area, userType, "F");
+    	//投资人注册人数——性别为保密
+    	int x = userService.getUserRegisterByAddress(province, city, area, userType, "X");
+    	//投资人注册人数——性别为未知
+    	//int w = userService.getUserRegisterByAddress(province, city, area, userType, null);
+    	int w = userTotal - m - f - x;
+		
+		data.put("manTotal", m);
+		data.put("womanTotal", f);
+		data.put("secrecyTotal", x);
+		data.put("unknownTotal", w);
+		data.put("userTotal", userTotal);
+		
+		printJson(getStringOfJpaObj(data));
+    	
+    }
+    
+    
+}
+
+
+
+

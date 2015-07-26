@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>数据字典</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = false;
+</script>
+<script type="text/javascript">
+	$.canAdd = false;
+</script>
+<script type="text/javascript">
+	$.canGrant = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  480;
+	var winHeight = 400;
+	var addTitle = "添加";
+	var addUrl =  "/modules/system/dict/dictAddPage.html";
+	var editTitle = "编辑";
+	var editUrl =  "/modules/system/dict/dictEditPage.html";
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'dictList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			//idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 60, fixed:true,checkbox : false},
+			
+			
+		//	{ field: 'typeId', title: '类型', width: 100, sortable:false,editor:{type:'numberbox',options:{'required':true}}},
+			{ field: 'nidName', title: '标识名称', width: 120, sortable:false,editor:{type:'validatebox',options:{'required':true}}},
+			{ field: 'nid', title: '标识', width: 120, sortable:false,editor:{type:'validatebox',options:{'required':true}}},
+			{ field: 'name', title: '名称', width: 120, sortable:false,editor:{type:'validatebox',options:{'required':true}}},
+			{ field: 'value', title: '值', width: 220, sortable:false,
+				editor : {type : 'validatebox',
+					options : {
+						'required' : true,
+						'missingMessage' : '请输入相应的值'
+					}
+				}	
+			}, 
+			{ field: 'sort', title: '排序', width: 100, sortable:false,editor:{type:'numberbox',options:{'required':true}}},
+			
+			{ field: 'status', title: '状态', width: 100, sortable:false,formatter:function(value, row, index){
+				if(value=='1'){
+					return "启用";
+				}else if(value=='0'){
+					return "禁用";
+				}
+			}},
+			{	field : 'action',
+				title : '操作',
+				width :80,
+				fixed :true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if(row.editing){
+						str += '<a href="#" onclick="saverow('+index+',this)">保存</a>&nbsp;';
+					}
+					if ($.canAdd) {
+						 str += $.formatString('<input class="parameters" type="hidden" value="'+row.id+"&typeId="+row.typeId+"&nid="+row.nid+"&sort="+row.sort+'"><img onclick="$.fn.dataGridOptions.addFun('+addWinParmeters+');" src="{1}" title="添加键值"/>', row.id+"&typeId="+row.typeId+"&nid="+row.nid+"&sort="+row.sort, '${theme_dir}/css/images/add.png');
+					}
+					str += '&nbsp;';
+					if ($.canEdit) {
+						str += "<@secAuthorizeUrl value='/dictEditBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					str += '&nbsp;';
+	                if ($.canDelete) {
+	                      str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+	                 }
+					 str += '&nbsp;';                    
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar'/* ,
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			},
+			onRowContextMenu : function(e, rowIndex, rowData) {
+				e.preventDefault();
+				$(this).datagrid('unselectAll').datagrid('uncheckAll');
+				$(this).datagrid('selectRow', rowIndex);
+				$('#menu').menu('show', {
+					left : e.pageX,
+					top : e.pageY
+				});
+			},
+			onBeforeEdit:function(index,row){  
+				row.editing=true;  
+				$('#dataGrid').datagrid('refreshRow', index);  
+		     },  
+		     onAfterEdit:function(index,row){  
+		    	 editIndex = undefined;
+		    	 row.editing=false;
+		    	 $('#dataGrid').datagrid('refreshRow', index);  
+		      },  
+			onDblClickRow : function(rowIndex, rowData){
+				if(editIndex == undefined){
+					$(this).datagrid('beginEdit', rowIndex);
+					editIndex = rowIndex;
+				}else{
+					$(this).datagrid('endEdit', rowIndex);
+				}
+			} */
+		});
+	});
+
+function saverow(index,obj){
+	$('#dataGrid').datagrid('endEdit', index);  
+    var node = $('#dataGrid').datagrid('getSelected');  
+    var json = {};  
+    json.id = node.id;  
+    json.status = node.status;  
+    json.sort = node.sort;  
+    json.typeId   = node.typeId;  
+    json.nid  = node.nid;  
+    json.name=node.name;
+    json.value=node.value;
+    $.ajax({  
+            url:'/modules/system/dict/dictEdit.html',  
+            type : 'post',  
+            data : json,  
+            timeout : 60000,  
+            success : function(data, textStatus, jqXHR) {     
+                if (data.result){  
+                   	$.messager.alert('提示', '保存成功！', function() {  
+                    	$('#dataGrid').datagrid('reload');  
+                    });  
+               	 }else{
+               		$.messager.alert('提示', '保存失败！');
+               	 } 
+  
+            }  
+        });  
+	}	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		 <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<!-- <li>类型标识：<input type="text" name="nid" autocomplete="off"/></li> -->
+            		<li>标识名称：<input type="text" name="nidName" autocomplete="off"/></li>
+            		<li>名称：<input type="text" name="name" autocomplete="off"/></li>
+            		<li>状态：
+						<select name="status" class="type">
+							<option value="99" selected="selected">全部</option>
+							<option value="1">启用</option>
+							<option value="0">禁用</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<@secAuthorizeUrl value='/dictAddBtn.html'>
+	<div id="toolbar" style="display: none;">		
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>				
+	</div>
+	</@secAuthorizeUrl>
+<div id="menu" class="easyui-menu" style="width: 120px; display: none;">		
+	<div onclick="$.fn.dataGridOptions.addFun($('.datagrid-row-selected').find('.parameters').val(),addTitle,winWidth,winHeight,addUrl);" data-options="iconCls:'pencil_add'">增加键值</div> 		
+	<div onclick="$.fn.dataGridOptions.editFun($(this).attr('node-id'),editTitle,winWidth,winHeight,editUrl);" data-options="iconCls:'pencil'">编辑</div>		
+</div>
+</body>
+</html>

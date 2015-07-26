@@ -1,0 +1,19 @@
+package com.ddtkj.p2psys.fillorder.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.fillorder.dao.FillOrderLogDao;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+
+@Repository("fillOrderLog")
+public class FillOrderLogDaoImpl extends BaseDaoImpl<FillOrderLog> implements FillOrderLogDao {
+
+	@Override
+	public FillOrderLog findByType(String fid, String type) {
+		QueryParam param = QueryParam.getInstance().addParam("fid", fid).addParam("type", type);
+		return findByCriteriaForUnique(param);
+	}
+
+}

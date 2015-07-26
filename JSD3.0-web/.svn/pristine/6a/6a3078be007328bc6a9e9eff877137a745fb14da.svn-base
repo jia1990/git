@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html"> 
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/contact.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/borrow_money.js"></script>
+<title>晋商贷-我的交易-我的收益</title>
+<style>
+.c_recharge ul label {float: left;color: #333;font-size: 14px;margin-right: 14px;}
+.c_recharge ul li {font-size: 14px;color: #333;display:inline-block;padding: 0 10px;margin-right: 10px;cursor: pointer;height: 30px;}
+.c_recharge ul .c_recharge_this {height: 22px;border: 1px solid #0697da;color: #0697da;}
+.c_recharge ul span {color: #333;font-size: 14px;color: #0697da;cursor: pointer;}
+.c_recharge b {font-family: Simsun;font-size: 12px;color: #0697da;cursor: pointer;}
+.c_recharge_sear {font-size: 12px;float: left;display: inline-block;width: 62px;height: 22px;line-height: 22px;border-radius: 2px;-webkit-border-radius: 2px;-o-border-radius: 2px;text-align: center;background: #ff7800;color: #fff;margin: 0 10px;}
+.c_recharge_limit{height:30px;}
+.c_recharge_limit input {float: left;}
+.c_recharge_limit i {float: left;padding: 0 6px 0 4px;}
+.c_deal_detal li {width: 110px;}
+.c_deal .c_data_display dd{width: 110px;}
+.c_deal .c_data_display dd.c_data_titledd90{width: 90px;}
+.c_deal .c_data_display dd.c_data_titledd60{width: 60px;}
+.c_deal .c_data_display dd.c_data_titledd250{width: 250px;}
+.c_deal_menu li{border-top:1px solid #ddd;border-left:1px solid #ddd;font-size:14px;}
+.c_deal_menu li.c_menu_this2{border-left:1px solid #ddd;border-top:1px solid #ddd;border-right:1px solid #ddd;left:147px;}
+.c_deal_menu li.c_menu_this1{background: #fff;border-bottom: none;}
+.c_deal_menu li.c_menu_this3{left: 279px;border-top: 1px solid #ddd;border-right: 1px solid #ddd;border-left: none;}
+.c_deal_menu li a{display:block;width:100%;height:36px;color:#333;font-size:14px;}
+.c_deal_detal li a.y_scoreAward {display:inline-block;width: 86px;height: 32px;line-height: 32px;background: #12adff;font-size: 14px;text-align:center;color: #fff;border-radius: 2px;-moz-border-radius: 2px;-webkit-border-radius: 2px;-o-border-radius: 2px;}
+</style>
+</head>
+ <body>
+  <#include "../../include/headerMemberCenter.html">
+	<!--  -->
+	<div class="c_deal">
+		<div class="c_deal_content">
+			<#assign mid="m_invest">
+			   <#include "../trade_menu.html">
+			<div class="c_deal_record">
+				<div class="c_deal_title">积分记录</div>
+				<ul class="c_deal_detal">
+					<li><span>积分总额</span><i>${Request.score.totalScore!}</i></li>
+					<li><span>已消费积分</span><i>${Request.score.expenseScore!}</i></li>
+					<li><span>可用积分</span><i class="c_invest_total">${Request.score.validScore!}</i></li>
+					<li><span>可转云购卡面值</span><i class="c_invest_total">${Request.transMoney!0}</i></li>
+					<li style="margin-left: 37px;margin-top: 12px;width: 95px;"><#if ruleAward?? && ruleAward.id??>
+					<a href="/scoreAward/index.html?id=${ruleAward.id!}" target="_blank" class="y_scoreAward">积分抽奖</a>
+					<#else><a href="#" id="scoreAward" class="y_scoreAward">积分抽奖</a></#if>
+					</li>
+					<li style="width: 90px;margin-top: 12px;"><a href="/scoreAward/cardTransferIndex.html" target="_blank" class="y_scoreAward">云购卡转账</a></li>
+				</ul>
+				<div class="c_look_deal">
+					<ul class="c_deal_menu">
+						<li class="c_menu_this1">所有积分</li>
+						<li class="c_menu_this2"><a href="${webroot}/member/score/awardDetail.html">抽奖记录</a></li>
+						<li class="c_menu_this3"><a href="${webroot}/member/score/transferDetail.html">云购卡转账记录</a></li>
+					</ul>
+					<div class="c_menu_content">
+						<div class="c_deal_operate c_income_operate" style="display:block;">
+							<div class="c_recharge" style="width:720px;">
+									<ul class="c_date_range">
+										<label>日期范围</label>
+										<li class="c_recharge_this" data-val="9">全部</li>
+										<li data-val="7">最近7天</li>
+										<li data-val="1">1个月</li>
+										<li data-val="2">2个月</li>
+										<li data-val="3">3个月</li>
+										<span>具体日期<b>&gt;&gt;</b></span>
+										<div class="c_clear"></div>
+									</ul>
+									<ul class="c_recharge_limit" style="display:none;">
+										<label>起止日期</label>
+										<input type="text" class="dateInput" name="startTime" id="startTime" value="${startTime?default('')}" size="15" onclick="change_picktime()" />
+										<i>-</i>
+										<input type="text" class="dateInput" name="endTime" value="${endTime?default('')}" id="endTime" size="15" onclick="change_picktime()" /> 
+										<input value="搜索" type="button"  class="c_recharge_sear"  id="searchBtn" />
+										<span><b>&lt;&lt;</b>具体日期</span>
+										<div class="c_clear"></div>
+									</ul>
+								
+									<ul class="c_score_type" style="margin-top:10px;">
+										<label>积分类型</label>
+										<li class="c_recharge_this" data-val="">全部</li>
+										<#if Request.scoreTypeList?? >
+										<#list scoreTypeList as item>
+										<li data-val="${item.nid!}">${item.name!}</li>
+										</#list>
+										</#if>
+									</ul>
+								</div>
+							<div class="c_data_display">
+								
+							</div>
+							<div id="kkpager" style="height: 60px;"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+	</div>
+	<#include "../../include/footer.html">
+ </body>
+ <script>seajs.use('member/investScore_log');</script> 
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/media/js/date.js"></script>
+ <script>
+	$(function(){
+		$($(".c_aside_nav dd")[2]).addClass("c_invest_this");
+	});
+	$(function(){
+		$("#scoreAward").click(function(){
+			alert("当前没有启用的抽奖规则，请期待新活动哦^_^");
+		});
+	});
+</script>
+</html>

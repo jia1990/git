@@ -1,0 +1,282 @@
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/formatterFunction.js"></script>
+<script>
+	
+	$(function(){
+		//location.reload();
+		//$(".nav dd a").removeClass("c_nav_this");
+		//$(".nav dd a").eq(0).addClass("c_nav_this");
+		$(".c_contact_icon").hover(function(){
+			var index=$(this).index(".c_contact_icon");
+			$(".pophover-content").hide();
+			$(".pophover-content").eq(index).show();
+		},function(){
+			$(".pophover-content").hide();
+		})
+		$(".y_list_list a").hover(function(){
+			$(this).find(".y_emnamess").css("color","#fff");
+			$(this).find(".y_emnums").css("color","#fff");	
+		},function(){
+			$(this).find(".y_emnamess").css("color","#494949");
+			$(this).find(".y_emnums").css("color","#fb8b1d");
+		})
+		$(".nav .y_myAssets").mouseenter(function(){
+				$(".nav .y_myAssets_list").css("display","block");
+		})
+		$(".nav .y_myAssets_list").mouseleave(function(){
+				$(".nav .y_myAssets_list").css("display","none");
+		})
+		var userId=$("#user_id").html();
+		var userType = $("#user_type").html() ;
+		if(userId !=0 &userId !='undefined'&userId !=null & userType!=null){
+			if(userType=="10"){
+				$.ajax({
+					url:"/member/investHandleMoney.html",
+					type:"post",
+					success:function(result){
+		    		$("#accountTotal").html(moneyFormat(result.account.accountTotal)+"元");
+		   			$("#rechargeUsable").html(moneyFormat(result.usableTotal)+"元");
+					$("#sumInterest").html(moneyFormat(result.sumInterest)+"元");
+					}
+				});
+			}
+			if(userType=="11"){
+				$.ajax({
+					url:"/member/investHandleBorrower.html",
+					type:"post",
+					success:function(result){
+		    		$("#cashMoney").html(moneyFormat(result.cashMoney)+"元");
+		   			$("#borrowMoneyTotal").html(moneyFormat(result.borrowMoneyTotal)+"元");
+					$("#repayMoney").html(moneyFormat(result.repayMoney)+"元");
+					}
+				});
+			}
+			if(userType=="12"){
+				$.ajax({
+					url:"/member/investHandleGuarantee.html",
+					type:"post",
+					success:function(result){
+		    		$("#guaranteeingCount").html(result.guaranteeingCount+"个");
+		   			$("#urgeCount").html(result.urgeCount+"个");
+					$("#overdueCount").html(result.overdueCount+"个");
+					}
+				});
+			}
+			if(userType=="13"){
+				$.ajax({
+					url:"/member/investHandleMervhant.html",
+					type:"post",
+					success:function(result){
+		    		$("#usableMount").html(moneyFormat(result.usableMount)+"元");
+		   			$("#cashTotal").html(moneyFormat(result.cashTotal)+"元");
+					$("#moneyCount").html(moneyFormat(result.moneyCount)+"元");
+					}
+				});
+			}
+		}
+		$(".y_TopRecharge").css({color:"#fff"});
+		$(".y_myAssets a").css({color:"#0198f1"});
+	    
+		var userName  = $("#userName").html();
+		if(userName != null &&userName.length >11){
+			var partUserName  = userName.substring(0,7);
+			var showUserName =partUserName+"..."
+			$("#userName").html(showUserName);
+			$(".dlddhovers1").hover(function(){
+				$("#userName").attr("title",userName);
+				
+			})
+		}
+		
+	
+	
+	});
+		
+		
+</script>
+<style>
+.headerTop{background:#fff;}
+.header{background:#fff;}
+.header .nav dd { width: 84px;}
+.header .nav { width: 760px;}
+	.headerTop .topContent .c_mobile{background: url(${webroot}${theme_dir}/images/header_footer/mobile.png) no-repeat 20px 16px;padding-left:0;}
+	.headerTop .topContent .c_mobile a{padding-left: 30px;}
+	.headerTop .topContent .c_mobile:hover{background-image:url(${webroot}${theme_dir}/images/header_footer/mobile1.png);}
+	.headerTop .topContent dd{margin-right:0;border-right: 1px solid #dddddd;}
+	.topContent dd a{display:block;padding: 0 20px;}
+	.topContent dd.dlddhovers a:hover{color: #fff;}
+	.topContent dd.dlddhovers1 a{color: #0697da;}
+	.topContent dd.dlddhovers2 a{color: #ff7900;}
+	.topContent dd.dlddhovers:hover{background-color:#12adff; }
+	.oldversions{background-color:#E3E3E3}
+	.oldversions:hover{background-color:#E3E3E3;}
+	#returnOld{color:#333}
+	#returnOld:hover{color:#fff}
+</style>
+
+	<!-- 头部 -->
+	<div class="headerTop">
+		<div class="topContent">
+			<ul class="c_servive">
+				<li>客服热线：<span class="c_telphone">400-080-3000</span></li>
+				<li>服务时间：24小时</li>
+				<li>
+					<span class="c_contact_icon c_microblog">
+						<div id="weibo-popover-content" class="pophover-content popover bottom" style="top: 40px;left: -60px;">
+							<div class="arrow"></div>
+							<div class="popover-content">
+								<p style="text-align: center;">
+									点击关注晋商贷微博 <a href="http://www.weibo.com/jinshangdai" target="_blank" hidefocus>@jinshangdai</a>
+								</p>
+							</div>
+						</div>
+					</span>
+					<span class="c_contact_icon c_kik">
+						<div id="wechat-popover-content" class="pophover-content popover bottom" style="top: 40px;left: -60px;">
+                            <div class="arrow"></div>
+                            <div class="popover-content">
+                                <p style="white-space: nowrap">扫码晋商贷微信</p>
+                                <div style="width: 100px; height: 100px; margin-left: 10px;">
+                                    <img src="${webroot}${theme_dir}/images/header_footer/code.jpg" width="100" height="100" border="0" alt="">
+                                </div>
+                            </div>
+                        </div>
+					</span>
+					
+					<a href="http://wpa.b.qq.com/cgi/wpa.php?ln=2&uin=938029566" target="_blank" title="点击访问晋商贷企业QQ">
+					<span class="c_contact_icon c_qq">
+						<div id="qq-popover-content" class="pophover-content" style="top: 40px;left: -60px;">
+                            <div class="arrow"></div>
+                            <div class="popover-content">
+                                <p style="white-space: nowrap">点击访问企业QQ</p>
+                            </div>
+                        </div>
+					</span>
+					</a>
+				</li>
+				<!-- <li><a href="javascript:;" title="收藏本站" id="fav">收藏本站</a></li> -->
+				
+			</ul>
+			<dl>
+				<dd class="dlddhovers"><a href="${webroot}/common/faquestions.html">常见问题</a></dd>
+		      <dd class="dlddhovers"><a href="${webroot}/desktop.html" title="添加到桌面快捷方式" >收藏</a></dd>
+			  <dd class="dlddhovers"><a href="/user/activity.html" hidefocus>活动专区</a></dd>
+			<#if session_user?exists >
+			
+				<!-- <dd class="c_mobile dlddhovers"><a href="${webroot}/app.html" hidefocus>移动客户端</a></dd> -->
+				
+				<dd class="dlddhovers dlddhovers1"><a href="${webroot}/member/main.html" class="hovercolors" hidefocus  id="userName">${session_user.userName}</a></dd>
+				<dd class="dlddhovers" ><a href="${webroot}/user/logout.html"  class="hovercolors" hidefocus>退出</a></dd>
+				<!-- JSDP-96 xingjia 2015-05-14 start -->
+				<dd class="oldversions dlddhovers" style="border-right:0;"><a href="http://old.jinshangdai.com" hidefocus id="returnOld" target="_blank" title="返回旧版本">返回旧版本</a></dd>
+				<!-- JSDP-96 xingjia 2015-05-14 end -->
+			<#else>
+				<dd class="dlddhovers"><a href="${webroot}/user/login.html" hidefocus>登录</a></dd>
+				<dd class="dlddhovers dlddhovers2"><a  href="${webroot}/user/register.html" hidefocus>注册送红包</a></dd>
+				<!-- <dd class="c_mobile dlddhovers" style="border-right:0;"><a href="${webroot}/app.html" hidefocus>移动客户端</a></dd> -->
+				<!--JSDP-96 xingjia 2015-05-09 start -->
+				<dd class="oldversions dlddhovers"><a href="http://old.jinshangdai.com" hidefocus id="returnOld" target="_blank" title="返回旧版本">返回旧版本</a></dd>
+				<!--JSDP-96 xingjia 2015-05-09 start -->
+			</#if>		
+			</dl>
+		</div>
+	</div>
+    <div class="header">
+		<div class="logo_nav">
+			<a href="/" class="logo" hidefocus></a>
+			<dl class="nav">                   
+				<!-- <dd><a class="c_nav_this" href="" hidefocus>我要投资</a></dd>
+				<dd><a href="" hidefocus>我要借款</a></dd>
+				<dd><a href="" hidefocus>新手引导</a></dd>
+				<dd><a href="" hidefocus>天翼商城</a></dd>
+				<dd><a href="" hidefocus>关于我们</a></dd>
+				<dd style="width:76px;"><a href="" hidefocus>论坛</a></dd>
+				<dd class="top_last top_register"><a href="" hidefocus>免费注册</a></dd>
+				<dd class="top_last"><a href="" hidefocus>立即登录</a></dd> -->
+				<#if !nid??><#assign nid="index"></#if> 
+				<#macro showSiteUrl site><#if nid=='yungouworld'||nid=='forum'><#else>${webroot}${site.url!}</#if> </#macro> 
+				
+				<#if tree??&&tree.hasChild()>
+				
+				<#list tree.child as item> 
+				<#if (item.model.status)??&&item.model.status==1&&item.model.name!='网站首页'&&item.model.name!='产品介绍'&&item.model.name!='我的账户'&&item.model.name!='常见问题'>
+				<dd >
+				<span class="<#if !item_has_next>myAccount</#if>">
+				<!-- 云购全球 -->
+				<#if item.model.name=='云购全球'>
+					
+					<#if session_user?exists >
+					<a class="<#if ((item.model.nid)??&&(item.model.nid)==nid)>hover<#else></#if>" style="position:relative;" href="/user/authorize.html?response_type=code&client_id=001&callback=http://www.yungouworld.com/api/jsdlogin_three/" target="_blank"><img style="position:absolute;top: 8px;
+right: 3px" src="${webroot}${theme_dir}/images/index/hot.gif"/>${item.model.name!}</a> 
+					
+					<#else>
+					<a class="<#if ((item.model.nid)??&&(item.model.nid)==nid)>hover<#else></#if>" style="position:relative;" href="<@showSiteUrl site=item.model/>" target="_blank"><img style="position:absolute;top: 8px;
+right: 3px" src="${webroot}${theme_dir}/images/index/hot.gif"/>${item.model.name!}</a> 
+ 					</#if>
+ 				<!-- 社区（论坛） -->
+				<#elseif item.model.name=='社区'>
+					<#if session_user?exists >
+					<a class="<#if ((item.model.nid)??&&(item.model.nid)==nid)>hover<#else></#if>" style="position:relative;" href="/user/authorize.html?response_type=code&client_id=002&callback=http://bbs.jinshangdai.com/member.php?mod=jsdlogin&action=jsdloggin" target="_blank">${item.model.name!}</a> 
+					
+					<#else>
+					<a class="<#if ((item.model.nid)??&&(item.model.nid)==nid)>hover<#else></#if>" style="position:relative;" href="<@showSiteUrl site=item.model/>" target="_blank">${item.model.name!}</a> 
+ 					</#if>
+				<#else>
+				
+				 <a class="<#if ((item.model.nid)??&&(item.model.nid)==nid)>hover<#else></#if>" href="<@showSiteUrl site=item.model/>">${item.model.name!}</a>  
+				</#if>
+				</span>
+				</dd>
+				</#if> 
+				</#list>
+				
+				</#if>
+				
+				<#if session_user?exists>
+				    <dd id="user_id" style="display: none">${session_user.userId}</dd>
+				    <dd id="user_type" style="display: none"><#if session_user.userCache.userType??>${session_user.userCache.userType}</#if></dd>
+					<dd class="y_myAssets" style="width:80px;"><a href="/member/main.html"><img src="${webroot}${theme_dir}/images/imgname.jpg" style="border-radius: 50%;">我的资产<span></span></a></dd>
+				    <dd class="y_myAssets_list" style="width:250px;">
+					<#if session_user.userCache.userType??&&session_user.userCache.userType=="10">
+						<ul>
+							<li style="height:83px;"></li>
+							<li class="y_list_list"><em class="y_emnamess">总资产</em><em class="y_emnums"  id="accountTotal"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >可用资金</em><em class="y_emnums" id="rechargeUsable"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >我的收益</em><em class="y_emnums" id="sumInterest"></em></li>
+							<li><a href="/member/recharge/newRecharge.html" class="y_TopRecharge">充值</a><a href="/member/cash/newCash.html" class="y_TopWithdraw">提现</a></li>
+						</ul>
+					<#elseif session_user.userCache.userType??&&session_user.userCache.userType=="11">
+						<ul>
+							<li style="height:83px;"></li>
+							<li class="y_list_list"><em class="y_emnamess">可提现金额</em><em class="y_emnums"  id="cashMoney"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >正在借款金额</em><em class="y_emnums" id="borrowMoneyTotal"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >待还总金额</em><em class="y_emnums" id="repayMoney"></em></li>
+							<li><a href="/member/recharge/newRecharge.html" class="y_TopRecharge">充值</a><a href="/member/cash/newCash.html" class="y_TopWithdraw">提现</a></li>
+						</ul>
+					<#elseif session_user.userCache.userType??&&session_user.userCache.userType=="12">
+						<ul>
+							<li style="height:83px;"></li>
+							<li class="y_list_list"><em class="y_emnamess">正在担保项目</em><em class="y_emnums"  id="guaranteeingCount"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >催收项目</em><em class="y_emnums" id="urgeCount"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >逾期项目</em><em class="y_emnums" id="overdueCount"></em></li>
+							<li><a href="/member/recharge/newRecharge.html" class="y_TopRecharge">充值</a><a href="/member/cash/newCash.html" class="y_TopWithdraw">提现</a></li>
+						</ul>
+					<#elseif session_user.userCache.userType??&&session_user.userCache.userType=="13">
+						<ul>
+							<li style="height:83px;"></li>
+							<li class="y_list_list"><em class="y_emnamess">账户总金额</em><em class="y_emnums"  id="usableMount"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >累计提现金额</em><em class="y_emnums" id="cashTotal"></em></li>
+							<li class="y_list_list"><em class="y_emnamess" >完成项目总金额</em><em class="y_emnums" id="moneyCount"></em></li>
+							<li><a href="/member/recharge/newRecharge.html" class="y_TopRecharge">充值</a><a href="/member/cash/newCash.html" class="y_TopWithdraw">提现</a></li>
+						</ul>
+					</#if>
+				 </dd>
+				<#else>
+				<dd class="y_myAssets"><a href="/member/main.html"><img src="${webroot}${theme_dir}/images/imgname.jpg" style="border-radius: 50%;">我的资产<span></span></a></dd>
+				<dd class="y_myAssets_list" style="height: 150px;width:250px;"><a href="${webroot}/user/login.html" class="y_TopRecharge" style="position: absolute;bottom: 24px;width: 210px;">请先登录</a></dd>
+				<!-- <dd class="top_last top_register"><a href="${webroot}/user/register.html" hidefocus>免费注册</a></dd>
+				<dd class="top_last"><a href="${webroot}/user/login.html" hidefocus>立即登录</a></dd>  -->
+				</#if>
+			</dl>
+		</div>
+	</div>

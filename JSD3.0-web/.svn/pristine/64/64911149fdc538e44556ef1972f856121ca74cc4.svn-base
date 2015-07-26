@@ -1,0 +1,234 @@
+package com.rongdu.p2psys.web.user;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+import com.rongdu.p2psys.user.model.UserLogisticsAddressModel;
+import com.rongdu.p2psys.user.service.UserLogisticsAddressService;
+
+/**
+ * 会员物流送货地址
+ * 
+ * @author 李建云
+ * @version 3.0
+ * @since 2014-12-06
+ */
+public class UserLogisticsAddressAction extends BaseAction<UserLogisticsAddress> implements ModelDriven<UserLogisticsAddress> {
+
+	@Resource
+	private UserLogisticsAddressService userLogisticsAddressService;
+
+	private UserLogisticsAddress userLogisticsAddress = new UserLogisticsAddress();
+
+	private User user;
+	
+	private Region regionProvince = new Region();
+	
+	private Region regionCity = new Region();
+	
+	private Region regionCounty = new Region(); 
+
+	private Map<String, Object> data;
+	
+	private int countSum = 3;
+
+	/**
+	 * 查询收货地址页面
+	 * @author 李建云 
+	 * @throws Exception 
+	 * 
+	 * */
+	
+	@Action(value = "/member/logisticsAddress/addressDetail", results = {
+			@Result(name = "member_addressDetail", type = "ftl", location = "member/logisticsAddress/addressDetail.html"),
+			@Result(name = "member_borrow_addressDetail", type = "ftl", location = "member_borrow/logisticsAddress/addressDetail.html") })
+	public String addressDetail() throws Exception {
+		user = getSessionUser();
+		UserCache uc = 	user.getUserCache();
+		saveToken("addAddressToken");
+	if("10".equals(uc.getUserType())){
+		return "member_addressDetail";
+	}else{
+		return "member_borrow_addressDetail";
+	}
+	}
+
+	@Action("/member/logisticsAddress/addressList")
+	public void addressList() throws Exception{		
+		data = new HashMap<String, Object>();
+		List<UserLogisticsAddress> list = userLogisticsAddressService.list(this.getSessionUserId());
+		List<UserLogisticsAddressModel> modelList = new ArrayList<UserLogisticsAddressModel>();
+		for(int i=0;i<list.size();i++){
+			UserLogisticsAddress addr = list.get(i);
+			UserLogisticsAddressModel addrModel = UserLogisticsAddressModel.instance(addr);
+			addrModel.setProvinceName(addr.getRegionProvince().getName());
+			addrModel.setCityName(addr.getRegionCity().getName());
+			addrModel.setCountyName(addr.getRegionCounty().getName());
+			modelList.add(addrModel);
+		}
+		data.put("list", modelList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 添加收货地址
+	 * @author 李建云 
+	 * 
+	 * */
+	@Action("/member/logisticsAddress/saveUserLogisticsAddress")
+	public void saveUserLogisticsAddress() throws IOException {
+
+		data = new HashMap<String, Object>();
+		user = this.getSessionUser();
+
+		String id = this.paramString("id");
+
+		userLogisticsAddress.setUser(user);
+		userLogisticsAddress.setName(this.paramString("name"));
+		regionProvince.setId(this.paramLong("province"));
+		regionCity.setId(this.paramLong("city"));
+		regionCounty.setId(this.paramLong("county"));
+		userLogisticsAddress.setRegionProvince(regionProvince);
+		userLogisticsAddress.setRegionCity(regionCity);
+		userLogisticsAddress.setRegionCounty(regionCounty);
+		userLogisticsAddress.setDetailAddress(this.paramString("detailAddress"));
+		userLogisticsAddress.setZipCode(this.paramString("zipCode"));
+		userLogisticsAddress.setPhone(this.paramString("phone"));
+		checkToken("addAddressToken");
+		Global.setTransfer("user", user);
+		if(null != id && !"".equals(id)){
+			userLogisticsAddress.setId(Integer.parseInt(id));
+			updateUserLogisticsAddressServiceById(userLogisticsAddress);
+			BaseMsg msg = new BaseMsg(NoticeConstant.LOGISTICS_ADDRESS_UPD_SUC);
+			msg.doEvent();
+		}else if(null != id &&"".equals(id)){
+			
+			List<UserLogisticsAddress> list = userLogisticsAddressService.list(this.getSessionUserId());
+			
+			if(null != list &&list.size()==0){
+				userLogisticsAddress.setIsDefault(1);
+				userLogisticsAddressService.addLogisticsAddress(userLogisticsAddress);
+				data.put("msg", true);	
+				BaseMsg msg = new BaseMsg(NoticeConstant.LOGISTICS_ADDRESS_ADD_SUC);
+				msg.doEvent();
+			}else if(null != list && list.size()<3&&list.size()>0){
+				userLogisticsAddress.setIsDefault(0);
+				userLogisticsAddressService.addLogisticsAddress(userLogisticsAddress);
+				data.put("msg", true);	
+				BaseMsg msg = new BaseMsg(NoticeConstant.LOGISTICS_ADDRESS_ADD_SUC);
+				msg.doEvent();
+			}else if(null != list && list.size()==3){
+				
+				data.put("msg", false);		
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+
+	}
+
+	/**
+	 * 删除收货地址
+	 * @author 李建云 
+	 * 
+	 * */
+	@Action("/member/logisticsAddress/deletelogisticsAddress")
+	public void  deletelogisticsAddress() throws IOException {
+
+		String id = this.paramString("id");
+		user = this.getSessionUser();
+		userLogisticsAddressService.deleteLogisticsAddress(Integer.parseInt(id));
+		Global.setTransfer("user", user);
+		BaseMsg msg = new BaseMsg(NoticeConstant.LOGISTICS_ADDRESS_DEL_SUC);
+		msg.doEvent();
+	}
+	
+	/**
+	 * 修改默认收货地址
+	 * @author 李建云 
+	 * 
+	 * */
+	@Action("/member/logisticsAddress/modifyIsDefault")
+	public void modifyIsDefault(){
+		
+		String id = this.paramString("id");
+		userLogisticsAddressService.modifyIsDefault(this.getSessionUserId(),Integer.parseInt(id));
+		
+	}
+	
+	
+	/**
+	 * 查询可添加收货地址数量
+	 * @author 李建云 
+	 * 
+	 * */
+	@Action("/member/logisticsAddress/queryAdderssCount")
+	public void queryAdderssCount() throws IOException{
+		
+		data = new HashMap<String, Object>();
+		List<UserLogisticsAddress> list2 = userLogisticsAddressService.list(this.getSessionUserId());
+		data.put("count", list2.size());
+		data.put("otherCount", countSum-list2.size());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 查询某个收货地址
+	 * @author 李建云 
+	 * 
+	 * */
+	@Action("/member/logisticsAddress/queryUserLogisticsAddressById")
+	public void queryUserLogisticsAddressServiceById() throws IOException{
+		
+		data = new HashMap<String, Object>();
+		String id = this.paramString("id");
+		userLogisticsAddress =userLogisticsAddressService.queryLogisticsAddress(Integer.parseInt(id));
+		data.put("userLogisticsAddress", userLogisticsAddress);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 修改收货地址
+	 * @author 李建云 
+	 * 
+	 * */
+	public void updateUserLogisticsAddressServiceById(UserLogisticsAddress userLogisticsAddress){
+		userLogisticsAddressService.modifyLogisticsAddress(userLogisticsAddress);
+	}
+
+	public Region getRegionCounty() {
+		return regionCounty;
+	}
+
+	public void setRegionCounty(Region regionCounty) {
+		this.regionCounty = regionCounty;
+	}
+}

@@ -1,0 +1,43 @@
+
+package com.ddtkj.p2psys.errorlog.dao.impl;
+
+import java.util.List;
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.errorlog.dao.ErrorLogDao;
+import com.ddtkj.p2psys.errorlog.domain.ErrorLog;
+import com.ddtkj.p2psys.errorlog.model.ErrorLogModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述:错误异常日志dao实现
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-12   
+ */
+@Repository("errorLogDao")
+public class ErrorLogDaoImpl extends BaseDaoImpl<ErrorLog> implements ErrorLogDao {
+
+	@Override
+	public ErrorLog getErrorLogById(long id) {
+		String jpql = "SELECT * FROM t_jsd_error_log WHERE id = ?1";
+		Query query = em.createQuery(jpql);
+		Integer new_id = (int) id;
+		query.setParameter(1, new_id);
+		List<ErrorLog> list = query.getResultList();
+		if (list != null && list.size() >= 0) {
+			return (ErrorLog) list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	
+	@Override
+	public PageDataList<ErrorLogModel> list(ErrorLogModel model) {
+		return null;
+	}
+
+}

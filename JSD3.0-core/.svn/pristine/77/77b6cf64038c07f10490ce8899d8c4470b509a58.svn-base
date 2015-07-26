@@ -1,0 +1,46 @@
+package com.rongdu.p2psys.region.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+
+@Service("regionService")
+public class RegionServiceImpl implements RegionService {
+
+	Logger logger = Logger.getLogger(RegionServiceImpl.class);
+
+	@Resource
+	private RegionDao regionDao;
+
+	@Override
+	public List<Region> getRegionList(long pId) {
+		return regionDao.getRegionList(pId);
+	}
+
+	public void setRegionDao(RegionDao regionDao) {
+		this.regionDao = regionDao;
+	}
+
+	@Override
+	public Region getRegionById(long id) {
+		return regionDao.findById(id);
+	}
+
+	@Override
+	public Region findByCode(String code) {
+		return regionDao.findByCode(code);
+	}
+	
+	@Override
+	public List<Object[]> getProvincialEnrollment() {
+		
+		return regionDao.getProvincialEnrollment();
+	}
+}

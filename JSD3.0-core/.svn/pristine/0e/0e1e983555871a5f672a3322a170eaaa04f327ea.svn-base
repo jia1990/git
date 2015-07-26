@@ -1,0 +1,143 @@
+package com.ddtkj.p2psys.redpacket.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述：活动红包的消费model   JSDP-184
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+public class RpActivityConsumeModel extends RpActivityConsume {
+	/** 当前页数**/
+	private int page = 1;
+	/** 每页总数 **/
+	private int size = Page.ROWS;
+	private Page pages;
+	
+	private String userName;
+	private String realName;
+	private String type;//消费类型  投标
+	private String statusType;//消费状态类型  成功、失败
+	private String startTime;//开始时间
+	private String endTime;//结束时间
+	private String consumeStatus;//消费状态
+	private double consumeSucMoney;//消费成功金额汇总
+	private double consumeFailMoney;//消费失败金额汇总
+	
+	
+	
+
+	public static RpActivityConsumeModel instance(RpActivityConsume rpActivityConsume) {
+		RpActivityConsumeModel rpActivityConsumeModel = new RpActivityConsumeModel();
+		BeanUtils.copyProperties(rpActivityConsume, rpActivityConsumeModel);
+		return rpActivityConsumeModel;
+	}
+
+	public RpActivityConsume prototype() {
+		RpActivityConsume rpActivityConsume = new RpActivityConsume();
+		BeanUtils.copyProperties(this, rpActivityConsume);
+		return rpActivityConsume;
+	}
+	
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getConsumeStatus() {
+		return consumeStatus;
+	}
+
+	public void setConsumeStatus(String consumeStatus) {
+		this.consumeStatus = consumeStatus;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+
+	public double getConsumeSucMoney() {
+		return consumeSucMoney;
+	}
+
+	public void setConsumeSucMoney(double consumeSucMoney) {
+		this.consumeSucMoney = consumeSucMoney;
+	}
+
+	public double getConsumeFailMoney() {
+		return consumeFailMoney;
+	}
+
+	public void setConsumeFailMoney(double consumeFailMoney) {
+		this.consumeFailMoney = consumeFailMoney;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public Page getPages() {
+		return pages;
+	}
+
+	public void setPages(Page pages) {
+		this.pages = pages;
+	}
+
+	public String getStatusType() {
+		return statusType;
+	}
+
+	public void setStatusType(String statusType) {
+		this.statusType = statusType;
+	}
+	
+	
+}

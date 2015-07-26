@@ -1,0 +1,68 @@
+package com.rongdu.p2psys.account.dao;
+
+import java.util.List;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.account.model.AccountBankModel;
+
+/**
+ * 银行卡Dao
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年3月6日
+ */
+public interface AccountBankDao extends BaseDao<AccountBank> {
+
+	/**
+	 * 提现银行卡列表
+	 * 
+	 * @param userId 用户ID
+	 * @return 提现银行卡列表
+	 */
+	List<AccountBank> list(long userId);
+
+	/**
+	 * 我的银行卡列表
+	 * 
+	 * @param userId 用户ID
+	 * @return 银行卡列表
+	 */
+	List<AccountBank> listAll(long userId);
+
+	/**
+	 * 统计用户银行卡数量
+	 * 
+	 * @param userId 用户ID
+	 * @return 银行卡数量
+	 */
+	int count(long userId);
+
+	/**
+	 * 删除/禁用
+	 * 
+	 * @param userId 用户ID
+	 * @param id ID
+	 */
+	void disable(long userId, long id);
+
+	/**
+	 * 通过银行账户和用户ID获得AccountBankModel
+	 * 
+	 * @param userId 用户ID
+	 * @param account 银行账户
+	 * @return AccountBank
+	 */
+	AccountBank find(long userId, String account);
+	
+	
+	//JSDP-116 xingjia 2015-05-15 start
+	/**
+	 * 提现银行卡导出excel使用sql查询
+	 */
+	List excelListBankCard(AccountBankModel model);
+	//JSDP-116 xingjia 2015-05-15 start
+
+	
+}

@@ -1,0 +1,165 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.math.BigDecimal;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.util.BigDecimalUtil;
+
+/**
+ * @描述:红包消费规则
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月23日
+ */
+public class RedPacketConsumeRuleCheck extends RuleCheck {
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+
+	private StaticRP static_rp;
+	private DynamicRP dynamic_rp;
+
+	private class StaticRP implements java.io.Serializable{
+		private double return_threshold_money;
+		private String remark;
+
+		public double getReturn_threshold_money() {
+			return return_threshold_money;
+		}
+
+		public void setReturn_threshold_money(double return_threshold_money) {
+			this.return_threshold_money = return_threshold_money;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+	}
+
+	private static class DynamicRP implements java.io.Serializable{
+		private int min_invest_money;
+		private int use_rp_value;
+		private String remark;
+
+		public int getMin_invest_money() {
+			return min_invest_money;
+		}
+
+		public void setMin_invest_money(int min_invest_money) {
+			this.min_invest_money = min_invest_money;
+		}
+
+		public int getUse_rp_value() {
+			return use_rp_value;
+		}
+
+		public void setUse_rp_value(int use_rp_value) {
+			this.use_rp_value = use_rp_value;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+	}
+
+	/**
+	 * 取现使用静态红包规则
+	 * 
+	 * @param returnMoney
+	 *            投资人可用的回款本金
+	 * @return  boolean
+	 *             可用或不可用
+	 * */
+	public boolean cashUsestaticRP(double returnMoney) {
+		// 回款可用本金大于规则时，可把静态红包取现
+		if (returnMoney >= static_rp.return_threshold_money) {
+
+			return true;
+		}
+
+		return false;
+	}
+	/**
+	 * 投资使用动态红包规则
+	 * @param useMoney
+	 *                用户可用金额
+	 * @param investMoney
+	 *                用户投资金额
+	 * @return  double
+	 *                 可用的钱袋子金额
+	 * */
+	public double  investUseDynamicRP(double useMoney,double investMoney,int borrowTimeType,int timeLimit){
+		  double dynamicRP = 0.0;
+		  //天标
+		  if(borrowTimeType==1 && timeLimit > 0){
+			  if(useMoney>=investMoney){
+				  dynamicRP = BigDecimalUtil.div(BigDecimalUtil.mul(BigDecimalUtil.mul(investMoney,dynamic_rp.use_rp_value), timeLimit),BigDecimalUtil.mul(30,dynamic_rp.min_invest_money)) ;
+			  }
+		  }
+		  //月标
+		  if(borrowTimeType==0 && timeLimit > 0){
+			   // JSDP-50 wcw 20150-4-18 start
+			  //if(useMoney>=investMoney &&investMoney>=dynamic_rp.min_invest_money){
+			  if(useMoney>=investMoney){
+			  // JSDP-50 wcw 20150-4-18 end
+				  dynamicRP = BigDecimalUtil.div(BigDecimalUtil.mul(BigDecimalUtil.mul(investMoney,dynamic_rp.use_rp_value), timeLimit),dynamic_rp.min_invest_money) ;
+			  }
+		  }
+			  
+		  
+		  dynamicRP = BigDecimalUtil.decimal(dynamicRP, 2);
+		  return dynamicRP;
+		
+	}
+
+	public static void main(String[] args) throws Exception {
+		// 测试使用
+		InputStream in = RedPacketConsumeRuleCheck.class
+				.getResourceAsStream("红包消费规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<RedPacketConsumeRuleCheck> clazz = RedPacketConsumeRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		RedPacketConsumeRuleCheck test = (RedPacketConsumeRuleCheck) jsonObj;
+
+
+		System.out.println(test.investUseDynamicRP(197000,19700,0,12));
+		
+	}
+
+	public StaticRP getStatic_rp() {
+		return static_rp;
+	}
+
+	public void setStatic_rp(StaticRP static_rp) {
+		this.static_rp = static_rp;
+	}
+
+	public DynamicRP getDynamic_rp() {
+		return dynamic_rp;
+	}
+
+	public void setDynamic_rp(DynamicRP dynamic_rp) {
+		this.dynamic_rp = dynamic_rp;
+	}
+}

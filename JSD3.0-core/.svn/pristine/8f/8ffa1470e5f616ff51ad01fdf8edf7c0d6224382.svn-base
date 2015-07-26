@@ -1,0 +1,91 @@
+package com.ddtkj.p2psys.goods.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.goods.model.GoodsOrderModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+public interface GoodsOrderService {
+	
+	/**
+	 * 查询订单的分页
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	PageDataList<GoodsOrderModel> goodsOrderPageList(GoodsOrderModel model) throws Exception;
+	/**
+	 * 根据id查询商品订单
+	 * @param id
+	 * @return
+	 * @throws Exception
+	 */
+	GoodsOrder findOrderById(long id) throws Exception;
+	/**
+	 * 修改订单
+	 * @param goodsOrder
+	 * @return
+	 * @throws Exception
+	 */
+	GoodsOrder updateOrder(GoodsOrder goodsOrder) throws Exception;
+	/**
+	 * 根据borrowId查找订单
+	 * @param borrowId
+	 * @return
+	 * @throws Exception
+	 */
+	GoodsOrder findOrderByBorrowId(long borrowId) throws Exception;
+	
+	
+
+/**
+	 * 查询借款用户订单的分页
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	public PageDataList<GoodsOrderModel> getGoodsOrderPageListWithBorrow(GoodsOrderModel  model);
+	//JSDBET-884 gjh 2015-3-30 start
+	GoodsOrder addOne(User user,GoodsModel gm,int period,double onePay,String resultFlag) throws Exception ;
+	//JSDBET-884 gjh 2015-3-30 end
+	/**
+	 * 分期宝分期付款（并发处理）
+	 * @param user
+	 * @param go
+	 * @param gm
+	 * @param b
+	 * @throws Exception
+	 */
+	void addOneSuccess(User user,GoodsOrder go,GoodsModel gm,Borrow b)throws Exception;
+	//JSDBET-884 gjh 2015-3-30 start
+	GoodsOrder addOneByNoBorrow(User user,GoodsModel gm,String resultFlag) throws Exception ;
+	//JSDBET-884 gjh 2015-3-30 end
+	void addByNoBorrowSuccess(User user,GoodsOrder go) throws Exception ;
+	
+	/**
+	 * 查询用户订单完成数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int orderCountByUser(int userId);
+	
+	/**
+	 * 查询用户订单完成金额
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int orderMoneyCountByUser(int userId);
+	//JSDP-116 fengguoqin 2015-05-19 start
+	/**
+	 * 订单excel导出数据获取
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	List<GoodsOrderModel> excelGoodsOrderList(GoodsOrderModel model) throws Exception;
+	//JSDP-116 fengguoqin 2015-05-19 end
+}

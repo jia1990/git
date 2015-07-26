@@ -1,0 +1,138 @@
+package com.ddtkj.p2psys.credit.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.credit.dao.CollectionCreditDao;
+import com.ddtkj.p2psys.credit.dao.CreditAssignmentDao;
+import com.ddtkj.p2psys.credit.dao.CreditLogDao;
+import com.ddtkj.p2psys.credit.domain.CollectionCredit;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.exception.CreditException;
+import com.ddtkj.p2psys.credit.model.CreditHelper;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.credit.model.worker.CreditWorker;
+import com.ddtkj.p2psys.credit.service.CollectionCreditService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.disruptor.DisruptorUtils;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+
+/**
+ * @描述：债权转让购买者Service实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+@Service("collectionCreditService")
+public class CollectionCreditServiceImpl implements CollectionCreditService{
+	
+	private static final Logger logger = Logger.getLogger(CollectionCreditServiceImpl.class);
+	@Resource
+	private CollectionCreditDao collectionCreditDao ;
+	@Resource
+	private BorrowCollectionDao borrowCollectionDao;
+    @Override
+	public List<CollectionCredit> collectionCredit(long status,long ahead_time){
+		return collectionCreditDao.findCollectionByCredit(status, ahead_time);
+	}
+    @Override
+    public void collectionCredit(CollectionCredit c){
+    	BorrowCollection bc=c.getBorrowCollection();
+    	//原投资债权
+		CreditAssignment oldCa=c.getOldCa();
+		//购买债权后又发布债权
+		CreditAssignment newCa=c.getNewCa();
+		 //专门处理债权未满
+	    int count=0;
+    	//原投资人转出
+	    if(oldCa!=null){
+	    	bc=fillBorrowCollection(oldCa,oldCa.getId(),0);
+	    	if(bc!=null){
+		    	count=collectionCreditDao.getCountByCollectionCredit(CollectionCredit.OUTSTAND_COLLECTION_TYPE, c.getId(),0);
+		    	if(count>0){
+		    		CollectionCredit collectionCredit=collectionCreditDao.getCollectionCredit(CollectionCredit.OUTSTAND_COLLECTION_TYPE, c.getId(),0);
+		    		BorrowCollection bcn=collectionCredit.getBorrowCollection();
+		    	    bc.setId(bcn.getId());
+		    	    borrowCollectionDao.update(bc);
+		    	}
+	    	}
+    	}
+    	// 购买的债权转出
+	    if(newCa!=null){
+	    	bc=fillBorrowCollection(newCa,0,newCa.getId());
+	    	if(bc!=null){
+		    	count=collectionCreditDao.getCountByCollectionCredit(CollectionCredit.OUTSTAND_COLLECTION_TYPE, 0,newCa.getId());
+		    	if(count>0){
+		    		CollectionCredit collectionCredit=collectionCreditDao.getCollectionCredit(CollectionCredit.OUTSTAND_COLLECTION_TYPE, 0,newCa.getId());
+		    		BorrowCollection bcn=collectionCredit.getBorrowCollection();
+		    	    bc.setId(bcn.getId());
+		    	    borrowCollectionDao.update(bc);
+		    	}
+	    	}
+    	}
+	    if(count<=0&&bc!=null){
+	    	borrowCollectionDao.save(bc);
+	    }
+    }
+    private BorrowCollection fillBorrowCollection(CreditAssignment c,long credit_assignment_id,long buy_credit_assignment_id){
+		//该债权要转让的那部分
+    	Object[] a=collectionCreditDao.getTotalCollectionByCredit(2, credit_assignment_id, buy_credit_assignment_id);
+    	double oldRepayAccountTotal=(Double) a[0];
+    	double oldRepayInterstTotal=(Double) a[1];
+    	double oldRepayCapitalTotal=(Double) a[2];
+    	//该债权被投资人购买的部分
+    	Object[] b=collectionCreditDao.getTotalCollectionByCredit(0, credit_assignment_id, buy_credit_assignment_id);
+    	double newRepayAccountTotal=(Double) b[0];
+    	double newRepayInterstTotal=(Double) b[1];
+    	double newRepayCapitalTotal=(Double) a[2];
+    	//剩余未转出的债权
+    	double repayAccount=BigDecimalUtil.sub(oldRepayAccountTotal, newRepayAccountTotal);
+    	double repayInterest=BigDecimalUtil.sub(oldRepayInterstTotal, newRepayInterstTotal);
+    	double repayCapital=BigDecimalUtil.sub(oldRepayCapitalTotal, newRepayCapitalTotal);
+    	BorrowCollection bct = new BorrowCollection();
+    	if(repayAccount>0){
+			bct.setBorrow(c.getBorrow());
+			bct.setTender(null);
+			bct.setInterest(repayCapital);
+			bct.setCapital(repayInterest);
+			bct.setRepaymentAccount(repayAccount);
+			bct.setAddTime(new Date());
+			bct.setAddIp(Global.getIP());
+			bct.setStatus(0);
+			bct.setRepaymentYesAccount(0.00);
+			bct.setLateDays(0);
+			bct.setLateInterest(0.00);
+			bct.setUser(c.getUser());
+			bct.setManageFee(BigDecimalUtil.mul(repayInterest, Global.getDouble("borrow_fee")));
+		}else{
+			bct=null;
+		}
+		return bct;
+	}
+}

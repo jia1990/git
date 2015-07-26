@@ -1,0 +1,159 @@
+
+package com.ddtkj.manage.action.scoreaward;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import javax.annotation.Resource;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.model.ScoreRuleAwardModel;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.OperationLog;
+import com.rongdu.p2psys.core.service.OperationLogService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.exception.ScoreException;
+
+/**
+ * @描述: 积分抽奖后台配置
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-31   
+ */
+public class ManageScoreRuleAwardAction extends BaseAction implements ModelDriven<ScoreRuleAwardModel> {
+	
+	
+	@Resource
+	private ScoreRuleAwardService soreRuleAwardService;
+	@Resource
+	private OperationLogService operationLogService;
+	
+	private ScoreRuleAwardModel model = new ScoreRuleAwardModel();
+	
+	public ScoreRuleAwardModel getModel() {
+		return model;
+	}
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	
+	/**
+	 * 所有规则配置页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/score/allRuleManage")
+	public String allRuleManage() throws Exception {
+
+		return "allRuleManage";
+	}
+	
+	/**
+	 * 所有规则配置列表
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/allRuleList")
+	public void allRuleList() throws Exception {
+		
+		PageDataList<ScoreRuleAwardModel> list = soreRuleAwardService.getRuleAwardList(model);
+		map.put("total", list.getPage().getTotal());
+		map.put("rows", list.getList());
+		printJson(getStringOfJpaObj(map));
+	}
+
+	/**
+	 * 抽奖规则添加页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/score/awardRuleAddPage")
+	public String awardRuleAddPage() throws Exception {
+		return "awardRuleAddPage";
+	}
+	
+	/**
+	 * 添加新规则
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/addAwardRule")
+	public void addAwardRule() throws Exception {
+		String actionType = paramString("actionType");
+		model.validRuleAward(model);
+		if (checkHasEnable(model)) {
+			throw new ScoreException("启用的抽奖规则有且最多有一条！",1);
+		}
+		soreRuleAwardService.addRuleAward(initRuleAward(actionType));
+		printResult("添加抽奖规则成功！", true);
+	}
+	
+	/**
+	 * 修改抽奖规则页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/score/showAwardRulePage")
+	public String showAwardRulePage() throws Exception {
+		ScoreRuleAward ruleAward = soreRuleAwardService.getRuleAwardByRuleId(model.getId());
+		request.setAttribute("ruleAward", ruleAward);
+		return "showAwardRulePage";
+	}
+		
+	/**
+	 * 修改抽奖规则
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/modifyAwardRule")
+	public  void modifyAwardRule() throws Exception {
+		String actionType = paramString("actionType");
+		model.validRuleAward(model);
+		if (checkHasEnable(model)) {
+			throw new ScoreException("启用的抽奖规则有且最多有一条！",1);
+		}
+		soreRuleAwardService.updateRuleAward(initRuleAward(actionType));
+		OperationLog log = new OperationLog(null, getOperator(), "edit_scoreaward_rule");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员修改抽奖规则(规则ID："+model.getId()+")");
+		operationLogService.save(log);
+		printResult("修改抽奖规则成功！", true);
+	}
+	
+	/**
+	 * 初始化抽奖规则信息
+	 * @return ScoreRuleAward 
+	 * @throws Exception   
+	 */ 
+	private ScoreRuleAward initRuleAward(String actionType){
+		ScoreRuleAward ruleAward = soreRuleAwardService.getRuleAwardByRuleId(model.getId());
+		if("add".equals(actionType)){
+			model.setAddTime(new Date());
+			model.setAddIp(getRequestIp());
+		}else if("modify".equals(actionType)){
+			model.setAddTime(ruleAward.getAddTime());
+			model.setAddIp(ruleAward.getAddIp());
+			model.setUpdateTime(new Date());
+			model.setUpdateIp(getRequestIp());
+		}
+		ruleAward = model.prototype();
+		return ruleAward;
+	}
+	
+	/**
+	 * 校验当前是否有启用的抽奖规则
+	 * @param  model
+	 * @throws Exception   
+	 */ 
+	private boolean checkHasEnable(ScoreRuleAwardModel ruleAwardModel) {
+		boolean hasEnable = false;
+		ScoreRuleAward ruleAward = soreRuleAwardService.getRuleAwardByStatusAndId(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE, ruleAwardModel.getId());
+		if (ruleAward != null && ScoreRuleAward.RULE_AWARD_STATUS_ENABLE.equals(ruleAwardModel.getStatus())) {
+			hasEnable = true;
+		}
+		return hasEnable;
+	}
+	
+}

@@ -1,0 +1,84 @@
+package com.rongdu.p2psys.web.account;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.ddtkj.p2psys.account.service.AccountLogService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 资金
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月17日
+ */
+public class AccountAction extends BaseAction implements ModelDriven<AccountModel> {
+
+	private AccountModel model = new AccountModel();
+
+	@Override
+	public AccountModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private AccountLogService accountLogService;
+
+	private User user;
+	private Map<String, Object> data;
+
+	/**
+	 * 资金记录
+	 * 
+	 * @return
+	 */
+	@Action(value="/member/account/log",results = { 
+			@Result(name = "log", type = "ftl", location = "/member/account/log.html"),
+			@Result(name = "log_firm", type = "ftl", location = "/member_borrow/account/log.html"),
+			@Result(name = "log_assure", type = "ftl", location = "/member_guarantee/account/log.html")
+			})
+	public String log() throws Exception {
+		user = getSessionUser();
+		if (UserConstant.USER_SORT_BORROW.equals(user.getUserCache().getUserType())) {
+			return "log_firm";
+		}else if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			return "log_assure";
+		}
+		return "log";
+	}
+
+	/**
+	 * 资金记录
+	 * 
+	 * @return
+	 */
+	@Action("/member/account/logList")
+	public void logList() throws Exception {
+		user = getSessionUser();
+		AccountLogModel m = (AccountLogModel) paramModel(AccountLogModel.class);
+		m.setUser(user);
+		PageDataList<AccountLogModel> list = accountLogService.list(m);
+		data = new HashMap<String, Object>();
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+}

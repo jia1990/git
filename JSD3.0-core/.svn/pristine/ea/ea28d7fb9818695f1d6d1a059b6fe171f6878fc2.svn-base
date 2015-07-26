@@ -1,0 +1,138 @@
+package com.rongdu.p2psys.account.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+
+/**
+ * 银行卡model
+ * 
+ * @author guojunhui@ddtkj.com
+ * @version 3.0
+ * @since 2015年1月14日
+ */
+public class AccountBankModel extends AccountBank {
+
+	private static final long serialVersionUID = 1L;
+
+	private String bankName;// 开户银行名称
+
+	private String userName;
+
+	private String provinceStr;
+
+	private String cityStr;
+
+	private String areaStr;
+	
+	private String bankRealName;
+	
+	private String mobilePhone;
+	
+	private String statusNew;//状态用于导出Excel
+	/** 手机验证码 */
+	private String verifyCode;
+	
+	public String getVerifyCode() {
+		return verifyCode;
+	}
+
+	public void setVerifyCode(String verifyCode) {
+		this.verifyCode = verifyCode;
+	}
+
+	public String getStatusNew() {
+		return statusNew;
+	}
+
+	public void setStatusNew(String statusNew) {
+		this.statusNew = statusNew;
+	}
+
+	/**
+	 *  验证手机验证码
+	 */
+	public void findAddBankValidMobile(String todo,User user) throws Exception{
+		if (!ValidateUtil.checkPwdCode(todo+"_code", user.getUserName(), user.getUserId(), user.getMobilePhone(),todo, verifyCode)) {
+			throw new UserException("校验码错误或已失效！", 1);
+		}
+		if (StringUtil.isBlank(this.verifyCode)) {
+			throw new UserException("校验码为空！", 1);
+		}
+	}
+	
+	public static AccountBankModel instance(AccountBank accountBank) {
+		AccountBankModel accountBankModel = new AccountBankModel();
+		BeanUtils.copyProperties(accountBank, accountBankModel);
+		return accountBankModel;
+	}
+
+	public AccountBank prototype() {
+		AccountBank accountBank = new AccountBank();
+		BeanUtils.copyProperties(this, accountBank);
+		return accountBank;
+	}
+
+	public String getBankName() {
+		return bankName;
+	}
+
+	public void setBankName(String bankName) {
+		this.bankName = bankName;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getProvinceStr() {
+		return provinceStr;
+	}
+
+	public void setProvinceStr(String provinceStr) {
+		this.provinceStr = provinceStr;
+	}
+
+	public String getCityStr() {
+		return cityStr;
+	}
+
+	public void setCityStr(String cityStr) {
+		this.cityStr = cityStr;
+	}
+
+	public String getAreaStr() {
+		return areaStr;
+	}
+
+	public void setAreaStr(String areaStr) {
+		this.areaStr = areaStr;
+	}
+
+	public String getBankRealName() {
+		return bankRealName;
+	}
+
+	public void setBankRealName(String bankRealName) {
+		this.bankRealName = bankRealName;
+	}
+
+	public String getMobilePhone() {
+		return mobilePhone;
+	}
+
+	public void setMobilePhone(String mobilePhone) {
+		this.mobilePhone = mobilePhone;
+	}
+	
+	
+
+}

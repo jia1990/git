@@ -1,0 +1,118 @@
+package com.ddtkj.manage.action.reward;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.award.domain.TakeWay;
+import com.ddtkj.p2psys.award.service.TakeWayService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class ManageTakeWayAction extends BaseAction<TakeWay> implements ModelDriven<TakeWay> {
+	@Resource
+	private TakeWayService takeWayService;
+	private Map<String, Object> data;
+	
+	/**
+	 * 活动参与方式展示页面
+	 * @author xingjia
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/takeWayManage")
+	public String takeWayManage() throws Exception {
+		return "takeWayManage";
+	}
+	
+	
+	/**
+	 * 活动中参与方式展示
+	 * @author xingjia
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/takeWayList")
+	public void takeWayList() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		
+		//能够接收到搜索值
+		//String actWay = paramString("actWay");
+		//data.put("actWay",actWay);
+		//model.setActWay(actWay);
+			
+		PageDataList<TakeWay> takeWayPageList = takeWayService.getPageList(model, pageNumber, pageSize);
+		
+		int totalPage = takeWayPageList.getPage().getTotal();// 总页数
+		
+		data.put("total", totalPage);
+		data.put("rows", takeWayPageList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**添加活动参与方式页面的展示
+	 * @author xingjia
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/takeWayAddPage")
+	public String takeWayAddPage() throws Exception {
+		saveToken("takeWayAddToken");
+		return "takeWayAdd";
+	}
+	
+	
+	/**
+	 * 活动参与方式的添加方法
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/takeWayAdd")
+	public void takeWayAdd() throws Exception{
+		data = new HashMap<String, Object>();
+		checkToken("takeWayAddToken");
+		takeWayService.addTakeWay(model);
+		data.put("result", true);
+		data.put("msg", "添加成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 活动参与方式的修改页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/takeWayEditPage")
+	public String takeWayEditPage() throws Exception {
+		saveToken("takeWayEditToken");
+		int id = paramInt("id");
+		TakeWay takeWay = takeWayService.findTakeWayById(id);
+		request.setAttribute("takeWay", takeWay);
+		saveToken("takeWayEditToken");
+		return "takeWayEdit";
+	}
+	
+	
+	/**
+	 * 活动参与方式修改
+	 * @throws Exception
+	 */
+	@Action(value="/modules/reward/takeWayEdit")
+	public void redPackEdit() throws Exception{
+		data = new HashMap<String, Object>();
+		checkToken("takeWayEditToken");
+		takeWayService.updateTakeWay(model);
+		data.put("msg", "修改成功");
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+}

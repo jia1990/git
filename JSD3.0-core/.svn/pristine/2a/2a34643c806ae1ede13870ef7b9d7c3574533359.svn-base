@@ -1,0 +1,174 @@
+package com.rongdu.p2psys.core.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * 审核记录表 TODO 类说明
+ * 
+ * @version 1.0
+ * @since 2014-4-14
+ */
+@Entity
+@Table(name = "rd_verify_log")
+public class VerifyLog implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	/**
+	 * 主键
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+
+	/**
+	 * 审核人
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "verify_user")
+	private Operator verifyUser;
+
+	/**
+	 * 数据类型，borrow，cash
+	 */
+	private String type;
+
+	/**
+	 * 数据ID
+	 */
+	private long fid;
+
+	/**
+	 * 审核类型，1：初审，2：复审
+	 */
+	private int verifyType;
+
+	/**
+	 * 结果
+	 */
+	private String result;
+
+	/**
+	 * 备注
+	 */
+	private String remark;
+
+	/**
+	 * 时间
+	 */
+	private Date time;
+	/**
+	 * ip
+	 */
+	private String ip;
+
+	public VerifyLog() {
+		super();
+	}
+
+	public VerifyLog(String type, long fid) {
+		super();
+		this.type = type;
+		this.fid = fid;
+		this.verifyType = 1;
+		this.time = new Date();
+		this.ip = Global.getIP();
+	}
+
+	public VerifyLog(Operator verifyUser, String type, long fid, int verifyType, String result, String remark) {
+		super();
+		this.verifyUser = verifyUser;
+		this.type = type;
+		this.fid = fid;
+		this.verifyType = verifyType;
+		this.result = result;
+		this.remark = remark;
+		this.time = new Date();
+		this.ip = Global.getIP();
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public Operator getVerifyUser() {
+		return verifyUser;
+	}
+
+	public void setVerifyUser(Operator verifyUser) {
+		this.verifyUser = verifyUser;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public long getFid() {
+		return fid;
+	}
+
+	public void setFid(long fid) {
+		this.fid = fid;
+	}
+
+	public int getVerifyType() {
+		return verifyType;
+	}
+
+	public void setVerifyType(int verifyType) {
+		this.verifyType = verifyType;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public Date getTime() {
+		return time;
+	}
+
+	public void setTime(Date time) {
+		this.time = time;
+	}
+
+	public String getIp() {
+		return ip;
+	}
+
+	public void setIp(String ip) {
+		this.ip = ip;
+	}
+
+	public String getResult() {
+		return result;
+	}
+
+	public void setResult(String result) {
+		this.result = result;
+	}
+
+}

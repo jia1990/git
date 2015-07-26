@@ -1,0 +1,79 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record.register;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountOpenDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountOpenHistory;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.core.util.BeanUtil;
+	
+public class AccountOpenRecord extends AbstractYmdEvent<AccountOpenHistory>{
+
+	
+	protected AccountOpenDao accountOpenDao;
+	
+	private AccountOpenHistory  accountOpenHistory;
+	
+	public AccountOpenRecord() {
+		
+	}
+
+	public AccountOpenRecord(YmdRegister y,User u,String addIp) {
+		init();
+		getT();
+		accountOpenHistory=accountOpenDao.findObjByProperty("user.userId", u.getUserId());
+		if(accountOpenHistory!=null){
+			t=accountOpenHistory;
+		}
+		t.setUser(u);
+		t.setCardNo(y.getCardNo());
+		t.setUserRealName(u.getRealName());
+		t.setSendCleartextInfo(y.SumitSignInfoJsonStr());
+		t.setThirdPartyLoginName(y.getAccountName());
+		t.setAddTime(new Date());
+		t.setAddIp(addIp);
+		t.setUserMode(u.getUserCache().getUserNature());
+		t.setUserName(u.getUserName());
+		t.setStatus(y.getErrCode());
+	}
+	
+	@Override
+	public void addRecord() {
+		if(accountOpenHistory!=null){
+			accountOpenDao.update(t);
+		}else{
+		    accountOpenDao.save(t);
+		}
+	}
+	@Override
+	public void init() {
+		/*System.out.println("加载配置文件……");
+		@SuppressWarnings("resource")
+		ApplicationContext context = new FileSystemXmlApplicationContext(new String[]{"D://2.0workspace/JSD3.0-web/src/spring/application*"});
+		System.out.println("加载配置文件成功");
+		accountOpenDao=(AccountOpenDao) context.getBean("accountOpenDao");*/
+		accountOpenDao=(AccountOpenDao) BeanUtil.getBean("accountOpenDao");
+	}
+
+	public AccountOpenDao getAccountOpenDao() {
+		return accountOpenDao;
+	}
+
+	public void setAccountOpenDao(AccountOpenDao accountOpenDao) {
+		this.accountOpenDao = accountOpenDao;
+	}
+
+	public AccountOpenHistory getAccountOpenHistory() {
+		return accountOpenHistory;
+	}
+
+	public void setAccountOpenHistory(AccountOpenHistory accountOpenHistory) {
+		this.accountOpenHistory = accountOpenHistory;
+	}
+
+	
+
+	
+}

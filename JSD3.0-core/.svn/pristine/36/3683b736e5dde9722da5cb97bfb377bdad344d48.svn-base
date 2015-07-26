@@ -1,0 +1,60 @@
+package com.ddtkj.p2psys.member.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.member.domain.MemberVipHistory;
+
+/**
+ * 
+ * @描述：会员历史记录模型类，用户缓存会员信息
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年1月4日
+ */
+public class MemberVipHistoryModel extends MemberVipHistory {
+
+
+	private static final long serialVersionUID = 7408370353489550350L;
+	/** 当前页码 */
+	private int page;
+	/** 每页总数 **/
+	private int rows = 10;
+	
+	public MemberVipHistoryModel(){
+	}
+	/**
+	 * 将model转为实体
+	 * @return
+	 */
+	public  MemberVipHistory prototype() {
+		MemberVipHistory m = new MemberVipHistory();
+		BeanUtils.copyProperties(this, m);
+		return m;
+	}
+	/**
+	 * 将实体转化为Model
+	 * @param m
+	 * @return
+	 */
+	public static MemberVipHistoryModel instance(MemberVipHistory m) {
+		MemberVipHistoryModel memberVipHistoryModel = new MemberVipHistoryModel();
+		BeanUtils.copyProperties(m, memberVipHistoryModel);
+		return memberVipHistoryModel;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+}

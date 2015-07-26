@@ -1,0 +1,359 @@
+package com.rongdu.p2psys.core.web;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Date;
+
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.struts2.ServletActionContext;
+
+import com.opensymphony.xwork2.ActionContext;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.ImageUtil;
+import com.rongdu.common.util.RSAUtil;
+import com.rongdu.common.util.ReflectUtil;
+import com.rongdu.common.web.action.CommonAction;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.rule.RsaFormEncryptRuleCheck;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+
+public class BaseAction<T> extends CommonAction {
+
+	@SuppressWarnings("unchecked")
+	protected Class<T> entityClass = ReflectUtil.getSuperClassGenricType(getClass());
+
+	/**
+	 * 实例对象
+	 */
+	protected T model;
+
+	/**
+	 * 实现ModelDriven接口getModel方法供子类继承
+	 * 
+	 * @return T 对象实例
+	 */
+	public T getModel() {
+		try {
+			model = entityClass.newInstance();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		return model;
+	}
+
+	private File file;
+	private String fileFileName;
+
+	public File getFile() {
+		return file;
+	}
+
+	public void setFile(File file) {
+		this.file = file;
+	}
+	public String getFileFileName() {
+		return fileFileName;
+	}
+
+	public void setFileFileName(String fileFileName) {
+		this.fileFileName = fileFileName;
+	}
+
+	/**
+	 * 上传图片
+	 * @return 图片路径
+	 * @throws IOException if has error
+	 */
+	protected String imgUpload() throws IOException {
+		String picPath = null;
+		if (file != null) {
+			if (!ImageUtil.fileIsImage(file)) {
+				printResult("您上传的图片无效，请重新上传！", true);
+			} else {
+				Operator oper = getOperator();
+				Date d = new Date();
+				String upfiesDir = ServletActionContext.getServletContext().getRealPath("/data/upfiles/images/");
+				String realPath = ServletActionContext.getServletContext().getRealPath("");
+				String destFileName = upfiesDir + DateUtil.dateStr2(d) + "/" + oper.getId()
+						+ entityClass.getSimpleName() + "/" + DateUtil.dateStr(d, "hhMMss")
+						+ fileFileName.substring(fileFileName.lastIndexOf("."));
+				File imageFile = new File(destFileName);
+				FileUtils.copyFile(file, imageFile);
+				picPath = destFileName.replace(realPath, "").replace(File.separator, "/");
+			}
+		}
+		return picPath;
+	}
+	// JSDP-171 20150608 sxy start
+	/**
+	 * 上传EXCEL文件，后缀名为.xls
+	 * @return 文件路径
+	 * @throws IOException if has error
+	 */
+	protected String xlsUploadFile() throws IOException {
+		String picPath = null;
+		if (file != null) {
+			String postfix = fileFileName.substring(fileFileName
+					.lastIndexOf("."));
+			if (!".xls".equals(postfix) && !".xlsx".equals(postfix)) {
+				printResult("您上传的文件类型不匹配，请重新上传！", false);
+			} else {
+				Operator oper = getOperator();
+				Date d = new Date();
+				String upfiesDir = ServletActionContext.getServletContext()
+						.getRealPath("/data/upfiles/excel/");
+				String realPath = ServletActionContext.getServletContext()
+						.getRealPath("");
+				String destFileName = upfiesDir + DateUtil.dateStr2(d) + "/"
+						+ oper.getId() + entityClass.getSimpleName() + "/"
+						+ DateUtil.dateStr(d, "hhMMss")
+						+ fileFileName.substring(fileFileName.lastIndexOf("."));
+				File imageFile = new File(destFileName);
+				FileUtils.copyFile(file, imageFile);
+				picPath = destFileName.replace(realPath, "").replace(
+						File.separator, "/");
+			}
+		}else{
+			printResult("请选择所要导入的文件！", false);
+		}
+		return picPath;
+	}
+	// JSDP-171 20150608 sxy end
+	private File[] files;
+	private String[] filesFileName;
+	public File[] getFiles() {
+		return files;
+	}
+
+	public void setFiles(File[] files) {
+		this.files = files;
+	}
+
+	public String[] getFilesFileName() {
+		return filesFileName;
+	}
+
+	public void setFilesFileName(String[] filesFileName) {
+		this.filesFileName = filesFileName;
+	}
+	/**
+	 * 上传多图片
+	 * @return 图片路径数组
+	 * @throws IOException if has error
+	 */
+	protected String[] imgsUpload() throws IOException {
+        String fileIndex = paramString("fileIndex");
+        int fileSize = paramInt("fileSize");
+        String[] indexs = fileIndex.split(",");
+		String[] picPath = new String[fileSize];
+		if (files != null && files[0] != null) {
+			for (int i = 0; i < files.length; i++) {
+				if (!ImageUtil.fileIsImage(files[i])) {
+					printResult("您上传的图片无效，请重新上传！", true);
+				} else {
+				    int index = Integer.parseInt(indexs[i]);
+					Operator oper = getOperator();
+					Date d = new Date();
+					String upfiesDir = ServletActionContext.getServletContext().getRealPath("/data/upfiles/images/");
+					String realPath = ServletActionContext.getServletContext().getRealPath("");
+					String destFileName = upfiesDir + DateUtil.dateStr2(d) + "/" + oper.getId()
+							+ entityClass.getSimpleName() + "/" + DateUtil.dateStr(d, "HHmmss") + i
+							+ filesFileName[i].substring(filesFileName[i].lastIndexOf("."));
+					File imageFile = new File(destFileName);
+					FileUtils.copyFile(files[i], imageFile);
+					picPath[index] = destFileName.replace(realPath, "").replace(File.separator, "/");
+				}
+				
+			}
+		}
+		return picPath;
+	}
+	
+	
+	/**
+	 * @author 李建云
+	 * 前台用户上传多图片
+	 * @return 图片路径数组
+	 * @throws IOException if has error
+	 */
+	protected String[] webImgsUpload() throws IOException {
+        String fileIndex = paramString("fileIndex");
+        int fileSize = paramInt("fileSize");
+        String[] indexs = fileIndex.split(",");
+		String[] picPath = new String[fileSize];
+		if (files != null && files[0] != null) {
+			for (int i = 0; i < files.length; i++) {
+				if (!ImageUtil.fileIsImage(files[i])) {
+					printResult("您上传的图片无效，请重新上传！", true);
+				} else {
+				    int index = Integer.parseInt(indexs[i]);
+					User user = this.getSessionUser();
+					Date d = new Date();
+					String upfiesDir = ServletActionContext.getServletContext().getRealPath("/data/upfiles/images/");
+					String realPath = ServletActionContext.getServletContext().getRealPath("");
+					
+					String destFileName = upfiesDir + DateUtil.dateStr2(d) + "/" + user.getUserId()
+							+ entityClass.getSimpleName() + "/" + DateUtil.dateStr(d, "HHmmss") + i
+							+ filesFileName[i].substring(filesFileName[i].lastIndexOf("."));
+					File imageFile = new File(destFileName);
+					FileUtils.copyFile(files[i], imageFile);
+					picPath[index] = destFileName.replace(realPath, "").replace(File.separator, "/");
+				}
+				
+			}
+		}
+		return picPath;
+	}
+	
+	/**
+	 * 获取Session中的用户对象
+	 * 
+	 * @return
+	 */
+	protected User getSessionUser() {
+		User user = (User) session.get(Constant.SESSION_USER);
+		return user;
+	}
+
+	/**
+	 * 获取Session中的用户对象的ID
+	 * 
+	 * @return
+	 */
+	protected long getSessionUserId() {
+		User user = (User) session.get(Constant.SESSION_USER);
+		if(user!=null){
+			return user.getUserId();
+		}
+		return 0;
+	}
+
+	/**
+	 * 获取Session中的用户对象
+	 * 
+	 * @return
+	 */
+	protected String getSessionUserName() {
+		User user = (User) session.get(Constant.SESSION_USER);
+		return user.getUserName();
+	}
+
+	/**
+	 * 获取Session中的用户认证信息
+	 * 
+	 * @return
+	 */
+	protected UserIdentify getSessionUserIdentify() {
+		UserIdentify userdiIdentify = (UserIdentify) session.get(Constant.SESSION_USER_IDENTIFY);
+		return userdiIdentify;
+	}
+
+	/**
+	 * 封装获取Session中的用户对象
+	 * 
+	 * @return
+	 */
+	protected Operator getOperator() {
+		return (Operator) session.get(Constant.SESSION_OPERATOR);
+	}
+
+	/**
+	 * 封装获取Session中的用户对象的用户名
+	 * 
+	 * @return
+	 */
+	protected String getOperatorUserName() {
+		Operator operator = (Operator) session.get(Constant.SESSION_OPERATOR);
+		return operator.getUserName();
+	}
+
+	/**
+	 * 封装获取Session中的用户对象的ID
+	 * 
+	 * @return
+	 */
+	protected long getOperatorId() {
+		Operator operator = (Operator) session.get(Constant.SESSION_OPERATOR);
+		if (operator == null)
+			return 49l;
+		return operator.getId();
+	}
+
+	public boolean isSession() {
+		User sessionUser = this.getSessionUser();
+		if (sessionUser == null)
+			return false;
+		return true;
+	}
+
+	/**
+	 * 重定向
+	 * 
+	 * @param url
+	 */
+	protected void redirect(String url) {
+		try {
+			response.sendRedirect(url);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * RSA 公钥的Modulus与PublicExponent的hex编码形式
+	 * 
+	 * @throws Exception
+	 */
+	protected void initRSAME() throws Exception {
+		RsaFormEncryptRuleCheck rsaFormEncrypt = (RsaFormEncryptRuleCheck) Global.getRuleCheck("rsaFormEncrypt");
+		if (rsaFormEncrypt!=null&&rsaFormEncrypt.enable_formEncrypt) {
+			RSAPublicKey rsap;
+			rsap = (RSAPublicKey) RSAUtil.getKeyPair().getPublic();
+			String module = rsap.getModulus().toString(16);
+			String empoent = rsap.getPublicExponent().toString(16);
+			request.setAttribute("m", module);
+			request.setAttribute("e", empoent);
+		}
+		request.setAttribute("rsaFormEncrypt", rsaFormEncrypt);
+	}
+	
+	/**
+	 * 下载文件
+	 * @param infile
+	 * @param downloadFile
+	 * @throws Exception
+	 */
+	protected void export(String infile,String downloadFile) throws Exception{
+		//JSDP-116 xingjia 2015-05-15 start
+		File inFile = new File(infile);
+		InputStream ins = new BufferedInputStream(new FileInputStream(infile));
+		byte[] buffer = new byte[ins.available()];
+		ins.read(buffer);
+		ins.close();
+		HttpServletResponse response = (HttpServletResponse) ActionContext.getContext().get(ServletActionContext.HTTP_RESPONSE);
+		response.reset();
+		response.addHeader("Content-Disposition", "attachment;filename="+ new String(downloadFile.getBytes(
+                "GB2312"), "iso-8859-1"));
+		response.addHeader("Content-Length", "" + inFile.length());
+		OutputStream ous = new BufferedOutputStream(response.getOutputStream());
+		response.setContentType("application/octet-stream");
+		ous.write(buffer);
+		ous.flush();
+		ous.close();
+		//JSDP-116 xingjia 2015-05-15 start
+	}
+	
+	
+
+}

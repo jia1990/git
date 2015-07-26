@@ -1,0 +1,177 @@
+package com.rongdu.p2psys.user.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.user.model.UserVipApplyModel;
+
+/**
+ * 认证信息
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月17日17:27:02
+ */
+public interface UserIdentifyService {
+
+	/**
+	 * 登录到个人中心，获得用户认证的状态并显示
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	public UserIdentify findByUserId(long userId);
+
+	/**
+	 * 更新实名认证状态real_name_status
+	 * 
+	 * @param userId
+	 */
+	public void modifyRealnameStatus(long userId, String status, String preStatus) throws Exception;
+
+	/**
+	 * 更新实名认证状态mobile_phone_status
+	 * 
+	 * @param userId
+	 */
+	public void modifyMobilePhoneStatus(long userId, String status, String preStatus) throws Exception;
+
+	/**
+	 * 通过userId获得UserAttestation对象
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	public UserIdentify getAttestationStatus(long userId);
+
+	/**
+	 * 得到单个用户的认证状态
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	public UserIdentifyModel getUserIdentifyByUserId(long userId);
+
+	/**
+	 * 更改邮箱状态
+	 * 
+	 * @param userId
+	 * @param status
+	 * @param preStatus
+	 */
+	public void modifyEmailStatus(long userId, String status, String preStatus);
+
+	/**
+	 * 审核用户认证信息
+	 * 
+	 * @param id
+	 * @param realNameVerifyRemark
+	 * @param realNameStatus
+	 * @param user
+	 */
+	public void userAttestationEdit(long id, String realNameVerifyRemark, String realNameStatus, Operator operator);
+
+	/**
+	 * 统计等待审核的实名认证总数
+	 * 
+	 * @param status
+	 * @return
+	 */
+	
+	public int countByRealName(String status);
+	/**
+	 * 统计认证通过的用户手机号是否存在
+	 * @param mobilePhone
+	 * @return
+	 */
+	public int countByVerifyOkMobilePhone(String mobilePhone) ;
+	
+	/**
+	 * 统计认证通过的身份证号是否存在
+	 * @param cardId
+	 * @return
+	 */
+	public int countByVerifyOkCardNo(String cardId);
+
+	/**
+	 * 通过ID查询记录
+	 * 
+	 * @param id
+	 * @return
+	 */
+	public UserIdentify findById(long id);
+
+	public PageDataList<UserIdentifyModel> findUserIdentifylist(int pageNumber, int pageSize, UserIdentify model);
+
+	public PageDataList<UserModel> userModelList(int pageNumber, int pageSize, UserIdentify model);
+
+	
+	
+
+	public PageDataList<UserVipApplyModel> vipApplyList(int pageNumber, int pageSize, UserVipApplyModel model);
+
+/*	*//**
+	 * 易极付实名回调
+	 * @param fci
+	 * @return
+	 *//*
+	public boolean updateRealNameStatusByCallBack(ForwardConIdentify fci);
+	*/
+	
+	/**
+	 * 搜索认证信息并分页(实名认证人工审核)
+	 * 
+	 * @author sunxiaoyong 2014年12月20日
+	 * @param map
+	 * @param currentPage
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<UserIdentifyModel> getPageDataList(Map<String,Object> map,int currentPage,int pageSize);
+	
+	/**
+	 * 搜索认证信息并分页
+	 * 
+	 * @author sunxiaoyong 2015年1月23日 
+	 * @param map
+	 * @param currentPage
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<UserIdentifyModel> getPageDataListForIdentify(Map<String,Object> map,int currentPage,int pageSize);
+	
+
+	/**
+	 * 更新用户认证
+	 * @author xingjia
+	 * @date 2014-12-25
+	 * @param userIdentify
+	 * @param operatorId
+	 * @return
+	 */
+	public UserIdentify updateUserIdentify(UserIdentify userIdentify,long operatorId);
+	
+
+	/**
+	 * 通过实名认证用户数 —— 投资人
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countTenderByRealName(String status);
+	
+	//JSDP-116 fengguoqin 2015-05-16 start
+	/**
+	 * excel导出用户认证信息
+	 * @return
+	 * @author 冯国琴
+	 */
+	public List<UserIdentifyModel> excelListUserIdentifyInfo(UserIdentifyModel model);
+	//JSDP-116 fengguoqin 2015-05-16 end
+	
+
+}

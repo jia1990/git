@@ -1,0 +1,116 @@
+package com.ddtkj.p2psys.account.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.executer.BaseRechargeSuccessExecuter;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * 
+ * @描述：转账云购executor JSDP-156
+ * @作者:xingjia@ddtkj.com 
+ * @创建时间:  2015年5月22日
+ */
+public class YunGouTransferSuccessInvesterExecuter extends BaseRechargeSuccessExecuter {
+
+	private String accountLogType = Constant.TRANSFER_YUNGOU;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		log.setRechargeMoney(rechargeMoney);
+		log.setReturnCapitalMoney(returnCapitalMoney);
+		//JSDP-168 xingjia 20150528 start
+		log.setAwardMoney(awardMoney);
+		log.setInterestMoney(interestMoney);
+		//JSDP-168 xingjia 20150528 end
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		//JSDP-200  wcw 2015-06-29 start
+		log.setAccountTotal(account.getAccountTotal());
+		//JSDP-200  wcw 2015-06-29 end
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		//JSDP-159 xingjia 2015-05-23 start
+		log.setPaymentsType((byte)2);
+		//JSDP-159 xingjia 2015-05-23 end
+		log.setTradeNo(tradeNo);
+		log.setOutTradeNo(outTradeNo);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+	    // 账户各类可用金额
+	    account.setRechargeUsable(BigDecimalUtil.add(account.getRechargeUsable(), -rechargeMoney));
+	    account.setReturnCapitalUsable(BigDecimalUtil.add(account.getReturnCapitalUsable(),-returnCapitalMoney));
+	  //JSDP-168 xingjia 20150528 start
+	    account.setAwardUsable(BigDecimalUtil.add(account.getAwardUsable(),-awardMoney));
+	    account.setInterestUsable(BigDecimalUtil.add(account.getInterestUsable(),-interestMoney));
+        //账户总额
+	    account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(), -(rechargeMoney+returnCapitalMoney+awardMoney+interestMoney)));
+	  //JSDP-168 xingjia 20150528 end
+	  //JSDP-164 wcw 20150527 start
+  		accountDao.modifyInvesterAccount(account, user.getUserId());
+  		//accountDao.update(account);
+  		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+		super.handleAccountSum();
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.TRANSFER_YUNGOU);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+		/*OperationLog operationLog = new OperationLog(super.user, super.operator, Constant.ONLINE_RECHARGE_SUCCESS);
+		operationLog.setOperationResult("（IP:" + super.operator.getLoginIp() + "）用户名为" + super.operator.getUserName()
+				+ "的操作员审核网上充值" + super.user.getUserName() + super.money + "元成功");
+		operationLogDao.save(operationLog);*/
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+
+}

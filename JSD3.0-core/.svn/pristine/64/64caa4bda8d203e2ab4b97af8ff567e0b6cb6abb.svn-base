@@ -1,0 +1,67 @@
+package com.rongdu.p2psys.core.dao.jdbc;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.core.dao.SiteDao;
+import com.rongdu.p2psys.core.domain.Site;
+import com.rongdu.p2psys.core.model.SiteModel;
+
+@Repository("siteDao")
+public class SiteDaoImpl extends BaseDaoImpl<Site> implements SiteDao {
+	
+	@Override
+	public List<Site> list() {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("pid", 0);
+		param.addOrder(OrderType.ASC, "sort");
+		return findByCriteria(param);
+	}
+
+	@Override
+	public List<Site> list(long pid, int status) {
+		QueryParam param = QueryParam.getInstance();
+		if(pid!=999){
+			param.addParam("pid", pid).addParam("status", status);
+		}else{
+			param.addParam("status", status);
+		}
+		return findByCriteria(param);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<Site> siteList(SiteModel model) {
+		StringBuffer sql = new StringBuffer("select * from rd_site order by id desc");
+		Query query = em.createNativeQuery(sql.toString(), Site.class);
+		List<Site> list = query.getResultList();
+		return list;
+	}
+
+	@Override
+	public List<Site> articleListBySite(StringBuffer sbf) {
+		// TODO Auto-generated method stub
+		String[] str = sbf.toString().split(",");
+		StringBuffer newSbf = new StringBuffer();
+		for(String ss:str){
+			newSbf.append("\'"+ss+"\',");
+		}
+		
+		String sqlTerm = newSbf.substring(0,newSbf.length()-1);
+		StringBuffer sql = new StringBuffer("SELECT id,name,nid,level,pid,leaf,status,type,url,"
+				+ "sort,description,add_time,add_ip,size FROM rd_site WHERE "
+				+ " nid NOT IN("+sqlTerm+") and pid != 0 ");
+		Query query = em.createNativeQuery(sql.toString(), Site.class);
+		List<Site> list = query.getResultList();
+		return list;
+	}
+	
+
+}

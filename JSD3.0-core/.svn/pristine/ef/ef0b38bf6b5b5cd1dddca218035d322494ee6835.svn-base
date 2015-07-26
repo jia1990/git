@@ -1,0 +1,47 @@
+package com.rongdu.p2psys.user.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.rongdu.p2psys.user.domain.UserNoticeConfig;
+
+public class UserNoticeConfigModel extends UserNoticeConfig {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	private String userName;
+	private String noticeName;
+
+	public static UserNoticeConfigModel instance(UserNoticeConfig config) {
+		UserNoticeConfigModel configModel = new UserNoticeConfigModel();
+		BeanUtils.copyProperties(config, configModel);
+		return configModel;
+	}
+
+	public UserNoticeConfig prototype() {
+		UserNoticeConfig config = new UserNoticeConfig();
+		BeanUtils.copyProperties(this, config);
+		return config;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getNoticeName() {
+		return noticeName;
+	}
+
+	public void setNoticeName(String noticeName) {
+		this.noticeName = noticeName;
+	}
+	
+	
+	
+}

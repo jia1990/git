@@ -1,0 +1,374 @@
+package com.rongdu.p2psys.web.borrow;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.BorrowRepaymentModel;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.service.OperatorService;
+
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+import com.rongdu.p2psys.user.domain.KefuRecord;
+import com.rongdu.p2psys.user.service.KefuChangeService;
+import com.rongdu.p2psys.user.service.UserService;
+
+
+
+/**
+ * 我的担保
+ * @author zhangyz
+ *
+ */
+public class MyGuaranteeAction extends BaseAction<BorrowModel> implements ModelDriven<BorrowModel> {
+	
+	private static Logger logger = Logger.getLogger(MyBorrowAction.class);
+
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private KefuChangeService kefuChangeService;
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	private User user;
+	private Map<String, Object> data;	
+	
+	/**
+	 * 担保公司用户信息
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/getGuaranteerInfo")
+	public void getGuaranteerInfo() throws Exception {
+
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		user = userService.find(user.getUserId());
+		data.put("email", user.getEmail());
+		data.put("realName", user.getRealName());
+		data.put("userName", user.getUserName());
+//		data.put("apiId", user.getApiId());  //TODO  于俊斐  现在不在用户表中了
+//		data.put("apiName", user.getApiUsercustId()); //TODO  于俊斐  现在不在用户表中了
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}	
+	
+	/**
+	 * 我担保的项目
+	 * 
+	 * @return
+	 */
+	@Action("/member_guarantee/getGuaranteeProject")
+	public void getGuaranteeProject() throws Exception {
+	//public String getGuaranteeProject() throws Exception {
+		// 担保公司用户ID
+		long userId = getSessionUserId();
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		
+		model.setVouchFirmId(getSessionUserId());
+		// 正在担保项目个数
+		data.put("guaranteeingCount", borrowService.getGuaranteeingCount(userId));
+		//PageDataList<BorrowModel> guaranteeingCountList = borrowService.getGuaranteeingList(model);
+		//data.put("guaranteeingCount", guaranteeingCountList.getList().size());
+		// 正在担保项目金额
+		data.put("guaranteeingAccount", borrowService.getGuaranteeingAccount(userId));
+		
+		
+		// 待登记项目个数
+		//data.put("needGuaranteeRegisteCount", borrowService.getNeedGuaranteeRegisteCount(userId));
+		// 待登记项目金额
+		//data.put("needGuaranteeRegisteAccount", borrowService.getNeedGuaranteeRegisteAccount(userId));
+		
+		
+		// 催收项目个数
+		//data.put("urgeCount", borrowRepaymentService.getUrgeCount(userId));
+		PageDataList<BorrowRepaymentModel> list = borrowRepaymentService.getCollectionListCount(model);
+		//data.put("urgeCount", list.getList().size());
+		data.put("urgeCount", borrowRepaymentService.getCollectionCount(userId));
+		
+		// 逾期项目个数
+		data.put("overdueCount", borrowRepaymentService.getOverdueCount(userId));
+		//PageDataList<BorrowRepaymentModel> overdueList = borrowService.getOverdueGuaranteeList(model);
+		//data.put("overdueCount", overdueList.getList().size());
+		/*
+		// 催收项目个数
+		model.setVouchFirmId(getSessionUserId());
+		PageDataList<BorrowModel> list = borrowService.getGuaranteeingList(model);
+		data.put("urgeCount", list.getList().size());
+		// 逾期项目个数
+		PageDataList<BorrowRepaymentModel> overdueList = borrowService.getOverdueGuaranteeList(model);
+		data.put("overdueCount", overdueList.getList().size());
+		
+		*/
+		
+		// 查询是否有更换客服的信息 如果有更换客服的信息，那么显示当前未更换客服，现在更换状态
+		UserCache uc = userService.find(user.getUserId()).getUserCache();
+		KefuRecord kfr = kefuChangeService.getKefuByUseridAndType(
+				user.getUserId(), uc.getCustomerUserId(), 1);
+		if (kfr != null) {
+			data.put("haveRecorde", true);
+			data.put("cstatus", kfr.getVerifyResult());
+		} else {
+			data.put("haveRecorde", false);
+		}
+		Operator o = operatorService.getUserById(uc.getCustomerUserId());
+		if (o != null) { // 没有客服
+			data.put("kefu", o);
+		}
+		data.put("url", Global.getValue("adminurl"));
+		data.put(
+				"imgpath",
+				getRequest().getSession().getServletContext()
+						.getAttribute("webroot").toString()
+						+ getRequest().getSession().getServletContext()
+								.getAttribute("theme_dir").toString());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 担保项目页面
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/guarantee/projectManage")
+	public String projectManage() throws Exception{
+		return "guaranteeList";
+	}
+	/**
+	 * 担保项目查询列表
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/guarantee/guaranteeList")
+	public void guaranteeList() throws Exception {
+		
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		model.setVouchFirm(user);
+		model.setSize(4);
+		PageDataList<BorrowModel> list = borrowService.getGuaranteeingList(model);
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 催收项目页面
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/collection/collectionList")
+	public String collectionList() throws Exception {
+		return "collectionList";
+	}
+	/**
+	 * 催收项目数据
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/collection/collectionListJSON")
+	public void collectionListJSON() throws Exception {
+		data = new HashMap<String, Object>();
+		model.setVouchFirmId(getSessionUserId());
+		model.setSize(4);
+		PageDataList<BorrowRepaymentModel> list = borrowRepaymentService.getCollectionList(model);
+		
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 获取担保公司待登记标列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/getNeedGuaranteeRegisterList")
+	public void getNeedGuaranteeRegisterList() throws Exception {
+		user = getSessionUser();
+		List<BorrowModel> list = borrowService.getNeedGuaranteeRegisteList(user.getUserId());
+		data = new HashMap<String, Object>();
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 逾期项目页面
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/overdue/overdueList")
+	public String overdueList() throws Exception {
+		return "overdueList";
+	}	
+	
+	/**
+	 * 获取担保公司逾期的标的信息列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/overdue/getOverdueGuaranteeList")
+	public void getOverdueGuaranteeList() throws Exception {
+		model.setVouchFirmId(getSessionUserId());
+		model.setSize(4);
+		PageDataList<BorrowRepaymentModel> list = borrowService.getOverdueGuaranteeList(model);
+		data = new HashMap<String, Object>();
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}	
+	
+	/**
+	 * 已经代偿项目页面
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/compensatory/compensatoryList")
+	public String compensatoryList() throws Exception {
+		return "compensatoryList";
+	}		
+	
+	/**
+	 * 获取担保公司已经代偿的标的信息列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/compensatory/getCompensatedList")
+	public void getCompensatedList() throws Exception {
+		model.setVouchFirmId(getSessionUserId());
+		model.setSize(4);
+		PageDataList<BorrowRepaymentModel> list = borrowService.getCompensatedList(model);
+		data = new HashMap<String, Object>();
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 还款明细页面
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/repayment/repaymentDetail")
+	public String repaymentDetail() throws Exception {
+		return "repaymentDetail";
+	}		
+	
+	/**
+	 * 获取标的还款明细列表
+	 * .
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/repayment/getRepayMentDetailList")
+	public void getRepayMentDetailList() throws Exception {
+		BorrowRepaymentModel brm = new BorrowRepaymentModel();
+		brm.setBorrowId(model.getBorrowId());
+		brm.setStatus(99);
+		brm.setPage(model.getPage());
+		brm.setSize(model.getSize());
+		if (StringUtil.isNotBlank(model.getUserName())) {
+			brm.setUserName(model.getUserName());
+		}
+		if (model.getTime() != 0) {
+            brm.setTime(model.getTime());
+        }
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			brm.setStartTime(model.getStartTime());
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			brm.setEndTime(model.getEndTime());
+		}
+		PageDataList<BorrowRepaymentModel> list = borrowRepaymentService.list(brm);
+		data = new HashMap<String, Object>();
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}	
+	
+	/**
+	 * 担保公司登记
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value="/member_guarantee/registerGuarantee", results = { @Result(name = "ipsGuarantee", type = "ftl", location = "/tpp/ipsGuarantee.html")})
+	public String registerGuarantee() throws Exception {
+		long borrowId = paramLong("borrowId");
+		Borrow borrow=borrowService.find(borrowId);
+		if(borrow.getStatus()!=11 ){
+			throw new BussinessException("标状态异常，请刷新后重新操作","/home.html");
+		}
+		if(!StringUtil.isBlank(borrow.getGuaranteeNo())){
+			throw new BussinessException("已登记担保方，请刷新后重新操作","/home.html");
+		}
+        return "ipsGuarantee";
+	}
+	
+	/**
+	 * 担保公司代偿
+	 * @throws Exception if has error
+	 */
+	@Action(value="/member_guarantee/repayment/compensate",results={
+			@Result(name = "result", type = "ftl", location = "/tpp/result.html")
+			})
+	public String compensate() throws Exception {
+		data = new HashMap<String, Object>();
+	    boolean isOpenApi = BaseTPPWay.isOpenApi();
+	    String apiCode = BaseTPPWay.apiCode();
+        if(!isOpenApi || !apiCode.equals("3")){
+            logger.info("项目第三方资金托管非汇潮接口！");
+    		data.put("result", false);
+    		return null;
+        }
+		BorrowRepayment repayment = borrowRepaymentService.findById(model.getRepaymentId());
+		int currPeriod = borrowRepaymentService.getCurrPeriod(repayment.getBorrow().getId());
+		if(currPeriod != repayment.getPeriod()){
+    		data.put("result", false);
+    		data.put("msg", "您本次还款的期数有误，请核查后进行还款！");
+    		printJson(getStringOfJpaObj(data));
+    		return null;
+		}
+	    YmdService ymdService = (YmdService) BeanUtil.getBean("ymdService");
+	    String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+	    ymdService.doCompensate(repayment,resultFlag);
+	    return "result";
+	}
+}

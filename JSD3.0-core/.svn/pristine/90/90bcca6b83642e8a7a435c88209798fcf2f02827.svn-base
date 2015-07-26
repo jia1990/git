@@ -1,0 +1,75 @@
+package com.ddtkj.p2psys.member.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.member.dao.MemberVipHistoryDao;
+import com.ddtkj.p2psys.member.domain.MemberVipHistory;
+import com.ddtkj.p2psys.member.model.MemberVipHistoryModel;
+import com.ddtkj.p2psys.member.service.MemberVipHistoryService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+/**
+ * 
+ * @描述：会员历史记录service实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年1月5日
+ */
+@Repository("memberVipHistoryService")
+public class MemberVipHistoryServiceImpl implements MemberVipHistoryService{
+	
+	private static Logger logger = Logger.getLogger(MemberVipHistoryServiceImpl.class);
+	@Resource
+	private MemberVipHistoryDao memberVipHistoryDao;
+	@Override
+	public MemberVipHistory saveMemberVipHistory(MemberVipHistory mvhistory) {
+		// TODO Auto-generated method stub
+		return memberVipHistoryDao.save(mvhistory);
+	}
+
+	@Override
+	public MemberVipHistory updateVipHistory(MemberVipHistory vipHistory) {
+		// TODO Auto-generated method stub
+		return memberVipHistoryDao.update(vipHistory);
+	}
+	@Override
+	public PageDataList<MemberVipHistoryModel> vipHistoryPageList(MemberVipHistoryModel model) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(model.getPage(), model.getRows());
+		param.addParam("user.userId", model.getUser().getUserId());
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<MemberVipHistory> vipHistoryPageList = memberVipHistoryDao.findPageList(param);
+		
+		PageDataList<MemberVipHistoryModel> pageDateList_ = new PageDataList<MemberVipHistoryModel>();
+		List<MemberVipHistoryModel> list = new ArrayList<MemberVipHistoryModel>();
+		if (vipHistoryPageList.getList().size() > 0) {
+			for (int i = 0; i < vipHistoryPageList.getList().size(); i++) {
+				MemberVipHistory recharge = (MemberVipHistory) vipHistoryPageList.getList().get(i);
+				MemberVipHistoryModel arm = new MemberVipHistoryModel();
+				BeanUtils.copyProperties(recharge, arm);
+				list.add(arm);
+			}
+		}
+		pageDateList_.setPage(vipHistoryPageList.getPage());
+		pageDateList_.setList(list);
+		return pageDateList_;
+	
+	}
+
+
+	@Override
+	public MemberVipHistory findVipHistoryBySql(long userId) {
+		// TODO Auto-generated method stub
+		return memberVipHistoryDao.findMemberVipHistory(userId);
+	}
+	
+
+}

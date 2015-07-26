@@ -1,0 +1,195 @@
+
+package com.ddtkj.p2psys.sms.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @描述: 短信通道配置信息
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-2-9   
+ */
+@Entity
+@Table(name = "t_jsd_sms_interface")
+public class SmsInterface implements Serializable {
+
+	private static final long serialVersionUID = 2475790916211381034L;
+
+	/**短信开启状态**/
+	public static final String SMS_STATUS_ENABLE = "11";
+	/**短信关闭状态**/
+	public static final String SMS_STATUS_DISABLE = "22";
+	/**短信状态所有**/
+	public static final String SMS_STATUS_ALL = "99";
+	
+	/** 时代天元短信接口  **/
+	public static final String SMS_NID_SDTY = "sdty";
+	/** 上海创蓝短信接口 **/
+	public static final String SMS_NID_SHCL = "shcl";
+	
+	/** 时代天元短信接口中文名  **/
+	public static final String SMS_NID_SDTY_CN = "时代天元";
+	/** 上海创蓝短信接口中文名 **/
+	public static final String SMS_NID_SHCL_CN = "上海创蓝";
+	
+	/** 查询短信接口结果响应时间 **/
+	public static final int SMS_RESULT_QUERY_RESPTIME = 0;
+	/** 查询短信接口结果响应码 **/
+	public static final int SMS_RESULT_QUERY_RESPCODE = 1;
+	/** 查询短信接口结果产品ID **/
+	public static final int SMS_RESULT_QUERY_BALANCE_PID = 2;
+	/** 查询短信接口结果产品余额 **/
+	public static final int SMS_RESULT_QUERY_BALANCE_REMAIN = 3;
+	
+	/** 调用短信接口结果 ok **/
+	public static final String SMS_RESULT_OK = "0";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;	//主键
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "add_user_id")
+	private Operator addUser;			//添加用户名
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "operate_user_id")
+	private Operator operateUser;		//更新用户名
+
+	private String name;	//短信接口名
+	private String status;	//短信开启状态：11开启，22关闭
+	private String nid;		//短信名简称
+	private String smsSn;	//短信序列号
+	private String smsUsername;	//短信用户名
+	private String smsPassword;	//短信密码
+	private String smsNoticeUrl; 	//短信请求地址	
+	private String smsNoticeUrlTwo; //短信请求地址，备用
+	private String smsBalanceUrl;	//短信余额查询地址
+	private Date addTime;			//添加时间
+	private Date updateTime;		//更新时间
+	private String addIp;		//添加IP
+	private String remark;			//备注
+	
+	private String signContent;     //签名内容
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public String getNid() {
+		return nid;
+	}
+	public void setNid(String nid) {
+		this.nid = nid;
+	}
+	public String getSmsSn() {
+		return smsSn;
+	}
+	public void setSmsSn(String smsSn) {
+		this.smsSn = smsSn;
+	}
+	public String getSmsUsername() {
+		return smsUsername;
+	}
+	public void setSmsUsername(String smsUsername) {
+		this.smsUsername = smsUsername;
+	}
+	public String getSmsPassword() {
+		return smsPassword;
+	}
+	public void setSmsPassword(String smsPassword) {
+		this.smsPassword = smsPassword;
+	}
+	public String getSmsNoticeUrl() {
+		return smsNoticeUrl;
+	}
+	public void setSmsNoticeUrl(String smsNoticeUrl) {
+		this.smsNoticeUrl = smsNoticeUrl;
+	}
+	public String getSmsNoticeUrlTwo() {
+		return smsNoticeUrlTwo;
+	}
+	public void setSmsNoticeUrlTwo(String smsNoticeUrlTwo) {
+		this.smsNoticeUrlTwo = smsNoticeUrlTwo;
+	}
+	public String getSmsBalanceUrl() {
+		return smsBalanceUrl;
+	}
+	public void setSmsBalanceUrl(String smsBalanceUrl) {
+		this.smsBalanceUrl = smsBalanceUrl;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public static String getSmsStatusEnable() {
+		return SMS_STATUS_ENABLE;
+	}
+	public static String getSmsStatusDisable() {
+		return SMS_STATUS_DISABLE;
+	}
+	public Operator getAddUser() {
+		return addUser;
+	}
+	public void setAddUser(Operator addUser) {
+		this.addUser = addUser;
+	}
+	public Operator getOperateUser() {
+		return operateUser;
+	}
+	public void setOperateUser(Operator operateUser) {
+		this.operateUser = operateUser;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public String getSignContent() {
+		return signContent;
+	}
+	public void setSignContent(String signContent) {
+		this.signContent = signContent;
+	}
+	
+}

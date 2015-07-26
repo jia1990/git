@@ -1,0 +1,327 @@
+<html>
+<head>
+<title>用户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.userLock = true;
+	$.userOff = false;
+</script>
+
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  500;
+	var winHeight = 300;
+	
+	var editTitle = "锁定用户";
+	var editUrl =  "/modules/user/user/user/userLockEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"','确定'";
+	
+/* 	var editTitle = "修改用户信息";
+	var userReadUrl =  "/modules/user/user/user/userEditPage.html";
+	var userReadParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+userReadUrl+"','确定'";
+	 */
+	var OffTitle = "注销用户信息";
+	var userOffUrl =  "/modules/user/user/user/userOffPage.html";
+	var userOffParmeters = "'{0}','"+OffTitle+"',"+winWidth+","+winHeight+",'"+userOffUrl+"','确定'";
+	
+	var resetMsg = "你确定要重置该用户密码吗？";
+	var resetPwdUrl = "/modules/user/user/user/userResetPwd.html";	//重置用户密码
+	var resetPwdWinParmeters = "'{0}','"+resetPwdUrl+"','"+resetMsg+"'";
+	
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'userList.html',
+			fit : true,
+			fitColumns : false,
+			border : false,
+			pagination : true,
+			idField : 'userId',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'userId',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			autoRowHeight : true,
+			nowrap : true,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'userId', title: '编号', width: 60, fixed :true,checkbox : false},
+			{ field: 'userName', title: '用户名', width: 150, fixed :true,checkbox : false},
+			{ field: 'realName', title: '真实姓名', width: 100, sortable: false },
+			{ field: 'sex', title: '性别', width: 45, fixed :true,sortable: false ,
+				formatter: function(value,row,index){
+					//M:男性 F:女性 X:保密
+					if(value == 'F'){
+						return "女";
+					}else if(value == 'M'){
+						return "男";
+					}else if(value == 'X'){
+						return "保密";
+					}
+					return "";
+				}
+			},
+			{ field: 'memberLevel', title: '会员等级', width: 80, sortable:false, 
+				formatter: function(value,row,index){
+					/* if(value=="N1"){
+						return "普通用户";
+					}else if(value=="V1"){
+						return "铜牌会员";
+					}else if(value=="V2"){
+						return "银牌会员";
+					}else if(value=="V3"){
+						return "金牌会员";
+					}else if(value=="V4"){
+						return "钻石会员";
+					}
+					return ""; */
+					return value;
+				}
+			},
+			{ field: 'vipEndTime', title: '到期时间', width: 140, fixed:true,sortable:false, 
+          	  	formatter: function(value,row,index){
+          	  		return getLocalTime(value,4);
+				}  
+            },
+			{ field: 'customerNo', title: '专属客服(工号)', width: 140, fixed:true,sortable:false, 
+          	  	formatter: function(value,row,index){
+          	  		return value;
+				}  
+            },
+			{ field: 'email', title: '电子邮件', width: 150, sortable: false },
+			{ field: 'mobilePhone', title: '手机号码',fixed :true, width: 100, sortable: false },
+			{ field: 'cardNO', title: '身份证号码',fixed :true, width: 150, sortable: false },
+			{ field: 'userNature', title: '开户个人或商户',fixed :true, width: 150, hidden:true },
+			
+			{ field: 'userType', title: '用户类型', width: 85, sortable: false ,
+				formatter: function(value,row,index){
+					var userNature = row.userNature;
+					if(value == 10){
+						return "投资用户";
+					}else if(value == 11 && userNature==20){
+						return "个人借款";
+					}else if(value == 11 && userNature==21){
+						return "企业借款";
+					}else if(value==12){
+						return "担保公司";
+					}else if(value==13){
+						return "商城用户";
+					}else{
+						return "注销用户";
+					}
+					return "";
+				}	
+			},
+			
+			{ field: 'province', title: '省',fixed :true, width: 60},
+			{ field: 'city', title: '市',fixed :true, width: 60},
+			{ field: 'area', title: '县/区',fixed :true, width: 60},
+			
+			{ field: 'emailStatus', title: '邮箱认证', width: 70, sortable:false, 
+				formatter: function(value,row,index){
+					//未认证:80邮箱认证通过:81
+					if(value==80){
+						return "未认证";
+					}else if(value==81){
+						return "已认证";
+					}
+					return "";
+				}
+			},
+			
+			{ field: 'mobilePhoneStatus', title: '手机认证', width: 70, sortable:false, 
+				formatter: function(value,row,index){
+					//手机未认证:85 、手机认证通过:86 、手机认证未通过:87
+					if(value==85){
+						return "未认证";
+					}else if(value==86){
+						return "已认证";
+					}else if(value==87){
+						return "认证未通过";
+					}
+					return "";
+				}
+			},
+			{ field: 'realStatus', title: '实名认证', width: 70, sortable:false, 
+				formatter: function(value,row,index){
+					//未认证:82实名认证通过:83 实名认证待审核 88 实名认证未通过:84;
+					if(value==82){
+						return "未认证";
+					}
+					if(value==83){
+						return "已认证";
+					}
+					if(value==88){
+						return "认证待审核";
+					}
+					if(value==84){
+						return "认证未通过";
+					}
+					return "不确定";
+				}
+			},
+			
+            { field: 'addTime', title: '注册时间', width: 140, fixed:true,sortable:false, 
+          	  	formatter: function(value,row,index){
+          	  		return getLocalTime(value,4);
+				  	}  
+            },
+            
+           /*  { field: 'userCache.addIp', title: '注册IP', width: 140, fixed:true,sortable:false }, */
+            { field: 'isLocked', title: '状态', width: 60, sortable:false,formatter: function(value,row,index){
+				if(value=='NN'){
+					return "未锁定";
+				}
+				if(value=='AY'){
+					return "已锁定";
+				}
+				if(value=='UY'){
+					return "挂起";
+				}
+				if(value=='FF'){
+					return "已销户";
+				}
+				return value;
+			}
+			}, 
+            
+			{	field : 'action',
+				title : '操作',
+				width :80,
+				fixed :true,
+				formatter : function(value, row, index) {
+					var str = '';
+					var userName = row.userName;
+					if(row.isLocked=='FF' || row.userId=='1'){
+						//alert(row.userId);
+						return str
+					}else{
+						str += '&nbsp;';
+						str += "<@secAuthorizeUrl value='/user/userLockedBtn.html' >";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="锁定用户"/>', row.userId, '${theme_dir}/css/images/extjs_icons/lock/lock.png');
+						str += "</@secAuthorizeUrl>";
+						str += '&nbsp;';
+						str += "<@secAuthorizeUrl value='/user/userOffBtn.html' >";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+userOffParmeters+');" src="{1}" title="注销用户"/>', row.userId, '${theme_dir}/css/images/extjs_icons/delete.png');
+						str += "</@secAuthorizeUrl>";
+						str += '&nbsp;'; 
+						str += "<@secAuthorizeUrl value='/user/userResetPwdBtn.html' >";
+						/* str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+resetPwdWinParmeters+');" src="{1}" title="重置用户密码"/>', row.userName, '${theme_dir}/css/images/extjs_icons/tab_edit.png'); */
+						str += '<img onclick="resetUserPwd(\''+userName+'\')" src="${theme_dir}/css/images/extjs_icons/tab_edit.png" title="重置用户密码"/>';
+						str += "</@secAuthorizeUrl>";
+					}
+					
+					return str;
+				}
+			} ] ],
+			loadFilter: function(data){
+				$.each(data.rows,function(index,row){
+					if(row.userIdentify){
+						row.realNameStatus=row.userIdentify.realNameStatus;
+					}
+					if(row.userCache){
+						row.sex=row.userCache.sex;
+						row.userType=row.userCache.userType;
+						row.status=row.userCache.status;
+					} 
+				}); 
+				return data;
+			},
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+	 			$('#searchForm table').show();
+	 			parent.$.messager.progress('close');
+	 			$(this).datagrid('tooltip');
+	 		}
+		});
+	});
+	//投资借款担保用户中的excel导出
+	function exportExcel(){
+		var url = "/modules/user/user/user/userAllExport.html";
+		var userName = $("#userName").val();
+		var realName = $("#realName").val();
+		var typeName = $("#typeName option:selected").val();
+		var lockType = $("#lockType option:selected").val();
+		var mobilePhone = $("#mobilePhone").val();
+		var email = $("#email").val();
+		var cardNO = $("#cardNO").val();
+		var customerNo = $("#customerNo").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&realName=" + realName +"&userType=" + typeName 
+				+ "&isLocked=" + lockType + "&mobilePhone=" + mobilePhone + "&email=" + email 
+				+ "&cardNO=" + cardNO + "&customerNo=" + customerNo + "&startTime=" + startTime
+				+ "&endTime="+endTime;
+		window.location.href = url + sou;
+	}
+	
+	
+	function resetUserPwd(userName){
+		parent.$.messager.confirm('询问', "确定要重置密码吗？", function(b) {
+			if(b){
+				var url = "/modules/user/user/user/userResetPwd.html";
+				$.post(url,{userName:userName},function(result) {
+					parent.$.messager.alert('提示', result.msg, 'info');
+					dataGrid.datagrid('reload');						
+					parent.$.messager.progress('close');
+				}, 'JSON');
+			}
+		});
+		
+		
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+	           		<li>用户名：<input type="text" name="userName" autocomplete="off" id="userName"/></li>
+            		<li>真实姓名：<input type="text" name="realName" autocomplete="off" id="realName"/></li>
+            		<li>手机：<input type="text" name="mobilePhone" autocomplete="off" id="mobilePhone"/></li>
+            		<li>身份证：<input type="text" name="cardNO" autocomplete="off" id="cardNO"/></li>
+            		<li>邮箱：<input type="text" name="email" autocomplete="off" id="email"/></li></br>
+            		<li>专属客服(工号)：<input type="text" name="customerNo" autocomplete="off" id="customerNo"/></li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime"  class="searchTime" style="width:140px;"/></li>
+            		<li>用户类型：
+						<select name="userType" class="type" id="typeName">
+							<option value="0">全部</option>
+							<option value="10">投资用户</option>
+							<option value="11">个人借款</option>
+							<option value="13">企业借款</option>
+							<option value="12">担保公司</option>
+							<option value="14">商城</option>
+						</select>
+					</li>
+					<li>状态：
+            		<select name="isLocked" class="type" id="lockType">
+	                  <option value="99">全部</option>
+	                  <option value="UY">挂起</option>
+	                  <option value="NN" selected="selected">未锁定</option>
+	                  <option value="AY">锁定</option>
+	                  <option value="FF">注销</option>
+	                </select> 
+	                </li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">
+		&nbsp;
+		<@secAuthorizeUrl value='/user/userAllExport.html'>
+			<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+	<script src="/plugins/laydate-v1.1/laydate.js"></script>
+	<script src="/themes/theme_default/js/date2.js"></script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+package com.rongdu.p2psys.web.authorize;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.log4j.Logger;
+import org.apache.oltu.oauth2.as.issuer.MD5Generator;
+import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
+import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.apache.oltu.oauth2.as.request.OAuthTokenRequest;
+import org.apache.oltu.oauth2.common.OAuth;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.apache.oltu.oauth2.common.message.types.ParameterStyle;
+import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.apache.oltu.oauth2.rs.request.OAuthAccessResourceRequest;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.authorize.model.OAuthCache;
+import com.ddtkj.p2psys.authorize.service.ClientService;
+import com.ddtkj.p2psys.authorize.service.ClientUserService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ActionContext;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class AuthorizeAction extends BaseAction{
+	private static Logger logger = Logger.getLogger(AuthorizeAction.class);
+
+	private String callback = "";
+	@Resource
+	private UserService userService;
+	@Resource
+	private ClientService clientService;
+	@Resource
+	private ClientUserService clientUserService;
+	private OAuthCache oAuthCache=new OAuthCache();
+
+	public OAuthCache getoAuthCache() {
+		return oAuthCache;
+	}
+
+	public void setoAuthCache(OAuthCache oAuthCache) {
+		this.oAuthCache = oAuthCache;
+	}
+
+	/**
+	 * 申请授权
+	 * 
+	 * @return
+	 * @throws URISyntaxException
+	 * @throws OAuthSystemException
+	 * @throws IOException
+	 */
+	@Action("/user/authorize")
+	public String authorize() throws URISyntaxException, OAuthSystemException,
+			IOException {
+
+		String clientId = paramString("client_id");
+		String callback = paramString("callback");
+		if("001".equals(clientId)){
+			callback = paramString("callback");
+		}else if("002".equals(clientId)){
+			callback = paramString("callback")+"&action=jsdloggin";
+		}
+		try {
+			// 构建OAuth授权请求
+			OAuthAuthzRequest oauthRequest = new OAuthAuthzRequest(request);
+			// 查询应用信息
+			Client currentClient = clientService.findByClientId(clientId);
+
+			if (currentClient == null) {
+				// 跳过不是服务端授权的应用
+				sendError(401, "invalid_client", "unauthorized_client",
+						response);
+				return null;
+			} else if (!currentClient.getCallBack().equals(callback)) {
+				// 回调地址不匹配
+				sendError(401, "invalid_callback", "unauthorized_callback",
+						response);
+				return null;
+			}
+			// 缓存当前应用信息
+			request.getSession().setAttribute("currentClient", currentClient);
+			// 如果用户未登录，跳至登录界面
+			//User user = (User) request.getSession().getAttribute("currentUser");
+			User user = getSessionUser();
+			
+			User sessionUser = (User) request.getSession().getAttribute(
+					Constant.SESSION_USER);
+			
+			if (null == sessionUser) {
+				if (null == user) {
+					request.setAttribute("client_id", clientId);
+					request.setAttribute("response_type",
+							paramString("response_type"));
+					request.setAttribute("callback", paramString("callback"));
+					return "loginSingle";
+				}
+			}
+
+			// 生成授权码，responseType目前仅支持CODE，另外还有TOKEN
+			String authorizationCode = null;
+			String responseType = oauthRequest
+					.getParam(OAuth.OAUTH_RESPONSE_TYPE);
+			logger.info("response===="+response);
+			if (responseType.equals(ResponseType.CODE.toString())) {
+				OAuthIssuerImpl oauthIssuerImpl = new OAuthIssuerImpl(
+						new MD5Generator());
+				authorizationCode = oauthIssuerImpl.authorizationCode();
+
+				// 缓存当前登录用户的授权码
+				User loginUser = userService.find(sessionUser.getUserId());
+				ClientUserModel cum = clientUserService.updateOauthUserInfo(
+						loginUser, currentClient);
+				//ClientUserModel cumUser = userService.find(cum.getServerUserId());
+				//ClientUserModel cuModel = clientUserService.selectByUserAndClient(cum.getServerUserId(), clientId);
+				//oAuthCache.addAuthCode(authorizationCode, cumUser);
+				oAuthCache.addAuthCode(authorizationCode, cum);
+			}
+			request.getSession().setAttribute("currentClient", null);
+
+			logger.info("单点登录授权码：" + authorizationCode);
+			// 通过回调地址发送授权码
+			sendCode(authorizationCode, response, callback);
+			return null;
+		} catch (OAuthProblemException e) {
+			logger.info("获取客户端授权码错误信息：" + e.getMessage());
+			sendError(401, "oauth_problem", e.getMessage(), response); // 写入错误信息
+			return null;
+		}
+	}
+
+	/**
+	 * 获取用户信息
+	 * 
+	 * @return
+	 * @throws URISyntaxException
+	 * @throws OAuthSystemException
+	 * @throws IOException
+	 */
+	@Action("/user/userInfo")
+	public String userInfo() throws URISyntaxException, OAuthSystemException, IOException {
+		logger.info("进入获取用户信息的方法");
+		HttpServletRequest request = ServletActionContext.getRequest();
+		HttpServletResponse response = ServletActionContext.getResponse();
+		
+		try {
+			logger.info("进入获取用户信息的方法的try片段");
+
+			// 构建OAuth资源请求
+			OAuthAccessResourceRequest oauthRequest = new OAuthAccessResourceRequest(request, ParameterStyle.QUERY);
+			logger.info("构建OAuth资源请求");
+			
+			// 校验AccessToken：获取客户传入的AccessToken，检查服务端缓存，如果有缓存校验通过，反之失败。（没有判断AccessToken与应用、用户的关联）
+			String accessToken = oauthRequest.getAccessToken();
+			if (!oAuthCache.checkAccessToken(accessToken)) {
+				logger.info("校验AccessToken失败");
+				sendError(401, "unauthorized", "unauthorized", response);
+				return null;
+			}
+			
+			String clientId = request.getParameter("client_id");
+			
+			// 云购全球
+			if("001".equals(clientId)){
+				callback = paramString("callback");
+			// 论坛
+			}else if("002".equals(clientId)){
+				//callback = paramString("callback")+"&action=jsd_two";
+				callback = paramString("callback");
+			}
+			
+			
+			ClientUserModel cum = oAuthCache.getUserInfoByAccessToken(accessToken);
+			//拼接回调URL的get参数
+			StringBuilder sb = new StringBuilder();
+			StringBuilder url = new StringBuilder();
+			String name = cum.getUserName();
+			
+			//与云购/论坛协定(勿轻易修改)
+			String key = "JinShangDaiDiscuz";
+			
+			long datesum = System.currentTimeMillis();
+			
+			//格式化
+			//SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			
+			sb.append(datesum).append(key).append(cum.getOpenId());
+			String code = MD5.encode(sb.toString());
+			
+			// 云购全球
+			if("001".equals(clientId)){
+				url.append(callback)
+				.append("?username=").append(URLEncoder.encode(name, "UTF-8"))
+				
+				.append("&time=").append(datesum)
+				.append("&phone=").append(cum.getPhone())
+				.append("&open_id=").append(cum.getOpenId())
+				.append("&code=").append(code);
+			// 论坛
+			}else if("002".equals(clientId)){
+				url.append(callback)
+				.append("?username=").append(URLEncoder.encode(name, "UTF-8"))
+				
+				.append("&time=").append(datesum)
+				.append("&open_id=").append(cum.getOpenId())
+				.append("&code=").append(code);
+			}
+
+			logger.info("获取用户信息成功");
+			response.sendRedirect(url.toString());
+			
+			//清除授权用户的session信息
+			//相关问题：由于不清除currentUser的session信息，只要使用晋商贷账号登录成功过一次云购后（不清除cookie），然后退出云购，重新使用晋商贷账号登录时，则不会跳到晋商贷登录页，造成无法切换账号
+			ActionContext ac = ActionContext.getContext();
+			Map<String, Object> session = ac.getSession();
+			session.put("currentUser", null);
+			return null;
+			
+		} catch (OAuthProblemException e) {
+			logger.info("进入获取用户信息的方法的catch片段"+e.getMessage());
+			sendError(401, "oauth_problem", e.getMessage(), response); //写入错误信息
+			return null;
+		}
+	}
+
+	/**
+	 * 获取accessToken
+	 * 
+	 * @return
+	 * @throws URISyntaxException
+	 * @throws OAuthSystemException
+	 * @throws IOException
+	 */
+	@Action("/user/accessToken")
+	public String accessToken() throws URISyntaxException,
+			OAuthSystemException, IOException, KeyManagementException,
+			NoSuchAlgorithmException {
+		logger.info("进入获取accessToken方法");
+		HttpServletRequest request = ServletActionContext.getRequest();
+		HttpServletResponse response = ServletActionContext.getResponse();
+		try {
+			logger.info("进入accessToken方法的try片段");
+			// 构建OAuth请求
+			OAuthTokenRequest oauthRequest = new OAuthTokenRequest(request);
+			logger.info("构建OAuth请求");
+			// 校验appId
+			if (!clientService.checkClientId(oauthRequest.getClientId())) {
+				sendError(401, "invalid_client", "unauthorized_client",
+						response);
+				return null;
+			}
+			// 校验授权码：获取客户传入的授权码，检查服务端缓存，如果有缓存校验通过，反之失败。（没有判断授权码与应用、用户的关联）
+			String authCode = oauthRequest.getParam(OAuth.OAUTH_CODE);
+			logger.info("接收授权码authCode：" + authCode);
+			if (oauthRequest.getParam(OAuth.OAUTH_GRANT_TYPE).equals(GrantType.AUTHORIZATION_CODE.toString())){
+				if (!oAuthCache.checkAuthCode(authCode)) {
+					sendError(401, "invalid_grant", "invalid_grant", response);
+					return null;
+				}
+				// 生成AccessToken
+				OAuthIssuer oauthIssuerImpl = new OAuthIssuerImpl(
+						new MD5Generator());
+				final String accessToken = oauthIssuerImpl.accessToken();
+				logger.info("生成accessToken：" + accessToken);
+	
+				oAuthCache.addAccessToken(accessToken,
+						oAuthCache.getUserInfoByAuthCode(authCode)); // 缓存当前用户的AccessToken
+				// 写入AccessToken
+				Map<String, Object> result = new LinkedHashMap<String, Object>();
+				result.put("access_token", accessToken);
+				result.put("expires_in", Constant.ACCESS_TOKEN_EXPIRE);
+	
+				logger.info("发送accessToken成功，URL为：" + result);
+				// 拼接回调URL的get参数
+				StringBuilder sb = new StringBuilder();
+				callback = oauthRequest.getParam("callback");
+				if(StringUtil.isNotBlank(callback)){
+					sb.append(callback);
+					if(callback.contains("?")){
+						sb.append("&");
+					}else{
+						sb.append("?");
+					}
+					sb.append("access_token=").append(accessToken)
+							.append("&expires_in=")
+							.append(Constant.ACCESS_TOKEN_EXPIRE);
+					response.sendRedirect(sb.toString());
+				}else{
+					sendError(401, "callback is null", "callback is null", response);
+				}
+			}
+			return null;
+			
+		} catch (OAuthProblemException e) {
+			logger.info("进入accessToken方法的catch片段" + e.getMessage());
+			sendError(401, "oauth_problem", e.getMessage(), response); // 写入错误信息
+			return null;
+		}
+	}
+
+	/**
+	 * 通过回调地址发送错误信息
+	 * 
+	 * @param status
+	 * @param errorCode
+	 * @param errorDescription
+	 * @param response
+	 * @throws IOException
+	 */
+	private void sendError(int status, String errorCode,
+			String errorDescription, HttpServletResponse response)
+			throws IOException {
+		response.setStatus(status);
+
+		StringBuffer sb = new StringBuffer();
+		sb.append(callback).append("?error_code=").append(errorCode)
+				.append("&error_description=").append(errorDescription);
+
+		response.sendRedirect(sb.toString());
+	}
+
+	/**
+	 * 通过回调地址发送授权码
+	 * 
+	 * @param code
+	 * @param response
+	 * @throws IOException
+	 */
+	private void sendCode(String code, HttpServletResponse response,
+			String callback) throws IOException {
+		response.setStatus(200);
+
+		StringBuffer sb = new StringBuffer();
+		if(callback.contains("?")){
+			sb.append(callback).append("&code=").append(code);
+		}else{
+			sb.append(callback).append("?code=").append(code);
+		}
+			
+	
+		response.sendRedirect(sb.toString());
+	}
+	
+	
+
+}

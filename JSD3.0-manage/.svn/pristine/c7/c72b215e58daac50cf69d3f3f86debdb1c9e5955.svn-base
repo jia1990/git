@@ -1,0 +1,174 @@
+package com.ddtkj.manage.action.reward;
+
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.award.domain.ActivityAward;
+import com.ddtkj.p2psys.award.service.ActivityAwardService;
+import com.ddtkj.p2psys.redpacket.domain.ActivityRP;
+import com.ddtkj.p2psys.redpacket.service.ActivityRPService;
+import com.ddtkj.p2psys.redpacket.service.ActivityService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class ManageActivityRPAction extends BaseAction<ActivityRP> implements ModelDriven<ActivityRP> {
+	@Resource
+	private ActivityRPService activityRPService;
+	private ActivityAwardService activityAwardService;
+	@Resource
+	private ActivityService activityService;
+	
+	private Map<String, Object> data;
+	private Map<String,Object> map = new HashMap<String, Object>();
+	
+	/**
+	 * 活动奖励页面
+	 * @author xingjia
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/activityRPManager")
+	public String arManager() throws Exception {
+		return "activityRPManager";
+	}
+	
+	/**
+	 * 所有活动奖励页面信息的展示
+	 * @author xingjia
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/arList")
+	public void arList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");	// 当前页数
+		int pageSize = paramInt("rows");	// 每页总数
+		map.put("model", model);
+		
+//		PageDataList<ActivityRP> activityRPPageList = activityRPService.getPageDataList(map, pageNumber, pageSize);
+		
+//		int totalPage = activityRPPageList.getPage().getTotal();	// 总页数
+//		data.put("total", totalPage);
+//		data.put("rows", activityRPPageList.getList());
+//		printJson(getStringOfJpaObj(data));
+//		printJson(JSON.toJSON(data));	
+
+		
+		
+		PageDataList<ActivityAward> activityAwardList = activityAwardService.getPageDataList(map, pageNumber, pageSize);
+		//可能为空，数据库无数据
+		System.out.println("activityAwardList的值为："+activityAwardList);
+		
+		int totalPage = activityAwardList.getPage().getTotal();	// 总页数
+		data.put("total", totalPage);
+		data.put("rows", activityAwardList.getList());
+		printJson(JSON.toJSON(data));
+	}
+	
+	
+	/**
+	 * 添加活动奖励页面的展示
+	 * @author xingjia
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/arAddPage")
+	public String activityAddPage() throws Exception {
+		saveToken("activity_add_token");
+		return "arAdd";
+	}
+	
+	
+	/**
+	 * 活动奖励的添加方法
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/arAdd")
+	public void activityAdd() throws Exception{
+		data = new HashMap<String, Object>();
+		checkToken("activity_add_token");
+		if(null != model.getActivity()){
+			model.getActivity().setOperator(getOperator());
+			model.getActivity().setCreatetime(Calendar.getInstance().getTime());
+		}
+		activityRPService.save(model);
+//		activityAwardService.save(model);
+		data.put("result", true);
+		data.put("msg", "添加成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 活动奖励的修改页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/arEditPage")
+	public String activityEditPage() throws Exception {
+		long id = paramLong("id");
+//		Activity activity = activityService.getEntityById(id);
+//		request.setAttribute("activity", activity);
+/*		RedPacket redPaceket = redPackService.getEntityById(id);
+		redPaceket.getOperator().getId();
+		request.setAttribute("redPacket", redPaceket);
+		
+		request.setAttribute("isopen", redPaceket.getIsopen());*/
+		saveToken("activity_edit_token");
+		ActivityRP ar = activityRPService.getEntityById(id);
+		if(null != ar.getActivity()){
+			request.setAttribute("activity", ar.getActivity());
+		}
+		if(null != ar.getRp()){
+			request.setAttribute("rp", ar.getRp());
+		}
+		if(0!=ar.getAccount()){
+			request.setAttribute("redMoney", ar.getAccount());
+		}
+		if(0!=ar.getId()){
+			request.setAttribute("arId", ar.getId());
+		}
+		return "arEdit";
+	}
+	
+	
+	/**
+	 * 活动奖励修改
+	 * @throws Exception
+	 */
+	@Action(value="/modules/reward/arEdit")
+	public void activityEdit() throws Exception{
+		data = new HashMap<String, Object>();
+		checkToken("activity_edit_token");
+		long id = paramLong("arId");
+		if(0!=id){
+			model.setId(id);
+		}
+		activityRPService.update(model);
+		data.put("msg", "修改成功");
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 理论删除，将数据库中的状态修改掉
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/reward/arDelete")
+	public void activityDelete() throws Exception {
+		data = new HashMap<String, Object>();
+//		long id = paramLong("id");
+//		Activity activity = activityService.getEntityById(id);
+//		activityService.delete(activity);
+		data.put("result", true);
+		data.put("msg", "删除成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+}

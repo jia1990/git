@@ -1,0 +1,31 @@
+package com.ddtkj.p2psys.redpacket.dao;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.redpacket.domain.Activity;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+public interface ActivityDao extends BaseDao<Activity>{
+	
+	
+	/**
+	 * 查询  根据ID查询
+	 */
+	public Activity getEntityById(long id) ;
+	/**
+	 * 查询 根据是否开启查询红包类型
+	 * 
+	 */
+	public PageDataList<Activity> getEntityByName(String name,int currentPage,int pagenum) ;
+	/**
+	 * 分页 多条件查询等复杂查询
+	 */
+	public PageDataList<Activity> getEntityList(QueryParam param,int currentPage,int pagenum);
+	/**
+	 * 查询当前时间有没有活动
+	 */
+	public PageDataList<Activity> getEntityListBetweenTime(Date date,int currentPage,int pagenum) ;
+
+}

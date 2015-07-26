@@ -1,0 +1,59 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.web.account;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.ddtkj.p2psys.account.service.AccountLogService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述：
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2014年12月25日
+ */
+public class AccountLogAction extends BaseAction implements ModelDriven<AccountLogModel> {
+
+	private AccountLogModel model=new  AccountLogModel();
+
+	public AccountLogModel getModel() {
+		return model;
+	}
+
+	public void setModel(AccountLogModel model) {
+		this.model = model;
+	}
+	
+	@Resource
+	private AccountLogService accountLogService;
+	
+	/**
+	 * 投资人我的主页最近交易记录
+	 * @throws Exception
+	 */
+	@Action("/member/investTransactionLog")
+	public String investTransactionLog() throws Exception {
+		User user = getSessionUser();
+		model.setUser(user);	
+		Map<String, Object> data  = new HashMap<String, Object>();
+	
+		data = new HashMap<String, Object>();
+		PageDataList<AccountLogModel> accountLogList =  accountLogService.list(model);
+		data.put("data", accountLogList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+}

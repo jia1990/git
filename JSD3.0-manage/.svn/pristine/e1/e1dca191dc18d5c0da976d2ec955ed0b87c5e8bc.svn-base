@@ -1,0 +1,177 @@
+<script type="text/javascript">
+    $(function() {
+    	$.fn.dataGridOptions.formSubFun("#form",'/modules/loan/repayment/repaymentPatch.html');
+    });
+</script>
+<form id="form" method="post">
+<h3>本地待还信息</h3>
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>借款人用户名：</span>
+		${repayment.user.userName!}
+	</div>
+	<div class="showItem">
+		<span>标名：</span>
+		${repayment.borrow.name!}
+	</div>
+	<div class="showItem">
+		<span>借款期限：</span>
+		<#if repayment.borrow.borrowTimeType == 0>
+			${repayment.borrow.period + 1!}月
+		<#else>
+			${repayment.borrow.period + 1!}天
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>合同编号：</span>
+		${repayment.borrow.dealNo!}
+	</div>
+	<div class="showItem">
+		<span>本次借款期数：</span>
+		${repayment.period + 1!}
+	</div>
+	<div class="showItem">
+		<span>借款类型：</span>
+		<#if repayment.borrow.type == 113>
+			能源宝
+		<#elseif repayment.borrow.type == 115>
+			微企贷
+		<#elseif repayment.borrow.type == 103>
+			车贷宝
+		<#elseif repayment.borrow.type == 105>
+			分期宝
+		<#else>
+			未知类型
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>预计还款金额：</span>
+		${repayment.repaymentAccount!}
+	</div>
+	<div class="showItem">
+		<span>已还金额：</span>
+		${repayment.repaymentYesAccount!}
+	</div>
+	<div class="showItem">
+		<span>本金：</span>
+		${repayment.capital!}
+	</div>
+	<div class="showItem">
+		<span>本金待收批次号：</span>
+	    <#if collection??>${collection.repayCapitalOutTradeNo!}</#if>
+	</div>
+	<div class="showItem">
+		<span>利息：</span>
+		${repayment.interest!}
+	</div>
+	<div class="showItem">
+		<span>利息代收批次号：</span>
+		<#if collection??>${collection.repayInterestOutTradeNo!}</#if>
+	</div>
+	<div class="showItem">
+		<span>滞纳：</span>
+		${repayment.lateInterest!}
+	</div>
+	<div class="showItem">
+		<span>预计还款时间：</span>
+		${repayment.repaymentTime!}
+	</div>
+	<#if (capitalList?size>0) && repayment.status != 1>
+		<div class="showItem">
+			<span>是否掉单：</span>
+			本地掉单
+		</div>
+		<div class="showItem">
+			<span>是否补单：</span>
+				<input type="radio" name="status" value="1">是			
+				<input type="radio" name="status" value="0" checked="checked">否			
+				<input type="hidden" name="collectionId" value="${collection.id!}" />
+				<input type="hidden" name="repaymentId" value="${repayment.id!}" />
+		</div>
+	<#else>
+		<div class="showItem">
+			<span>是否掉单：</span>
+			未掉单
+		</div>
+	</#if>
+</div>
+<h3>第三方转账列表信息</h3><br/>
+<#if (capitalList?size>0)>
+<#list capitalList as ca>
+<#if ((ca.outTradeNo?substring(19,20))?number - (ca.tradeNo?substring(19,20))?number) == 1>
+	本金转账信息
+<#elseif ((ca.outTradeNo?substring(19,20))?number - (ca.tradeNo?substring(19,20))?number) == 2>
+	利息转账信息
+<#elseif ((ca.outTradeNo?substring(19,20))?number - (ca.tradeNo?substring(19,20))?number) == 2>
+	利息管理费转账信息
+<#elseif ((ca.outTradeNo?substring(19,20))?number - (ca.tradeNo?substring(19,20))?number) == 2>
+	逾期利息转账信息
+</#if>
+
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>交易状态：</span>
+		<#if ca.tradeStatus = "00">
+			成功
+		<#else>
+			失败
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>交易编号：</span>
+		${ca.outTradeNo!}
+	</div>
+	<div class="showItem">
+		<span>交易金额：</span>
+		${ca.amount!}
+	</div>
+</div>
+</#list>
+<#else>
+	暂无数据
+</#if>
+<!--
+<#if ymdCapital??>
+第三方本金转账信息
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>交易状态：</span>
+		<#if ymdCapital.tradeStatus = "00">
+			成功
+		<#else>
+			失败
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>交易编号：</span>
+		${ymdCapital.outTradeNo!}
+	</div>
+	<div class="showItem">
+		<span>交易金额：</span>
+		${ymdCapital.amount!}
+	</div>
+</div>
+</#if>
+<#if ymdInterest??>
+第三方利息转账信息
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>交易状态：</span>
+		<#if ymdInterest.tradeStatus = "00">
+			成功
+		<#else>
+			失败
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>交易编号：</span>
+		${ymdInterest.outTradeNo!}
+	</div>
+	<div class="showItem">
+		<span>交易金额：</span>
+		${ymdInterest.amount!}
+	</div>
+</div>
+</#if>
+
+--></form>

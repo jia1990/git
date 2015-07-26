@@ -1,0 +1,125 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.user.domain.UserRealnameApplication;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：用户实名认证资料申请
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月29日 
+ */
+public class UserRealnameApplicationModel extends UserRealnameApplication {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4921495236527345062L;
+	
+	/** 当前页码 */
+	private int page;
+	/** 每页总数 **/
+	private int rows;
+	
+	private long userId;
+	private String userName;//用户名 
+	private String realName;//真实姓名
+	
+	private String optUserName;//操作员
+	
+	private String cardNo;//身份证号
+	
+	public static UserRealnameApplicationModel instance(UserRealnameApplication UserRealnameApplication) {
+		UserRealnameApplicationModel userRealnameApplicationModel = new UserRealnameApplicationModel();
+		BeanUtils.copyProperties(UserRealnameApplication, userRealnameApplicationModel);
+		return userRealnameApplicationModel;
+	}
+
+	public UserRealnameApplication prototype() {
+		UserRealnameApplication userRealnameApplication = new UserRealnameApplication();
+		BeanUtils.copyProperties(this, userRealnameApplication);
+		return userRealnameApplication;
+	}
+	
+	
+	/**
+	 * 上传认证信息的数据格式
+	 * 
+	 * @return
+	 */
+	public String validUserApplicationModel() {
+		
+		if(!StringUtil.isNotBlank(getRealName())){
+			throw new UserException("真实姓名不能为空！", 1);
+		}
+		if(!StringUtil.isNotBlank(getCardNo())){
+			throw new UserException("身份证号不能为空！", 1);
+		}	
+		return "OK";
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	public String getCardNo() {
+		return cardNo;
+	}
+
+	public void setCardNo(String cardNo) {
+		this.cardNo = cardNo;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public long getUserId() {
+		return userId;
+	}
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+	public String getOptUserName() {
+		return optUserName;
+	}
+
+	public void setOptUserName(String optUserName) {
+		this.optUserName = optUserName;
+	}
+	
+	
+	
+
+}

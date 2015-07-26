@@ -1,0 +1,21 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpActivitySumDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivitySum;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+@Repository("rpActivitySumDao")
+public class RpActivitySumDaoImpl extends BaseDaoImpl<RpActivitySum>  implements RpActivitySumDao{
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.dao.RpActivitySumDao#findRpActivitySumByUserId(long)
+	 */
+	@Override
+	public RpActivitySum findRpActivitySumByUserId(long userId) {
+		return super.findObjByProperty("user.userId", userId);
+	}
+
+	
+}

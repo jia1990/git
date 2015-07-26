@@ -1,0 +1,147 @@
+package com.rongdu.p2psys.core;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowConfigDao;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.core.dao.LogTemplateDao;
+import com.rongdu.p2psys.core.dao.NoticeTypeDao;
+import com.rongdu.p2psys.core.domain.LogTemplate;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.model.SystemConfigModel;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+import com.rongdu.p2psys.core.service.RuleService;
+import com.rongdu.p2psys.core.service.SystemConfigService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：缓存中的数据拿不到的话从数据库中获取  JSDP-211 xingjia 20150706 start
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年7月4日
+ */
+public class DataGloble {
+	
+	private static String rulePackageName = "com.rongdu.p2psys.core.rule";
+	
+	
+	/**
+	 * 从全局缓存中加载返回指定日志模板
+	 * 
+	 * @param nid
+	 * @param log_type
+	 * @return LogTemplate
+	 * */
+	public static LogTemplate getLogTemplate(String nid, byte log_type) {
+		
+		LogTemplateDao logTemplateDao = (LogTemplateDao) BeanUtil.getBean("logTemplateDao");
+		Map<String, LogTemplate> logTemplateMap = new HashMap<String, LogTemplate>();
+		List<LogTemplate> logTemplateList = logTemplateDao.findAll();
+		for (int i = 0; i < logTemplateList.size(); i++) {
+			LogTemplate logT = logTemplateList.get(i);
+			if (logT != null) {
+				String mapKey = logT.getType() + "_" + logT.getNid();
+				logTemplateMap.put(mapKey, logT);
+			}
+		}
+		
+		return logTemplateMap.get(log_type + "_" + nid);
+	}
+	
+	/**
+	 * 从全局缓存中加载返回指定标配置
+	 * @param id
+	 * @return
+	 */
+	public static BorrowConfig getBorrowConfig(long id) {
+		
+		BorrowConfigDao borrowConfigDao = (BorrowConfigDao) BeanUtil.getBean("borrowConfigDao");
+		List<BorrowConfig> borrowConfigList = borrowConfigDao.findAll();
+		Map<Long, BorrowConfig> borrowConfigMap = new HashMap<Long, BorrowConfig>();
+		for (BorrowConfig config : borrowConfigList) {
+			borrowConfigMap.put(config.getId(), config);
+		}
+		return borrowConfigMap.get(id);
+	}
+	/**
+	 * 获取borrowConfig
+	 * @return
+	 */
+	public static List<BorrowConfig> getBorrowConfig(){
+		BorrowConfigDao borrowConfigDao = (BorrowConfigDao) BeanUtil.getBean("borrowConfigDao");
+		List<BorrowConfig> borrowConfigList = borrowConfigDao.findAll();
+		return borrowConfigList;
+	}
+	
+	/**
+	 * 数据库中国获取全局缓存中获取NoticeType
+	 * @param noticeTypeNid
+	 * @param notice_type
+	 * @return
+	 */
+	public static NoticeType getNoticeType(String noticeTypeNid,
+			byte notice_type) {
+		
+		NoticeTypeDao noticeTypeDao = (NoticeTypeDao) BeanUtil.getBean("noticeTypeDao");
+		List<NoticeType> noticeTypeList = noticeTypeDao.list();
+		Map<String, NoticeType> noticeTypeMap = new HashMap<String, NoticeType>();
+		for (int i = 0; i < noticeTypeList.size(); i++) {
+			NoticeType noticeType = noticeTypeList.get(i);
+			noticeTypeMap.put(
+					noticeType.getNid() + "_" + noticeType.getNoticeType(),
+					noticeType);
+		}
+		
+		return noticeTypeMap.get(noticeTypeNid + "_" + notice_type);
+	}
+	
+	
+	/**
+	 * 从数据库中获取系统配置
+	 * @return
+	 */
+	public static SystemConfigModel getSystemConfigModel() {
+		SystemConfigService systemConfigService = (SystemConfigService) BeanUtil.getBean("systemConfigService");
+		SystemConfigModel info = systemConfigService.getSystemInfo();
+		return info;
+	}
+	
+	
+	/**
+	 * 获取ruleCheck
+	 * @param nid
+	 * @return
+	 */
+	public static RuleCheck getRuleCheck(String nid) {
+		Map<String, RuleCheck> ruleCheckMap = new HashMap<String, RuleCheck>();
+		RuleService ruleService = (RuleService) BeanUtil.getBean("ruleService");
+		List<Rule> ruleList = ruleService.findAll();
+		for (int i = 0; i < ruleList.size(); i++) {
+			Rule r = ruleList.get(i);
+			try {
+				Class<?> clazz = null;
+				clazz = Class.forName(rulePackageName + "."
+						+ StringUtil.firstCharUpperCase(r.getNid())
+						+ "RuleCheck");
+				Object jsonObj = JSON.parseObject(r.getRuleCheck(), clazz);
+				if (jsonObj == null) {
+					jsonObj = clazz.newInstance();
+				} else {
+					ruleCheckMap.put(r.getNid(), (RuleCheck) jsonObj);
+				}
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+
+		}
+		return ruleCheckMap.get(nid);
+	}
+}

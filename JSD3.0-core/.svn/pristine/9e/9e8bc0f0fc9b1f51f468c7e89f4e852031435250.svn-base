@@ -1,0 +1,92 @@
+package com.rongdu.p2psys.user.dao;
+
+import java.util.List;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+
+
+public interface UserLogisticsAddressDao extends BaseDao<UserLogisticsAddress>{
+	
+	/**
+     * 保存用户收货信息
+     * 
+     * 
+     * @param userLogisticsAddress
+     */
+    void addLogisticsAddress(UserLogisticsAddress userLogisticsAddress);
+	
+	
+
+    /**
+	 * 查询收货信息列表
+	 * @return
+	 */
+	public List<UserLogisticsAddress> list(long userId);
+    
+    /**
+	 * 统计收货地址数量
+	 * 
+	 * @return
+	 */
+	int countLogisticsAddress(long userId);
+	
+	
+	/**
+	 * 更新用户收货地址
+	 * 
+	 * 
+	 * */
+	public void modifyLogiscAddress(UserLogisticsAddress userLogisticsAddress);
+	
+	
+	/**
+	 *删除用户收货地址 
+	 * 
+	 * */
+	public void deleteLogisticsAddress(int id);
+	
+	
+	
+	/**
+	 * 更新默认收获地址
+	 * 
+	 * @param userId 用户ID
+	 * @param isDefault 默认收货地址状态
+	 */
+	void modifyIsDefault(long userId,int id );
+	
+	
+	/**
+	 *查询指定用户收货地址 
+	 * 
+	 * */
+	public UserLogisticsAddress queryLogisticsAddress(int id);
+	
+	/**
+	 *查询用户id查询默认的收货地址
+	 * 
+	 * */
+	public UserLogisticsAddress queryLogisticsAddressByUserId(long userId);
+	
+	
+	
+	/**
+	 * 分页查询所用的收货地址信息
+	 * @author xingjia
+	 * @date 20141210
+	 * @param param
+	 * @return
+	 */
+	PageDataList<UserLogisticsAddress> addressPageDataList(QueryParam param);
+	
+	/**
+	 * 查询某用户的其他收货地址
+	 * @param userId
+	 * @return
+	 * @author sunxiaoyong@ddtkj.com
+	 */
+	PageDataList<UserLogisticsAddress> otherAddressList(int userId);
+}

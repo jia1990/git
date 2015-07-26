@@ -1,0 +1,115 @@
+
+package com.ddtkj.manage.action.cardaward;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.cardaward.domain.MemberCardAward;
+import com.ddtkj.p2psys.cardaward.model.MemberCardAwardModel;
+import com.ddtkj.p2psys.cardaward.service.CardAwardTransferService;
+import com.ddtkj.p2psys.cardaward.service.MemberCardAwardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 后台抽奖购物卡记录查询
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-31   
+ */
+public class ManageCardAwardAction extends BaseAction implements ModelDriven<MemberCardAwardModel> {
+	
+	@Resource
+	private MemberCardAwardService memberCardAwardService;
+	@Resource
+	private CardAwardTransferService cardAwardTransferService;
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	private MemberCardAwardModel model = new MemberCardAwardModel();
+
+	public MemberCardAwardModel getModel() {
+		return model;
+	}
+	
+	/**
+	 * 抽奖购物卡记录
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/cardAwardManage")
+	public String cardAwardManage() throws Exception {
+		return "cardAwaraManage";
+	}
+		
+	/**
+	 * 取得抽奖购物卡列表
+	 * @throws Exception
+	 */
+	@Action("/modules/user/cardaward/cardAwardList")
+	public void cardAwardList() throws Exception {
+		PageDataList<MemberCardAwardModel> list = memberCardAwardService.getCardAwardList(model);
+		map.put("rows", list.getList());
+		map.put("total", list.getPage().getTotal());
+		printJson(getStringOfJpaObj(map));					
+	}
+	
+	/**
+	 * 导出抽奖购物卡记录
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/exportCardAward")
+	public void exportCardAward() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("isConvert");
+		// 第一页开始
+		model.setPage(1);
+		// 最多出99999999条记录
+		model.setSize(99999999);
+		// 记录取得
+		List<MemberCardAwardModel> list = memberCardAwardService.getCardAwardList(model).getList();
+		List<MemberCardAwardModel> newList = new ArrayList<MemberCardAwardModel>();		
+		for(int i=0;i<list.size();i++){
+			MemberCardAwardModel cardAwardModel = list.get(i);
+			cardAwardModel.setIsConvert(cardAwardModel.convertCardAwardStatus(cardAwardModel.getIsConvert()));
+			cardAwardModel.setAwardResource(cardAwardModel.convertCardAwardResource(cardAwardModel.getAwardResource()));
+			newList.add(cardAwardModel);
+		}
+		String title = "";
+		if (MemberCardAward.CONVERT_STATUS_ALL.equals(status)) {
+			title = "抽奖购物卡所有记录Excel表";
+		}else if (MemberCardAward.CONVERT_STATUS_YES.equals(status)) {
+			title = "抽奖购物卡已兑换记录Excel表";
+		}
+		String[] hearders = new String[] {"编号","用户名","真实姓名","购物卡金额","购物卡是否兑换","购物卡奖励来源","兑换时间","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","userName","realName","awardValue","isConvert","awardResource","awardConvertTime","addTime","addIp"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<MemberCardAwardModel> tdList = new ArrayList<MemberCardAwardModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				MemberCardAwardModel cm = newList.get(j);
+				tdList.add(cm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+	}	
+	
+}

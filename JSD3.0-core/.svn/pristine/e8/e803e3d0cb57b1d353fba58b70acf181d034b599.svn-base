@@ -1,0 +1,78 @@
+package com.ddtkj.p2psys.core.quartz.draw;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.rongdu.p2psys.core.Global;
+/**
+ * 取现、充值业务处理
+ * @author zxc
+ *
+ */
+public class DrawTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(DrawTask.class);
+
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	
+
+	public AccountDrawCashService getAccountDrawCashService() {
+		return accountDrawCashService;
+	}
+
+	public void setAccountDrawCashService(
+			AccountDrawCashService accountDrawCashService) {
+		this.accountDrawCashService = accountDrawCashService;
+	}
+
+	public DrawTask(AccountDrawCashService accountDrawCashService) {
+		super();
+		task.setName("cash.Task");
+		this.accountDrawCashService=accountDrawCashService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (DrawJobQueue.DRAW!=null && DrawJobQueue.DRAW.size() > 0) {
+			DrawBean cb = DrawJobQueue.DRAW.peek();
+			if (cb != null) {
+				String result = "success";
+				try {
+					//处理取现的情况
+					if("drawFailBack".equals(cb.getType())){
+						accountDrawCashService.drawCashBankFailCallBack(cb.getYmdCash(),null);
+					}
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					DrawJobQueue.DRAW.remove(cb);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				}
+			}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return DrawTask.CASH_STATUS;
+	}
+
+}

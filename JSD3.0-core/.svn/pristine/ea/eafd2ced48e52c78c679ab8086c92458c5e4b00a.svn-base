@@ -1,0 +1,46 @@
+package com.ddtkj.p2psys.award.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.award.domain.ActivityConfig;
+import com.ddtkj.p2psys.award.domain.TakeWay;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * 活动配置的service接口类
+ * @author xingjia
+ * @date 20141212
+ *
+ */
+public interface ActivityConfigService {
+	
+	/**
+	 * 查询活动配置的分页
+	 * @param map
+	 * @param currentPage
+	 * @param pageSize
+	 * @return PageDataList<ActivityConfig>
+	 */
+	PageDataList<ActivityConfig> getPageDataList(Map<String,Object> map,int currentPage,int pageSize);
+	
+	/**
+	 * 根据id查询活动配置
+	 * @param actId
+	 * @return ActivityConfig
+	 */
+	ActivityConfig findActivityById(int actId);
+	
+	/**
+	 * 查询所用的参与方式
+	 * @return List<TakeWay>
+	 */
+	List<TakeWay> findAllTakeWayList();
+	
+	/**
+	 * 添加活动配置和对应奖励
+	 * @param activityConfig
+	 */
+	void saveAcitvityConfig(ActivityConfig activityConfig);
+	
+}

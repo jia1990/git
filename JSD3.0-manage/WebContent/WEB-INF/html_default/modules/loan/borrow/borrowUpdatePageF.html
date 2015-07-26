@@ -1,0 +1,171 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/loan/borrow/updateBorrow.html');	
+	    $("#isDXB").click(function(){
+	    	if($('#isDXB').attr("checked"))
+			{	
+		        $('#pwd').attr("disabled",false);
+		    }else{
+		        $('#pwd').attr("disabled",true);
+		        $('#pwd').val("");
+		    }
+	    });
+	    
+	    $('#ss').numberspinner({
+		    min: 10,
+		    max: 730,
+		    editable: true
+		});
+		$(".spinner-arrow").css({background:"#ccc",height:"32px"});
+		$(".spinner-arrow span").css({display:"block",height:"16px"});
+		$(".spinner").css({borderColor:"#ccc",background:"#f0f0f0",height:"32px"});
+		
+	    
+	    $("#isDB").click(function(){
+	    	if($('#isDB').attr("checked")){
+		        $('#vouchId').attr("disabled",false);
+		    }else{
+		        $('#vouchId').attr("disabled",true);
+		    }
+	    });
+	    
+	    if("${borrow.vouchFirm!""}"==""){
+	    	 $('#vouchId').attr("disabled",true);
+	    }
+	});
+</script>
+<form id="form" method="post" enctype="multipart/form-data">
+<div class="borrowForm" style="border-top:none;">
+<#if map??&&map.get("award")??>
+	<#assign award=map.get("award")?eval />
+</#if>
+<#if map??&&map.get("partAccount")??>
+	<#assign partAccount=map.get("partAccount") />
+</#if>
+<#if map??&&map.get("funds")??>
+	<#assign funds=map.get("funds") />
+</#if>
+	<h1 class="borrowFormTitle">基本信息</h1>
+	<ul>
+		<li><span>借款标题：</span><input type="text" name="name" maxlength="20" value="${borrow.name!}" autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true,validType:'maxLength[25]'"></li>
+		<li><span>借款人邮箱：</span>${user.email}</li>
+		<li><span>借款金额：</span>
+			<input type="text" id="account" name="account" maxlength="11" value="${borrow.account!}" autocomplete="off" onkeyup="value=value.replace(/[^0-9]/g,'')" size="15" class="borrowFormTxt1 easyui-validatebox" disabled="disabled"><em>元</em>
+			<input type="hidden" value="${borrow.account!}" name="account">
+		</li>
+		<li><span>合同号：</span>
+		${borrow.dealParent!}
+		</li>
+		<!-- <li><span>借款总金额：</span><input type="text" name="account" maxlength="7" value="${borrow.account!}" autocomplete="off" onkeyup="value=value.replace(/[^0-9]/g,'')" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'accout[500,5000000]'"><em>元</em></li>-->
+		<li><span>借款年利率：</span><input type="text" name="apr" maxlength="15" value="${borrow.apr!}" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'apr[1,24]'"><em>%</em></li>
+		<li><span>借款用途：</span><@linkage name="borrowUse" id="use" class="borrowFormTxt J_input" default="${borrow.borrowUse}" type="value" nid="borrow_use" /></li>
+		<li><span>有无担保公司：</span><input id="isDB" type="checkbox" <#if borrow.vouchFirm?? >checked="checked" </#if>
+				name="isDB" value="1" size="15" class="easyui-validatebox">&nbsp;&nbsp;有</li>
+		<li><span>担保公司：</span>
+		<#if borrow.vouchFirm?? >
+			<select name="vouchFirm.userId" id="vouchId">
+				<#list vouchFirms as item>
+					<option value="${item.userId}" <#if borrow.vouchFirm.userId==item.userId>selected="selected"</#if>>
+					${item.userCache.companyName}
+					</option>
+				</#list>
+			</select>
+		<#else>
+			<select name="vouchFirm.userId" id="vouchId">
+				<#list vouchFirms as item>
+					<option value="${item.userId}">
+					${item.userCache.companyName}
+					</option>
+				</#list>
+			</select>
+		</#if>
+			
+		</li>
+		
+		<li><span>锁定期限：</span>
+	        <#if borrow.borrowTimeType==0>
+	        <@linkage name="timeLimit" id="time_limit" class="J_input select_low" default="${borrow.timeLimit!}" type="value" nid="borrow_time_limit_month_scope" limit="sfd"/>
+	        <#else>
+	        <input name="timeLimit" id="ss" style="height:34px;padding:0;padding-left:4px;border:none;float:left;border-color:#ccc;color: #555; font-size: 14px;" value="${borrow.timeLimit!}" class="borrowFormTxt easyui-numberspinner" data-options="required: true">
+	        </#if>
+		</li>
+		<li>
+			<span>还款方式：</span>
+			<#if borrow.type==105>
+			<@linkage name="style" id="style" default="${borrow.style}" nid="borrow_style" type="value" class="J_input" disabled="disabled"/>
+			<input type="hidden" name="style" value="${borrow.style}">
+	        </#if>
+		</li>
+		<!--<li><span>投标奖励比例：</span><input type="text" name="partAccount" <#if borrow.partAccount==0>value=""<#else>value="${borrow.partAccount!}"</#if> autocomplete="off" class="borrowFormTxt1 easyui-validatebox" size="15" data-options="validType:'rewardRatio[0.1,6]'"><em>%</em></li>
+		 <li><span>还款结束后奖励：</span><input type="hidden" name="lateAward" class="w300 easyui-validatebox" value="${borrow.lateAward!}" size="15"></li> -->
+		<li><span>是否是定向标：</span><input id="isDXB" type="checkbox" name="isDXB" value="1" size="15" class="easyui-validatebox" <#if borrow.pwd?exists&&borrow.pwd!="">checked="true"</#if>> </li>
+		<li><span>定向标密码：</span><input type="text" name="pwd"  size="15" class="borrowFormTxt easyui-validatebox" id="pwd" <#if borrow.pwd?exists&&borrow.pwd!="">value="${borrow.pwd}"<#else>disabled="disabled"</#if>> </li>
+		<#if borrow.type!=110>
+		<li><span>最低投标金额：</span>
+			<input name="lowestAccount" value="1" type="text" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'accout[1,90]'"><em>元</em>
+        </li>
+		<li><span>最多投标总额：</span>
+	        <input type="text"  name="mostAccount" class="borrowFormTxt1 easyui-validatebox" data-options="validType:'accout[1,10000]'"/><em>元</em>
+		</li>
+		</#if>
+		<li><span>满标有效期限：</span><@linkage name="validTime" id="valid_time" default="${borrow.validTime}" nid="borrow_valid_time" class="J_input"  type="value" /></li>
+		<#if borrow.type!=101>
+		<li><span>借款手续费：</span><input type="text" value="${borrow.borrowManageRate!}" name="borrowManageRate" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width:60px" data-options="required: true,validType:'manageFee[0,90]'"><em>%</em></li>
+		<li><span>担保年化费：</span><input type="text" value="${borrow.guaranteeRate!}" name="guaranteeRate" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width:60px" data-options="required: true,validType:'manageFee[0,90]'"><em>%</em></li>
+		</#if>
+		<!-- <li><span>是否测试标：</span><input id="isTest" type="checkbox" name="isTest" value="1" size="15" class="easyui-validatebox" <#if borrow.isTest==1>checked="true"</#if>> </li> -->
+		<li><span>标的星级：</span><input  type="text" size="15" class="borrowFormTxt easyui-validatebox" maxlength="1" value="${borrow.star!}" name="star" data-options="required: true,validType:'maxNum[0,5]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>财务实力评分：</span><input  type="text" size="15" maxlength="3"  class="borrowFormTxt easyui-validatebox" value="${borrow.financeScore!}" name="financeScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>经营状况评分：</span><input  type="text" size="15" maxlength="3" class="borrowFormTxt easyui-validatebox" value="${borrow.statusScore}" name="statusScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>偿债保障评分：</span><input  type="text" size="15" maxlength="3" class="borrowFormTxt easyui-validatebox" value="${borrow.sinkScore!}" name="sinkScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>添加时间：</span>${borrow.addTime?string("yyyy-MM-dd HH:mm:ss")}</li>
+		<li><span>IP：</span>${borrow.addIp}</li>
+		
+		<input type="hidden" name="allAccount" value="${borrow.allAccount!}" />
+		<input type="hidden" name="userId" value="${user.userId}">
+		<input type="hidden" name="dealNo" value="${borrow.dealNo}">
+		<input type="hidden" name="dealParent" value="${borrow.dealParent!}">
+		<input type="hidden" name="addTime" value="${borrow.addTime?string('yyyy-MM-dd HH:mm:ss')}">
+		<input type="hidden" name="id" value="${borrow.id}">
+		<input type="hidden" name="borrowManageCostWay" value="${borrow.borrowManageCostWay!}">
+		<input type="hidden" name="borrowTimeType" value="${borrow.borrowTimeType!}">
+		<input type="hidden" name="type" value="${borrow.type}">
+		<input type="hidden" name="period" value="${borrow.period!}">
+	
+	</ul>
+	<div class="borrowFormMuti"><span>借款详情：</span>
+	
+	<div class="ipt" style="padding-left:85px;">
+		<script id="content" name="content" type="text/plain">${borrow.content!}</script>
+	 </div>
+	<!-- <textarea id="content" name="content" maxlength="5000" class="easyui-validatebox borrowFormTextarea" data-options="required: true">${borrow.content!}</textarea> -->
+	</div>
+</div>
+<input type="hidden" name="borrowUpdatePageToken" value="${borrowUpdatePageToken}" />
+</form>
+
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+var descriptionBox = UE.getEditor('content', {
+    autoHeight: false,
+    initialFrameWidth:610,
+    toolbars: [
+               ['fullscreen', 'source', '|', 'undo', 'redo', '|',
+                'bold', 'italic', 'underline', 'fontborder', 'strikethrough', 'superscript', 'subscript', 'removeformat', 'formatmatch', 'autotypeset', 'blockquote', 'pasteplain', '|', 'forecolor', 'backcolor', 'insertorderedlist', 'insertunorderedlist', 'selectall', 'cleardoc', '|',
+                'rowspacingtop', 'rowspacingbottom', 'lineheight', '|',
+                'customstyle', 'paragraph', 'fontfamily', 'fontsize', '|',
+                'directionalityltr', 'directionalityrtl', 'indent', '|',
+                'justifyleft', 'justifycenter', 'justifyright', 'justifyjustify', '|', 'touppercase', 'tolowercase', '|',
+                'link', 'unlink', 'anchor', '|', 'imagenone', 'imageleft', 'imageright', 'imagecenter', '|',
+                'simpleupload', 'insertimage', 'insertvideo', 'attachment',  'insertcode',  'pagebreak', 'template', '|',
+                'horizontal', 'date', 'time', 'spechars', 'wordimage', '|',
+                'inserttable', 'deletetable', 'insertparagraphbeforetable', 'insertrow', 'deleterow', 'insertcol', 'deletecol', 'mergecells', 'mergeright', 'mergedown', 'splittocells', 'splittorows', 'splittocols', 'charts', '|',
+                'print', 'searchreplace', 'drafts'
+               ]
+           ]
+    
+});
+   
+</script>

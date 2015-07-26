@@ -1,0 +1,86 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.worker;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountRechargeDao;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述：平台转账(如云购卡充值)
+ * @作者：wangchangwei@ddtkj.com  JSDBET-943
+ * @创建时间：2015年4月14日 
+ */
+public class RechargeTransferWorker extends BaseTransferWorker{
+
+	public RechargeTransferWorker(AccountTransferModel atm) {
+		super(atm);
+	}
+	
+
+
+	@Override
+	public void transfer() {
+		String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+		String transferNo=TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER);
+		String oriMerBillNo=atm.getTransferNo();
+		double transferAmount=BigDecimalUtil.decimal(atm.getTransferAmount(),2);
+		//String trdAmt=transferAmount+"";
+		String fromApiId=Global.getValue("ymd_merchant_id");
+		String toApiId=atm.getUserName();
+		if(StringUtil.isNotBlank(atm.getUserName())){
+			//本地处理
+			UserDao userDao = (UserDao) BeanUtil.getBean("userDao");
+    		User u=userDao.findObjByProperty("userName",atm.getUserName());
+
+    		Map<String, Object> map=new HashMap<String, Object>();
+	    	if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+	    		Global.setTransfer("transferAmount", transferAmount);
+	    		Global.setTransfer("transferNo", transferNo);
+				map.put("rechargeMoney", transferAmount);
+				map.put("tradeNo", transferNo);//批次号
+				map.put("outTradeNo", oriMerBillNo);//流水号
+				
+				AbstractExecuter executer = ExecuterHelper.doExecuter("rechargeTransferSuccessInvesterExecuter");
+				executer.execute(map, u);
+			}else{
+				map.put("borrowerRechargeMoney", transferAmount);
+				AbstractExecuter executer = ExecuterHelper.doExecuter("rechargeTransferSuccessBorrowerExecuter");
+				executer.execute(map, u);
+			}
+			
+			//一麻袋处理
+			YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, transferAmount+"", fromApiId, toApiId);
+		    if("0000".equals(ymdTransfer.getErrCode())){
+		    	
+		    }else{
+		    	throw new BussinessException("本地账户信息和一麻袋不符",1);
+		    }
+		    	
+		}
+	
+	
+	}
+	
+}

@@ -1,0 +1,179 @@
+﻿<!DOCTYPE html>
+<html>
+
+<#assign nid="account_home" >
+<#assign web_title='我的账户 - ${webname!}' >
+<#assign web_description='我的账户，${webname!}p2p网贷平台' >
+<#include "../include/resource1.html"> 
+<#include "../include/resource2.html"> 
+<#include "../common/function.html">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/header_footer.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/account.css">
+<style>
+.record_conss li dd.record_dd4{margin-left:0;}
+.record_conss li dd.record_dd2 {width: 70px;}
+.MemberCenter_con4 h1 a {display: block;padding-left: 29px;width: 56px;background: url(${webroot}${theme_dir}/images/MemberCenter/MemberCenter_1.png) no-repeat;height: 22px;line-height: 22px;position: absolute;top: 34px;color: #005ea7;font-size: 14px;}
+
+/*详细信息*/
+.y_con2_lis{position:relative;}
+.y_con2_lis i{display: inline-block;width: 16px;height: 18px;background: url(${webroot}${theme_dir}/images/password/detail.png) no-repeat 0 -23px;padding-right: 4px;float:left;margin-top:6px;}
+.y_con2_lis .y_tooltips {position: absolute;width: 250px;line-height: 22px;color: #555555;font-size: 12px;padding: 10px 12px;border: 1px solid #cbcbcb;border-radius: 3px;bottom: 40px;left: -48px;background: #fff;z-index: 1;display: none;}
+.y_con2_lis .y_tooltips em{position: absolute;width: 17px;display: block;height: 10px;background: url(${webroot}${theme_dir}/images/password/top_bottom.png) no-repeat;bottom: -10px;left: 125px;}
+.y_con2_lis d{display: inline-block;width: 16px;height: 18px;background: url(${webroot}${theme_dir}/images/password/detail.png) no-repeat 0 -23px;padding-right: 4px;float:left;margin-top:6px;}
+.record_conss li dd.record_dd140{width:140px;}
+.record_conss li dd.record_dd100{width:100px;}
+
+/*   JSDP-108 fengguoqin  5.12  start  */
+.calculatorCpmBox4 .change_con ul li{margin-top: 15px; height: 195px;width: 148px;padding-left: 10px;padding-right: 10px;padding-top: 10px;}
+.calculatorCpmBox4 .change_con{height: 445px;width:760px;}
+.calculatorCpmBox4 .change_con ul {height: 445px;width:170px;}
+.calculatorCpmBox4 .change_conin{height: 445px;}
+.calculatorCpmBox4 .changebutton{top: 260px;}
+.calculatorCpmBox4 .change_con ul li p{line-height: 20px;}
+.calculatorCpmBox4{width: 862px;}
+.change_true { bottom: 3px;left:353px;}
+/*   JSDP-108 fengguoqin  5.12  end  */
+</style>
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script>
+$(function(){
+	//time		
+		$(window).resize(function(){
+			if($(window).width()>=1911){
+				 $(".MemberCenter_con1").css("backgroundSize","100%");
+			}else{
+			     $(".MemberCenter_con1").css("backgroundSize","");
+			}
+		});
+		$(window).resize();
+
+		$(".y_jy_title li").click(function(){
+			var index=$(this).index(".y_jy_title li");
+			$(".y_jy_title li").removeClass("liclicksx");
+			$(this).addClass("liclicksx");	
+			$(".record_conssin_num").css("display","none");
+			$($(".record_conssin_num")[index]).css("display","block");
+		})
+		
+})
+</script>
+<body>
+<#include "../../include/headerMemberCenter.html">
+<!--header-end-->  
+	<!-- 不同时间段的信息 -->
+     <input type="hidden" id="webpath" value="${webroot}${theme_dir}"></input>
+	<input type="hidden" id="webpathnodir" value="${webroot}"></input>
+	 <input type="hidden" class="nickname" value="${nickname!}"></input>
+	<input type="hidden" class="figureUrl" value="${figureUrl!}"></input>
+	<input type="hidden" class="cooperationLogin" value="${CooperationLogin!}"></input>
+	<input type="hidden" class="userImg" value="${session_user.userId?c}"></input>
+    <div class="MemberCenter_con1 MemberCenter_con1">
+    <!-- 头部图片信息 -->
+		<div class="MemberCenter_con1in">
+			<div class="y_user_img"><a href="/member/info/detail.html" hidefocus title="编辑资料"><img  style="width: 84px;height: 84px;border-radius: 50%;"></a></div>
+		</div>
+	</div>
+	<#if session_user??&&session_user.thirdPartyIsOpen??&&session_user.thirdPartyIsOpen=="N">
+	<div class="noAuthentication" style="display:none">
+	  <i class="iconfont error">&#xe62a;</i>您还未开通第三方支付账户，为了尽快进行投资服务，请<a href="/member/security/realNameIdentify.html">立即开通</a>。
+	</div>
+	</#if>
+		<!-- 总额 -->
+	<div class="MemberCenter_con2" style="background:none;">
+	    <div class="account_home clearfix">
+	    	
+	    </div>
+		
+	</div>
+	<!-- K线图&客服 -->
+	<div class="MemberCenter_con3">
+		<!-- K线图 -->
+		<div class="MemberCenter_con3_left" id="accountView"></div>
+		
+	</div>
+	<!-- 交易记录 -->
+	
+	<div class="MemberCenter_con4">
+		<h1>交易记录
+			<a href="/member/autoInvest/detail.html" style="background-position:-152px 0;right:137px;">自动投资</a>
+			<a href="/member/bill/electronicBill.html" style="background-position:-152px -35px;right:27px;">电子账单</a>
+		</h1>
+		<ul class="y_jy_title">
+			<li id="recentTradingList" class="liclicksx">最近交易记录</li>
+			<li id="investCollectedList">投资已收记录</li>
+			<li id="rechargeList">充值记录</li>
+			<li id="cashList">提现记录</li>
+			<li id="scoreList">积分明细</li>
+			<li id="creditList">购买债权</li>
+			<!-- <li id="">扣费记录</li> -->
+		</ul>
+		<div class="record_conss">
+			<!-- 最近交易记录 -->
+			<ul class="record_conssin_num record_conssin_num1" style="display:block;"></ul>									
+			<!-- 投资记录 -->
+			<ul class="record_conssin_num record_conssin_num1"></ul>
+			<!-- 充值记录 -->
+			<ul class="record_conssin_num"></ul>
+			<!-- 提现记录 -->
+			<ul class="record_conssin_num"></ul>
+			<!-- 积分明细 -->
+			<ul class="record_conssin_num"></ul>
+			<!-- 债权 -->
+			<ul class="record_conssin_num">
+				<li class="record_conss_title">
+					<dl>
+						<dd class="record_dd5">项目名称</dd>
+						<dd>认购金额</dd>
+						<dd>认购后收益</dd>
+						<dd class="record_dd5">认购时间</dd>
+						<dd class="record_dd4">项目到期日</dd>
+						<dd>状态</dd>
+						<dd class="record_dd5">收益详情</dd>
+					</dl>
+				</li>						
+				<p class="y_no_nums"></p>
+			</ul>
+			<!-- 扣费记录 -->
+			<!-- <ul class="record_conssin_num">
+				<li class="record_conss_title">
+					<dl>
+						<dd class="record_dd6">扣费时间</dd>
+						<dd class="record_dd6">扣费类型</dd>
+						<dd class="record_dd6">扣费金额</dd>
+						<dd class="record_dd6">备注</dd>
+					</dl>
+				</li>
+				<p class="y_no_nums"></p>
+			</ul> -->
+			<div class="calculatorCpmBox3" style="left: 505px; top: 9px; display: none;">
+				<h1 style="padding-left:14px;padding-top: 0px;font-size:16px;color:#555555;">原因<img src="${webroot}${theme_dir}/images/bid/cpm.png"></h1>
+				<form id="kfForm">
+					<textarea  name="reason" id="reason"></textarea>
+					<#if kefu?exists >
+					<input type="hidden" id="kfid" name="kfid" value="${kefu.id}"/>
+					</#if>
+					<a class="change_true">提交</a>
+				</form>
+			</div>
+			 <!--JSDP-108 fengguoqin  5.12  start  -->
+			<div class="calculatorCpmBox4" style="left: 505px; top: 9px; display: none;height:530px;">
+				 <!--  JSDP-108 fengguoqin  5.12  end --> 
+				<h1 style="padding-left:14px;padding-top: 0px;font-size:16px;color:#555555;">更换专属客服<img src="${webroot}${theme_dir}/images/bid/cpm.png"></h1>
+				<div class="changeprevious changebutton"></div>
+				<div class="changenext changebutton"></div>
+				<a class="change_true">确定</a>
+				<div class="change_con">
+					<div class="change_conin">
+					</div>
+				</div>
+			</div>
+			<div class="calculatorCpmBottom" style="display: none;"></div>
+		</div>
+		<div id="kkpager"></div>
+	</div>
+<script>
+seajs.use('${webroot}${theme_dir}/media/js/member/member_main');
+</script>
+<#include "../include/footer.html">
+</body>
+</html>

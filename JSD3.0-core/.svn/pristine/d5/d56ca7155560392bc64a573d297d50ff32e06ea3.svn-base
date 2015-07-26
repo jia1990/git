@@ -1,0 +1,95 @@
+package com.ddtkj.p2psys.core.util;
+
+import com.rongdu.common.util.BigDecimalUtil;
+
+/**
+ * @描述：公允价值计算
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月9日 
+ */
+public class OneTimeCreditCalculator implements CreditCalculatorUtil {
+	
+	
+	public static final int REPAYMENT_NO = 1 ;
+	public static final int REPAYMENT_YES = 2 ;
+	
+	private double residueAccount ;  //剩余本金
+	private double apr ; 	//年利率
+	private double discount ; // 折让费率
+	private int day ;  // 应计息天数
+	private int isRepayMent ;  //  本期 是否已还款 1 已还 2 未还
+	private int period ;
+	private double cprice = 100;
+	private int daytotal ;
+	private double copies ;
+	
+	public OneTimeCreditCalculator(double residueAccount, double apr,double discount, int day,int isRepayMent,int period,int daytotal,double copies) {
+		super();
+		this.residueAccount = residueAccount;
+		this.apr = BigDecimalUtil.div(apr, 100,4);
+		this.discount = discount;
+		this.day = day;
+		this.isRepayMent = isRepayMent ;
+		this.period = period ;
+		this.daytotal = daytotal ;
+		this.copies = copies ;
+	}
+	/**
+	 * 计算公允价值
+	 * @return
+	 */
+	public double calculator(){
+		//return BigDecimalUtil.round(BigDecimalUtil.mul(oneTime(), discount));
+		return BigDecimalUtil.decimal(BigDecimalUtil.mul(oneTime(), discount),2);
+	}
+	/**
+	 * 计算份数
+	 * @return
+	 */
+	public double getCopies(){
+		// 一次性的和按月还息的，本金肯定是投资人投资的，是100的倍数
+		return copies ;
+	}
+	/**
+	 * 计算每份价值
+	 * @return
+	 */
+	public double getCopiesPrice(){
+		// 一次性的和按月还息的，本金肯定是投资人投资的，是cprice的倍数
+		//return BigDecimalUtil.round(BigDecimalUtil.div(oneTime(),getCopies())) ;
+		return BigDecimalUtil.decimal(BigDecimalUtil.div(oneTime(),getCopies()),2) ;
+	}
+	/**
+	 * 计算每份价格
+	 * @return
+	 */
+	public double getCopiesAccount(){
+		//return BigDecimalUtil.round(getCopiesPrice() * discount) ;
+		return BigDecimalUtil.decimal(BigDecimalUtil.mul(getCopiesPrice(),discount),2) ;
+	}
+	/**
+	 * 应计利息
+	 */
+	public double getCopiesInsterest(){
+		//return  BigDecimalUtil.mul(BigDecimalUtil.div(day,daytotal,4),BigDecimalUtil.mul(BigDecimalUtil.mul(residueAccount , BigDecimalUtil.div(apr,12)),period));
+		return BigDecimalUtil.decimal(BigDecimalUtil.div(BigDecimalUtil.mul(day, BigDecimalUtil.mul(residueAccount,apr)),360),2)  ;
+	}
+
+	private double oneTime(){
+		// 应计利息
+		//double interest = BigDecimalUtil.mul(BigDecimalUtil.div(day,daytotal,4),BigDecimalUtil.mul(BigDecimalUtil.mul(residueAccount , BigDecimalUtil.div(apr,12)),period));
+		double interest = BigDecimalUtil.decimal(BigDecimalUtil.div(BigDecimalUtil.mul(day, BigDecimalUtil.mul(residueAccount,apr)),360),2) ;
+		if(isRepayMent==1){
+			return BigDecimalUtil.add(residueAccount,interest);
+		}	
+		if(isRepayMent==2){
+			return BigDecimalUtil.sub(residueAccount,interest) ;
+		}
+		return 0.00 ;
+	}
+	public static void main(String[] args) {
+		System.out.println( BigDecimalUtil.decimal(BigDecimalUtil.div(BigDecimalUtil.mul(6, BigDecimalUtil.mul(100,0.12)),365),2));
+		System.out.println();
+	}
+	
+}

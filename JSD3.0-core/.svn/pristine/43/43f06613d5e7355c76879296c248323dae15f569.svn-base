@@ -1,0 +1,266 @@
+package com.ddtkj.p2psys.subbranch.dao.impl;
+
+import java.lang.reflect.InvocationTargetException;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.persistence.Query;
+
+import org.apache.commons.beanutils.BeanUtils;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.subbranch.dao.MarketerBranchDao;
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.ddtkj.p2psys.subbranch.model.BranchMarketerModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+
+
+/**
+ * @描述：分店市场专员关系dao层实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月22日 
+ */
+@Repository("marketerBranchDao")
+public class MarketerBranchDaoImpl extends BaseDaoImpl<BranchMarketerModel> implements MarketerBranchDao {
+	
+	@Resource
+	private BorrowCollectionDao borrowCollectionDao;
+	@Override
+	public PageDataList<BranchMarketerModel> findPageList(UserModel userModel) {
+		
+		StringBuffer sql = new StringBuffer();
+		StringBuffer sqlCount = new StringBuffer();
+//		sql.append("SELECT u.user_id userId,u.user_name userName,u.mobile_phone mobilePhone,ff.counts inviteCount,fc.countss validCount,sb.name branchName "
+//					+" FROM  t_jsd_user u "
+//					+" RIGHT JOIN t_jsd_branch_marketer bm " 
+//				    +" ON bm.user_id=u.user_id "
+//				    +" LEFT JOIN t_jsd_sub_branch sb "
+//				    +" ON sb.id = bm.branch_id "
+//					+" LEFT JOIN"
+//					+"("
+//						+" SELECT COUNT(uc.user_id) counts,uc.invite_user_id inviteUser"
+//						+" FROM t_jsd_user_cache uc "
+//						+" WHERE   uc.invite_user_id IN "
+//						+"(SELECT u.user_id user_dd FROM t_jsd_branch_marketer bm,t_jsd_sub_branch sb,t_jsd_user u "
+//						+" WHERE bm.branch_id=sb.id AND sb.is_delete=FALSE AND u.user_id=bm.user_id )"
+//						+" GROUP BY uc.invite_user_id "
+//					+") ff ON ff.inviteUser=u.user_id"
+//					+" LEFT JOIN "
+//					+"("
+//						+"SELECT COUNT(uc.user_id)  countss,uc.invite_user_id inviteUser"
+//						+" FROM t_jsd_user_cache uc ,t_jsd_user_identify ui,t_jsd_user u "
+//						+" WHERE   uc.invite_user_id IN "
+//						+"( SELECT u.user_id user_dd FROM t_jsd_branch_marketer bm,t_jsd_sub_branch sb,t_jsd_user u "
+//						+"  WHERE bm.branch_id=sb.id AND sb.is_delete=FALSE AND u.user_id=bm.user_id ) AND uc.user_id = ui.user_id AND ui.real_name_status='83' "
+//						  +" AND ui.email_status='81' AND ui.mobile_phone_status='86' and u.user_id=uc.user_id ");
+//						if(null != userModel.getStartTime()){
+//							sql.append(" and u.add_time >=:startTime ");
+//						}
+//						if(null !=userModel.getEndTime()){
+//							sql.append(" and u.add_time <:endTime ");
+//						}
+//						sql.append(" GROUP BY uc.invite_user_id "
+//					+") fc"
+//					+" ON  fc.inviteUser=u.user_id "
+//					+ " WHERE u.islocked='NN' AND sb.is_delete=FALSE ");
+//					if(StringUtil.isNotBlank(userModel.getBranchName())){
+//						sql.append(" AND sb.name like '%" + userModel.getBranchName() + "%'");
+//					}
+//					
+//		
+//		if(StringUtil.isNotBlank(userModel.getUserName())){
+//			sql.append(" and u.user_name=:userName ");
+//		}
+//		if(StringUtil.isNotBlank(userModel.getMobilePhone())){
+//			sql.append(" and u.mobile_phone=:mobilePhone ");
+//		}
+//		
+//		sql.append(" order by fc.countss desc ");
+//		
+//		
+//		Query query = em.createNativeQuery(sql.toString());
+//		if(StringUtil.isNotBlank(userModel.getUserName())){
+//			query.setParameter("userName", userModel.getUserName());
+//		}
+//		if(StringUtil.isNotBlank(userModel.getMobilePhone())){
+//			query.setParameter("mobilePhone", userModel.getMobilePhone());
+//		}
+//		
+		
+		
+		String branchName= null;
+		String userName = null;
+		String mobilePhone = null; 
+		
+		if(StringUtil.isNotBlank(userModel.getBranchName())){
+			branchName = "'"+userModel.getBranchName()+"'";
+		}
+		if(StringUtil.isNotBlank(userModel.getUserName())){
+			userName = "'"+userModel.getUserName()+"'";
+		}
+		if(StringUtil.isNotBlank(userModel.getMobilePhone())){
+			mobilePhone = "'"+userModel.getMobilePhone()+"'";
+		}
+		
+		int start = (userModel.getPage() - 1) *userModel.getSize();
+		int end = userModel.getPage()*userModel.getSize();
+		
+		
+		sql.append("{call marketerProcedure("+userModel.getStartTime()+","+userModel.getEndTime()+","+branchName+","+userName+","+mobilePhone+","+start+","+end+")}");
+		sqlCount.append("{call marketerProcedure("+userModel.getStartTime()+","+userModel.getEndTime()+","+branchName+","+userName+","+mobilePhone+",0,0)}");
+		Query query = em.createNativeQuery(sql.toString());
+		Query queryCount = em.createNativeQuery(sqlCount.toString());
+		
+		
+		Object[] object = new Object[6];
+
+		PageDataList<BranchMarketerModel> pageDataList = new PageDataList<BranchMarketerModel>();
+		
+		List bmmList = query.getResultList();
+		List bmmListCounts = queryCount.getResultList();
+		Page page = new Page(bmmListCounts.size(), userModel.getPage(), userModel.getSize());
+//        query.setFirstResult((userModel.getPage() - 1) * userModel.getSize());
+//        query.setMaxResults(userModel.getSize());
+		
+		List<BranchMarketerModel> branchMarList = new ArrayList<BranchMarketerModel>();
+		for(int i=0;i<bmmList.size();i++){
+			object = (Object[]) bmmList.get(i);
+			BranchMarketerModel bmm = new BranchMarketerModel();
+			bmm.setUserId((Integer) object[0]);
+			bmm.setUserName((String) object[1]);
+			bmm.setMobilePhone((String) object[2]);
+			bmm.setInviteCount((BigInteger) object[3]);
+			bmm.setValidCount((BigInteger) object[4]);
+			bmm.setBranchName((String)object[5]);
+			branchMarList.add(bmm);
+		}
+        pageDataList.setList(branchMarList);
+        
+		pageDataList.setPage(page);
+		return pageDataList;
+	}
+
+	@Override
+	public PageDataList<BranchMarketerModel> findInvitePageList(
+			UserModel userModel) {
+		StringBuffer sql = new StringBuffer();
+		
+		sql.append("SELECT uc.user_id,uu.user_name,u.user_name marketerName,sb.name branchName,uu.add_time,ui.user_id userIdentify"
+					+" FROM t_jsd_sub_branch sb"
+					+" LEFT JOIN t_jsd_branch_marketer bm"
+					+" ON sb.id=bm.branch_id"
+					+" RIGHT JOIN t_jsd_user u"
+					+" ON u.user_id=bm.user_id"
+					+" RIGHT JOIN t_jsd_user_cache uc"
+					+" ON uc.invite_user_id = bm.user_id"
+					+" LEFT JOIN t_jsd_user uu"
+					+" ON uu.user_id=uc.user_id"
+					+" LEFT JOIN t_jsd_user_identify ui"
+					+" ON ui.user_id = uu.user_id AND  ui.real_name_status = '83' AND ui.email_status = '81' AND ui.mobile_phone_status = '86'"
+
+					+" WHERE sb.is_delete=FALSE AND u.islocked='NN'");
+		if(StringUtil.isNotBlank(userModel.getBranchName())){
+			sql.append(" and sb.name like '%"+userModel.getBranchName()+"%' ");
+		}
+		if(StringUtil.isNotBlank(userModel.getUserName())){
+			sql.append(" and u.user_name like '%"+userModel.getUserName()+"%' ");
+		}
+		if(null != userModel.getStartTime()){
+			sql.append(" and uu.add_time >=:startTime ");
+		}
+		if(null !=userModel.getEndTime()){
+			sql.append(" and uu.add_time <:endTime ");
+		}
+		sql.append(" order by uu.add_time desc ");
+		
+		//System.out.println("SQL--->"+sql);
+		
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		/*if(StringUtil.isNotBlank(userModel.getUserName())){
+			query.setParameter("marketerName", userModel.getUserName());
+		}*/
+		if(null != userModel.getStartTime()){
+			query.setParameter("startTime", userModel.getStartTime());
+		}
+		if(null !=userModel.getEndTime()){
+			query.setParameter("endTime", userModel.getEndTime());
+		}
+		
+		List inviteList = query.getResultList();
+		
+		Object[] object = new Object[6];
+		Page page = new Page(query.getResultList().size(), userModel.getPage(), userModel.getSize());
+        query.setFirstResult((userModel.getPage() - 1) * userModel.getSize());
+        query.setMaxResults(userModel.getSize());
+        
+        List invitePageDataList = query.getResultList();
+		List<BranchMarketerModel> inviteeList = new ArrayList<BranchMarketerModel>();
+		
+		for(int i=0;i<invitePageDataList.size();i++){
+			object = (Object[]) invitePageDataList.get(i);
+			BranchMarketerModel inviteModel = new BranchMarketerModel();
+			inviteModel.setUserId((Integer)object[0]);
+			inviteModel.setUserName((String)object[1]);
+			inviteModel.setMarketerName((String)object[2]);
+			inviteModel.setBranchName((String)object[3]);
+			inviteModel.setAddTime((Date) object[4]);
+			if(null != object[5]){
+				double unCollMoney = borrowCollectionDao.getCollectionSum(0,inviteModel.getUserId());
+				double collMoney = borrowCollectionDao.getCollectionSum(1, inviteModel.getUserId());
+				if(0!=unCollMoney || 0 != collMoney){
+					inviteModel.setIsValid("T");
+				}else{
+					inviteModel.setIsValid("Y");
+				}
+				
+			}else{
+				inviteModel.setIsValid("N");
+			}
+			inviteeList.add(inviteModel);
+		}
+		PageDataList<BranchMarketerModel> pageDataList = new PageDataList<BranchMarketerModel>();
+		
+		
+		
+		pageDataList.setList(inviteeList);
+		pageDataList.setPage(page);
+		return pageDataList;
+	}
+
+	
+	/**
+	 * 根据加盟商ID查询市场专员
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * @time 2015年4月30日
+	 * @param id
+	 * @return
+	 */
+	@Override
+	public int findMarketerCountByBranchId(long id) {
+		
+		String sql = "SELECT COUNT(*) FROM t_jsd_branch_marketer t1 WHERE t1.branch_id = ?1";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter(1, id);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return (int) Double.parseDouble(obj.toString());
+        }
+        return 0;
+        
+	}
+	
+
+}

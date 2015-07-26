@@ -1,0 +1,93 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.domain;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：活动红包的汇总实体  JSDP-203
+ * @作者：xingjia@ddtkj.com
+ * @创建时间：2015年7月20日 
+ */
+@Entity
+@Table(name="t_jsd_rp_activity_sum")
+public class RpActivitySum {
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = "id")
+	private long id; 
+	private double produceTotal;//产生红包总金额
+	private double consumeTotal;//消费红包总金额
+	private double fzenTotal;//冻结红包总金额
+	private double unvalidTotal;//失效红包总金额
+	private double useableTotal;//可用红包总结
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;//用户名id
+	private String userName;//用户名
+	
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public double getProduceTotal() {
+		return produceTotal;
+	}
+	public void setProduceTotal(double produceTotal) {
+		this.produceTotal = produceTotal;
+	}
+	public double getConsumeTotal() {
+		return consumeTotal;
+	}
+	public void setConsumeTotal(double consumeTotal) {
+		this.consumeTotal = consumeTotal;
+	}
+	public double getFzenTotal() {
+		return fzenTotal;
+	}
+	public void setFzenTotal(double fzenTotal) {
+		this.fzenTotal = fzenTotal;
+	}
+	public double getUnvalidTotal() {
+		return unvalidTotal;
+	}
+	public void setUnvalidTotal(double unvalidTotal) {
+		this.unvalidTotal = unvalidTotal;
+	}
+	public double getUseableTotal() {
+		return useableTotal;
+	}
+	public void setUseableTotal(double useableTotal) {
+		this.useableTotal = useableTotal;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	
+	
+	
+	
+}

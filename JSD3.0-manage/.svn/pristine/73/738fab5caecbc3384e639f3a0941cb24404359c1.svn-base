@@ -1,0 +1,464 @@
+package com.rongdu.manage.action.home;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserCertificationService;
+import com.rongdu.p2psys.user.service.UserCreditApplyService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 首页
+ * 
+ * @version 2.0
+ * @since 2014-4-24
+ */
+@SuppressWarnings("rawtypes")
+public class HomeAction extends BaseAction {
+
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	@Resource
+	private UserCreditApplyService userCreditApplyService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserCertificationService attestationService;
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private BorrowCollectionService borrowCollectionService;
+	
+	private Map<String, Object> data;
+	
+	@Action("/index")
+	public String index() throws Exception {
+		return "loginPage";
+	}
+
+	@Action("/home")
+	public String home() throws Exception {
+		return "home";
+	}
+	/**
+	 * 新增后台定时修改密码
+	 */
+	@Action("/homep")
+	public String modifyPwd() throws Exception {
+		
+		String noticeModifyPwd = (String) request.getSession().getAttribute("modify_pwd");
+		if("noticed".equals(noticeModifyPwd)){
+			request.setAttribute("modifyPwd", "yes");
+			request.getSession().removeAttribute("modify_pwd");
+		}
+		return "home";
+	}
+	
+	/**
+	 * 百度编辑器中的跳转页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value="/plugins/ueditor/dialogs/video/video")
+	public String videoPage() throws Exception{
+		return "video";
+	}
+	
+	@Action(value="/plugins/ueditor/dialogs/spechars/spechars")
+	public String specharsPage() throws Exception{
+		return "spechars";
+	}
+	
+	
+	@Action(value="/plugins/ueditor/dialogs/searchreplace/searchreplace")
+	public String searchreplacePage() throws Exception{
+		return "searchreplace";
+	}
+	
+	@Action(value="/plugins/ueditor/dialogs/link/link")
+	public String linkPage() throws Exception{
+		return "link";
+	}
+	
+	@Action(value="/plugins/ueditor/dialogs/template/template")
+	public String templatePage() throws Exception{
+		return "template";
+	}
+	
+	
+	@Action(value="/plugins/ueditor/dialogs/table/edittable")
+	public String edittablePage() throws Exception{
+		return "edittable";
+	}
+	
+	
+	@Action(value="/plugins/ueditor/dialogs/anchor/anchor")
+	public String anchorPage() throws Exception{
+		return "anchor";
+	}
+	
+	
+	@Action(value="/plugins/ueditor/dialogs/attachment/attachment")
+	public String attachmentPage() throws Exception{
+		return "attachment";
+	}
+	
+	
+	@Action(value="/plugins/ueditor/dialogs/table/edittd")
+	public String edittdPage() throws Exception{
+		return "edittd";
+	}
+	
+	
+	
+	
+	
+	
+
+	/**
+	 * 首页待办事项
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/todoManager")
+	public String todoManager() throws Exception {
+		// 发标待审
+		int trialBorrowCount = borrowService.trialCount(0);
+		request.setAttribute("trialBorrowCount", trialBorrowCount);
+		// 满标复审
+		int fullBorrowCount = borrowService.fullCount(1);
+		request.setAttribute("fullBorrowCount", fullBorrowCount);
+		// 实名认证
+		int realNameCount = userIdentifyService.countByRealName("82");
+		request.setAttribute("realNameCount", realNameCount);
+		// 信用额度申请
+		int amountCount = userCreditApplyService.count(0, 2);
+		request.setAttribute("amountCount", amountCount);
+		// 上传资料待审核
+		//int attestationCount = attestationService.count(0);
+		//request.setAttribute("attestationCount", attestationCount);
+		// 等待初审审核的提现
+		int cashCount = accountDrawCashService.drawTotalCount(AccountDraw.DRAW_CASH_APPLY);
+		request.setAttribute("cashCount", cashCount);
+		// 等待复审审核的提现
+		int cashCountRecheck = accountDrawCashService.drawTotalCount(AccountDraw.DRAW_CASH_CHECK1_SUCCESS);
+		request.setAttribute("cashCountRecheck", cashCountRecheck);
+		// 等待审核的充值
+		int rechargeCount = accountRechargeService.count(55);
+		request.setAttribute("rechargeCount", rechargeCount);
+		// 今日待还
+		int repayCount = borrowRepaymentService.count();
+		request.setAttribute("repayCount", repayCount);
+		return "todoManager";
+	}
+
+	/**
+	 * 运营信息
+	 * 
+	 * @return
+	 * @throws Exception
+	 *//*
+	@Action("/modules/home/notices")
+	public String notices() throws Exception {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("userCache.userType", 1);
+		int userCount = userService.count(param);						// 查询投资人用户注册数
+		int borrowCount = borrowService.count();						// 成功发标统计（发标初审通过）
+		double tenderAccount = borrowTenderService.tenderAccount();		// 投资人累计投资金额
+		double sumInterest = borrowCollectionService.sumInterest();		// 累计为用户赚取收益	
+		request.setAttribute("userCount", userCount);
+		request.setAttribute("borrowCount", borrowCount);
+		request.setAttribute("tenderAccount", tenderAccount);
+		request.setAttribute("sumInterest", sumInterest);
+		return "notices";
+	}*/
+	/**
+	 * 运营信息
+	 * 
+	 * @return
+	 * @throws Exception
+	 * @author 孙晓勇
+	 */
+	@Action("/modules/home/notices")
+	public String notices() throws Exception {
+		int userCount = userService.countUserByType(10);					// 查询投资人用户注册数
+		int borrowCount = borrowService.count();							// 成功发标统计（发标初审通过）
+		double tenderAccount = borrowTenderService.tenderInvestAccount();	// 投资人累计投资金额
+		double sumInterest = borrowCollectionService.sumInterest();			// 累计为用户赚取收益	
+		request.setAttribute("userCount", userCount);
+		request.setAttribute("borrowCount", borrowCount);
+		request.setAttribute("tenderAccount", tenderAccount);
+		request.setAttribute("sumInterest", sumInterest);
+		return "notices";
+	}
+	
+	/**
+	 * 最近7天投资人数页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/investmentStatisticsPage")
+	public String investmentStatisticsPage() throws Exception {
+		return "investmentStatisticsPage";
+	}
+	/**
+	 * 最近7天投资人数
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/investmentStatistics")
+	public void investmentStatistics() throws Exception {
+		data = new HashMap<String, Object>();
+		List<Integer> counts = new ArrayList<Integer>();
+		List<String> dates = new ArrayList<String>();
+		Calendar c = Calendar.getInstance();
+		String time = paramString("time");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		if (!"".equals(startTime)) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			Date startDate = sdf.parse(startTime);
+			Date endDate = sdf.parse(endTime);
+			Calendar c1 = Calendar.getInstance();
+			c.setTime(startDate);
+			c1.setTime(endDate);
+			while (!c.after(c1)) {
+				String date = DateUtil.dateStr2(c1.getTime());
+				int acount = borrowTenderService.getInvestCountByDate(date);
+				c1.add(Calendar.DATE, -1);
+				dates.add(date.substring(5, date.length()));
+				counts.add(acount);
+			}
+		} else {
+			if ("year".equals(time)) {
+				for (int i=0; i<12;i++) {
+					String date = DateUtil.dateStr(c.getTime(),"yyyy-MM");
+					int acount = borrowTenderService.getInvestCountByDate(date);
+					c.add(Calendar.MONTH, -1);
+					dates.add(date);
+					counts.add(acount);
+				}
+			} else if ("month".equals(time)) {
+				for (int i=0; i<30;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					int acount = borrowTenderService.getInvestCountByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					counts.add(acount);
+				}
+			} else {
+				for (int i=0; i<7;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					int acount = borrowTenderService.getInvestCountByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					counts.add(acount);
+				}
+			}
+		}
+		Collections.reverse(dates);
+		Collections.reverse(counts);
+		data.put("dates", dates.toArray());
+		data.put("counts", counts.toArray());
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 最近7天借款金额页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/borrowingStatisticsPage")
+	public String borrowingStatisticsPage() throws Exception {
+		return "borrowingStatisticsPage";
+	}
+	/**
+	 * 最近7天借款金额
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/borrowingStatistics")
+	public void borrowingStatistics() throws Exception {
+		data = new HashMap<String, Object>();
+		List<Double> accounts = new ArrayList<Double>();
+		List<String> dates = new ArrayList<String>();
+		Calendar c = Calendar.getInstance();
+		String time = paramString("time");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		if (!"".equals(startTime)) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			Date startDate = sdf.parse(startTime);
+			Date endDate = sdf.parse(endTime);
+			Calendar c1 = Calendar.getInstance();
+			c.setTime(startDate);
+			c1.setTime(endDate);
+			while (!c.after(c1)) {
+				String date = DateUtil.dateStr2(c1.getTime());
+				double acount = borrowService.getBorrowAccountByDate(date);
+				c1.add(Calendar.DATE, -1);
+				dates.add(date.substring(5, date.length()));
+				accounts.add(acount);
+			}
+		} else {
+			if ("year".equals(time)) {
+				for (int i=0; i<12;i++) {
+					String date = DateUtil.dateStr(c.getTime(),"yyyy-MM");
+					double acount = borrowService.getBorrowAccountByDate(date);
+					c.add(Calendar.MONTH, -1);
+					dates.add(date);
+					accounts.add(acount);
+				}
+			} else if ("month".equals(time)) {
+				// JSDP-137 2015年5月27日    sxy
+				/*String date = DateUtil.dateStr2(c.getTime());
+				dates.add(date.substring(5, date.length()));
+				accounts.add(borrowService.getBorrowAccountByDate(date));*/
+				// JSDP-137 2015年5月27日    sxy
+				for (int i=0; i<30;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					double acount = borrowService.getBorrowAccountByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					accounts.add(acount);
+				}
+			} else {
+				for (int i=0; i<7;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					double acount = borrowService.getBorrowAccountByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					accounts.add(acount);
+				}
+			}
+		}
+		Collections.reverse(dates);
+		Collections.reverse(accounts);
+		data.put("dates", dates.toArray());
+		data.put("accounts", accounts.toArray());
+		printJson(getStringOfJpaObj(data));
+	}
+
+	
+	/**
+	 * 访问人数
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/visitor")
+	public String visitor() throws Exception {
+		return "visitor";
+	}
+
+	/**
+	 * 其他通知
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/otherNotices")
+	public String otherNotices() throws Exception {
+		return "otherNotices";
+	}
+	
+	
+	
+	/**
+	 * 交易金额
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/home/tenderStatistics")
+	public void tenderStatistics() throws Exception {
+		data = new HashMap<String, Object>();
+		List<Double> accounts = new ArrayList<Double>();
+		List<String> dates = new ArrayList<String>();
+		Calendar c = Calendar.getInstance();
+		String time = paramString("time");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		if (!"".equals(startTime)) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			Date startDate = sdf.parse(startTime);
+			Date endDate = sdf.parse(endTime);
+			Calendar c1 = Calendar.getInstance();
+			c.setTime(startDate);
+			c1.setTime(endDate);
+			while (!c.after(c1)) {
+				String date = DateUtil.dateStr2(c1.getTime());
+				double acount = borrowTenderService.tenderedAccountsByDate(date);
+				c1.add(Calendar.DATE, -1);
+				dates.add(date.substring(5, date.length()));
+				accounts.add(acount);
+			}
+		} else {
+			if ("year".equals(time)) {
+				for (int i=0; i<12;i++) {
+					String date = DateUtil.dateStr(c.getTime(),"yyyy-MM");
+					double acount = borrowTenderService.tenderedAccountsByDate(date);
+					c.add(Calendar.MONTH, -1);
+					dates.add(date);
+					accounts.add(acount);
+				}
+			} else if ("month".equals(time)) {
+				// JSDP-155 2015年5月27日    sxy
+				/*String firstDate = DateUtil.dateStr2(c.getTime());
+				dates.add(firstDate.substring(5, firstDate.length()));
+				accounts.add(borrowTenderService.tenderedAccountsByDate(firstDate));*/
+				// JSDP-155 2015年5月27日    sxy
+				for (int i=0; i<30;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					double acount = borrowTenderService.tenderedAccountsByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					accounts.add(acount);
+				}
+			} else {
+				for (int i=0; i<7;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					double acount = borrowTenderService.tenderedAccountsByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					accounts.add(acount);
+				}
+			}
+		}
+		Collections.reverse(dates);
+		Collections.reverse(accounts);
+		data.put("dates", dates.toArray());
+		data.put("accounts", accounts.toArray());
+		printJson(getStringOfJpaObj(data));
+	}
+
+}

@@ -1,0 +1,55 @@
+package com.rongdu.p2psys.web.reset;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.reset.global.service.GlobalResetService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述:重置全局变量
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月24日
+ */
+
+public class GlobalResetAction extends BaseAction {
+
+	@Resource
+	private GlobalResetService globalResetService;
+	private Map<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * 重置规则
+	 * 
+	 * @return
+	 */
+	@Action(value = "/reset/rule")
+	public void rule() throws Exception {
+		long ruleID = this.paramLong("id");
+		String token = this.paramString("token");
+		try {
+
+			if (globalResetService.isAuthority(token)) {
+				Rule rule = globalResetService.resetRuleCheck(ruleID);
+				if (rule == null) {
+					data.put("status", false);
+				} else {
+					data.put("status", true);
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			data.put("status", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+}

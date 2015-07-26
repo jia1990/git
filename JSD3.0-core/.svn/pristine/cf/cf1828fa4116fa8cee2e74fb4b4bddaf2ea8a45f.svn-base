@@ -1,0 +1,273 @@
+package com.ddtkj.p2psys.account.service;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述:账户取现服务
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间:  2014年12月16日 
+ */
+public interface AccountDrawCashService {
+	 //JSDP-117  wcw 20150521 start
+    /**
+     * 新增提现记录
+     * @param draw
+     * @throws Exception
+     */
+	void saveDrawCash(AccountDraw draw)throws Exception ;
+	/**
+     * 修改提现记录
+     * @param draw
+     * @throws Exception
+     */
+	void updateDrawCash(AccountDraw draw)throws Exception ;
+	 //JSDP-117  wcw 20150521 end
+	
+	/**
+	 * 申请提现核心业务
+	 * @param accountDraw
+	 * @param user
+	 */
+    public void doApplyDrawCash(AccountDraw draw)throws Exception;
+    
+    /**
+     * 提现fee计算
+     * @param map
+     * @return
+     */
+    public Map<String, Object> drawFee(Map<String, Object> map) ;
+    
+    /**
+	 * 取消提现 注意判断id与userId是否对应
+	 * 
+	 * @param userId
+	 * @param id
+	 */
+	void doCancleDrawCash(Map<String, Object> drawMap);
+	/**
+	 * 提现失败
+	 * @param drawMap
+	 */
+	void doFailDrawCash(Map<String, Object> drawMap);
+	/**
+	 * 后台提现初审成功业务逻辑
+	 * @param draw   提现实体
+	 * @param operator 后台操作人员
+	 * @param preStatus  提现记录修改前的状态
+	 */
+    void firstTrialSuccessCash(Map<String, Object> drawMap);
+    
+    /**
+	 * 后台提现复审成功业务逻辑等待银行转账业务逻辑
+	 * @param cash
+	 */
+    Map<String, Object> recheckSuccessCash(Map<String, Object> drawMap)throws Exception;
+	/**
+	 * 前台提现记录查询
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	PageDataList<AccountDrawModel> list(long userId, AccountDrawModel model);
+	
+	/**
+	 * 前台用户提现总额统计
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	double drawTotalMoney(long userId,int startPage,AccountDrawModel model);
+
+	/**
+	 * 后台提现审核记录列表
+	 * 
+	 * @param accountCashModel
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<AccountDrawModel> accountDrawCashPageDataList(int startPage,AccountDrawModel model);
+	
+	/**
+	 * 后台提现总额
+	 * 
+	 * @param accountCashModel
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	//double accountDrawCashTotal(int startPage,AccountDrawModel model);
+	
+	/**
+	 * 后台提现总额
+	 * 
+	 * @param accountCashModel
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	double accountDrawCashTotal();
+	
+	
+	
+	/**
+	 * 后台导出提现记录列表
+	 * 
+	 * @param accountCashModel
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	List<AccountDrawModel> accountDrawCashList(AccountDrawModel model);
+	
+    /**
+     * 通过流水号查询提现记录
+     * @param out_trade_no
+     * @return
+     */
+	List<AccountDraw> drawListByTradeNo(String out_trade_no);
+	/**
+	 * 统计等待审核的提现总次数
+	 * 
+	 * @param status
+	 * @return
+	 */
+	int drawTotalCount(String drawHandleStatus);
+
+	/**
+	 * 提现回调业务处理
+	 * @param cash 提现参数封装
+	 */
+	void drawCashCallBack(YmdCash cash);
+	/**
+	 * 提现银行转账失败回调业务处理
+	 * 
+	 * //JSDP - BUG32  sxy
+	 * @remark 若非补单操作，则fillOrderLog值为NULL
+	 * @param cashModel
+	 */
+	//void drawCashBankFailCallBack(AccountDrawModel cashModel);、
+	void drawCashBankFailCallBack(YmdCash cash,FillOrderLog fillOrderLog);
+	/**
+	 * 提现银行转账成功业务处理
+	 * 
+	 * //JSDP - BUG32  sxy
+	 * @remark 若非补单操作，则fillOrderLog值为NULL
+	 * @param cashModel
+	 */
+	//void drawCashBankSucCallBack(AccountDrawModel cashModel);
+	void drawCashBankSucCallBack(YmdCash ymdCash,String drawHandleStatus,FillOrderLog fillOrderLog)throws Exception;
+    /**
+     * @author 李建云
+     * 投资人累计提现金额总和
+     * 
+     * @return
+     */
+    double allDrawCashMomeny(long userId);
+    
+    /**
+     * @author 李建云
+     * 投资人截止某个日期累计提现金额总和
+     * 
+     * @return
+     */
+    double allDrawCashMomenyByUserIdAndEndTime(Date date ,long userId);
+    
+	
+	/**
+	 * @author 李建云
+	 * 今日提现
+	 * @param userId
+	 * @return
+	 */
+	public double drawCashMomenyToday(long userId);
+	
+	/**
+	 *@author 李建云 
+	 * 本月累计提现
+	 * */
+	public double drawCashMoneyMonth(long userId,Date startTime,Date endTime);
+    
+    /**
+     * 通过ID查询单条提现记录
+     * @param id
+     * @return
+     */
+    AccountDraw getDrawById(int id);
+    /**
+     * 通过提现Id进行本地以及第三方对账
+     * @param id
+     * @return
+     */
+    public Map<String, Object> drawCompare(int id) throws Exception;
+    void drawSupplementSingle(int id) throws Exception ;
+    
+    /**
+     * 根据查询条件提现汇总
+     * @param model
+     * @return
+     */
+    String drawTotal(AccountDrawModel model);
+    /**
+     * 根据用户id查询用户的提现历史记录
+     * @param userId
+     * @param model
+     * @return
+     */
+    PageDataList<AccountDrawModel> drawHistoryPageList(long userId,AccountDrawModel model);
+    /**
+     * 个人提现金额汇总
+     * @param userId
+     * @param model
+     * @return
+     */
+    String drawStatusTotal(long userId, AccountDrawModel model);
+    //提现订单号查询 wcw 2015-4-8 start
+    /**
+     * 通过提现订单号查询记录
+     * @param outTradeNo
+     * @return
+     */
+    AccountDraw getDrawByOutTradeNo(String outTradeNo);
+  //提现订单号查询 wcw 2015-4-8 end
+    
+    /**
+	 * 
+	 * 明细——查询时间段内提现金额记录
+	 * 
+	 * @author sxy 2015年5月5日
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<AccountDrawModel> drawMoneyStatisticsList(AccountDrawModel model, int pageNumber, int pageSize);
+	/**
+	 * 使用sql导出excel提现查询
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 xingjia 2015-05-15 start
+	List excelListDraw(AccountDrawModel model);
+	//JSDP-116 xingjia 2015-05-15 start	
+	// JSDP-BUG99 20150527 sxy start
+	/**
+	 * 投资列表
+	 * 
+	 * @param borrowModel
+	 * @return
+	 */
+	PageDataList<AccountDraw> drawMoneyStatisticsListForSQL(AccountDrawModel model, int page, int size);
+	// JSDP-BUG99 20150527 sxy start
+	
+}

@@ -1,0 +1,615 @@
+package com.ddtkj.mobile.action;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.mobile.MobileBaseAction;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowHelper;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.core.cache.MemCachedUtil;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.model.CreditShowModel;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowMortgage;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.domain.BorrowUpload;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.MobileBorrowModel;
+import com.rongdu.p2psys.borrow.model.MobileBorrowTenderModel;
+import com.rongdu.p2psys.borrow.model.interest.InterestCalculator;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.disruptor.DisruptorUtils;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.rule.RedPacketConsumeRuleCheck;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.domain.UserFreeze;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class ProjectPageAction extends MobileBaseAction {
+
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowTenderService tenderService;
+	@Resource
+	private CreditAssignmentService creditAssignmentService;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private VerifyLogService verifyLogService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private RegionService regionServcie;
+
+	@Resource
+	private UserService userService;
+
+	@Resource
+	private AccountService accountService;
+
+	private Map<String, Object> data;
+
+	@Resource
+	private DictService dictService;
+
+	// 理财产品 - 取得项目列表与项目详情
+	@Action("/jsdmobile/project")
+	public String project() throws IOException {
+		data = new HashMap<String, Object>();
+		int page = paramInt("page");
+		String type = paramString("type");
+		try {
+			if ("energy".equals(type) || "car".equals(type) || "web".equals(type) || "stage".equals(type)) {
+				BorrowModel model = (BorrowModel) paramModel(BorrowModel.class);
+				List<HashMap<String,Object>> pArray = new ArrayList<HashMap<String, Object>>();
+				if ("energy".equals(type)) {
+					model.setType(Borrow.TYPE_MORTGAGE_ENERGY);
+				} else if ("car".equals(type)) {
+					model.setType(Borrow.TYPE_MORTGAGE);
+				} else if ("web".equals(type)) {
+					model.setType(Borrow.TYPE_NETWORK);
+				} else if ("stage".equals(type)) {
+					model.setType(Borrow.TYPE_AMORTIZE);
+				}
+				
+				int size = paramInt("size");
+				if (size != 0) {
+					model.setSize(size);
+				} else {
+					model.setSize(16);
+				}
+				
+				int status = paramInt("status");
+				if (status != 0) {
+					model.setStatus(status);
+				} else {
+					model.setStatus(-2);
+				}
+				
+				Borrow borrow = BorrowHelper.getWorker(model).prototype();
+				model = BorrowModel.instanceCurr(borrow, model);
+				model.setPage(page);
+				if (model.getPage() == 0) {
+					model.setPage(1);
+				}
+				PageDataList<BorrowModel> pageDataList = borrowService.getList(model);
+				if (pageDataList == null) {
+					data.put("res_code", "0");
+					data.put("res_msg", "失败");
+				} else if (pageDataList != null) {
+					if (pageDataList.getList().size() > 0) {
+						
+						
+						for (int i = 0; i < pageDataList.getList().size(); i++) {
+							BorrowModel btm = pageDataList.getList().get(i);
+							
+							//仅显示投资中的标与还款中的标
+							if(btm.getStatus()!=1 && btm.getStatus()!=3 && btm.getStatus()!=6 && btm.getStatus()!=7 && btm.getStatus()!=8){
+								continue;
+							}
+							if(btm.getStatus()==1 && btm.isFlow()){
+								continue;
+							}						
+							
+							VerifyLog log = verifyLogService.findByType(btm.getBorrowId(), "borrow", 1);
+							
+							HashMap<String,Object> pMap = new HashMap<String,Object>();
+							pArray.add(pMap);
+							
+							pMap.put("id",btm.getId());
+							pMap.put("account",btm.getAccount());
+							pMap.put("account_yes",btm.getAccountYes());
+							pMap.put("apr",btm.getApr());
+							pMap.put("borrow_time_type",btm.getBorrowTimeType());
+							pMap.put("fixed_time",btm.getFixedTime());
+							pMap.put("name",btm.getName());
+							pMap.put("scales",btm.getScales());
+							pMap.put("status",btm.getStatus());
+							pMap.put("styleName",btm.getStyle());
+							pMap.put("style",getStyleName(btm.getStyle()));
+							pMap.put("time_limit",btm.getTimeLimit());
+							pMap.put("user_id",btm.getUserId());
+							pMap.put("valid_time",btm.getValidTime());
+							pMap.put("add_time",btm.getAddTime());
+							boolean direct_pwd = false; 
+							if(null!=btm.getPwd() && !"".equals(btm.getPwd())){
+								direct_pwd = true;
+							}
+							pMap.put("direct_pwd", direct_pwd);
+
+							if (log != null) {
+								pMap.put("verify_time",log.getTime());
+							}
+						}
+					}
+					data.put("res_code", "1");
+					data.put("res_msg", "成功");
+				}
+				if ("energy".equals(type)) {
+					data.put("energy_list", pArray);
+				} else if ("car".equals(type)) {
+					data.put("car_list", pArray);
+				} else if ("web".equals(type)) {
+					data.put("web_list", pArray);
+				} else if ("stage".equals(type)) {
+					data.put("stage_list", pArray);
+				}
+				data.put("page", model.getPage());
+			} else if ("creditor".equals(type)) {
+				CreditAssignmentModel creditModel = (CreditAssignmentModel) paramModel(CreditAssignmentModel.class);
+				List<CreditShowModel> csmList = new ArrayList<CreditShowModel>();
+				List<String> list = new ArrayList<String>();
+				list.add("01");
+				int size = paramInt("size");
+				if (size != 0) {
+					creditModel.setSize(size);
+				} else {
+					creditModel.setSize(16);
+				}
+				creditModel.setPage(page);
+				if (creditModel.getPage() == 0) {
+					creditModel.setPage(1);
+				}
+				PageDataList<CreditShowModel> pageDataList = creditAssignmentService.getDateShow(list, creditModel.getPage(), creditModel.getSize(), creditModel);
+				if (pageDataList != null) {
+					if (pageDataList.getList().size() > 0) {
+						for (int i = 0; i < pageDataList.getList().size(); i++) {
+							CreditShowModel csm = pageDataList.getList().get(i);
+							csmList.add(csm);
+						}
+					}
+					data.put("res_code", "1");
+					data.put("res_msg", "成功");
+				} else if (pageDataList == null) {
+					data.put("res_code", "0");
+					data.put("res_msg", "失败");
+				}
+				data.put("creditor_list", csmList);
+				data.put("page", creditModel.getPage());
+			} else if ("all".equals(type)) {
+				return null;
+			}
+		} catch (Exception e) {
+			data.put("res_code", "0");
+			data.put("res_msg", "失败：" + e.getMessage());
+		}
+		printMap(data);
+		return null;
+	}
+
+	/**
+	 * 还款方式数字转中文字符串，便于手机端处理
+	 * 
+	 * @param style
+	 * @return String
+	 * @throws Exception
+	 */
+	private String getStyleName(int style) {
+		String styleStr = "";
+		if (style == Borrow.STYLE_INSTALLMENT_REPAYMENT) {
+			styleStr = "等额本息";
+		} else if (style == Borrow.STYLE_MONTHLY_INTEREST) {
+			styleStr = "每月付息";  //每月还息到期还本
+		} else if (style == Borrow.STYLE_ONETIME_REPAYMENT) {
+			styleStr = "一次性还";  //一次性还款
+		} else {
+			styleStr = "未知";
+		}
+		return styleStr;
+	}
+
+	// 理财产品 - 取得借款明细与投资列表
+	@Action(value = "/jsdmobile/project_detail", 
+			results = { @Result(name = "yemadai_result", type="ftl", location = "phone/pages/yemadai_result.html"),
+			@Result(name = "project_detail", type = "ftl", location = "/phone/pages/project_detail.html") })
+	public String project_detail() throws IOException {
+		data = new HashMap<String, Object>();
+		int page = this.paramInt("page");
+		long id = paramLong("id");
+		String type = paramString("type");
+		String fetch = paramString("fetch");
+		List<Map<String, Object>> tenderList = new ArrayList<Map<String, Object>>();
+		if ("detail".equals(fetch)) {
+			try{
+				if ("energy".equals(type) || "car".equals(type) || "web".equals(type) || "stage".equals(type)) {
+					Borrow b = borrowService.find(id);
+					User user = b.getUser();
+	
+					BorrowModel borrow = BorrowModel.instance(b);
+					UserCache userCache = userCacheService.findByUserId(b.getUser().getUserId());
+					UserCacheModel uc = UserCacheModel.instance(userCache);
+					uc.setProvinceName(this.regionServcie.getRegionById(Long.parseLong(uc.getProvince())).getName());
+					uc.setCityName(this.regionServcie.getRegionById(Long.parseLong(uc.getCity())).getName());
+					uc.setAreaName(this.regionServcie.getRegionById(Long.parseLong(uc.getArea())).getName());
+					request.setAttribute("borrow", borrow);
+					request.setAttribute("uc", uc);
+					
+					if(null != borrow){
+						request.setAttribute("borrowContent", Html2Text(borrow.getContent()));
+					}else{
+						request.setAttribute("borrowContent", "待补充");
+					}
+	
+					if(null != b.getUser()){
+						request.setAttribute("nickName", userService.find(b.getUser().getUserId()).getNickname()); // 借款人昵称
+					}else{
+						request.setAttribute("nickName", "保密");
+					}
+					request.setAttribute("sex", "M".equals(uc.getSex()) ? "男" : ("F".equals(uc.getSex()) ? "女" : "保密")); // 性别
+					if(null != user.getCardNO()){
+						request.setAttribute("birth", user.getCardNO().substring(6, 10) + "年" + user.getCardNO().substring(10, 12) + "月" + user.getCardNO().substring(12, 14) + "日"); // 出生年月			
+					}else{
+						request.setAttribute("birth", "保密");
+					}
+					request.setAttribute("marry", "1".equals(uc.getMaritalStatus()) ? "已婚" : ("2".equals(uc.getMaritalStatus()) ? "未婚" : "保密")); // 婚姻状况
+					request.setAttribute("position", uc.getPosition()); // 岗位职责
+					try{
+						if (!uc.getCity().contains("X")) {
+							request.setAttribute("area", this.regionServcie.getRegionById(Long.parseLong(uc.getProvince())).getName() // 所在地区
+									+ this.regionServcie.getRegionById(Long.parseLong(uc.getCity())).getName() + this.regionServcie.getRegionById(Long.parseLong(uc.getArea())).getName());
+						} else {
+							request.setAttribute("area", "保密");
+						}
+					}catch(Throwable t){
+						request.setAttribute("area", "保密");
+					}
+					Dict dic = dictService.find("borrow_use", b.getBorrowUse());
+					request.setAttribute("borrowUse", dic != null ? dic.getName() : null); // 借款用途
+					Dict dic2 = dictService.find("professional", uc.getProfessional());
+					if (dic2 != null) {
+						request.setAttribute("profressional", dic2.getName()); // 所属行业
+					} else {
+						request.setAttribute("profressional", "保密");
+					}
+					Dict dic3 = dictService.find("repayment_source", uc.getSourceRepay());
+					if (dic3 != null) {
+						request.setAttribute("sourcerepay", dic3.getName()); // 还款来源
+					} else {
+						request.setAttribute("sourcerepay", "保密");
+					}
+					String companyName = uc.getCompanyName();
+					if (companyName != null && companyName.length() > 5) {
+						request.setAttribute("companyName", companyName.substring(0, 2) + "****" + companyName.substring(companyName.length() - 4)); // 企业名称
+					} else {
+						request.setAttribute("companyName", "保密");
+					}
+					request.setAttribute("companyDesc", uc.getCompanyDesc()); // 企业描述
+					request.setAttribute("companyStatus", uc.getCompanyStatus());  //经营状况
+				}
+				return "project_detail";
+			}catch(Throwable t){
+				Writer result = new StringWriter();
+			    PrintWriter printWriter = new PrintWriter(result);
+			    t.printStackTrace(printWriter);
+				
+				this.getRequest().setAttribute("result", result.toString());
+				return "yemadai_result";
+			}
+		} else if ("tender".equals(fetch)) {
+			try {
+				PageDataList<BorrowTenderModel> pageDataList = new PageDataList<BorrowTenderModel>();
+				if ("energy".equals(type) || "car".equals(type) || "web".equals(type) || "stage".equals(type)) {
+					BorrowModel model = (BorrowModel) paramModel(BorrowModel.class);
+					model.setPage(page);
+					if (model.getPage() == 0) {
+						model.setPage(1);
+					}
+					pageDataList = tenderService.list(id, model.getPage(), 0);
+					data.put("page", model.getPage());
+				} else if ("creditor".equals(type)) {
+					CreditAssignmentModel caModel = (CreditAssignmentModel) paramModel(CreditAssignmentModel.class);
+					caModel.setPage(page);
+					CreditAssignment ca = creditAssignmentService.getEntityById(paramLong("id"));
+					if (caModel.getPage() == 0) {
+						caModel.setPage(1);
+					}
+					pageDataList = tenderService.list(ca.getBorrow().getId(), caModel.getPage(), 0);
+					data.put("page", caModel.getPage());
+					data.put("caId", ca.getId());
+				}
+				if (pageDataList == null) {
+					data.put("res_code", "0");
+					data.put("res_msg", "失败");
+				} else if (pageDataList != null) {
+					if (pageDataList.getList().size() > 0) {
+						for (int i = 0; i < pageDataList.getList().size(); i++) {
+							BorrowTenderModel btm = pageDataList.getList().get(i);
+							tenderList.add(fillMobileBorrowTenderModel(btm));
+						}
+					}
+					data.put("res_code", "1");
+					data.put("res_msg", "成功");
+				}
+			} catch (Exception e) {
+				data.put("res_code", "0");
+				data.put("res_msg", "失败：" + e.getMessage());
+			}
+		}
+		data.put("touziliebiao", tenderList);
+		printMap(data);
+		return null;
+	}
+
+	public String Html2Text(String inputString) {
+		String htmlStr = inputString; // 含html标签的字符串
+		String textStr = "";
+		java.util.regex.Pattern p_script;
+		java.util.regex.Matcher m_script;
+		java.util.regex.Pattern p_style;
+		java.util.regex.Matcher m_style;
+		java.util.regex.Pattern p_html;
+		java.util.regex.Matcher m_html;
+
+		try {
+			String regEx_script = "<[\\s]*?script[^>]*?>[\\s\\S]*?<[\\s]*?\\/[\\s]*?script[\\s]*?>"; // 定义script的正则表达式{或<script[^>]*?>[\\s\\S]*?<\\/script>
+																										// }
+			String regEx_style = "<[\\s]*?style[^>]*?>[\\s\\S]*?<[\\s]*?\\/[\\s]*?style[\\s]*?>"; // 定义style的正则表达式{或<style[^>]*?>[\\s\\S]*?<\\/style>
+																									// }
+			String regEx_html = "<[^>]+>"; // 定义HTML标签的正则表达式
+
+			p_script = Pattern.compile(regEx_script, Pattern.CASE_INSENSITIVE);
+			m_script = p_script.matcher(htmlStr);
+			htmlStr = m_script.replaceAll(""); // 过滤script标签
+
+			p_style = Pattern.compile(regEx_style, Pattern.CASE_INSENSITIVE);
+			m_style = p_style.matcher(htmlStr);
+			htmlStr = m_style.replaceAll(""); // 过滤style标签
+
+			p_html = Pattern.compile(regEx_html, Pattern.CASE_INSENSITIVE);
+			m_html = p_html.matcher(htmlStr);
+			htmlStr = m_html.replaceAll(""); // 过滤html标签
+
+			textStr = htmlStr;
+
+		} catch (Exception e) {
+			textStr = inputString+"("+e.getMessage()+")";
+		}
+
+		return textStr;// 返回文本字符串
+	} 
+	
+	/**
+	 * 填充手机端投标信息
+	 * 
+	 * @param btm
+	 * @throws Exception
+	 */
+	private Map<String, Object> fillMobileBorrowTenderModel(BorrowTenderModel btm) {
+		MobileBorrowTenderModel mobileModle = new MobileBorrowTenderModel();
+		Map<String, Object> map = new HashMap<String, Object>();
+		if (btm != null) {
+			mobileModle.setAccount(btm.getAccount());
+			mobileModle.setAdd_time(btm.getAddTime());
+			mobileModle.setId(btm.getBorrowId());
+			mobileModle.setUser_name(btm.getUserName());
+		}
+		map.put("id", (Object) mobileModle.getAccount());
+		map.put("user_name", (Object) mobileModle.getUser_name());
+		map.put("account", (Object) mobileModle.getAccount());
+		map.put("add_time", (Object) mobileModle.getAdd_time());
+		return map;
+	}
+
+	private Map<String, Object> printResult(boolean isSuccess) {
+		Map<String, Object> map = new HashMap<String, Object>();
+		if (isSuccess) {
+			data.put("res_code", "1");
+			data.put("res_msg", "成功");
+		} else {
+			data.put("res_code", "0");
+			data.put("res_msg", "失败");
+		}
+		return map;
+	}
+
+	// 理财产品 - 立即投资
+	@Action("/jsdmobile/project_invest")
+	public String project_invest() throws Exception {
+		data = new HashMap<String, Object>();
+		try {
+			Map<String, Object> map=(Map<String, Object>) MemCachedUtil.memCachedClient.get("project_invest");
+			if(map==null){
+				map=new HashMap<String, Object>();
+				map.put("borrowId", paramLong("id"));
+				map.put("currentTime", DateUtil.getNowTime());
+				map.put("userId", paramLong("uid"));
+				MemCachedUtil.memCachedClient.add("project_invest", map);
+			}else{
+				long borrow_id=(Long) map.get("borrowId");
+				int currentTime= (Integer) map.get("currentTime");
+				long userId=(Long) map.get("userId");
+				if(borrow_id==paramLong("id")&&userId==paramLong("uid")&&currentTime+180>DateUtil.getNowTime()){
+					throw new Exception("3分钟内不允许投相同的标");
+				}else{
+					map.put("borrowId", paramLong("id"));
+					map.put("currentTime", DateUtil.getNowTime());
+					map.put("userId", paramLong("uid"));
+					MemCachedUtil.memCachedClient.replace("project_invest", map);
+				}
+			}
+			//是否使用钱袋支付, 默认为启用
+			String mdAccountUse = "true"; //paramString("mdAccountUse");
+			BorrowModel model = new BorrowModel();
+			Borrow borrow = borrowService.find(paramLong("id"));
+			if (borrow != null) {
+				if (borrow.getPwd() != null) {
+					String direct_pwd = paramString("direct_pwd");
+					if (!borrow.getPwd().equals(direct_pwd)) {
+						throw new Exception("定向密码输入错误!");
+					} else{
+						model.setPwd(direct_pwd);
+					}
+				} 
+			} else {
+				throw new Exception("没有找到当前标:"+paramLong("id"));
+			}
+			
+			User user = userService.find(paramLong("uid"));
+			if(null == user){
+				throw new Exception("非法UID,当前用户不存在!");
+			}
+			
+			String pay_pwd = paramString("pay_pwd");
+			if(null!=user.getPaypwd() && !"".equals(user.getPaypwd())){
+				if(!user.getPaypwd().equals(MD5.encode(pay_pwd))){
+					throw new Exception("支付密码不正确,请重新输入!");
+				}
+			}else{
+				throw new Exception("您尚未设置支付密码, 请先设置支付密码后再操作!");
+			}
+			
+			// 处理使用红包 如果不用那么获取到的是 "" 否则 1
+			Account ac = this.accountService.findByUser(user.getUserId());
+			RedPacketConsumeRuleCheck rpcrc = (RedPacketConsumeRuleCheck) Global.getRuleCheck("redPacketConsume");
+			model.setMoney(paramDouble("money"));
+			String borrowType = paramString("type");
+			if(!"stage".equals(borrowType)){
+				double money=paramDouble("money");
+				if(money<100){
+					throw new Exception("投标金额不能小于100元");
+				}
+			}
+		
+			if ("energy".equals(borrowType)) {
+				// 能源宝
+				borrow.setType(113);
+			} else if ("web".equals(borrowType)) {
+				// 微企贷
+				borrow.setType(115);
+			} else if ("car".equals(borrowType)) {
+				// 车贷宝
+				borrow.setType(103);
+			} else if ("creditor".equals(borrowType)) {
+
+			} else if ("stage".equals(borrowType)) {
+				// 分期宝
+				borrow.setType(105);
+			}
+			double mdAccount = rpcrc.investUseDynamicRP(ac.getUsableAccount(), model.getMoney(),model.getBorrowTimeType(),model.getTimeLimit());
+			if ("true".equals(mdAccountUse)) {
+				if (mdAccount > ac.getRpDynamicTotal()) {
+					mdAccount = 0;
+				}
+				model.setMdAccount(mdAccount);
+			}
+			// 投标前model值校验
+			model.checkTenderModel(borrow, user);
+			BorrowTender tender = new BorrowTender();
+			tender.setAddIp(this.getRequestIp());
+			tender.setTenderType((byte) 2);
+			accountService.accountCompare(paramLong("uid"));
+			//投标前校验
+			tender=tenderService.validTender(user, borrow, tender, model);
+			// 投标核心方法
+			//tenderService.addTender(user, borrow, tender, model);
+			DisruptorUtils.doAddTender(user, model, borrow,
+					tender, paramString("resultFlag"));
+			data.put("res_code", "1");
+			if("true".equals(mdAccountUse)){
+				data.put("res_msg", "投标处理中，请到我的投资页面查看投资结果!本次使用钱袋"+mdAccount+"元");
+			}else{
+				data.put("res_msg", "投标处理中，请到我的投资页面查看投资结果");
+			}
+			
+		} catch (Exception e) {
+			data.put("res_code", "0");
+			data.put("res_msg", "投标失败 "+e.getMessage());
+			e.printStackTrace();
+		}
+		printMap(data);
+		return null;
+	}
+	
+	// 理财产品 - 计算到期收益
+	@Action("/jsdmobile/project_calc_interest")
+	public String project_calc_interest() throws Exception {
+		try {
+			double money = paramDouble("money");
+			long id = paramLong("id");
+			Borrow borrow = borrowService.find(id);
+			//borrow.setScales(-1); // 用于标记是投标的情况
+			BorrowWorker worker = BorrowHelper.getWorker(borrow);
+			BorrowTender tender = new BorrowTender();
+			tender.setMoney(money);
+			double validAccount = worker.validAccount(tender);
+			InterestCalculator ic = worker.interestCalculator(validAccount);
+			data = new HashMap<String, Object>();
+			double inv = 0;
+			if (validAccount != money) {
+				inv = ic.repayTotal() - validAccount;
+			} else {
+				inv = ic.repayTotal() - money;
+			}
+			data.put("inv", String.format("%.2f", inv));
+			data.put("res_code", "1");
+			data.put("res_msg", "计算成功");
+		} catch (Exception e) {
+			data.put("res_code", "0");
+			data.put("res_msg", e.getMessage());
+			e.printStackTrace();
+		}
+		printMap(data);
+		return null;
+	}
+}

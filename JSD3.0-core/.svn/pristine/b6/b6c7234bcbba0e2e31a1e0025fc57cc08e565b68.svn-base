@@ -1,0 +1,1123 @@
+package com.rongdu.p2psys.user.dao.jdbc;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck.FriendFirstInvest;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @author fuxingxing
+ * @version 2.0
+ * @date 2012-7-2-下午2:08:27
+ */
+@Repository("userDao")
+public class UserDaoImpl extends BaseDaoImpl<User> implements UserDao {
+
+	private static Logger logger = Logger.getLogger(UserDaoImpl.class);	
+
+	@Override
+	public long getUserIdByUserName(String userName) throws Exception {
+		String sql = "SELECT userId FROM User WHERE userName = :userName";
+		Query query = em.createQuery(sql);
+		query.setParameter("userName", userName);
+		return (Long) query.getSingleResult();
+	}
+
+	public int count(QueryParam param) {
+		return countByCriteria(param);
+	}
+
+	@Override
+	public int countByUserName(String userName) {
+		return countByCriteria(QueryParam.getInstance().addParam("userName", userName));
+	}
+	@Override
+	public int countByNickName(String nickName) {
+		//		return countByCriteria(QueryParam.getInstance().addParam("nickName", nickName));
+		return 0 ;
+	}
+	@Override
+	public int countByCardId(String cardId) {
+		return countByCriteria(QueryParam.getInstance().addParam("cardId", cardId));
+	}
+	
+    @Override
+    public int countByMobilePhone(String mobilePhone) {
+        //return countByCriteria(QueryParam.getInstance().addParam("mobilePhone", mobilePhone));
+    	return countByCriteria(QueryParam.getInstance().addParam("mobilePhone", mobilePhone));
+    }
+	
+    @Override
+    public int countByEmail(String email) {
+        return countByCriteria(QueryParam.getInstance().addParam("email", email));
+    }
+
+	@Override
+	public User modifyPwd(User user) {
+		String sql = "UPDATE User SET password = :pwd WHERE userId = :userId";
+		user.setPassword(MD5.encode(user.getPassword()));
+		Query query = em.createQuery(sql);
+		query.setParameter("pwd", user.getPassword());
+		query.setParameter("userId", user.getUserId());
+		int result = query.executeUpdate();
+		logger.debug("用户修改密码, userId:" + user.getUserId() + " ,修改结果：" + result);
+		if (result != 1) {
+			throw new UserException("密码修改失败！");
+		}
+		return user;
+	}
+	@Override
+	public User modifyPaypwd(User user) {
+		String sql = "UPDATE User SET paypwd = :paypwd WHERE userId = :userId";
+		user.setPaypwd(MD5.encode(user.getPaypwd()));
+		Query query = em.createQuery(sql);
+		query.setParameter("paypwd", user.getPaypwd());
+		query.setParameter("userId", user.getUserId());
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("交易密码设置或修改失败！");
+		}
+		return user;
+	}
+
+	public void modifyRealname(long userId, String realName) {
+		String sql = "UPDATE User SET realName = :realName WHERE userId = :userId";
+		Query query = em.createQuery(sql);
+		query.setParameter("realName", realName);
+		query.setParameter("userId", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("更新用户实名认证失败！", 1);
+		}
+	}
+	
+	@Override
+    public  void modifyUsername(long userId, String userName){
+	    String sql = "UPDATE User SET userName = :userName WHERE userId = :userId";
+        Query query = em.createQuery(sql);
+        query.setParameter("userName", userName);
+        query.setParameter("userId", userId);
+        int result = query.executeUpdate();
+        if (result != 1) {
+            throw new UserException("更新用户名失败！", 1);
+        }
+	}
+	@Override
+	public void modifyEmail(long userId, String email) {
+		String sql = "UPDATE User SET email = :email WHERE userId = :userId";
+		Query query = em.createQuery(sql);
+		query.setParameter("email", email);
+		query.setParameter("userId", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("更新用户实名认证失败！", 1);
+		}
+	}
+
+	@Override
+	public void modifyPhone(long userId, String mobilePhone) {
+		String sql = "UPDATE User SET mobilePhone = :mobilePhone WHERE userId = :userId";
+		Query query = em.createQuery(sql);
+		query.setParameter("mobilePhone", mobilePhone);
+		query.setParameter("userId", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("更新用户实名认证失败！", 1);
+		}
+	}
+
+	@Override
+	public PageDataList<UserModel> userList(int pageNumber, int pageSize, UserModel model) {
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber, pageSize);
+		param.addParam("userAttestation.user.userId", Operators.PROPERTY_EQ, "userId");
+		param.addParam("userCache.user.userId", Operators.PROPERTY_EQ, "userId");
+		if (!StringUtil.isBlank(model.getUserName())) {
+			param.addParam("userName", model.getUserName());
+		}
+		if (!StringUtil.isBlank(model.getRealName())) {
+			param.addParam("realName", model.getRealName());
+		}
+
+		if (StringUtils.isNotEmpty(model.getIsLocked())) {
+			param.addParam("islocked", model.getIsLocked());
+		}
+		PageDataList<User> pageDataList = super.findPageList(param);
+		PageDataList<UserModel> pageDataList_ = new PageDataList<UserModel>();
+		List<UserModel> list = new ArrayList<UserModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				User user = (User) pageDataList.getList().get(i);
+				UserModel userModel = UserModel.instance(user);
+				if (userModel.getUserCache().getAddress() != null)
+					list.add(userModel);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+	// JSDPBUG-99 20150505  sxy
+	@Override
+	public PageDataList<UserModel> registerUserList(UserModel model, int pageNumber, int pageSize) {
+		
+		PageDataList<UserModel> pageDataList = new PageDataList<UserModel>();
+		StringBuffer sb = new StringBuffer();
+		
+		QueryParam param = QueryParam.getInstance();
+		
+		sb.append(" SELECT * FROM t_jsd_user t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND t2.user_type = '10' ");
+		
+		if(StringUtil.isNotBlank(model.getTimeType())){
+			
+			if("yesterday".equals(model.getTimeType())){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d')  ");
+			}
+			if("today".equals(model.getTimeType())){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			if("week".equals(model.getTimeType())){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			if("month".equals(model.getTimeType())){
+				sb.append(" DATE_FORMAT(t1.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			if("area".equals(model.getTimeType())){
+				if(null != model.getStartTime() && null != model.getEndTime()){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT("+model.getStartTime()+",'%y-%m-%d') AND  DATE_FORMAT("+model.getEndTime()+",'%y-%m-%d') ");
+				}
+			}
+
+		}
+        Query query = em.createNativeQuery(sb.toString(), User.class);
+        Page page = new Page(query.getResultList().size(), pageNumber, pageSize);
+        query.setFirstResult((pageNumber - 1) * pageSize);
+        query.setMaxResults(pageSize);
+        List<UserModel> list = query.getResultList();
+        pageDataList.setList(list);
+        pageDataList.setPage(page);
+        return pageDataList;
+		
+		
+		
+	}
+	
+	@Override
+	public PageDataList<User> proveStatisticsUserList(UserModel userModel,int page, int size ) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT t1.user_id,t1.user_name,t1.real_name,t1.mobile_phone,t1.card_no,t3.user_type,t2.email_status, "
+				+ " t2.mobile_phone_status,t2.real_name_status,t1.add_time,t2.real_name_verify_time,t2.mobile_phone_verify_time,t2.email_verify_time,t1.islocked "
+				+ " FROM t_jsd_user t1,t_jsd_user_identify t2,t_jsd_user_cache t3 "
+				+ " WHERE t1.user_id = t2.user_id AND t2.user_id = t3.user_id AND t1.user_id = t3.user_id "
+				//+ " AND t2.real_name_status = '83' AND t2.email_status = '81' AND t2.mobile_phone_status = '86' "
+				+ " AND t3.user_type = '10' AND t1.islocked != 'FF' "
+				+ " ");
+		
+		// 认证类型
+		if(StringUtil.isNotBlank(userModel.getProveType())){
+			// 全部认证
+			if("prove_all".equals(userModel.getProveType())){
+				
+				sql.append(" AND t2.real_name_status = '83' AND t2.email_status = '81' AND t2.mobile_phone_status = '86' ");
+				// 时间类型
+		    	if(StringUtil.isNotBlank(userModel.getTimeType())){
+		    		
+		    		// 昨天记录
+		    		if(StatisticsData.DATA_TIME_YESTERDAY.equals(userModel.getTimeType())){
+		    		
+		    			sql.append(" AND ");
+		    			sql.append(" (((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 2 DAY),'%y-%m-%d') < DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+		    			sql.append(" OR ");
+		    			sql.append(" ((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 2 DAY),'%y-%m-%d') < DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(NOW(),'%y-%m-%d'))) ");
+		    			
+		    		}
+		    		// 今天记录
+		    		if(StatisticsData.DATA_TIME_TODAY.equals(userModel.getTimeType())){
+		    			
+		    			sql.append(" AND ");
+		    			sql.append(" (((DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') <= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+		    			sql.append(" OR ");
+		    			sql.append(" ((DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') <= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 0 DAY),'%y-%m-%d'))) ");
+		    			
+		    		}
+		    		// 一周内记录
+		    		if(StatisticsData.DATA_TIME_WEEK.equals(userModel.getTimeType())){
+		    			
+		    			sql.append(" AND ");
+		    			sql.append(" (((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') < DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+		    			sql.append(" OR ");
+		    			sql.append(" ((DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') < DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') < DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY),'%y-%m-%d'))) ");
+		    			
+		    		}
+		    		// 本月记录
+		    		if(StatisticsData.DATA_TIME_MONTH.equals(userModel.getTimeType())){
+		    			
+		    			sql.append(" AND ");
+		    			sql.append(" (((DATE_FORMAT(t2.real_name_verify_time,'%y-%m') = DATE_FORMAT(NOW(),'%y-%m')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.email_verify_time,'%y-%m') <= DATE_FORMAT(NOW(),'%y-%m')) ");
+		    			sql.append(" OR ");
+		    			sql.append(" ((DATE_FORMAT(t2.email_verify_time,'%y-%m') = DATE_FORMAT(NOW(),'%y-%m')) ");
+		    			sql.append(" AND ");
+		    			sql.append(" DATE_FORMAT(t2.real_name_verify_time,'%y-%m') <= DATE_FORMAT(NOW(),'%y-%m'))) ");
+		    			
+		    		}
+		    		// 时间段记录
+		    		if(StatisticsData.DATA_TIME_AREA.equals(userModel.getTimeType())){
+		    			
+			    		if(null != userModel.getStartTime() && null != userModel.getEndTime()){
+
+			    			sql.append(" AND  ");
+			    			sql.append(" (((DATE_FORMAT('"+DateUtil.dateStr4(userModel.getStartTime())+"','%y-%m-%d %H:%i:%s') <= DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+DateUtil.dateStr4(userModel.getEndTime())+"','%y-%m-%d %H:%i:%s')) ");
+			    			sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+DateUtil.dateStr4(userModel.getEndTime())+"','%y-%m-%d %H:%i:%s')) ");
+			    			sql.append(" OR ((DATE_FORMAT('"+DateUtil.dateStr4(userModel.getStartTime())+"','%y-%m-%d %H:%i:%s') <= DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+DateUtil.dateStr4(userModel.getEndTime())+"','%y-%m-%d %H:%i:%s')) ");
+			    			sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+DateUtil.dateStr4(userModel.getEndTime())+"','%y-%m-%d %H:%i:%s'))) ");
+			    			
+						}
+		    		
+		    		}
+		    		
+		    	}
+				
+				
+			}
+			
+			// 实名认证
+			if("prove_realname".equals(userModel.getProveType())){
+				
+				sql.append(" AND t2.real_name_status = '83' ");
+				
+				// 昨日
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+				}
+				// 今日
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 一周内
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 本月
+				if (userModel.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+					sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+				}
+				// 时间段
+				if (userModel.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+					if (null != userModel.getStartTime()) {
+						sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ DateUtil.dateStr4(userModel.getStartTime()) + "','%y-%m-%d %H:%i:%s') ");
+					}
+					if (null != userModel.getEndTime()) {
+						sql.append(" AND DATE_FORMAT(t2.real_name_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ DateUtil.dateStr4(userModel.getEndTime()) + "','%y-%m-%d %H:%i:%s') ");
+					}
+
+				}
+				
+			}
+			
+			// 手机认证
+			if("prove_phone".equals(userModel.getProveType())){
+				sql.append(" AND t2.mobile_phone_status = '86' ");
+				
+				// 昨日
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+				}
+				// 今日
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 一周内
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 本月
+				if (userModel.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+					sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+				}
+				// 时间段
+				if (userModel.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+					if (null != userModel.getStartTime()) {
+						sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ DateUtil.dateStr4(userModel.getStartTime()) + "','%y-%m-%d %H:%i:%s') ");
+					}
+					if (null != userModel.getEndTime()) {
+						sql.append(" AND DATE_FORMAT(t2.mobile_phone_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ DateUtil.dateStr4(userModel.getEndTime()) + "','%y-%m-%d %H:%i:%s') ");
+					}
+
+				}
+				
+			}
+			
+			// 邮箱认证
+			if("prove_email".equals(userModel.getProveType())){
+				
+				sql.append(" AND t2.email_status = '81' ");
+				
+				// 昨日
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_YESTERDAY)){
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+				}
+				// 今日
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_TODAY)){
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 一周内
+				if(userModel.getTimeType().equals(StatisticsData.DATA_TIME_WEEK)){
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 本月
+				if (userModel.getTimeType().equals(StatisticsData.DATA_TIME_MONTH)) {
+					sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m') ");
+				}
+				// 时间段
+				if (userModel.getTimeType().equals(StatisticsData.DATA_TIME_AREA)) {
+
+					if (null != userModel.getStartTime()) {
+						sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"+ DateUtil.dateStr4(userModel.getStartTime()) + "','%y-%m-%d %H:%i:%s') ");
+					}
+					if (null != userModel.getEndTime()) {
+						sql.append(" AND DATE_FORMAT(t2.email_verify_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"+ DateUtil.dateStr4(userModel.getEndTime()) + "','%y-%m-%d %H:%i:%s') ");
+					}
+
+				}
+				
+			}
+			
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		Page pages = new Page(query.getResultList().size(), size, page);
+		PageDataList<User> pageList = new PageDataList<User>();
+		query.setFirstResult((userModel.getPage() - 1) * userModel.getSize());
+		query.setMaxResults(userModel.getSize());
+		List queryList = query.getResultList();
+		List<User> userList = new ArrayList<User>();
+		Object[] object = new Object[13];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			UserModel userM = new UserModel();
+//			userM.setUserId((Long) object[0]);
+			userM.setIdInt((Integer)object[0]);
+			userM.setUserName((String) object[1]);
+			userM.setRealName((String) object[2]);
+			userM.setMobilePhone((String) object[3]);
+			userM.setCardNO((String) object[4]);
+			userM.setUserType((String) object[5]);
+			userM.setEmailStatus((String) object[6]);
+			userM.setMobilePhoneStatus((String) object[7]);
+			userM.setRealStatus((String) object[8]);
+			userM.setAddTime((Date) object[9]);
+			userM.setRealNameVerifyTime((Date) object[10]);
+			userM.setMobilePhoneVerifyTime((Date) object[11]);
+			userM.setEmailVerifyTime((Date) object[12]);
+			userM.setIsLocked((String) object[13]);
+			userList.add(userM);
+		}
+		
+		
+		pageList.setList(userList);
+		pageList.setPage(pages);
+		
+		
+		
+		return pageList;
+	}
+	@Override
+	public PageDataList<User> registerStatisticsUserList(UserModel userModel,int page, int size ) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT t1.user_id,t1.user_name,t1.real_name,t1.mobile_phone,t1.card_no,t3.user_type,t1.member_level,t2.email_status, "
+				+ " t2.mobile_phone_status,t2.real_name_status,t1.add_time,t1.register_way,t1.islocked "
+				+ " FROM t_jsd_user t1,t_jsd_user_identify t2,t_jsd_user_cache t3 "
+				+ " WHERE t1.user_id = t2.user_id AND t2.user_id = t3.user_id AND t1.user_id = t3.user_id "
+				// +
+				// " AND t2.real_name_status = '83' AND t2.email_status = '81' AND t2.mobile_phone_status = '86' "
+				+ " AND t3.user_type = '10' AND t1.islocked != 'FF' " + " ");
+
+		// 注册方式
+		if (StringUtil.isNotBlank(userModel.getRegisterWay())) {
+			sql.append(" AND t1.register_way = '"+userModel.getRegisterWay()+"' ");
+		}
+		
+		// 时间类型
+		if (StringUtil.isNotBlank(userModel.getTimeType())) {
+
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(userModel
+					.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(userModel.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(userModel.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(userModel.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m')  ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(userModel.getTimeType())) {
+
+				if (null != userModel.getStartTime()) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ DateUtil.dateStr4(userModel.getStartTime())
+							+ "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (null != userModel.getEndTime()) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ DateUtil.dateStr4(userModel.getEndTime())
+							+ "','%y-%m-%d %H:%i:%s') ");
+				}
+
+			}
+
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		Page pages = new Page(query.getResultList().size(), size, page);
+		PageDataList<User> pageList = new PageDataList<User>();
+		query.setFirstResult((page - 1) * size);
+		query.setMaxResults(size);
+		List queryList = query.getResultList();
+		List<User> userList = new ArrayList<User>();
+		Object[] object = new Object[13];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			UserModel userM = new UserModel();
+//			userM.setUserId((Long) object[0]);
+			userM.setIdInt((Integer)object[0]);
+			userM.setUserName((String) object[1]);
+			userM.setRealName((String) object[2]);
+			userM.setMobilePhone((String) object[3]);
+			userM.setCardNO((String) object[4]);
+			userM.setUserType((String) object[5]);
+			userM.setMemberLevel((String) object[6]);
+			userM.setEmailStatus((String) object[7]);
+			userM.setMobilePhoneStatus((String) object[8]);
+			userM.setRealStatus((String) object[9]);
+			userM.setAddTime((Date) object[10]);
+			userM.setRegisterWay((String) object[11]);
+			userM.setIsLocked((String) object[12]);
+			
+			userList.add(userM);
+		}
+		
+		
+		pageList.setList(userList);
+		pageList.setPage(pages);
+
+		return pageList;
+	}
+
+	@Override
+	public User getUserByUserName(String userName) {
+		User user = super.findObjByProperty("userName", userName);
+		if (user != null) {
+			return user;
+		}
+		return null;
+	}
+
+	@Override
+	public User getUserById(long userId) {
+		return super.find(userId);
+	}
+	@Override
+	public void modifyApi(long userId, String api_id, String api_status,String apiUserCustId) {
+		String nativeSql = "UPDATE t_jsd_user SET api_id = :api_id,api_status = :api_status,api_usercust_id=:apiUserCustId WHERE user_id = :userId";
+		String[] names = new String[] { "api_id", "api_status",  "userId","apiUserCustId" };
+		Object[] values = new Object[] { api_id, api_status,  userId,apiUserCustId };
+		int result = updateBySql(nativeSql, names, values);
+		if (result != 1) {
+			throw new UserException("更新用户第三方账号失败！", 1);
+		}
+	}
+	@Override
+	public void modify(long userId, String card_id) {
+		String nativeSql = "UPDATE t_jsd_user SET card_id = :card_id WHERE user_id = :userId";
+		String[] names = new String[] { "card_id", "userId" };
+		Object[] values = new Object[] { card_id, userId };
+		int result = updateBySql(nativeSql, names, values);
+		if (result != 1) {
+			throw new UserException("更新用户实名认证失败！", 1);
+		}
+	}
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public PageDataList<User> findUserList(int pageNumber, int pageSize) {
+        PageDataList<User> pageDataList = new PageDataList<User>();
+        StringBuffer sb = new StringBuffer("select  from t_jsd_account_open_history a"
+                + ",t_jsd_user u where a.user_id=u.user_id "
+                + " and u.isLocked='NN'");
+        
+        Query query = em.createNativeQuery(sb.toString(), User.class);
+        Page page = new Page(query.getResultList().size(), pageNumber, pageSize);
+        query.setFirstResult((pageNumber - 1) * pageSize);
+        query.setMaxResults(pageSize);
+        List<User> list = query.getResultList();
+        pageDataList.setList(list);
+        pageDataList.setPage(page);
+        return pageDataList;
+    }
+
+	@Override
+	public int countUserBySuccessBorrow() {
+		StringBuffer sb = new StringBuffer();
+		sb.append(" SELECT COUNT(r.user_id) FROM (");
+		sb.append(" SELECT u.user_id FROM rd_borrow b  ");
+		sb.append(" LEFT JOIN t_jsd_user u ON u.user_id = b.user_id ");
+		sb.append(" LEFT JOIN rd_verify_log v ON b.id = v.fid ");
+		sb.append(" WHERE v.verify_type = 2 ");
+		sb.append(" AND DATE_FORMAT(v.time, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m') ");
+		sb.append("  ) r  ");
+		
+		Query query = em.createNativeQuery(sb.toString());
+		return  Integer.parseInt(query.getSingleResult().toString());
+	}
+
+	/**
+	 * 更新数据库用户会员级别(xinggw)
+	 * 
+	 * @param userID
+	 *            平台用户ID
+	 * @param memberLevel
+	 *            会员级别
+	 * 
+	 * @throws Exception
+	 * */
+	@Override
+	public void updateMemberLevel(long userId, String memberLevle) {
+		String nativeSql = "UPDATE t_jsd_user SET member_level= :memberLevle WHERE user_id = :userId";
+		String[] names = new String[] { "memberLevle", "userId" };
+		Object[] values = new Object[] { memberLevle,userId};
+		int result = updateBySql(nativeSql, names, values);
+		if (result != 1) {
+			throw new UserException("更新用户会员级别失败！", 1);
+		}
+	}
+	
+
+	
+	@Override
+	public int countUltimoTender() {
+		
+		/*String sql = "SELECT COUNT(*) FROM t_jsd_user_cache t2 LEFT JOIN t_jsd_user t1 ON t1.user_id = t2.user_id WHERE t2.user_type = '10'" +
+				"AND t1.add_time >(SELECT DATE_SUB(DATE_SUB(DATE_FORMAT(NOW(),'%y-%m-%d'),INTERVAL EXTRACT(DAY FROM NOW())-1 DAY),INTERVAL 1 MONTH) AS lastdate)" +
+             		" AND  t1.add_time < (SELECT DATE_SUB(DATE_SUB(DATE_FORMAT(NOW(),'%y-%m-%d'),INTERVAL EXTRACT(DAY FROM NOW()) DAY),INTERVAL 0 MONTH) AS firstdate)";*/
+		String sql = "SELECT COUNT(*) FROM t_jsd_user_cache t2 LEFT JOIN t_jsd_user t1 ON t1.user_id = t2.user_id WHERE t2.user_type = '10'";
+        Query query = em.createNativeQuery(sql);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return (int) Double.parseDouble(obj.toString());
+        }
+        return 0;
+
+	}
+	/**
+	 * 查询用户注册数——投资人
+	 * @author 孙晓勇 
+	 */
+	@Override
+	public int countUserByType(int userType) {
+		
+		String sql = "SELECT COUNT(*) FROM t_jsd_user t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND t2.user_type = :userType AND t1.islocked != 'FF' ";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("userType", userType);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return (int) Double.parseDouble(obj.toString());
+        }
+        return 0;
+	}
+	/*
+	*//**
+	 * 查询某段时间内的用户注册数——投资人
+	 * @author 孙晓勇 
+	 *//*
+	@Override
+	public int countUserByTypeAndTime(String userType,String userNature,String timeType,String startTime,String endTime) {
+		
+		StringBuffer sb = new StringBuffer();
+		
+		sb.append(" SELECT count(*) FROM t_jsd_user t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id ");
+		
+		// 用户类型
+		if(StringUtil.isNotBlank(userType)){
+			sb.append(" AND t2.user_type = :userType ");
+		}
+		// 用户性质
+		if(StringUtil.isNotBlank(userType)){
+			sb.append(" AND t2.user_nature = :userNature ");
+		}
+		// 时间类型（今日、昨日、一周）
+		if(StringUtil.isNotBlank(timeType)){
+			
+			// 昨日
+			if(timeType.equals(StatisticsData.DATA_TIME_YESTERDAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今日
+			if(timeType.equals(StatisticsData.DATA_TIME_TODAY)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内
+			if(timeType.equals(StatisticsData.DATA_TIME_WEEK)){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 时间段
+			if (timeType.equals(StatisticsData.DATA_TIME_AREA)) {
+
+				if (StringUtil.isNotBlank(startTime)) {
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') >= DATE_FORMAT('"+ startTime + "','%y-%m-%d') ");
+				}
+				if (StringUtil.isNotBlank(endTime)) {
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') <= DATE_FORMAT('"+ endTime + "','%y-%m-%d') ");
+				}
+
+				// sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(':startTime','%y-%m-%d') AND DATE_FORMAT(':endTime','%y-%m-%d') ");
+
+			}
+			
+			
+		}
+		
+		
+		
+		sb.append(" AND t1.islocked != 'FF' ");
+		String sql = "SELECT t1.* FROM t_jsd_user t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND"
+				+ " t2.user_type = :userType AND t2.user_nature = :userNature AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d')";
+		
+		
+		Query query = em.createNativeQuery(sb.toString());
+		query.setParameter("userType", userType);
+		//query.setParameter("userNature", userNature);
+		//query.setParameter("timeType", timeType);
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (int) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	*/
+	@Override
+	public void modifyNickName(long userId,String nickName) {
+		String nativeSql = "UPDATE t_jsd_user SET nickname = :nickname  WHERE user_id = :userId";
+		String[] names = new String[] { "nickname", "userId" };
+		Object[] values = new Object[] {nickName, userId};
+		int result = updateBySql(nativeSql, names, values);
+		if (result != 1) {
+			throw new UserException("昵称更新失败！", 1);
+		}
+		
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public PageDataList<UserModel> getUnInviteAwardList(UserModel model,long userId) {
+		
+		StringBuffer sbf = new StringBuffer();
+		
+		/*sbf.append(" SELECT p.*  FROM ( ");
+		sbf.append(" SELECT u.* ,MIN(t.id),t.money ");
+		sbf.append(" FROM t_jsd_user u,t_jsd_user_identify i,t_jsd_user_cache c ,t_jsd_borrow_tender t,rd_borrow b ");
+		sbf.append(" WHERE u.user_id = i.user_id  ");
+		sbf.append(" AND u.user_id = c.user_id  ");
+		sbf.append(" AND u.user_id = t.user_id ");
+		sbf.append(" AND b.id = t.borrow_id ");
+		sbf.append(" AND ((b.type in (103,105) and b.status in (3,6,7,8)) or (b.type in(113,115)) ) ");
+		sbf.append(" AND c.invite_user_id = :userId  ");
+		sbf.append(" AND i.real_name_status = 83 ");
+		sbf.append(" AND i.email_status = 81 ");
+		sbf.append(" AND i.mobile_phone_status = 86 ");
+		sbf.append(" GROUP BY t.user_id ");
+		sbf.append(" ORDER BY t.user_id, t.id ");
+		sbf.append(" ) p ");
+		sbf.append(" WHERE  p.money< :thresholdMoney ");*/
+		
+		sbf.append(" SELECT t1.*  ");
+		sbf.append(" FROM t_jsd_user t1  ");
+		sbf.append(" LEFT JOIN t_jsd_user_cache t2 ON t1.user_id = t2.user_id ");
+		sbf.append(" LEFT JOIN t_jsd_user_identify t3 ON t1.user_id = t3.user_id ");
+		sbf.append(" WHERE t1.user_id = t2.user_id AND t1.user_id = t3.user_id AND (t3.real_name_status = '82' OR t3.email_status = '80' OR t3.mobile_phone_status = '85') ");
+		sbf.append(" AND t2.invite_user_id = "+userId+" ");
+	
+		EntityManager em = this.getEm();
+		
+		Query query = em.createNativeQuery(sbf.toString(), User.class);
+		/*if (userId > 0) {
+			query.setParameter("userId", userId);
+		}*/
+
+		/*RedPacketProduceRuleCheck ruleCheck = (RedPacketProduceRuleCheck) Global
+				.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+		double thresholdMoney = 0.0;
+		if (ruleCheck != null) {
+			FriendFirstInvest friendFirstInvest = ruleCheck.getStatic_rp()
+					.getRecommend().getFriend_invest().getFirst_invest();
+			int status = friendFirstInvest.getStatus();
+			if (status == 1) {
+				thresholdMoney = friendFirstInvest.getThreshold_money();
+			}
+		}
+		query.setParameter("thresholdMoney", thresholdMoney);*/
+
+		 Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+         query.setFirstResult((model.getPage() - 1) * model.getSize());
+         query.setMaxResults(model.getSize());
+         
+		 List<UserModel> list = query.getResultList();
+
+         PageDataList<UserModel> pageDataList = new PageDataList<UserModel>();
+         
+         pageDataList.setList(list);
+         pageDataList.setPage(page);
+      
+         return pageDataList;
+	}
+	
+	@Override
+	public int getUnInviteAwardSum(UserModel userModel, long userId) {
+		StringBuffer sbf = new StringBuffer();
+		
+		/*sbf.append(" SELECT p.*  FROM ( ");
+		sbf.append(" SELECT u.* ,MIN(t.id),t.money ");
+		sbf.append(" FROM t_jsd_user u,t_jsd_user_identify i,t_jsd_user_cache c ,t_jsd_borrow_tender t,rd_borrow b ");
+		sbf.append(" WHERE u.user_id = i.user_id  ");
+		sbf.append(" AND u.user_id = c.user_id  ");
+		sbf.append(" AND u.user_id = t.user_id ");
+		sbf.append(" AND b.id = t.borrow_id ");
+		sbf.append(" AND ((b.type in (103,105) and b.status in (3,6,7,8)) or (b.type in(113,115)) ) ");
+		sbf.append(" AND c.invite_user_id = :userId  ");
+		sbf.append(" AND i.real_name_status = 83 ");
+		sbf.append(" AND i.email_status = 81 ");
+		sbf.append(" AND i.mobile_phone_status = 86 ");
+		sbf.append(" GROUP BY t.user_id ");
+		sbf.append(" ORDER BY t.user_id, t.id ");
+		sbf.append(" ) p ");
+		sbf.append(" WHERE  p.money< :thresholdMoney ");*/
+		
+		sbf.append(" SELECT t1.*  ");
+		sbf.append(" FROM t_jsd_user t1  ");
+		sbf.append(" LEFT JOIN t_jsd_user_cache t2 ON t1.user_id = t2.user_id ");
+		sbf.append(" LEFT JOIN t_jsd_user_identify t3 ON t1.user_id = t3.user_id ");
+		sbf.append(" WHERE t1.user_id = t2.user_id AND t1.user_id = t3.user_id AND (t3.real_name_status = '82' OR t3.email_status = '80' OR t3.mobile_phone_status = '85') ");
+		sbf.append(" AND t2.invite_user_id = "+userId+" ");
+	
+		EntityManager em = this.getEm();
+		
+		 Query query = em.createNativeQuery(sbf.toString(), User.class);
+		 /*if (userId > 0) {
+             query.setParameter("userId", userId);
+         }*/
+		 
+		 /*RedPacketProduceRuleCheck ruleCheck=(RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+		 double thresholdMoney = 0.0;
+		if(ruleCheck != null){
+			FriendFirstInvest friendFirstInvest = ruleCheck.getStatic_rp().getRecommend().getFriend_invest().getFirst_invest();	
+			int status = friendFirstInvest.getStatus();
+			if(status ==1){
+				thresholdMoney = friendFirstInvest.getThreshold_money();
+			}	
+		}
+		 query.setParameter("thresholdMoney", thresholdMoney);*/
+         
+		 List<UserModel> list = query.getResultList();
+		 if(list != null){
+			 return list.size(); 
+		 }
+		 return 0;
+	}
+
+	@Override
+	public void modifyisLock(long userId, String islocked) {
+		String sql = "UPDATE User SET islocked = :islocked,lockTime=now() WHERE userId = :userId";
+		Query query = em.createQuery(sql);
+		query.setParameter("islocked", islocked);
+		query.setParameter("userId", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("更新锁定状态失败！", 1);
+		}
+		
+	}
+
+	@Override
+	public void modifythirdPartyOpenCount(long userId, int count)
+			throws Exception {
+		User user = this.getUserById(userId);
+		if(count>0){
+			user.setThirdPartyOpenCount(user.getThirdPartyOpenCount()+1);
+		}else if(count ==0){
+			user.setThirdPartyOpenCount(0);
+		}
+		 // 更新
+		update(user);
+	}
+
+	@Override
+    public List<User> getUserByAddress(UserModel userModel) {
+		
+        QueryParam param = QueryParam.getInstance();
+        
+        String province = userModel.getUserCache().getProvince();
+        String city = userModel.getUserCache().getCity();
+        String area = userModel.getUserCache().getArea();
+        String userType = userModel.getUserCache().getUserType();
+        
+        if(null != province || !"".equals(province) || "" != province){
+        	
+        	param.addParam("userCache.province", userModel.getUserCache().getProvince());
+        }
+        if(null != city || !"".equals(city) || "" != province){
+        	
+        	param.addParam("userCache.city", userModel.getUserCache().getCity());
+        }
+        if(null != area || !"".equals(area) || "" != province){
+        	
+        	param.addParam("userCache.area", userModel.getUserCache().getArea());
+        }
+        if(null != userType || !"".equals(userType) || "" != province){
+        	
+        	param.addParam("userCache.userType", userModel.getUserCache().getUserType());
+        }
+        
+        return findByCriteria(param);
+    }
+	
+	/**
+	 * 查询用户地区注册数——投资人
+	 * @author 孙晓勇 
+	 */
+	@Override
+	public int getUserRegisterByAddress(String province,String city,String area,String userType,String sex) {
+		
+		StringBuffer sb = new StringBuffer();
+		
+		sb.append("SELECT count(*) FROM t_jsd_user_cache t1,t_jsd_user t2 WHERE t1.user_id = t2.user_id");
+		
+		if(null != userType && !"".equals(userType) && "" != userType){
+			sb.append(" AND t1.user_type = :userType");
+	    }
+		if(null != province && !"".equals(province) && "" != province){
+			sb.append(" AND t1.province = :province");
+        }
+        if(null != city && !"".equals(city) && "" != city){
+        	sb.append(" AND t1.city = :city ");
+        }
+        if(null != area && !"".equals(area) && "" != area){
+        	sb.append(" AND t1.area = :area ");
+        }
+        // 性别
+        if(null != sex && !"".equals(sex) && "" != sex){
+        	sb.append(" AND t1.sex = :sex ");
+        }
+        sb.append(" AND t2.islocked != 'FF' ");
+		
+		Query query = em.createNativeQuery(sb.toString());
+		
+		if(null != userType && !"".equals(userType) && "" != userType){
+			query.setParameter("userType", userType);
+	    }
+		if(null != province && !"".equals(province) && "" != province){
+			query.setParameter("province", province);
+        }
+        if(null != city && !"".equals(city) && "" != city){
+        	query.setParameter("city", city);
+        }
+        if(null != area && !"".equals(area) && "" != area){
+        	query.setParameter("area", area);
+        }
+        // 性别
+        if(null != sex && !"".equals(sex) && "" != sex){
+        	query.setParameter("sex", sex);
+        }
+		
+		
+		return  Integer.parseInt(query.getSingleResult().toString());
+		
+	}
+
+	@Override
+	public PageDataList<User> findThirdOpenBorrowUser(int size, int page, UserModel userModel) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT u.user_id,u.user_name,u.real_name,u.email,u.mobile_phone "
+				+" FROM t_jsd_user u ,t_jsd_user_cache uc,t_jsd_user_identify ui ,t_jsd_account_open_history oh"
+				+" WHERE u.third_party_is_open='Y' AND u.third_party_account IS NOT NULL AND uc.user_id = u.user_id AND uc.user_type=11 AND u.user_id = ui.user_id" 
+				+" AND ui.real_name_status='83'  AND u.user_id=oh.user_id AND oh.status='00'");
+		//根据用户名查询
+    	if(StringUtil.isNotBlank(userModel.getUserName())){
+    		sql.append(" and u.user_name like '%"+userModel.getUserName()+"%'");
+    	}
+    	//根据手机号查询
+    	if(StringUtil.isNotBlank(userModel.getMobilePhone())){
+    		sql.append(" and u.mobile_phone like '%"+userModel.getMobilePhone()+"%'");
+    	}
+    	//根据可发标类型
+    	if(StringUtil.isNotBlank(userModel.getUserBorrowType())){
+    		sql.append(" and uc.borrow_type like '"+userModel.getUserBorrowType()+"'");
+    	}
+		Query query = em.createNativeQuery(sql.toString());
+		
+		Page pages = new Page(query.getResultList().size(), size, page);
+		PageDataList<User> pageList = new PageDataList<User>();
+		query.setFirstResult((userModel.getPage() - 1) * userModel.getSize());
+		query.setMaxResults(userModel.getSize());
+		List queryList = query.getResultList();
+		List<User> userList = new ArrayList<User>();
+		Object[] object = new Object[5];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			User user = new User();
+//			user.setUserId((Long) object[0]);
+			user.setUserName((String) object[1]);
+			user.setRealName((String) object[2]);
+			user.setEmail((String) object[3]);
+			user.setMobilePhone((String) object[4]);
+			userList.add(user);
+		}
+		
+		
+		pageList.setList(userList);
+		pageList.setPage(pages);
+		
+		
+		
+		return pageList;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<UserModel> excelListUser(UserModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT u.user_id userId,u.user_name userName,u.real_name realName,");
+		sql.append(" CASE uc.sex WHEN  'M' THEN '男'  WHEN  'F' THEN '女'  ELSE '保密' END AS userSex,");
+		sql.append(" proName,cityName,areaName,u.email,u.mobile_phone,u.card_no,op.no,");
+		sql.append(" CASE uc.user_type+uc.user_nature  WHEN  '30' THEN '投资人' WHEN '31'  THEN '个人借款人' WHEN  '32'  THEN '企业借款' WHEN  '34' THEN '担保公司' WHEN  '33' THEN '分期宝用户' ELSE '不确定' END AS userType,");
+		sql.append(" CASE  ui.email_status  WHEN  '80' THEN '未认证' WHEN  '81' THEN '已认证' WHEN  '89' THEN '认证未通过' ELSE '不确定' END AS userEmailStatus,");
+		sql.append(" CASE  ui.mobile_phone_status  WHEN  '85' THEN '未认证' WHEN  '86' THEN '已认证'   WHEN  '87' THEN '认证未通过' ELSE '不确定' END AS  userPhoneStatus,");
+		sql.append(" CASE  ui.real_name_status  WHEN  '82' THEN '未认证' WHEN  '83' THEN '已认证' WHEN  '88' THEN '认证待审核'  WHEN  '84' THEN '认证未通过' ELSE '不确定' END AS userRealName, ");
+		sql.append(" DATE_FORMAT(u.add_time ,'%Y-%m-%d %T') registerTime,  ");
+		sql.append(" CASE  vip.vip_level  WHEN  'N1' THEN '普通用户'  WHEN  'V1' THEN '铜牌会员' ");
+		sql.append(" WHEN  'V2' THEN '银牌会员'  WHEN  'V3' THEN '金牌会员'  WHEN  'V4' THEN '钻石会员'  ELSE '普通用户' END AS vipLevel,");
+		sql.append(" DATE_FORMAT(vip.end_time,'%Y-%m-%d %T') vipEndTime,  ");
+		sql.append(" CASE u.islocked WHEN  'NN' THEN '未锁定' WHEN  'AY' THEN '已锁定' WHEN  'UY' THEN '挂起' WHEN  'FF' THEN '销户'   ELSE '不确定' END  AS isLock  ");
+		sql.append(" FROM `t_jsd_user` u ");
+		sql.append(" LEFT JOIN `t_jsd_vip` vip ON  u.`user_id` = vip.`user_id` ,`t_jsd_user_identify` ui,  ");
+		sql.append(" `t_jsd_user_cache` uc LEFT JOIN `s_operator` op  ON   uc.`customer_user_id` = op.id   ");
+		sql.append("  LEFT JOIN ");
+		sql.append("   (SELECT  uc.user_id  proUserId,reg.name proName  FROM  t_jsd_dict_region reg ,`t_jsd_user_cache` uc WHERE uc.province = reg.id) AS pro   ");
+		sql.append("  ON   uc.user_id = pro.proUserId   ");
+		sql.append(" LEFT JOIN ");
+		sql.append("  (SELECT  uc.user_id  cityUserId,reg.name cityName  FROM  t_jsd_dict_region reg ,`t_jsd_user_cache` uc  WHERE uc.city = reg.id) AS city  ");
+		sql.append(" ON   uc.user_id = city.cityUserId  ");
+		sql.append(" LEFT JOIN ");
+		sql.append("   (SELECT  uc.user_id  areaUserId,reg.name  areaName FROM  t_jsd_dict_region reg ,`t_jsd_user_cache` uc  WHERE uc.area = reg.id) AS are ");
+		sql.append(" ON   uc.user_id = are.areaUserId ");
+		sql.append(" WHERE u.`user_id` = ui.`user_id`  AND u.`user_id` = uc.`user_id` ");
+		if (!StringUtil.isBlank(model.getUserName())) {
+			sql.append("  AND u.user_name  like '%" + model.getUserName()
+					+ "%'  ");
+		}
+		if (!StringUtil.isBlank(model.getRealName())) {
+			sql.append("  AND u.real_name ='" + model.getRealName() + "'  ");
+		}
+		if (!StringUtil.isBlank(model.getMobilePhone())) {
+			sql.append("  AND u.mobile_phone ='" + model.getMobilePhone()
+					+ "'  ");
+		}
+		if (!StringUtil.isBlank(model.getCardNO())) {
+			sql.append("  AND u.card_no='" + model.getCardNO() + "'  ");
+		}
+		if (!StringUtil.isBlank(model.getEmail())) {
+			sql.append("  AND u.email ='" + model.getEmail() + "'  ");
+		}
+		if (!StringUtil.isBlank(model.getCustomerNo())) {
+			sql.append("  AND op.no ='" + model.getCustomerNo() + "'  ");
+		}
+		if (!StringUtil.isBlank(model.getStartTime())) {
+			String dataStr = DateUtil.dateStr4(model.getStartTime());
+			sql.append("  AND u.add_time >= '" + dataStr + "'  ");
+		}
+		if (!StringUtil.isBlank(model.getEndTime())) {
+			String dataStr = DateUtil.dateStr4(model.getEndTime());
+			sql.append("  AND u.add_time < '" + dataStr + "'  ");
+		}
+
+		if (!StringUtil.isBlank(model.getUserType())
+				&& !"0".equals(model.getUserType())) {
+			sql.append("  AND uc.user_type ='" + model.getUserType() + "'  ");
+		}
+		if (!StringUtil.isBlank(model.getIsLocked())
+				&& !"99".equals(model.getIsLocked())) {
+			sql.append("  AND u.islocked='" + model.getIsLocked() + "'  ");
+		}
+
+		sql.append("  ORDER BY u.user_id DESC");
+
+		Query query = em.createNativeQuery(sql.toString());
+
+		List userList = query.getResultList();
+		return userList;
+		// JSDP-116 fengguoqin 2015-05-19 end
+	}
+	//JSDP-179 xingjia 20150610 start
+	@Override
+	public void modifyThirdAccount(long userId, String phoneNo) {
+		String sql = "update User set thirdPartyAccount =:phoneNo where "
+				+ "userId=:userId and isLocked='NN' and thirdPartyIsOpen = 'Y'";
+		Query query = em.createQuery(sql);
+		query.setParameter("phoneNo", phoneNo);
+		query.setParameter("userId", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("更新第三方账户失败", 1);
+		}
+	}
+	//JSDP-179 xingjia 20150610 end
+	
+	
+}

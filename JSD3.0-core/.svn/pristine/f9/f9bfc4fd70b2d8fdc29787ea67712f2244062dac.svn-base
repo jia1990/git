@@ -1,0 +1,44 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.activity.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.activity.dao.ActivityGoodsDao;
+import com.ddtkj.p2psys.activity.domain.ActivityGoods;
+import com.ddtkj.p2psys.activity.exception.ActivityGoodsException;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+
+/**
+ * @描述：
+ * @作者：shenguoping@ddtkj.com
+ * @创建时间：2015-7-22 
+ */
+@Repository("activityGoodsDao")
+public class ActivityGoodsDaoImpl extends BaseDaoImpl<ActivityGoods> implements ActivityGoodsDao {
+
+	@Override
+	public int updateActivityGoodsByOpValue(long userId, int totalOpVar, int validOpVar,
+			int expenseOpVar, int freezeOpVar) {
+		String sql = "update t_jsd_activity_goods set total = total + :totalOpVar, valid = valid + :validOpVar, expense = expense + :expenseOpVar, freeze = freeze + :freezeOpVar where user_id = :userId and valid + :validOpVar > 0 ";
+		String[] names = {"userId", "totalOpVar", "validOpVar", "expenseOpVar", "freezeOpVar"};
+		Object[] values = {userId, totalOpVar, validOpVar, expenseOpVar, freezeOpVar};
+		int count = updateBySql(sql, names, values);
+		if (count < 1) {
+			throw new ActivityGoodsException("可用物品数量不足");
+		}
+		em.refresh(findActivityGoodsByUserId(userId, ActivityGoods.GOODS_TYPE_ID_JCZ));
+		return count;
+	}
+
+	@Override
+	public ActivityGoods findActivityGoodsByUserId(long userId, String typeId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addParam("typeId", typeId);
+		return findByCriteriaForUnique(param);
+	}
+	
+}

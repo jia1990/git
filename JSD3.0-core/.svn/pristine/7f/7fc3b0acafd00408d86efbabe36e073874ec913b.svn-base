@@ -1,0 +1,35 @@
+package com.ddtkj.p2psys.webpetcard.service.impl;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.webpetcard.dao.PetCardSumDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardSum;
+import com.ddtkj.p2psys.webpetcard.service.PetCardSumService;
+
+/**
+ * @描述：储值卡汇总service实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:2015年6月2日 
+ * @JIRA JSDP-171
+ */
+@Repository("petCardSumService")
+public class PetCardSumServiceImpl implements PetCardSumService {
+
+	private static Logger logger = Logger.getLogger(PetCardSumServiceImpl.class);
+	@Resource
+	private PetCardSumDao petCardSumDao;
+	
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.webpetcard.service.PetCardSumService#findPetCardSumByUserId(long)
+	 */
+	@Override
+	public PetCardSum findPetCardSumByUserId(long userId) {
+		PetCardSum petCardSum = petCardSumDao.findObjByProperty("user.userId", userId);
+		return petCardSum;
+	}
+
+	
+}

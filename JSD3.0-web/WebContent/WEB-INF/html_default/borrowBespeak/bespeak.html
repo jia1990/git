@@ -1,0 +1,841 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#assign nid="reserveBorrow" > 
+
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷P2P网贷我要借款频道，晋商贷P2P网贷平台提供小额贷款，个人贷款，企业贷款，无抵押贷款，无抵押个人贷款，网上贷款，个人小额贷款，贷款条件，个人无抵押小额贷款，请关注晋商贷P2P网贷平台"/>
+<meta name="keywords"content="网络借贷，借贷平台，p2p平台，网络借贷平台"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/account.css">
+<script src="${webroot}${theme_dir}/media/js/jquery-1.8.2.min.js"></script>
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/address.js"></script>
+<title>网络借贷，网络借贷平台，p2p网络借贷平台-晋商贷</title>
+<script>
+ $(function(){
+		$(function(){
+			$(".nav dd a").removeClass("c_nav_this");
+			$($(".nav dd a")[1]).addClass("c_nav_this");
+			
+		})
+ 	$(".y_borrowTitlein li").click(function(){
+	var index=$(this).index(".y_borrowTitlein li");
+	$(".y_borrowTitlein li").removeClass("y_borrowTitleli");
+	$(this).addClass("y_borrowTitleli");
+})
+	//"选择申请借款产品"
+	$(".xxk_li").click(function(){
+		var index=$(this).index(".xxk_li");
+		$(this).addClass("c_this_product").siblings().removeClass("c_this_product");
+		$(this).parent().next().children("ul").eq(index).show().siblings().hide();
+	})
+ 	$(".y_borrowTitlein li").click(function(e){
+			e.preventDefault();
+			var index=$(this).index(".y_borrowTitlein li");
+			var tops=$($(".y_borrow_conH1")[index]).offset().top;
+			$(document.documentElement).animate({
+				scrollTop: tops
+				},200);
+			//支持chrome
+			$(document.body).animate({
+				scrollTop: tops
+				},200);
+		});
+ 	$(window).scroll(function(){
+ 		if($(window).scrollTop()>=471){
+ 			$(".y_borrowTitle").css({position:"fixed",zIndex:100,top:"0"})
+ 			$($(".y_borrow_conH1")[0]).css("marginTop","50px");
+ 		}else{
+			$(".y_borrowTitle").css({position:"relative"})
+			$($(".y_borrow_conH1")[0]).css("marginTop","0");
+ 		}
+ 		if($(window).scrollTop()>=($($(".y_borrow_conH1")[0]).offset().top-40)&&$(window).scrollTop()<($($(".y_borrow_conH1")[1]).offset().top-40)){
+ 			$($(".y_borrowTitlein li")[0]).addClass("y_borrowTitleli").siblings().removeClass("y_borrowTitleli"); 
+ 		}
+ 		if($(window).scrollTop()>($($(".y_borrow_conH1")[1]).offset().top-40)&&$(window).scrollTop()<($($(".y_borrow_conH1")[2]).offset().top-40)){
+ 			$($(".y_borrowTitlein li")[1]).addClass("y_borrowTitleli").siblings().removeClass("y_borrowTitleli"); 
+ 		}
+ 		if($(window).scrollTop()>=($($(".y_borrow_conH1")[2]).offset().top-40)&&$(window).scrollTop()<($($(".y_borrow_conH1")[3]).offset().top-40)){
+ 			$($(".y_borrowTitlein li")[2]).addClass("y_borrowTitleli").siblings().removeClass("y_borrowTitleli"); 
+ 		}
+ 		if($(window).scrollTop()>=($($(".y_borrow_conH1")[3]).offset().top-150)){
+ 			$($(".y_borrowTitlein li")[3]).addClass("y_borrowTitleli").siblings().removeClass("y_borrowTitleli"); 
+ 		}
+ 	})
+ 	
+ })
+</script>
+<style>
+.y_borrow_con{width: 100%;}
+.y_borrowTitle{width: 100%;height: 50px;background-color: #f3f3f3;line-height: 50px;position: relative;}
+.y_borrowTitlein{width: 1000px;margin: 0 auto;}
+.y_borrowTitlein li{float: left;text-align: center;color: #717171;font-size: 14px;cursor: pointer;}
+.y_borrowTitlein li.y_borrowTitleli span{color: #0898da;border-bottom: 2px solid #0697da;padding: 13px 0;}
+.y_borrow_conH1{width: 334px;margin:0px auto 25px;height: 54px;line-height: 54px;border-bottom: 1px solid #e5e5e7;font-size: 22px;color: #000000;font-weight: normal;text-align: center;padding-top: 43px;}
+.y_borrow_conH3{text-align: center;color: #888888;font-size: 18px;line-height: 32px;font-weight: normal;}
+/*什么是晋商贷*/
+.y_borrow_con1,.y_borrow_con3{padding-left: 424px;background: url(${webroot}${theme_dir}/images/account/borrow1.jpg) no-repeat; height: 351px;width: 576px;margin:0 auto;position: relative;}
+.y_borrow_con3{background: url(${webroot}${theme_dir}/images/account/borrow3.jpg) no-repeat 0 50px;}
+.y_borrow_conH4{color: #000000;font-size: 28px;font-weight: normal;padding-top: 64px;line-height: 64px;}
+.y_borrow_con1 ul,.y_borrow_con2 ul,.y_borrow_con3 ul{float: left;}
+.y_borrow_con1 li,.y_borrow_con2 li,.y_borrow_con3 li{line-height: 34px;color: #555555;font-size: 14px;padding-left: 16px;height: 36px;background: url(${webroot}${theme_dir}/images/account/iconlis.png) no-repeat 0 15px;}
+.y_borrow_conul1 li{width: 290px;}
+.y_borrow_conul2 li{width: 250px;}
+.y_borrow_con1 a{display: block;position: absolute;bottom: 65px;right: 486px;width: 86px;height: 38px;border: 1px solid #12adff;line-height: 38px;text-align: center;font-size: 14px;color: #12adff;border-radius: 2px;}
+.y_borrow_con1 a:hover{color: #fff;background-color: #12adff;}
+.y_borrow_con2{background: url(${webroot}${theme_dir}/images/account/borrow2.jpg) no-repeat 633px 0;  height: 467px;width:1000px;margin:0 auto;position: relative;}
+/*为什么选择晋商贷？*/
+.y_borrow_con4{width: 100%;background-color: #f6f7f9;margin-bottom: 45px;}
+.y_borrow_con4 ul,.y_borrow_con5{overflow: hidden;width: 1000px;margin: 0 auto;}
+.y_borrow_con5{margin:0 auto 60px;}
+.y_borrow_con4 li{float:left; width: 184px;margin-right: 88px;}
+.y_borrow_con5 li{float:left; width: 498px;height:318px;}
+.y_borrow_con4 li img{margin-left: 44px;}
+.y_borrow_con5 li img{margin-left: 170px;margin-top: 30px;}
+.y_borrow_conH2{color: #000000;font-size: 22px;font-weight: normal;line-height: 46px;text-align: center;}
+.y_borrow_conH2 span,.y_borrow_conH2 a{color: #12adff;font-size: 22px;}
+.y_borrow_con4 li p,.y_borrow_con5 li p{font-size:14px;color: #555555;line-height: 24px;text-align: center;}
+.y_borrow_con6{width: 100%;}
+
+
+
+
+<!--xxk-->
+.clear{clear:both;height:0;line_height:0;font-siez:0;margin:0;padding:0;}
+
+.xxk{ width:1000px;margin:0 auto; border-top:1px #e5e5e5 solid; border-right:0px; margin-bottom:15px;}
+.xxk_li{ float:left; width:152px; height:54px;text-align:center; line-height:54px;border-bottom:1px #e5e5e5 solid; border-right:1px #e5e5e5 solid;}
+.xxk_li.c_this_product{ border:0px;border-right:1px #e5e5e5 solid;height:52px;border-top:3px #0697da solid;}
+.xxk li a{cursor:pointer;width:152px; height:51px; font-size:16px; display:block; }
+.xxk_cen{ border-top:3px #0697da solid; border-bottom:0px;}
+
+.cyd_xxk{ width:1000px; margin:0 auto;}
+.cyd_xxk ul{ margin-top:58px;display:none;}
+.cyd_xxk li{ float:left;margin-bottom: 60px;}
+.cyd_xxk_li{ margin-left:60px; font-size:14px;}
+.cyd_xxk span{ font-size:20px; color:#0898da;}
+.cyd_xxk b{color:#ff0000; position:relative; top:3px;z-index: -1;}
+.mg{ margin-top:18px;color:#555;}
+.cyd_xxk dd{ line-height:30px; font-size:14px;}
+.cyd_xxk input{ width:190px;padding-left:10px; height:36px; border:1px #cccccc solid;position: relative;
+z-index: 100;color:#999;}
+textarea{ display:block; width:198px; height:206px;resize:none;}
+select{border:1px #cccccc solid;}
+.ssq select{ width:200px; height:34px;}
+.c_inline_applay{margin:0 auto 56px;width:504px;text-align:center;}
+.c_applay_btn{display:inline-block;width:250px;height:42px;color:#fff;background:#12adff;line-height:42px;border-radius:2px;font-size:18px;}
+.c_inline_valid{float:right;border:1px solid #DDDDDD;width:210px;border-radius:2px;height:36px;}
+.c_inline_valid input{border:none;height:36px;float:left;width:110px;padding-left:8px;}
+.c_inline_valid span{display:inline-block;width:89px;float:right;height:36px;border-left:1px solid #DDDDDD;}
+.c_inline_valid span img{border:none;width:89px;float:left;height:36px;}
+.cyd_xxk .bespeakBtn {display:inline-block;width:250px;height:42px;color:#fff;background:#12adff;line-height:42px;border-radius:2px;font-size:18px;}
+select{display:none;}
+.select_showbox{border: 1px solid #ccc;width:195px;height: 36px;padding-left: 5px;background: url(${webroot}${theme_dir}/images/sel.png) no-repeat 160px 0;line-height: 36px;}
+.select_option{border: 1px solid #ccc;border-top: none;display: none;}
+.select_option li{padding-left: 5px;margin: 0;}
+.select_option li.hover{background: #0697DA; color: #fff;}
+.select_box ul{margin:0;position:absolute;top:38px;width:200px;background:#fff;z-index: 101;max-height: 224px;overflow-x: hidden;overflow-y: auto;}
+.select_box ul li{clear:both;width:195px;}
+.select_box{position:relative;}
+.c_sex .select_box ul{width:79px;right:0;}
+.c_sex .select_box ul li{width:75px;}
+
+
+
+.clearfix:after{
+     content:".";        
+     display:block;        
+     height:0;        
+     clear:both;        
+     visibility:hidden;        
+
+}
+.clearfix{*zoom:1}
+
+/* m_zlxg */
+.m_zlxg2 ul{display:block;margin:0;}
+
+.m_zlxg{ width:200px; height:36px; line-height:30px;cursor:pointer;margin:0 10px 0 0;background:url(${webroot}${theme_dir}/images/sel.png) no-repeat right;border:1px solid #ccc;}
+.m_zlxg p{ width:190px; padding-left:10px; overflow:hidden; line-height:36px; color:#333333; font-size:12px; font-family:"微软雅黑";text-overflow:ellipsis; white-space:nowrap;}
+.m_zlxg2{position:absolute; top:36px;left:0; border:1px solid #ded3c1;width:200px; display:none; height:auto; background:#fff;}
+.m_zlxg2 ul{max-height:224px;overflow-x:hidden; overflow-y:auto;}
+.m_zlxg2 li{width:190px;margin:0;clear:both;line-height:28px;white-space:nowrap; padding-left:10px;font-family:"微软雅黑";color:#333333; font-size:12px;}
+.m_zlxg2 li:hover{ background: #0697DA;color:#fff;}
+
+
+
+.bespeak_banner {
+    background: url("${webroot}${theme_dir}/images/contact/bespeak_baner.jpg") no-repeat scroll center 0 rgba(0, 0, 0, 0);
+    height: 339px;
+    width: 100%;
+}
+</style>
+<!-- iconlis.png -->
+</head>
+<#include "../include/resource1.html">
+<#include "../include/header.html">
+<!-- S Banner -->
+<!--  
+<div class="bespeakBanner clearfix">
+	<div class="bespeakBannerBd">
+		<img src="${webroot}${theme_dir}/media/bg/bespeakBanner.png" alt="" />
+	</div>
+</div>
+-->
+<!-- E Banner -->
+<!-- S 导航 -->
+<!-- <object style="border:0px" type="text/x-scriptlet" data="header.html" width=100% height=132></object> -->
+	<div class="bespeak_banner">
+	</div>
+	<div class="y_borrow_con"> 
+	     <div class="y_borrowTitle">                                           
+			<ul class="y_borrowTitlein">
+				<li class="y_borrowTitleli" style="width:190px;"><span>什么是晋商贷 </span></li>
+				<li style="width:340px;"><span>为什么选择晋商贷 </span></li>
+				<li style="width:240px;"><span>晋商贷贷款流程 </span></li>
+				<li style="width:230px;"><span>在线申请借款 </span></li>
+			</ul>
+		</div>
+		<!-- 什么是晋商贷 -->
+		<h1 class="y_borrow_conH1">什么是晋商贷</h1>
+		<h3 class="y_borrow_conH3">借贷也可以很顺心哦！</h3>
+		<div class="y_borrow_con1">
+			<h4 class="y_borrow_conH4">专业的管理团队</h4>
+			<ul class="y_borrow_conul1">
+				<li>深谙互联网公司运营</li>
+				<li>高管平均6年以上金融从业经历</li>
+				<li>多年互联网产品开发经验</li>
+			</ul>
+			<ul class="y_borrow_conul2">
+				<li>丰富的资本运作模式</li>
+				<li>4人曾经是国内其他金融机构高管</li>
+				<li>来自国内知名学府，4名注册风险评估师</li>
+				<li>互联网金融梦想家</li>
+			</ul>
+			<a href="/aboutUs/team.html" hidefocus>了解详情</a>
+		</div>
+		<div class="y_borrow_con2">
+			<h4 class="y_borrow_conH4">强大的技术支持</h4>
+			<ul class="y_borrow_conul1">
+				<li>功能强大的p2p网贷系统</li>
+				<li>100人的技术团队支持</li>
+				<li>银行级的网络安全防护体系</li>
+				<li>7*24小时技术支持</li>
+			</ul>
+			<ul class="y_borrow_conul2">
+				<li>超大的客户数据储存空间</li>
+				<li>先进的数据加密技术</li>
+				<li>实力雄厚的第三方支付合作机构</li>
+			</ul>
+		</div>
+		<div class="y_borrow_con3">
+			<h4 class="y_borrow_conH4">严格的风险控制</h4>
+			<ul class="y_borrow_conul1">
+				<li>用户注册流程规范化</li>
+				<li>专业的风险控制团队，多年风控经验</li>
+				<li>高于银行级别的风险防控体系</li>
+				<li>国际领先网站加密技术</li>
+			</ul>
+			<ul class="y_borrow_conul2">
+				<li>专业律师团队，时刻监控借贷风险</li>
+				<li>高效严密的风险控制流程</li>
+				<li>强大的集团财力支持</li>
+			</ul>
+		</div>
+		
+		<!-- 为什么选择晋商贷？ -->
+		<div class="y_borrow_con4" >
+			<h1 class="y_borrow_conH1">为什么选择晋商贷？</h1>
+			<ul>
+				<li>
+					<img src="${webroot}${theme_dir}/images/account/borrow8.png">
+					<h2 class="y_borrow_conH2"><span>1</span> 无手续费</h2>
+					<p>我们最大的特色在于去掉了借款的中间环节，不收取手续费</p>
+				</li>
+				<li>
+					<img src="${webroot}${theme_dir}/images/account/borrow9.png">
+					<h2 class="y_borrow_conH2"><span>2</span> 超低利息</h2>
+					<p>绝大数借款利息在12-18%远低于民间利息</p>
+				</li>
+				<li>
+					<img src="${webroot}${theme_dir}/images/account/borrow10.png">
+					<h2 class="y_borrow_conH2"><span>3</span> 快速审批</h2>
+					<p>审批直接在网上完成，无需出门，大大减少时间精力</p>
+				</li>
+				<li style="margin-right: 0px;">
+					<img src="${webroot}${theme_dir}/images/account/borrow11.png">
+					<h2 class="y_borrow_conH2"><span>4</span> 迅速筹标</h2>
+					<p>历史筹标时间基本在24小时满标，第三方支持系统马上转账</p>
+				</li>
+			</ul>
+		</div>
+		<h1 class="y_borrow_conH1">轻松四步，借款无烦恼!</h1>
+		<!-- 轻松四步，借款无烦恼! -->
+		<ul class="y_borrow_con5">
+			<li style="border-bottom:1px solid #dadada;border-right:1px solid #dadada;">
+				<img src="${webroot}${theme_dir}/images/account/borrow4.jpg" style="margin-left:140px;">
+				<h2 class="y_borrow_conH2"><span>1</span> 填写<a>资料</a>成为借款人</h2>
+				<p>超轻松注册</p>
+			</li>
+			<li style="border-bottom:1px solid #dadada;">
+				<img src="${webroot}${theme_dir}/images/account/borrow5.jpg" style="margin-left:140px;">
+				<h2 class="y_borrow_conH2"><span>2</span> 提交审批材料</h2>
+				<p>降低借贷成本</p>
+			</li>
+			<li style="border-right:1px solid #dadada;">
+				<img src="${webroot}${theme_dir}/images/account/borrow6.jpg">
+				<h2 class="y_borrow_conH2"><span>3</span> 快速审批</h2>
+				<p>1-3个工作日内完成审批</p>
+			</li>
+			<li style="margin-right: 0px;">
+				<img src="${webroot}${theme_dir}/images/account/borrow7.jpg">
+				<h2 class="y_borrow_conH2"><span>4</span> 出资人投标</h2>
+				<p>迅速取得融资</p>
+			</li>
+		</ul>
+
+
+
+	</div>
+	
+		<div class="y_borrow_con6">
+			<h1 class="y_borrow_conH1">选择申请借款产品</h1>
+		</div>
+	
+		<!--<div class="bespeakForm">
+			<form action="/borrowBespeak/doBespeak.html" id="bespeakForm" method="post">
+				<dl class="step1">
+					<dt>1、填写车商资料</dt>
+					<dd>
+						<label for="companyName">公司名称<em>*</em></label> <input
+							name="companyName" id="companyName" class="commonTxt txtInput"
+							autocomplete="off" maxlength="30"/>
+					</dd>
+					<dd>
+						<label for="name">联系人<em>*</em></label> <input name="name"
+							id="name" class="commonTxt txtInput" autocomplete="off" maxlength="10" />
+					</dd>
+					<dd>
+						<label for="telephone">联系电话<em>*</em></label> <input
+							name="telephone" id="telephone" class="commonTxt txtInput"
+							autocomplete="off"
+							onkeyup="value=value.replace(/[^0-9]/g,'').trim();" />
+					</dd>
+				</dl>
+				<dl class="step2">
+					<dt>2、填写借款需求</dt>
+					<dd>
+						<label for="money">借款金额</label> <input name="money" id="money"  maxlength="10"
+							class="txtInput1" autocomplete="off"
+							onkeyup="value=value.replace(/[^0-9]/g,'')" /><span>元</span>
+					</dd>
+					<dd>
+						<label for="limitTime">借款期限</label> <input name="limitTime"   maxlength="4"
+							id="limitTime" class="txtInput1" autocomplete="off"
+							onkeyup="value=value.replace(/[^0-9]/g,'')" /><span>天</span>
+					</dd>
+					<dd>
+						<label for="borrowUse">借款用途</label> <input name="borrowUse"
+							id="borrowUse" autocomplete="off" class="commonTxt txtInput" maxlength="30"/>
+					</dd>
+				</dl>
+				<dl class="step3">
+					<dt>3、填写其他资料</dt>
+					<dd>
+						<label for="description">借款描述</label>
+						<textarea name="description" id="description"
+							class="commonTxt txtInput2" maxlength="300"></textarea>
+					</dd>
+					<dd>
+						<label for="collateralDescription">抵押物描述</label>
+						<textarea name="collateralDescription" id="collateralDescription"
+							class="commonTxt txtInput2"  maxlength="300"></textarea>
+					</dd>
+				</dl>
+				<dl class="step4">
+					<dt>4.填写所属区域</dt>
+					<dd>
+						<label for="province" >省<em>*</em></label>
+						<select name="province" id="province" class="{required:true}">
+							<option value="">请选择</option>
+						</select> 
+					</dd>
+					<dd>
+						<label for="city">市<em>*</em></label>
+						<select name="city" id="city" class="{required:true}">
+							<option value="">请选择</option>
+						</select> 
+					</dd>
+					<dd>
+						<label name="county" for="county">区(县)<em>*</em></label>
+						<select id="county" name="county" class="{required:true}">
+							<option value="">请选择</option>
+						</select>  
+					</dd>
+				</dl>
+				<dl class="step5" >
+				<dd>
+					<input class="code" id="validCode" name="validCode" autocomplete="off"
+						placeholder="验证码" type="text" maxlength="4" /><img
+						src="/validimg.html" align="absmiddle" class="valicode_img"
+						alt="点击刷新" />
+				</dd>
+				</dl>
+				<p>
+					<input type="submit" value="提交申请" class="bespeakBtn" style="background:#12adff;" />
+				</p>
+			</form>
+			-->
+			<div class="xxk">
+        	<ul style="overflow:hidden;">
+              	<li class="xxk_li xxk_li2 c_this_product"><a>能源宝</a></li>
+             	<li class="xxk_li"><a>微商贷</a></li>
+                <li class="xxk_li"><a>车贷宝</a></li>
+                <li class="xxk_li"><a>分期宝</a></li>
+                <li style="width:388px; height:54px; border-bottom:1px #e5e5e5 solid; float:left;"></li>
+            </ul>
+			<div class="cyd_xxk">
+				<ul style="display:block;">
+				<form action="/borrowBespeak/doBespeak.html" id="bespeakForm" method="post">
+					<li>
+						<dl>
+							<dd><span>1、填写借款资料</span></dd>
+							<dd class="mg">公司名称<b> *</b></dd>
+							<dd><input type="text" name="companyName" value="" maxlength="20"/><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">联系人<b> *</b></dd>
+							<dd class="c_sex"><input type="text" name="name" maxlength="10" style="margin-right: 6px;float:left; width:110px;" value=""/>
+							<select name="sex" style="float:left; width:60px; height:38px; border-left:0px;">
+							  <option value ="M" selected="selected">男</option>
+							  <option value ="F">女</option>
+							</select>
+							<p class="c_error" style="width: 196px;"></p>
+							</dd> 	
+							<div class="clear"></div>
+							<dd class="mg">联系电话<b> *</b></dd>
+							<dd><input type="text" name="telephone" value=""/><p class="c_error" style="width: 196px;"></p></dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>2、填写借款需求</span></dd>
+							<dd class="mg">借款金额<b> *</b></dd>
+							<dd><input name="money" type="text" maxlength="9" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">借款期限<b> *</b></dd>
+							<dd><input name="limitTime" type="text" maxlength="3"/><p class="c_error" style="width: 196px;"></p></dd> 	
+							<dd class="mg">借款用途<b> *</b></dd>
+							<dd><input name="borrowUse" type="text" maxlength="20"/><p class="c_error" style="width: 196px;"></p></dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>3、填写其他资料</span></dd>
+							<dd class="mg">借款描述</dd>
+							
+							<dd><textarea name="description"></textarea></dd>
+							
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+					<dd><span>4、填写所属区域</span></dd>
+					<div class="sjld" style="position:relative;">
+						<dd class="mg ssq">省<b style="color:#ff0000;"> *</b>
+							<select class="province" id="province">
+								<option value="-1">请选择</option>
+							</select>
+							<input class="send" type="hidden" name="province" value="-1"/>
+						<p class="c_error" style="width: 196px;"></p>
+						</dd>
+						<dd class="mg">市<b style="color:#ff0000;"> *</b>
+						<select class="city" id="city">
+								<option value="-1">请选择</option>
+						</select>
+						<input class="send" type="hidden" name="city"  value="-1"/>
+						<p class="c_error" style="width: 196px;"></p>
+						</dd>
+						<dd class="mg ssq">区<b style="color:#ff0000;"> *</b>
+						<select class="county" id="county">
+								<option value="-1">请选择</option>
+						</select>
+						<input class="send" type="hidden" name="county" value="-1"/>
+						<p class="c_error" style="width: 196px;"></p>
+						</dd>
+						</div>
+						<!--<dl>
+						
+							<dd><span>4、填写所属区域</span></dd>
+							<dd class="mg ssq">省<b style="color:#ff0000;"> *</b></dd>
+							<dd class="ssq" id = "provinceShow"><select class="province" name="province" id="province">
+								<option value = "">请选择</option>
+								</select>
+								<b id="selectBtn" style='background: url("${webroot}${theme_dir}/images/sel.png") repeat scroll 0 0 rgba(0, 0, 0, 0);display: block;height: 37px;margin-right: 0;overflow: hidden;position: absolute;right: 0;top: 10px;width: 40px;z-index: 0;'></b>
+							</dd>
+							<dd class="mg">市<b style="color:#ff0000;"> *</b></dd>
+							<dd class="ssq"><select class="city" name="city" id="city">
+								  <option value ="">请选择</option>
+								</select>
+							</dd>	
+							<dd class="mg ssq">区<b style="color:#ff0000;"> *</b></dd>
+							<dd class="ssq"><select name="county" id="county" class="county">
+								  <option value ="">请选择</option>
+								</select>
+							</dd>
+						</dl>
+					--></li>
+					<div style="clear:both;"></div>
+					
+			<div class="c_inline_applay">
+				<input type="hidden" value="113" name="type" />
+				<input type="hidden" name="bespeakToken" value="${bespeakToken!}" />
+				<input type="submit" value="提交申请" class="bespeakBtn" />
+				<div class="c_inline_valid">
+				<input class="code" id="validCode1" name="validCode" autocomplete="off"
+						placeholder="验证码" type="text" maxlength="4" /><span><img
+						src="/validimg.html" align="absmiddle" class="valicode_img"
+						alt="点击刷新" /></span><p class="c_error" style="width: 196px;margin-top: 37px;width: 114px;"></p></div>
+			</div>
+			</form>
+				</ul>
+				<ul>
+				<form action="/borrowBespeak/doBespeak.html" id="bespeakForm2" method="post">
+					<li>
+						<dl>
+							<dd><span>1、填写借款资料</span></dd>
+							<dd class="mg">公司名称<b> *</b></dd>
+							<dd><input type="text"  name="companyName" maxlength="20"/><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">联系人<b> *</b></dd>
+							<dd class="c_sex"><input type="text" name="name" maxlength="10" style="margin-right: 6px;float:left; width:110px;" />
+								<select name="sex" style="float:left; width:60px; height:38px; border-left:0px;">
+								  <option value ="M">男</option>
+								  <option value ="F">女</option>
+								</select>
+								<p class="c_error" style="width: 196px;"></p>
+							</dd> 	
+							<div class="clear"></div>
+							<dd class="mg">联系电话<b> *</b></dd>
+							<dd><input type="text" name="telephone"/><p class="c_error" style="width: 196px;"></p></dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>2、填写借款需求</span></dd>
+							<dd class="mg">借款金额<b> *</b></dd>
+							<dd><input type="text" name="money" maxlength="10" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">借款期限<b> *</b></dd>
+							<dd><input type="text" name="limitTime"  maxlength="3" /><p class="c_error" style="width: 196px;"></p></dd> 	
+							<dd class="mg">借款用途<b> *</b></dd>
+							<dd><input type="text" name="borrowUse"  maxlength="20" /><p class="c_error" style="width: 196px;"></p></dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>3、填写其他资料</span></dd>
+							<dd class="mg">借款描述</dd>
+							
+							<dd><textarea name="description"></textarea></dd>
+							
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>4、填写所属区域</span></dd>
+							<div class="sjld" style="position:relative;">
+								<dd class="mg ssq">省<b style="color:#ff0000;"> *</b>
+									<select class="province" id="province1">
+										<option value="-1">请选择</option>
+									</select>
+									<input class="send" type="hidden" name="province" value="-1"/>
+									<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<dd class="mg">市<b style="color:#ff0000;"> *</b>
+								<select class="city" id="city1">
+										<option value="-1">请选择</option>
+								</select>
+								<input class="send" type="hidden" name="city" value="-1"/>
+									<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<dd class="mg ssq">区<b style="color:#ff0000;"> *</b>
+								<select class="county" id="county1">
+										<option value="-1">请选择</option>
+								</select>
+								<input class="send" type="hidden" name="county" value="-1"/>
+									<p class="c_error" style="width: 196px;"></p>
+								</dd>
+							</div>
+						</dl>
+					</li>
+					<div style="clear:both;"></div>
+			<div class="c_inline_applay">
+				<input type="hidden" value="115" name="type" />
+				<input type="hidden" name="bespeakToken" value="${bespeakToken!}" />
+				<input type="submit" value="提交申请" class="bespeakBtn" />
+				<div class="c_inline_valid"><input class="code" id="validCode2" name="validCode" autocomplete="off"
+						placeholder="验证码" type="text" maxlength="4" /><span><img
+						src="/validimg.html" align="absmiddle" class="valicode_img"
+						alt="点击刷新" /></span><p class="c_error" style="width: 196px;margin-top: 37px;width: 114px;"></p></div>
+			</div>
+			</form>
+				</ul>
+				<ul>
+				<form action="/borrowBespeak/doBespeak.html" id="bespeakForm3" method="post">
+					<li>
+						<dl>
+							<dd><span>1、填写借款资料</span></dd>
+							<dd class="mg">联系人<b> *</b></dd>
+							<dd><input type="text" name="name" maxlength="10" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">联系电话<b> *</b></dd>
+							<dd><input type="text"  name="telephone"/><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">性别<b> *</b></dd>
+							<dd>
+								<select name="sex" style="width:200px;height:36px;">
+								  <option value ="M">男</option>
+								  <option value ="F">女</option>
+								</select><p class="c_error" style="width: 196px;"></p>
+							</dd> 	
+							<div class="clear"></div>
+							
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>2、填写借款需求</span></dd>
+							<dd class="mg">借款金额<b> *</b></dd>
+							<dd><input type="text" name="money"  maxlength="10" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">借款期限<b> *</b></dd>
+							<dd><input type="text" name="limitTime"  maxlength="3" /><p class="c_error" style="width: 196px;"></p></dd> 	
+							<dd class="mg">借款用途<b> *</b></dd>
+							<dd><input type="text" name="borrowUse"  maxlength="20" /><p class="c_error" style="width: 196px;"></p></dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>3、车辆信息</span></dd>
+							<dd class="mg">品牌<b> *</b></dd>
+							<dd><input type="text" name="brandType"  maxlength="20" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">原购车价（元）<b> *</b></dd>
+							<dd><input type="text" name="originalPrice"  maxlength="10" /><p class="c_error" style="width: 196px;"></p></dd> 	
+							<dd class="mg">购买年月<b> *</b></dd>
+							<dd><input type="text" name="buyDate"  maxlength="11" /><p class="c_error" style="width: 196px;"></p></dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>4、车牌所属地</span></dd>
+							<div class="sjld" style="position:relative;">
+								<dd class="mg ssq">省<b style="color:#ff0000;"> *</b>
+									<select class="province" id="province2" >
+										<option value="-1">请选择</option>
+									</select>
+									<input class="send" type="hidden" name="province" value="-1"/>
+								<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<dd class="mg">市<b style="color:#ff0000;"> *</b>
+								<select class="city" id="city2">
+										<option value="-1">请选择</option>
+								</select>
+								<input class="send" type="hidden" name="city" value="-1"/>
+								<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<dd class="mg ssq">区<b style="color:#ff0000;"> *</b>
+								<select class="county" id="county2">
+										<option value="-1">请选择</option>
+								</select>
+								<input class="send" type="hidden" name="county" value="-1"/>
+								<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<div>
+								</div>
+							</div>
+						</dl>
+					</li>
+					<div style="clear:both;"></div>
+			<div class="c_inline_applay">
+				<input type="hidden" name="type" value="103" />
+				<input type="hidden" name="bespeakToken" value="${bespeakToken!}" />
+				<input type="submit" value="提交申请" class="bespeakBtn" />
+				<div class="c_inline_valid"><input class="code" id="validCode3" name="validCode" autocomplete="off"
+						placeholder="验证码" type="text" maxlength="4" /><span><img
+						src="/validimg.html" align="absmiddle" class="valicode_img"
+						alt="点击刷新" /></span><p class="c_error" style="width: 196px;margin-top: 37px;width: 114px;"></p></div>
+			</div>
+			</form>
+				</ul>
+				<ul>
+				<form action="/borrowBespeak/doBespeak.html" id="bespeakForm4" method="post">
+					<li>
+						<dl>
+							<dd><span>1、填写借款资料</span></dd>
+							<dd class="mg">联系人<b> *</b></dd>
+							<dd><input type="text" name="name"  maxlength="20" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">联系电话<b> *</b></dd>
+							<dd><input type="text" name="telephone" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">性别<b> *</b></dd>
+							<dd>
+								<select name="sex" style="width:200px;height:36px;">
+								  <option value ="M">男</option>
+								  <option value ="F">女</option>
+								</select><p class="c_error" style="width: 196px;"></p>
+							</dd> 	
+							<div class="clear"></div>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>2、填写其他资料</span></dd>
+							<dd class="mg">就读大学<b> *</b></dd>
+							<dd><input type="text" name="college" maxlength="20" /><p class="c_error" style="width: 196px;"></p></dd>
+							<dd class="mg">专业<b> *</b></dd>
+							<dd><input type="text" name="major" maxlength="20" /><p class="c_error" style="width: 196px;"></p></dd> 	
+							<dd class="mg">学号<b> *</b></dd>
+							<dd><input type="text" name="studentId" maxlength="12" /><p class="c_error" style="width: 196px;"></p></dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+						<dl>
+							<dd><span>3、填写其他资料</span></dd>
+							<dd class="mg">品牌类型<b> *</b></dd>
+							<dd>
+								<select name="brandType" style="width:200px;height:36px;">
+								<#if goods??>
+								  <#list goods as item>
+								  	<option>${item.name!}</option>
+								  </#list>
+								  </#if>
+								</select><p class="c_error" style="width: 196px;"></p>
+							</dd>
+							<dd class="mg">分期周期<b> *</b></dd>
+							<dd>
+								<select name="stageCycle" style="width:200px;height:36px;">
+								  <option value ="1">1个月</option>
+								  <option value ="2">2个月</option>
+								  <option value ="3">3个月</option>
+								  <option value ="4">4个月</option>
+								  <option value ="5">5个月</option>
+								  <option value ="6">6个月</option>
+								  <option value ="7">7个月</option>
+								  <option value ="8">8个月</option>
+								  <option value ="9">9个月</option>
+								  <option value ="10">10个月</option>
+								  <option value ="11">11个月</option>
+								  <option value ="12">12个月</option>
+								  <option value ="13">13个月</option>
+								  <option value ="14">14个月</option>
+								  <option value ="15">15个月</option>
+								  <option value ="16">16个月</option>
+								  <option value ="17">17个月</option>
+								  <option value ="18">18个月</option>
+								  <option value ="19">19个月</option>
+								</select>
+								<p class="c_error" style="width: 196px;"></p>
+							</dd> 
+							<dd style="width:200px;margin-top:24px;font-size:12px;color:#555;">分期宝是交通银行信用卡中心首家推出的现场快速分期付款业务。</dd>
+						</dl>
+					</li>
+					
+					<li class="cyd_xxk_li">
+					
+						<dl>
+							<dd><span>4、填写所属区域</span></dd>
+							<div class="sjld" style="position:relative;">
+								<dd class="mg ssq">省<b style="color:#ff0000;"> *</b>
+									<select class="province" id="province3" >
+										<option value="-1">请选择</option>
+									</select>
+									<input class="send" type="hidden" name="province" value="-1"/>
+									<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<dd class="mg">市<b style="color:#ff0000;"> *</b>
+								<select class="city" id="city3">
+										<option value="-1">请选择</option>
+								</select>
+								<input class="send" type="hidden" name="city" value="-1"/>
+									<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<dd class="mg ssq">区<b style="color:#ff0000;"> *</b>
+								<select class="county" id="county3">
+										<option value="-1">请选择</option>
+								</select>
+								<input class="send" type="hidden" name="county" value="-1"/>
+									<p class="c_error" style="width: 196px;"></p>
+								</dd>
+								<div>
+								</div>
+							</div>
+						</dl>
+					</li>
+					<div style="clear:both;"></div>
+			<div class="c_inline_applay">
+				<input type="hidden" name="type" value="105" />
+				<input type="hidden" name="bespeakToken" value="${bespeakToken!}" />
+				<input type="submit" value="提交申请" class="bespeakBtn"/>
+				<div class="c_inline_valid"><input class="code" id="validCode4" name="validCode" autocomplete="off"
+						placeholder="验证码" type="text" maxlength="4" /><span><img
+						src="/validimg.html" align="absmiddle" class="valicode_img"
+						alt="点击刷新" /></span><p class="c_error" style="width: 196px;margin-top: 37px;width: 114px;"></p></div>
+			</div>
+			</form>
+				</ul>
+			</div>
+			<!-- end -->
+		</div>
+			
+
+
+
+<!-- E 内容 -->
+<script>
+/*
+ *初始化省份选择框
+ * */
+$.ajax({
+    type:"get",
+    url:"/region/regionList.html?id="+Math.random(),
+    dataType:"json",
+    success:function(json){
+		var provinces = "";
+    	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+    		  var province=json[i];
+    		  $(".province").append("<option value="+province.id+">"+province.name+"</option>");
+    	 }
+ 	seajs.use("${webroot}${theme_dir}/media/js/jquery.select.region");
+    }
+});
+
+ 	seajs.use("${webroot}${theme_dir}/media/js/borrowBespeak/bespeak");
+ 	//seajs.use("${webroot}${theme_dir}/media/js/address");
+ 	$(function(){
+
+ 		
+ 		
+
+ 	$(".m_zlxg p").click(function(){
+ 		if($(".m_zlxg2 ul").css("display") == "none"){
+ 	 		$(".m_zlxg2 ul").show();
+ 	 	}
+ 		$(".qydq_tj").next("p").hide(); 
+ 	 	})
+ 	 $(".m_zlxg2 ul").click(function(){
+ 	 	if($(".m_zlxg2 ul").css("display") == "block"){
+ 	 		$(".m_zlxg2 ul").hide();
+ 	 	}
+ 	 })
+ 	 //$("#chengshi").width(200);
+ 	 	})
+</script>
+<#include "../include/footer.html">
+</body>
+</html>

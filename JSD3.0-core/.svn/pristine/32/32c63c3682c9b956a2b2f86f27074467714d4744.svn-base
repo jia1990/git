@@ -1,0 +1,42 @@
+package com.ddtkj.p2psys.redpacket.dao;
+
+
+import com.ddtkj.p2psys.redpacket.domain.UserActivity;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+public interface UserActivityDao extends BaseDao<UserActivity>{
+	/**
+	 * 获取用户所有非推荐来的红包
+	 * @param id
+	 * @return
+	 */
+	public PageDataList<UserActivity> getUserActivity(long id,int currentPage,int pagenum) ;
+	/**
+	 * 获取用户所有推荐来的红包
+	 * @param id
+	 * @return
+	 */
+	public PageDataList<UserActivity> getUserActivityRef(long id,int currentPage,int pagenum) ;
+	/**
+	 * 获取某个用户的使用或未使用的红包
+	 * @param userid  用户id
+	 * @param isuse  0 未使用  1 已使用
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,int isuse,int currentPage,int pagenum);
+	/**
+	 * 获取某个用户  通过某种 typecode 来的  使用或未使用的红包
+	 * @param userid  用户id
+	 * @param isuse  0 未使用  1 已使用
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,int isuse,String typecode,int currentPage,int pagenum);
+	/**
+	 * 获取某个用户  通过某种 推荐 来的  使用或未使用的红包
+	 * @param userid  用户id
+	 * @param isuse  0 未使用  1 已使用
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUseridAndTJ(long userid,int isuse,int currentPage,int pagenum);
+}

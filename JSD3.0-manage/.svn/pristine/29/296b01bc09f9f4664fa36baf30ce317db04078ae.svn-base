@@ -1,0 +1,238 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/user/user/userAdminEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址		
+</script>
+<form id="form" method="post">
+<div class="adminUserForm" style="border-bottom:0;">
+    <ul>
+		<li><span>公司名称：</span><input type="text" name="companyName" value="${userCache.companyName}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true" maxlength="20"/><i>*</i></li>
+		<li><span>营业执照号：</span><input type="text" name="companyRegNo" value="${userCache.companyRegNo}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true" maxlength="20"/><i>*</i></li>
+		<li><span>税务登记证号：</span><input type="text" name="companyTaxNo" value="${userCache.companyTaxNo}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true" maxlength="20"/><i>*</i></li>
+		<li><span>组织机构代码：</span><input type="text" name="companyOrgCode" value="${userCache.companyOrgCode}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true" maxlength="20"/><i>*</i></li>
+		<li><span>公司法人：</span><input type="text" name="companyLawPerson" value="${userCache.companyLawPerson}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true" maxlength="20"/><i>*</i></li>
+		<li><span>法人身份证：</span><input type="text" name="companyLawPersonCardno" value="${userCache.companyLawPersonCardno}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'idCard'" maxlength="20"/><i>*</i></li>
+		<li><span>公司电话：</span><input type="text" name="companyPhone" value="${userCache.companyPhone}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'tel'" maxlength="20"/><i>*</i></li>
+		<li><span>公司传真：</span><input type="text" name="companyFax" value="${userCache.companyFax}" autocomplete="off" class="easyui-validatebox adminUserTxt" maxlength="20"/></li>
+		<li><span>公司邮箱：</span><input type="text" name="companyEmail" value="${userCache.companyEmail}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="validType:'email'" maxlength="35"/></li>
+		<li><span>负责人：</span><input type="text" name="user.realName" value="${userCache.user.realName}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true" maxlength="20"/><i>*</i></li>
+		<li><span>负责人身份证：</span><input type="text" name="user.cardNO" value="${userCache.user.cardNO}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'idCard'" maxlength="20"/><i>*</i></li>
+		<li><span>负责人手机：</span><input type="text" name="user.mobilePhone" value="${userCache.user.mobilePhone}" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'mobile'" maxlength="20"/><i>*</i></li>
+		<li><span>负责人邮箱：</span>${userCache.user.email}</li>
+		</ul>
+	
+	<div  class="adminUserMuti">
+		<span style="line-height:40px;">公司地区：</span>
+		
+	    <select name="province" id="province">
+			<option value="">请选择</option>
+		</select> 
+		<select name="city" id="city">
+			<option value="">请选择</option>
+		</select> 
+		<select id="county" name="area" >
+			<option value="">请选择</option>
+		</select>  
+
+		
+	</div>
+	<div class="adminUserMuti"><span>公司地址：</span><textarea name="address" class="easyui-validatebox adminUserTextarea" data-options="required: true,validType:'maxLength[50]'" maxlength="50">${userCache.address}</textarea><i>*</i></div>
+	<div class="adminUserMuti"><span>公司描述：</span><textarea name="companyDesc" class="easyui-validatebox adminUserTextarea" data-options="required: true" maxlength="500">${userCache.companyDesc}</textarea><i>*</i></div>
+	<div class="adminUserMuti"><span>经营状况：</span><textarea name="companyStatus" class="easyui-validatebox adminUserTextarea" data-options="required: true" maxlength="250">${userCache.companyStatus}</textarea><i>*</i></div>
+	<div class="adminUserMuti">
+	     <span>风险方案：</span>
+	     <div style="margin-left:112px">
+			<script id="content" name="riskSolutions" type="text/plain">${userCache.riskSolutions!}</script>
+		 </div>
+	</div>
+	<input type="hidden" name="user.email" value="${userCache.user.email}">
+	<input type="hidden" name="id" value="${userCache.userId!}">
+	<input type="hidden" name="userType" value="${userCache.userType}">
+	
+	<input type="hidden" value="${userAdminEditToken!}" name="userAdminEditToken">
+	
+</div>
+</form>
+<script>
+	/*  $("#city").citySelect({
+		url:"${theme_dir}/js/jquery-citySelect/city.json",
+		<#if userCache.province??>
+		prov:"${userCache.province}", //省份 
+	    city:"${userCache.city!}", //城市 
+	    dist:"${userCache.area!}", //区县 
+		<#else>
+		prov:"${userCache.city!}", //省份 
+	    city:"${userCache.area!}", //城市 
+		</#if>
+	    required:true,
+	    nodata:"none" //当子集无数据时，隐藏select 
+	});   */
+	
+	
+
+	/*
+	 *初始化省份选择框
+	 * 
+	 */
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html",
+        dataType:"json",
+        success:function(json){
+        	
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		 var province=json[i];
+        		 if(province.id=="${userCache.province}"){
+        			 $("#province").append("<option value="+province.id+" selected='selected'>"+province.name+"</option>");
+        			 getEditCity(${userCache.province});
+        		 }else{
+        		 	 $("#province").append("<option value="+province.id+">"+province.name+"</option>");
+        		 }
+        	 }
+        }
+    });
+	
+	//根据id获取city
+	function getEditCity(id){
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html",
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var city=json[i];
+	        		  if(city.id=="${userCache.city}"){
+	        			  
+	        		  	  $("#city").append("<option value="+city.id+" selected='selected'>"+city.name+"</option>");
+	        		  	  
+	        		  	  getEditArea(${userCache.city});
+	        		  }else{
+	        			  $("#city").append("<option value="+city.id+" >"+city.name+"</option>");
+	        		  }
+	        	 }
+	        }
+	    });
+	}
+	
+	
+	
+	//根据id获取country
+	function  getEditArea(id){
+		//ajax逻辑
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html",
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var county=json[i];
+	        		  if(county.id=="${userCache.area}"){
+	        			  $("#county").append("<option value="+county.id+" selected='selected'>"+county.name+"</option>");
+	        		  }else{
+	        		      $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+	        		  }
+	        	 }
+	        }
+	    });
+		
+	}
+	//给省份下拉选择框注册change事件 
+	 $("#province").change(function(){
+		 $("#city").empty();
+		 $("#city").append("<option value=''>请选择</option>");
+		 var id = $(this).val();
+		 if($(this).val() != ''){
+		 	getCity(id);
+		 }else{
+		 	 $("#county").empty();
+			 $("#county").append("<option value=''>请选择</option>");
+		 }
+	 });
+	
+	
+	/*省份发生变化
+	 *AJAX一步后台获取与此省份关联的城市
+	 * 
+	 * */
+	function  getCity(id){
+		//ajax逻辑
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html?id="+${userCache.city},
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var city=json[i];
+	        		 $("#city").append("<option value="+city.id+">"+city.name+"</option>");
+	        	 }
+	        }
+	    });
+		
+	}
+	
+	/*给城市选择框注册change事件*/
+	$("#city").change(function(){
+		 $("#county").empty();
+		 $("#county").append("<option value=''>请选择</option>");
+		var id = $(this).val();
+		if(id!=''){
+			getCounty(id);
+		}
+	});
+
+	/*城市发生变化
+	 *AJAX一步后台获取与此市关联的县（区）
+	 * 
+	 * */
+	function getCounty(id){
+		//ajax逻辑
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html?id="+${userCache.area},
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var county=json[i];
+	        		 $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+	        	 }
+	        }
+	    });
+		
+	}
+</script>
+<!-- 编辑器 -->
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+var descriptionBox = UE.getEditor('content', {
+    autoHeight: false,
+    initialFrameWidth:680,
+    toolbars: [
+               ['fullscreen', 'source', '|', 'undo', 'redo', '|',
+                'bold', 'italic', 'underline', 'fontborder', 'strikethrough', 'superscript', 'subscript', 'removeformat', 'formatmatch', 'autotypeset', 'blockquote', 'pasteplain', '|', 'forecolor', 'backcolor', 'insertorderedlist', 'insertunorderedlist', 'selectall', 'cleardoc', '|',
+                'rowspacingtop', 'rowspacingbottom', 'lineheight', '|',
+                'customstyle', 'paragraph', 'fontfamily', 'fontsize', '|',
+                'directionalityltr', 'directionalityrtl', 'indent', '|',
+                'justifyleft', 'justifycenter', 'justifyright', 'justifyjustify', '|', 'touppercase', 'tolowercase', '|',
+                'link', 'unlink', 'anchor', '|', 'imagenone', 'imageleft', 'imageright', 'imagecenter', '|',
+                'simpleupload', 'insertimage', 'insertvideo', 'attachment',  'insertcode',  'pagebreak', 'template', '|',
+                'horizontal', 'date', 'time', 'spechars', 'wordimage', '|',
+                'inserttable', 'deletetable', 'insertparagraphbeforetable', 'insertrow', 'deleterow', 'insertcol', 'deletecol', 'mergecells', 'mergeright', 'mergedown', 'splittocells', 'splittorows', 'splittocols', 'charts', '|',
+                'print', 'searchreplace', 'drafts'
+               ]
+           ]
+    
+});
+   
+</script>

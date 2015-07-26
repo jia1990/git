@@ -1,0 +1,950 @@
+package com.rongdu.p2psys;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.swing.filechooser.FileSystemView;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+import org.apache.struts2.interceptor.ServletRequestAware;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.model.CreditShowModel;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Site;
+import com.rongdu.p2psys.core.model.ArticleModel;
+import com.rongdu.p2psys.core.model.RankModel;
+import com.rongdu.p2psys.core.model.SiteModel;
+import com.rongdu.p2psys.core.rule.IndexRuleCheck;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+import com.rongdu.p2psys.core.service.ArticleService;
+import com.rongdu.p2psys.core.service.SiteService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 首页
+ * 
+ * @author
+ * @version 1.0
+ * @since 2014年3月4日
+ */
+public class IndexAction extends BaseAction implements ServletRequestAware {
+
+	private String filename;
+	private InputStream stream;
+	@Resource
+	private BorrowTenderService tenderService;
+	@Resource
+	private SiteService siteNewService;
+	@Resource
+	private ArticleService articleService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	@Resource
+	private UserCacheService userCacheService ;
+	@Resource
+	private CreditAssignmentService creditAssignmentService ;
+	@Resource
+	private RpActivityProduceService rpActivityProduceService;
+	
+	
+	private IndexRuleCheck indexRuleCheck = (IndexRuleCheck) Global
+			.getRuleCheck("index");
+
+	private Map<String, Object> data;
+
+	@Action("/index")
+	public String index() throws Exception {
+		/*// 用户注册数量
+		User user = getSessionUser() ;
+		if(user!=null){
+			UserCache uc = userCacheService.findByUserId(user.getUserId()) ;
+			request.getSession().setAttribute("isBorrower",uc.getUserType());
+		}*/
+		/*QueryParam param = QueryParam.getInstance();
+		int userCount = this.userService.count(param);
+		request.setAttribute("userCount", userCount);
+		Object[] object = this.borrowService.countByFinish();
+		if (object != null) {
+			request.setAttribute("borrowFinishCount", object[0]);
+			request.setAttribute("borrowFinishMoney", object[1]);
+		}*/
+		return "home";
+	}
+
+	@Action("/index/calculatorIndex")
+	public String calculatorIndex() throws Exception {
+		return "calculatorIndex";
+	}
+
+	@Action("/index/articleList")
+	public void articleList() throws Exception {
+		String nid = paramString("nid");
+		Site site = siteNewService.findByNid(nid);
+		SiteModel m = SiteModel.instance(site, nid);
+		m.validSiteForArticleList();
+		List<ArticleModel> articleList = null;
+		data = new HashMap<String, Object>();
+		if (nid.equals("media")||nid.equals("scrollPic")) {
+			List<Long> ids = articleService.getIds(site);
+			site.setSize(ids.size());
+			articleList = articleService.listAdBySize(nid, site.getSize());
+			
+			List list = null;
+			if (articleList.size() > 10) {
+				 list = new ArrayList();
+				for (int i = 0; i < 10; i++) {
+					list.add(i, articleList.get(i));
+				}
+				data.put("data", list);
+			}else{
+				data.put("data", articleList);
+			}
+		}else {
+			site.setSize(4);
+			articleList = articleService.listAdBySize(nid, site.getSize());
+			data.put("data", articleList);
+		}
+		printJson(getStringOfJpaObj(data));
+		 //JSDP-86 wcw 2015-05-05 start
+		data=null;
+		 //JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 添加到桌面快捷方式
+	 * 
+	 * @author 李建云
+	 * */
+	@Action(value = "desktop", results = { @Result(
+
+	name = "success",
+
+	type = "stream",
+
+	params = {
+
+	"contentType", "application/x-download",
+
+	"inputName", "stream",
+
+	"bufferSize", "1024",
+
+	"contentDisposition", "attachment;filename=\"${filename}\""
+
+	}) })
+	public String createDesktop() throws Exception {
+
+		StringBuffer templateContent = new StringBuffer();
+
+		templateContent.append("[InternetShortcut]\r\n");
+		templateContent.append("URL="+Global.getValue("weburl")+"\r\n");
+		String path = request.getContextPath();
+
+		templateContent
+				.append("IconFile=http://"+Global.getValue("con_weburl")+"\favicon.ico\r\n");
+		templateContent.append("IconIndex=0\r\n");
+
+		filename = "晋商贷" + ".url";
+
+		String agent = request.getHeader("User-Agent");
+		boolean isMSIE = (agent != null && agent.indexOf("MSIE") != -1);
+
+		if (isMSIE) {
+			// 处理其它浏览器乱码
+			filename = URLEncoder.encode(filename, "UTF-8");
+		} else {
+			// 处理火狐浏览器乱码
+			filename = new String(filename.getBytes("UTF-8"), "ISO-8859-1");
+		}
+
+		FileSystemView fsv = FileSystemView.getFileSystemView();
+		String upurl = fsv.getHomeDirectory().toString();
+		stream = new ByteArrayInputStream(templateContent.toString().getBytes());
+
+		return SUCCESS;
+	}
+
+	/**
+	 * @author 李建云 联系我们
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/contactUs")
+	public String contactUs() throws Exception {
+		return "contactUs";
+	}
+
+	/**
+	 * @author 冯国琴 关于我们页面
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/about")
+	public String about() throws Exception {
+		// 公司荣誉
+		String nid = "honor";
+		Site site = siteNewService.findByNid(nid);
+		List<Long> listIds = articleService.getIds(site);
+		site.setSize(listIds.size());
+		SiteModel m = SiteModel.instance(site, nid);
+		// 显示
+		if (m.getStatus() == 1) {
+
+			List<ArticleModel> articleList = articleService.listAdBySize(nid,
+					site.getSize());
+			request.setAttribute("honorArticleList", articleList);
+		} else {
+			request.setAttribute("honorArticleList", null);
+		}
+		// 办公环境
+		String nid2 = "officeEnvir";
+		Site site2 = siteNewService.findByNid(nid2);
+		List<Long> listIds2 = articleService.getIds(site2);
+		site2.setSize(listIds2.size());
+		SiteModel m2 = SiteModel.instance(site2, nid2);
+
+		if (m2.getStatus() == 1) {
+
+			List<ArticleModel> articleList = articleService.listAdBySize(nid2,
+					site2.getSize());
+			List<ArticleModel> articleTopList = new ArrayList<ArticleModel>();
+			List<ArticleModel> articleBottomList = new ArrayList<ArticleModel>();
+			for (int i = 0; i < articleList.size(); i++) {
+				if (i < 8) {
+
+					articleTopList.add(articleList.get(i));
+
+				} else if (i >= 8 && i < 16) {
+					articleBottomList.add(articleList.get(i));
+				}
+			}
+			request.setAttribute("articleTopList", articleTopList);
+			request.setAttribute("articleBottomList", articleBottomList);
+			request.setAttribute("officeEnvirArticleList", articleList);
+		} else {
+			request.setAttribute("officeEnvirArticleList", null);
+		}
+
+		// 晋商贷视频
+		String nid3 = "jsdVideo";
+		Site site3 = siteNewService.findByNid(nid3);
+		List<Long> listIds3 = articleService.getIds(site3);
+		site3.setSize(1);
+		SiteModel m3 = SiteModel.instance(site3, nid3);
+		// 显示
+		if (m3.getStatus() == 1) {
+
+			List<ArticleModel> articleList = articleService.listAdBySize(nid3,
+					site3.getSize());
+			request.setAttribute("jsdVideoArticleList", articleList);
+		} else {
+			request.setAttribute("jsdVideoArticleList", null);
+		}
+		return "about";
+	}
+
+	/**
+	 * @author 李建云 加入我们页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/job")
+	public String job() throws Exception {
+		return "job";
+	}
+
+	/**
+	 * @author 冯国琴 团队介绍
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/team")
+	public String team() throws Exception {
+
+		// 团队介绍
+		String nid = "teamIntroduc";
+		Site site = siteNewService.findByNid(nid);
+		List<Long> listIds = articleService.getIds(site);
+		site.setSize(listIds.size());
+		SiteModel m = SiteModel.instance(site, nid);
+		// 显示
+		if (m.getStatus() == 1) {
+
+			List<ArticleModel> articleList = articleService.listAdBySize(nid,
+					site.getSize());
+			request.setAttribute("teamIntroducArticleList", articleList);
+		} else {
+			request.setAttribute("teamIntroducArticleList", null);
+		}
+		// 管理团队介绍
+		String nid2 = "manageTeam";
+		Site site2 = siteNewService.findByNid(nid2);
+		List<Long> listIds2 = articleService.getIds(site2);
+		site2.setSize(listIds2.size());
+		SiteModel m2 = SiteModel.instance(site2, nid2);
+		// 显示
+		if (m2.getStatus() == 1) {
+
+			List<ArticleModel> articleList2 = articleService.listAdBySize(nid2,
+					site2.getSize());
+			request.setAttribute("manageTeamArticleList", articleList2);
+		} else {
+			request.setAttribute("manageTeamArticleList", null);
+		}
+		return "team";
+	}
+
+	/**
+	 * @author 冯国琴
+	 * 得到最新的广告条
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/index/newestAd")
+	public void newestAd() throws Exception {
+		String nid = paramString("nid");
+		
+		Site site = siteNewService.findByNid(nid);
+		List<Long> listIds = articleService.getIds(site);
+		site.setSize(listIds.size());
+		SiteModel m = SiteModel.instance(site, nid);
+		// 显示
+		if (m.getStatus() == 1) {
+
+			List<ArticleModel> articleList = articleService.listAdBySize(nid,
+					site.getSize());
+			data = new HashMap<String, Object>();
+			data.put("data", articleList);
+
+		} else {
+			data.put("data", null);
+		}
+
+		printJson(getStringOfJpaObj(data));
+		 //JSDP-86 wcw 2015-05-05 start
+		 data=null;
+		 //JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * @author 冯国琴合作伙伴
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/partner")
+	public String partner() throws Exception {
+		return "partner";
+	}
+
+	/**
+	 * @author 冯国琴 常见问题页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/common/faquestions")
+	public String faquestions() throws Exception {
+		String type = paramString("type");
+		if(!StringUtil.isNotBlank(type)){
+			request.setAttribute("type", "faquestions");
+		}else{
+			request.setAttribute("type", type);
+			Site site = siteNewService.findByNid(type);
+			request.setAttribute("site", site);
+		}
+		Site site = siteNewService.findByNid("questions");
+		List<Site> questionsList = siteNewService.findByNid(site.getId());
+		request.setAttribute("questionsList",questionsList);
+		return "faquestions";
+	}
+
+	/**
+	 * @author 冯国琴 如何理财页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/common/faManageMoney")
+	public String faManageMoney() throws Exception {
+		request.setAttribute("type", "faManageMoney");
+		return "faManageMoney";
+	}
+
+	/**
+	 * @author 冯国琴 如何借款页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/common/faborrowMoney")
+	public String faborrowMoney() throws Exception {
+		request.setAttribute("type", "faborrowMoney");
+		return "faborrowMoney";
+	}
+
+	/**
+	 * @author 冯国琴 法律顾问
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/law")
+	public String law() throws Exception {
+
+		// 法律顾问
+		String nid = "lawTeam";
+		Site site = siteNewService.findByNid(nid);
+		site.setSize(2);
+		SiteModel m = SiteModel.instance(site, nid);
+		// 显示
+		if (m.getStatus() == 1) {
+
+			List<ArticleModel> articleList = articleService.listAdBySize(nid,
+					site.getSize());
+			request.setAttribute("lawAdviserArticleList", articleList);
+		} else {
+			request.setAttribute("lawAdviserArticleList", null);
+		}
+		
+		
+		
+		// 律师事务所
+		String nid2 = "lawOffice";
+		Site site2 = siteNewService.findByNid(nid);
+		site2.setSize(1);
+		SiteModel m2 = SiteModel.instance(site, nid);
+		// 显示
+		if (m2.getStatus() == 1) {
+
+			List<ArticleModel> articleList = articleService.listAdBySize(nid2,
+					site2.getSize());
+			if (articleList.size() > 0) {
+				request.setAttribute("lawOfficeArticle", articleList.get(0));
+			} else {
+				request.setAttribute("lawOfficeArticle", null);
+			}
+
+		} else {
+			request.setAttribute("lawOfficeArticle", null);
+		}
+		return "law";
+	}
+
+	/**
+	 * @author 冯国琴 晋商贷成就数据列表
+	 * 
+	 * @throws Exception  项目未使用
+	 *//*
+	@Action("/aboutUs/data")
+	public String data() throws Exception {
+		return "data";
+	}*/
+
+	/**
+	 * @author 冯国琴 铺宝宝数据列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/store")
+	public String store() throws Exception {
+		return "store";
+	}
+
+	/**
+	 * @author 冯国琴 车宝宝数据列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/car")
+	public String car() throws Exception {
+		return "car";
+	}
+
+	/**
+	 * @author 冯国琴 能源宝数据列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/energy")
+	public String energy() throws Exception {
+		return "energy";
+	}
+
+	/**
+	 * @author 冯国琴 媒体报道数据列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/platform")
+	public String platform() throws Exception {
+		return "platform";
+	}
+
+	/**
+	 * 产品介绍
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/productsIntro")
+	public String productsIntro() throws Exception {
+		return "productsIntro";
+	}
+
+	/**
+	 * 关于我们页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/siteIntro")
+	public String siteIntro() throws Exception {
+		return "siteIntro";
+	}
+
+	/**
+	 * 正在招标
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/indexJson")
+	public String indexJson() throws Exception {
+		BorrowModel model = new BorrowModel();
+		model.setSize(4);
+		model.setStatus(-2);
+		PageDataList<BorrowModel> pageData = null;// borrowService.getList(model);
+		data = new HashMap<String, Object>();
+		data.put("data", pageData);
+		printJson(getStringOfJpaObj(data));
+		 //JSDP-86 wcw 2015-05-05 start
+		data=null;
+		 //JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	/**
+	 * 债权列表
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/indexCreditJson")
+	public String indexCreditJson() throws Exception {
+		data = new HashMap<String, Object>();
+		CreditAssignmentModel model = new CreditAssignmentModel() ;
+		List<String> list = new ArrayList<String>();
+		list.add("01") ;
+		list.add("03") ;
+		//list.add("05") ;
+		//list.add("06") ;
+		list.add("07") ;
+		int size = paramInt("size");
+		if (size != 0) {
+			model.setSize(size);
+		} else {
+			model.setSize(4);
+		}
+		PageDataList<CreditShowModel> calist = creditAssignmentService.getDateShow(list,model.getPage(),model.getSize(),model) ;
+		data.put("calist", calist);
+		data.put("imgpath",getRequest().getSession().getServletContext().getAttribute("webroot")+""+getRequest().getSession().getServletContext().getAttribute("theme_dir"));
+		printJson(getStringOfJpaObj(data));
+		 //JSDP-86 wcw 2015-05-05 start
+		data=null;
+		 //JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	/**
+	 * 成功贷款
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/index/borrowSuccess")
+	public String borrowSuccess() throws Exception {
+		data = new HashMap<String, Object>();
+		if (indexRuleCheck.success == 1) {
+			/*
+			 * List<Borrow> successList =
+			 * borrowService.getSuccessListForIndex(); data.put("data",
+			 * successList);
+			 */
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		 //JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 最新借款
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/index/newTender")
+	public String newTender() throws Exception {
+		data = new HashMap<String, Object>();
+		if (indexRuleCheck.newTender == 1) {
+			List<BorrowTender> newTenderList = tenderService.getNewTenderList();
+			data.put("data", newTenderList);
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 投资排行榜
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/index/rankList")
+	public String rankList() throws Exception {
+		data = new HashMap<String, Object>();
+		if (indexRuleCheck.total_rank_list_ofmonth == 1) {
+			List<RankModel> totalRankListOfMonth = tenderService.getRankList();
+			data.put("data", totalRankListOfMonth);
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 浏览器升级页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/browserUpgrade")
+	public String browserUpgrade() throws Exception {
+
+		return "browserUpgrade";
+	}
+
+	/**
+	 * 资费说明页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/help/charges")
+	public String charges() throws Exception {
+
+		return "charges";
+	}
+
+	/**
+	 * 常见问题页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/help/commonProblems")
+	public String commonProblems() throws Exception {
+
+		return "commonProblems";
+	}
+
+	/**
+	 * 安全保障页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/safe")
+	public String safe() throws Exception {
+		request.setAttribute("nid", "security");
+		String day = DateUtil.getSubDay(DateUtil.valueOf("2012-08-08"), new Date())+"";
+		for(int i=0;i<(4-day.length());i++){
+			day="0"+day ;
+		}
+		request.setAttribute("day",day);
+		return "safe";
+	}
+	//JSDP-124 fengguoqin start  5.19
+	/**
+	 * 汇潮支付的宣传页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             
+	 */
+	@Action("/huichao")
+	public String huichao() throws Exception {
+		return "huichao";
+	}
+	//JSDP-124 fengguoqin start  5.19
+
+	/**
+	 * @author 李建云 首页数据显示
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/index/dataView")
+	public void dataView() throws Exception {
+		data = new HashMap<String, Object>();
+
+		// 获取指定时间的月
+		int date = DateUtil.getTimeMonth(new Date());
+
+		// 当月成功借款人数
+		int borrowUserCount = userService.countUserBySuccessBorrow();
+
+		data.put("date", date);
+
+		data.put("borrowUserCount", borrowUserCount);
+
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * @author 李建云
+	 * 
+	 *         首页详细数据分析页面
+	 * */
+	@Action("/frontData/dataDetail")
+	public String dataDetail() throws Exception {
+
+		return "dataDetail";
+	}
+
+	/**
+	 * 新手指引页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/help/guide")
+	public String guide() throws Exception {
+		request.setAttribute("nid", "newGuide");
+		return "guide";
+	}
+
+	/**
+	 * 法律声明页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/help/legalNotices")
+	public String legalNotices() throws Exception {
+
+		return "legalNotices";
+	}
+
+	/**
+	 * @author guojunhui@ddtkj.com 前台数据
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/index/investIn")
+	public void investIn() throws Exception {
+
+		RuleCheck spRuleCheck1 = GlobalCache.getRuleCheck("dataShow");
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("showData", spRuleCheck1);
+		printJson(getStringOfJpaObj(map));
+		//JSDP-86 wcw 2015-05-05 start
+		map=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	public InputStream getStream() {
+		return stream;
+	}
+
+	public void setFilename(String filename) {
+		this.filename = filename;
+	}
+
+	public String getFilename() {
+		return filename;
+	}
+	/**
+	 * @author guojunhui@ddtkj.com 前台数据
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/index/newHelp")
+	public String newHalp() throws Exception {
+		return "newHelp" ;
+	}
+	/**
+	 * @author guojunhui@ddtkj.com app下载页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/app")
+	public String appPage() throws Exception {
+		return "app" ;
+	}
+	/**
+	 * @author guojunhui@ddtkj.com 风险备用金专题页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/risks")
+	public String risksPage() throws Exception {
+		return "risks" ;
+	}
+	/**
+	 * @author guojunhui@ddtkj.com 红包专题页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/redPacket")
+	public String redPacketPage() throws Exception {
+		String inviteId = paramString("inviteId");
+		request.setAttribute("inviteId", inviteId);
+		return "redPacket" ;
+	}
+	/**
+	 * @author guojunhui@ddtkj.com 提现免费专题页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/freeDraw")
+	public String freeDrawPage() throws Exception {
+		return "freeDraw" ;
+	}
+	
+	
+	/**
+	 * @author fengguoqin@ddtkj.com 邀请好友专题页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/inviteGift")
+	public String inviteGift() throws Exception {
+		String inviteId = paramString("inviteId");
+		request.setAttribute("inviteId", inviteId);
+		User user = this.getSessionUser();
+		request.setAttribute("user", user);
+		return "inviteGift" ;
+		
+	}
+	/**
+	 * @author fengguoqin@ddtkj.com 邀请好友专题页面(新)
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/inviteGift1")
+	public String inviteGift1() throws Exception {
+		String inviteId = paramString("inviteId");
+		request.setAttribute("inviteId", inviteId);
+		User user = this.getSessionUser();
+		request.setAttribute("user", user);
+		return "inviteGift1" ;
+		
+	}
+	
+	
+	
+	/**
+	 * @author fengguoqin@ddtkj.com 资金托管活动页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/fund_deposit")
+	public String fundDeposit() throws Exception {
+		return "fund_deposit" ;
+	}
+	
+	/**
+	 * @author guojunhui@ddtkj.com 注册活动页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/register")
+	public String registerPage() throws Exception {
+		String inviteId = paramString("inviteId");
+		request.setAttribute("inviteId", inviteId);
+		return "register" ;
+	}
+	
+	
+	/**
+	 * @author fengguoqin 专列信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/subject/specialTrain")
+	public String specialTrain() throws Exception {
+		return "specialTrain" ;
+	}
+	//JSDP-184 xingjia 20150618 start
+	
+	/**
+	 * 端午节活动页面
+	 * @return
+	 */
+	@Action("/subject/activityDragon")
+	public String activityDragon(){
+		
+		return "activityDragon";
+	}
+	/**
+	 * 查询活动期间的标和投标状况
+	 * @throws IOException 
+	 */
+	@Action("/subject/activityDragonBorrow")
+	public void activityDragonBorrow() throws IOException{
+		
+		List<Map<String,Object>> rpmList = rpActivityProduceService.getRpActivityList(RpActivityProduce.RP_RPODUCE_DRAGON);
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("data", rpmList);
+		printJson(getStringOfJpaObj(map));
+		map=null;
+	}
+	//JSDP-184 xingjia 20150618 end
+	/**
+	 * 首页广告页面跳转
+	 * @return
+	 */
+	@Action("/advertiser/finance")
+	public String advertiserTyunGou(){
+		return "finance";
+	}
+}

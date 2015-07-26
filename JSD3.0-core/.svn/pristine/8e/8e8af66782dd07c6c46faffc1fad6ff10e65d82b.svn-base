@@ -1,0 +1,48 @@
+
+package com.ddtkj.p2psys.score.dao.impl;
+
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.score.dao.ScoreAwardDao;
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.score.exception.ScoreException;
+
+@Repository("scoreAwardDao")
+public class ScoreAwardDaoImpl extends BaseDaoImpl<ScoreAward> implements ScoreAwardDao {
+
+	private static Logger logger = Logger.getLogger(ScoreAwardDaoImpl.class);
+
+	@Override
+	public List<ScoreAward> getAwardObjectListByRuleId(long ruleId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rule.id", ruleId);
+		param.addOrder(OrderType.ASC, "rate");
+		return findByCriteria(param);
+	}
+
+	@Override
+	public ScoreAward getAwardObjectById(long awardId) {
+		return find(awardId);
+	}
+
+	@Override
+	public void updateBestow(long ruleId, long awardId) {
+		// update 奖品规则表 set 抽中数量 = 抽中数量 +1 where 总数量 > 抽中数量 and 奖品id=? and ruleId=?	
+		String jpql = " UPDATE t_jsd_score_award SET bestow = ifnull(bestow,0) + 1 WHERE total > bestow AND id = :id AND rule_id = :rule_id ";
+		String[] names = new String[] { "rule_id", "id" };
+		Object[] values = new Object[] { ruleId, awardId };
+		int count = updateBySql(jpql, names, values);
+		if (count != 1) {
+			throw new ScoreException("更新奖品规则奖品的抽中数量失败");
+		}
+		this.refresh(this.find(awardId));	
+	}
+	
+	
+}

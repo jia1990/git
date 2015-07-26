@@ -1,0 +1,26 @@
+package com.ddtkj.p2psys.tpp.ymd.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountTradeDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountTransferTrade;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountTransferTradeDetail;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月9日 
+ */
+@Repository("accountTradeDao")
+public class AccountTradeDaoImpl extends BaseDaoImpl<AccountTransferTrade> implements AccountTradeDao{
+	@Override
+	public AccountTransferTrade getTransferTradeByTradeno(String tradeNo) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("tradeNo", tradeNo);
+		AccountTransferTrade accountTransferTrade=(AccountTransferTrade) findByCriteriaForUnique(param);
+		return accountTransferTrade;
+	}
+	
+}

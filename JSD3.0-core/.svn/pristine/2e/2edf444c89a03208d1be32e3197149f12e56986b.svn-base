@@ -1,0 +1,52 @@
+package com.ddtkj.p2psys.analysis.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.analysis.dao.AnalysisDao;
+import com.ddtkj.p2psys.analysis.domain.Analysis;
+import com.ddtkj.p2psys.analysis.service.AnalysisService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.QueryParam;
+/**
+ * @描述：用户来源收集service实现层
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+@Service("analysisService")
+public class AnalysisServiceImpl implements AnalysisService{
+
+	@Resource
+	private AnalysisDao analysisDao;
+	public AnalysisServiceImpl() {
+		
+	}
+
+	@Override
+	public Analysis saveAnalysis(Analysis analysis) {
+		return analysisDao.save(analysis);
+	}
+
+	@Override
+	public Analysis findAnalysisSource(String sessionId,String sucUrl) {
+//		QueryParam param = QueryParam.getInstance();
+//		param.addParam("sessionId", sessionId);
+//		param.addOrder(OrderType.ASC, "hitTime");
+//		List<Analysis> analysisList = analysisDao.findByCriteria(param);
+//		if(null != analysisList){
+//			return analysisList.get(0);
+//		}
+		
+		return analysisDao.findAnalysisSource(sessionId,sucUrl);
+	}
+
+	@Override
+	public int saveAnalysisBySql(Analysis analysis) {
+		
+		return analysisDao.saveAnalysis(analysis);
+	}
+
+}

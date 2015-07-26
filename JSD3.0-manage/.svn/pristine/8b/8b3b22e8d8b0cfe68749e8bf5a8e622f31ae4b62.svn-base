@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>发标待审标信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	//发标管理中的excel导出
+	function exportExcel() {
+		var url = "/modules/loan/borrow/verifyBorrowExcel.html";
+		var userName = $("#userName").val();
+		var borrowName = $("#borrowName").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&borrowName=" + borrowName
+				+ "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+	$(function(){
+		$("#contractNo").focus(function(){
+			$(".y_tooltips").css({left:$("#contractNo").position().left+"px"});
+			$(".y_tooltips").show();
+		})
+		$("#contractNo").blur(function(){
+			$(".y_tooltips").hide();
+		})
+		
+	})
+</script>
+<style>
+.y_tooltips {
+    background: none repeat scroll 0 0 #F0F0F0;
+    border: 1px solid #cbcbcb;
+    border-radius: 3px;
+    bottom: 0px;
+    opacity :1;
+    color: #666;
+    display: none;
+    font-size: 14px;
+    font-weight:200;
+    left: 198px;
+    /* line-height: 22px; */
+    padding: 20px 12px;
+    position: relative;
+    z-index: 1;
+    margin-top:170px;
+    margin-bottom:170px;
+}
+#content{
+	padding-top:0px;
+}
+</style>
+</head>
+<body style="padding: 0 20px;">
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false"
+			id="searchBox">
+			<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+					<!-- <li>类型：<select name="type" class="type"><option value="全部">全部</option><#list borrowConfigList as item><option value="${item.id}">${item.name}</option></#list></select></li> -->
+					<li>借款人：<input type="text" name="userName"
+						autocomplete="off" id="userName" /></li>
+					<li>标名：<input type="text" name="name" autocomplete="off"
+						id="borrowName" /></li>
+					<!-- <li>时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		-->
+					<li>时间：<input type="text" name="startTime" id="startTime"
+						class="searchTime" style="width: 140px;" />&nbsp;-&nbsp;<input
+						type="text" name="endTime" id="endTime" class="searchTime"
+						style="width: 140px;" /></li>
+					<li><a href="javascript:void(0);" class="searchBtn"
+						onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a
+						href="javascript:void(0);" class="searchBtn"
+						onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+				</ul>
+			</form>
+		</div>
+		<!-- 合同号提示 -->
+		<div class="y_tooltips" style="display: none;text-align:center;width:187px;height:30px;" ><span id="content" style="margin-top:10px;" >合同号格式参考：<br/>NYB20150408001</span></div>
+		
+		<div data-options="region:'center'"
+			style="margin-top: 30px; padding-bottom: 30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	
+	<div id="toolbar" style="display: none;position:relative;">
+	
+		&nbsp; 
+		<@secAuthorizeUrl value='/loan/addBorrowExcel.html'> 
+		<!-- <select name="nature" id="nature">
+			<option value="请选择" selected="selected">请选择</option>
+			<option value="20">个人</option>
+			<option value="21">企业</option>
+		</select> &nbsp;  -->
+		<select name="type" id="type">
+			<option value="请选择" selected="selected">请选择</option>
+			<#list borrowConfigList as item><option value="${item.id}">${item.name}</option></#list>
+		</select> 
+		</@secAuthorizeUrl> &nbsp; 
+		<a style="color: #848484; font-size: 14px;" id="tishi">请选择借款人类型</a>
+		&nbsp;&nbsp; 
+		<input type="text" id="contractNo" class="searchContract easyui-validatebox"
+				data-options="required: true,validType:'unNormal'" maxlength="20" title="合同号格式参考：NYB20150408001">
+		
+		<a onclick="searchContract($('#contractNo').val(),$('#type').val());"
+			href="javascript:void(0);" class="searchContractBtn" >查询合同</a>
+
+		<@secAuthorizeUrl value='/loan/verifyBorrowExcel.html'> <a
+			onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>
+<script type="text/javascript">
+	//$.fn.iframeWidthResize(640);//页面最小宽度设置
+	var dataGrid;
+	var winWidth = 800;
+	var winHeight = 500;
+	var param = document.getElementById("type").value;
+	var addTitle = "发布借款";
+	var addUrl = "/modules/loan/borrow/borrowAddPage.html";
+	var verifyTitle = "初审";
+	var verifyUrl = "/modules/loan/borrow/borrowVerifyPage.html";
+	var confirmUrl = "/modules/loan/borrow/registerBorrowResult.html";
+	var openUrl = "/modules/loan/borrow/registerBorrow.html";
+	var verifyWinParmeters = "'{0}','" + verifyTitle + "',700,530,'"
+			+ verifyUrl + "','确定'";
+	var registerBorrowParmeters = "'{0}','" + confirmUrl + "','" + openUrl
+			+ "'";
+	
+	var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+	var viewWinParmeters = "'{0}','" + viewUrl + "'";
+	var detailTitle = "修改借款";
+	var detailUrl = "/modules/loan/borrow/borrowUpdatePage.html"
+	var detailWinParmeters = "'{0}','" + detailTitle + "',800,500,'"
+			+ detailUrl + "','确定'";
+	$(function() {
+		dataGrid = $('#dataGrid')
+				.datagrid(
+						{
+							url : 'verifyBorrowList.html',
+							fit : true,
+							fitColumns : true,
+							border : false,
+							pagination : true,
+							idField : 'id',
+							pageSize : 10,
+							pageNums : 1,
+							pageList : [ 10, 20, 30, 40, 50 ],
+							sortName : 'id',
+							sortOrder : 'asc',
+							checkOnSelect : false,
+							selectOnCheck : false,
+							nowrap : false,
+							singleSelect : true,
+							columns : [ [
+									{
+										field : 'id',
+										title : '编号',
+										width : 50,
+										fixed : true,
+										sortable : false
+									},
+									{
+										field : 'userName',
+										title : '借款人',
+										width : 150,
+										fixed : true,
+										sortable : false
+									},
+									{
+										field : 'name',
+										title : '标名',
+										width : 150,
+										sortable : false,
+						            	  formatter:function(value, row, index){
+						  					var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+						  					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+						  					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}">'+row.name+'</a>', row.id, '${theme_dir}/css/images/extjs_icons/link.png');
+						  					
+						  					}
+									},
+									{
+										field : 'dealParent',
+										title : '合同号',
+										width : 80,
+										sortable : false
+									},
+									{
+										field : 'dealNo',
+										title : '子合同号',
+										width : 80,
+										sortable : false
+									},
+									{
+										field : 'typeName',
+										title : '类型',
+										width : 60,
+										sortable : false
+									/*  , 
+														formatter: function(value,row,index){
+															return borrowType(value);  
+									    				}  
+									 */},
+									{
+										field : 'accountStr',
+										title : "<a title='元'>借款金额</a>",
+										width : 100,
+										sortable : false,
+										formatter : function(value, row, index) {
+											//return value + "元";
+											return value;
+										}
+									},
+									{
+										field : 'apr',
+										title : '利率',
+										width : 50,
+										sortable : false,
+										formatter : function(value, row, index) {
+											return value + "%";
+										}
+									},
+									{
+										field : 'timeLimit',
+										title : '期限',
+										width : 50,
+										sortable : false,
+										formatter : function(value, row, index) {
+											if (row.type == 101) {
+												return "满标即还";
+											} else if (row.borrowTimeType == 1) {
+												return row.timeLimit + "天";
+											} else {
+												return value + "个月";
+											}
+										}
+									},
+									{
+										field : 'addTime',
+										title : '添加时间',
+										width : 180,
+										fixed : true,
+										sortable : false,
+										formatter : function(value, row, index) {
+											return getLocalTime(value, 4);
+										}
+									},
+									{
+										field : 'action',
+										title : '操作',
+										width : 75,
+										fixed : true,
+										formatter : function(value, row, index) {
+											var str = '';
+											str += "<@secAuthorizeUrl value='/borrowEditBtn.html'>";
+											str += $
+													.formatString(
+															'<img onclick="$.fn.dataGridOptions.borroweditFun('
+																	+ detailWinParmeters
+																	+ ');" src="{1}" title="修改借款信息"/>',
+															row.id,
+															'${theme_dir}/css/images/extjs_icons/pencil.png');
+											str += "</@secAuthorizeUrl>";
+											str += '&nbsp;';
+											str += "<@secAuthorizeUrl value='/borrowFirstVerifyBtn.html'>";
+											str += $
+													.formatString(
+															'<img onclick="$.fn.dataGridOptions.editFun('
+																	+ verifyWinParmeters
+																	+ ');" src="{1}" title="初审"/>',
+															row.id,
+															'${theme_dir}/css/images/extjs_icons/key.png');
+											str += "</@secAuthorizeUrl>";
+											str += '&nbsp;';
+											return str;
+										}
+									} ] ],
+							toolbar : '#toolbar'
+						});
+
+		$("#a").hide();
+		//$("#type").hide();
+		$("#contractNo").hide();
+		$("#contractNo").val();
+		$(".searchContractBtn").hide();
+		$("#tishi").show(300);
+		/* $("#nature")
+				.change(
+						function() {
+
+							if ($("#nature").val() != "请选择") {
+								$("#tishi").html("发标请先选择借款标类型");
+								$("#type").show();
+								$("#a").hide();
+								$("#contractNo").hide();
+								$("#contractNo").attr("value","");;
+								$(".searchContractBtn").hide();
+								$("#tishi").show(300);
+								var type = $("#nature :selected").val();
+								if (type == 20) {
+									$("#type")
+											.html(
+													'<option value="请选择" selected="selected">请选择</option>'
+															+ '<#list borrowConfigList as item>'
+															+ '<#if item.type == "20"><option value="${item.id}">${item.name}</option>'
+															+ '</#if></#list>');
+								} else if (type == 21) {
+									$("#type")
+											.html(
+													'<option value="请选择" selected="selected">请选择</option>'
+															+ '<#list borrowConfigList as item>'
+															+ '<#if item.type == "21"><option value="${item.id}">${item.name}</option>'
+															+ '</#if></#list>');
+								}
+							} else {
+								$("#type").hide();
+								$("#a").hide();
+								$("#contractNo").hide();
+								$("#contractNo").attr("value","");;
+								$(".searchContractBtn").hide();
+								$("#tishi").html("请选择借款人类型");
+								$("#tishi").show(300);
+							}
+
+						}); */
+		$("#type").change(function() {
+			//alert($("#type").val());
+
+			if ($("#type").val() == "请选择") {
+				$("#a").hide();
+				$("#contractNo").hide();
+				$("#contractNo").attr("value","");;
+				$(".searchContractBtn").hide();
+				$("#tishi").show(300);
+			} else {
+				$("#a").show();
+				$("#contractNo").show();
+				$("#contractNo").attr("value","");
+				$(".searchContractBtn").show();
+				$("#tishi").hide(300);
+			}
+
+
+		});
+	});
+	function searchContract(contractNo, typeId) {
+		if (contractNo == "") {
+			parent.$.messager.alert('提示', "请输入合同号！", 'warning');
+		}else{
+			var bl = /^[A-Za-z0-9]+$/.test(contractNo);
+			if(!bl){
+				parent.$.messager.alert('提示', "请输入合法的合同号！", 'warning');
+			}else{
+				
+				if (typeId == "请选择") {
+					parent.$.messager.alert('提示', "请选择标的类型！", 'warning');
+				} else {
+					$.ajax({
+						type : "post",
+						url : "/modules/loan/borrow/borrowByDealParent.html",//发送请求地址
+						data : {
+							dealParent : contractNo,
+							borrowType : typeId
+						},
+						success : function(data) {
+							// 判断对应合同号的借款标是否存在
+							if (data.borrowList.length == 0) {
+								//确认合同号无其他借款标使用
+								if(data.borrowListByDealParent.length == 0){
+									
+									// 合同提示
+									//parent.$.messager.confirm('提示','此合同号可以发标，请发标！','info');
+									parent.$.messager.confirm('确认', '该合同号可发标，是否发标？',
+											function(r) {
+												if (r) {
+													$.fn.dataGridOptions.borrowAddFun(
+															typeId, addTitle, winWidth,
+															winHeight, addUrl, contractNo);
+												} else {
+		
+												}
+											});
+		
+								}else{
+									parent.$.messager.alert('提示','此合同号已被其他借款标所使用，请更换合同号！', 'info');
+								}
+								
+								// 再次借款
+							} else {
+								// 判断此合同号借款金额是否已完成
+								if (data.account == data.borrow.allAccount) {
+									parent.$.messager.alert('提示',
+											'此合同号借款金额已达到上限，请更换合同号！', 'info');
+								} else if(data.account < data.borrow.allAccount){
+									// 合同提示
+									parent.$.messager.confirm('确认',
+											'该合同号可继续发标，是否继续发标？', function(r) {
+												if (r) {
+													$.fn.dataGridOptions.borrowAddFun(
+															typeId, addTitle, winWidth,
+															winHeight, addUrl,
+															contractNo);
+												} else {
+	
+												}
+											});
+								}else{
+									parent.$.messager.alert('提示',
+											'无法发标，请联系管理员！', 'info');
+								}
+							}
+	
+						}
+					});
+				}	
+			}
+		}
+
+	}
+</script>
+

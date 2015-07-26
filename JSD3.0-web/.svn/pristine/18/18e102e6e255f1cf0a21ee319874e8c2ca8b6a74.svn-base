@@ -1,0 +1,92 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html">
+<#assign nid="my_account"> 
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/meida/css/contact.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/meida/css/account.css">
+<script src="${webroot}${theme_dir}/meida/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/meida/js/alerts.js"></script>
+<title>晋商贷-实名认证</title>
+<style>
+.y_alertsBoxCon{color: #555555;font-size: 16px;line-height: 30px;}
+.y_alertsBoxCon span{color: #0057ff;}
+.c_deal_content .y_account_nav dd span.c_member_icon{background:url(${webroot}${theme_dir}/images/contact/vip.png) no-repeat 0 2px;}
+.c_deal_content .y_account_nav .c_invest_this span.c_member_icon{background-position:0 -20px;}
+
+.y_account_password_right .c_forms label{height:46px;line-height:46px;float:left;}
+.c_names{font-weight:normal;font-size:14px;color:#888;display:block;height:46px;line-height:46px;}
+.y_account_password_right .c_forms .y_id_front,.y_account_password_right .c_forms .y_id_contrary{padding-top:10px;padding-bottom:10px;height:24px;padding:0px\9;height:44px\9;width:262px\9;background:#fff;}
+</style>
+<script>
+$(function () {
+	if($(".y_account_right").height()>$(".y_account_nav").height()){
+		$(".y_account_nav").height($(".y_account_right").height()-24)
+	}
+})
+</script>
+</head>
+ <body>
+ 	 	<p  class="pss" style="display:none;">尊敬的用户，由于实名认证与提现有关联，请确保所用提现<span>银行卡信息与实名
+认证信息一致</span>，否则会导致第三方支付（汇潮支付）提现校验不通过与提现失败。
+请勿使用他人身份信息进行认证！</p>
+  <#include  "../../include/b_header.html">
+	<!--  -->
+	<div class="c_deal">
+		<div class="c_deal_content" style="overflow: hidden;">
+			<!-- 左侧导航 -->
+			<#assign mid="m_realNameIdentify" >
+			<#include "../account_menu.html">
+			<!-- 右侧 -->
+			<div class="c_deal_record y_account_right y_account_password_right">
+				<!-- 账户设置 -->
+				<div class="c_deal_title">实名认证<a href='huichao.html' style="color: #12adff;text-decoration: underline;" target="_blank">(了解汇潮支付)</a></div>
+				<form  id="form" class="y_forms c_forms" action="${webroot}/user/userRealnameApplication/upload.html" method="post"  enctype="multipart/form-data" style="margin-top:20px;">
+					<label class="y_input_label">用户名</label><b class="c_names">${user.userName!}</b><div style="clear:both"></div><br/>
+					<label class="y_input_label">真实姓名</label><input type="text" name="realName" class="y_input_name" value="${user.realName!}" /><span class="y_spans_name y_spans"></span><div style="clear:both"></div>
+					<label class="y_input_label">身份证号码</label><input type="text" name="cardNo" id="cardId" class="y_input_ID" value="${user.cardNO!}"/><span class="y_spans_ID y_spans"></span><br/>
+					<label class="y_input_label">证件正面</label><input type="file" name="files"  class="y_id_front"  accept=".jpg,.jpeg,.gif,.png" style="float:left;"/><span class="y_spans" style="display:block;float:left;color:#888;">照片大小不大于500K</span>
+					<div id="positivePhoto" style="display: block;width:100px;position: relative;height:100px;bottom: 30px;margin-left: 10px;float:left;"></div><br/>
+					<label class="y_input_label">证件反面</label><input type="file" name="files" id="reverse" class="y_id_contrary"  accept=".jpg,.jpeg,.gif,.png" style="float:left;"/><span class="y_spans" style="display:block;float:left;color:#888;">照片大小不大于500K</span>
+					<div id="reversePhoto" style="display: block;position: relative;width:100px;height:100px;bottom: 20px;margin-left: 10px;float:left;"></div>
+					<input type="hidden" name="fileIndex" id="fileIndex" />
+					<input type="hidden" name="fileSize" id="fileSize" />
+					<input type="submit" value="确认提交" class="y_submits"/>
+				</form>
+			</div>
+		</div>
+	</div>
+<#include "../../include/b_foot.html">
+<script>
+$(function(){
+	$("#form").submit(function(){
+		var files = $("input[name='files']");
+		var fileIndex = "";
+		for(var i = 0; i < files.length; i++){
+			if(files[i].value != ""){
+				fileIndex = fileIndex+i+",";
+			}
+		}
+		$("#fileIndex").val(fileIndex.substring(0,fileIndex.length-1));
+		$("#fileSize").val(files.length);
+	});
+	
+});
+	$(function(){
+		$($(".y_account_nav dd")[1]).addClass("c_invest_this");
+	})
+</script>
+<script >
+seajs.use("${theme_dir}/media/js/upload/upload.js");
+seajs.use("${theme_dir}/media/js/ajaxfileupload");
+seajs.use("${webroot}${theme_dir}/media/js/member/realNameSetting")
+</script>
+ </body>
+</html>

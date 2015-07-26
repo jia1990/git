@@ -1,0 +1,122 @@
+package com.ddtkj.p2psys.user.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+/**
+ * @描述:实名认证状态实体
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月8日
+ */
+@Entity
+@Table(name = "t_jsd_user_identify")
+public class UserIdentify implements Serializable {
+
+	private static final long serialVersionUID = 5396715952854735472L;
+	public UserIdentify() {
+	}
+
+	@Id
+	private long userId;// 平台用户ID
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private User user;
+	private String realNameStatus="82";// 未认证:82 实名认证通过:83 实名认证待审核 88 实名认证未通过:84;
+	private String emailStatus="80";// 未认证:80  邮箱认证通过:81 邮箱认证未通过：89
+	private String mobilePhoneStatus="85";// 手机未认证:85 、手机认证通过:86 、手机认证未通过:87
+	private Date realNameVerifyTime;// 实名认证审核时间
+	private Date mobilePhoneVerifyTime;// 手机认证审核时间
+	
+	// JSDP-104 BUG邮箱认证时间  孙晓勇  2015年4月28日
+	private Date emailVerifyTime;
+
+	public Date getEmailVerifyTime() {
+		return emailVerifyTime;
+	}
+
+	public void setEmailVerifyTime(Date emailVerifyTime) {
+		this.emailVerifyTime = emailVerifyTime;
+	}
+	// JSDP-104 BUG邮箱认证时间  孙晓勇  2015年4月28日
+
+
+	public UserIdentify(User user) {
+		super();
+		this.userId = user.getUserId() ;
+		this.user = user;
+		if(null != user.getMobilePhone()){
+			this.mobilePhoneStatus="86";
+			this.mobilePhoneVerifyTime=new Date();
+		}
+	}
+	
+
+
+	public UserIdentify(User user, String emailStatus) {
+		super();
+		this.user = user;
+		this.emailStatus = emailStatus;
+	}
+	public String getRealNameStatus() {
+		return realNameStatus;
+	}
+
+	public void setRealNameStatus(String realNameStatus) {
+		this.realNameStatus = realNameStatus;
+	}
+
+	public String getEmailStatus() {
+		return emailStatus;
+	}
+
+	public void setEmailStatus(String emailStatus) {
+		this.emailStatus = emailStatus;
+	}
+
+	public String getMobilePhoneStatus() {
+		return mobilePhoneStatus;
+	}
+
+	public void setMobilePhoneStatus(String mobilePhoneStatus) {
+		this.mobilePhoneStatus = mobilePhoneStatus;
+	}
+
+
+
+	public Date getRealNameVerifyTime() {
+		return realNameVerifyTime;
+	}
+
+	public void setRealNameVerifyTime(Date realNameVerifyTime) {
+		this.realNameVerifyTime = realNameVerifyTime;
+	}
+
+	public Date getMobilePhoneVerifyTime() {
+		return mobilePhoneVerifyTime;
+	}
+
+	public void setMobilePhoneVerifyTime(Date mobilePhoneVerifyTime) {
+		this.mobilePhoneVerifyTime = mobilePhoneVerifyTime;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.userId = user.getUserId() ;
+		this.user = user;
+	}
+	public long getUserId() {
+		return userId;
+	}
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+}

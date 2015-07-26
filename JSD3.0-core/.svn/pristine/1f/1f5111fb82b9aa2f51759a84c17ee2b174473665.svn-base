@@ -1,0 +1,475 @@
+package com.ddtkj.p2psys.account.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.dao.AccountDrawCashDao;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月17日 
+ */
+@Repository("accountDrawCashDao")
+public class AccountDrawCashDaoImpl extends BaseDaoImpl<AccountDraw> implements AccountDrawCashDao{
+
+	@Override
+	public AccountDraw saveAccountDraw(AccountDraw draw) {
+		return save(draw);
+	}
+
+	@Override
+	public void updAccountDrawCheckStatus(AccountDraw draw) {
+		update(draw);
+	}
+
+	@Override
+	public AccountDraw queryOne(long userID, String tradeID) {
+		return null;
+	}
+
+	@Override
+	public List<AccountDraw> queryList(long userID, String checkStatus) {
+		return null;
+	}
+
+	@Override
+	public PageDataList<AccountDrawModel> queryListByPage(
+			AccountDrawModel model, int pageNumber, int pageSize) {
+		return null;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.account.dao.AccountDrawCashDao#queryOneByID()
+	 */
+	@Override
+	public AccountDraw queryOneByID() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void updateStatus(int id, String status, String preStatus) {
+		String sql = "UPDATE AccountDraw SET drawHandleStatus = :status WHERE id = :id AND drawHandleStatus = :preStatus";
+		Query query = em.createQuery(sql);
+		query.setParameter("status", status);
+		query.setParameter("id", id);
+		query.setParameter("preStatus", preStatus);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更改提现记录状态失败！", 1);
+		}
+		refresh(super.find(id));
+	}
+
+
+	@Override
+	public double allDrawCashMomeny(long userId) {
+		String rechargeTotalSql = "SELECT SUM(draw_amount) AS num FROM t_jsd_account_draw WHERE draw_handle_status='30' AND draw_amount > 0  AND user_Id = :userId";
+		Query query = em.createNativeQuery(rechargeTotalSql).setParameter(
+				"userId", userId);		
+		
+		Object obj = query.getSingleResult();
+		
+		  if (obj != null) {
+			   return Double.parseDouble(obj.toString());
+		   }
+		return 0.0;
+	}
+
+
+	@Override
+	public double drawCashMomenyToday(long userId) {
+		String rechargeTotalSql = "SELECT SUM(draw_amount) AS num FROM t_jsd_account_draw WHERE draw_handle_status='30' AND draw_amount > 0 AND date(add_time) = curdate() AND user_Id = :userId";
+		Query query = em.createNativeQuery(rechargeTotalSql).setParameter(
+				"userId", userId);			
+		  Object obj = query.getSingleResult();
+		
+		  if (obj != null) {
+			   return Double.parseDouble(obj.toString());
+		   }
+		return 0.0;
+	}
+
+	/**
+	 * 后台查询投资人提现金额总数
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double accountDrawCashTotal() {
+	   String sql = "SELECT SUM(t1.draw_amount) FROM t_jsd_account_draw t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND t1.draw_handle_status = '30' AND t2.user_type ='10'";
+	   Query query = em.createNativeQuery(sql);
+	   Object obj = query.getSingleResult();
+	   if (obj != null) {
+		   return Double.parseDouble(obj.toString());
+	   }
+	   return 0;
+	}
+
+	@Override
+	public double allDrawCashMomenyByUserIdAndEndTime(Date date, long userId) {
+		String rechargeTotalSql = "SELECT SUM(draw_amount) AS num FROM t_jsd_account_draw WHERE draw_handle_status='30' AND draw_amount > 0 AND add_time <= :addTime AND user_Id = :userId";
+		Query query = em.createNativeQuery(rechargeTotalSql).setParameter("addTime", date).setParameter(
+				"userId", userId);			
+		Object obj = query.getSingleResult();
+		
+		  if (obj != null) {
+			   return Double.parseDouble(obj.toString());
+		   }
+		return 0.0;
+	}
+
+	@Override
+	public double drawCashMoneyMonth(long userId, Date startTime, Date endTime) {
+		
+		String rechargeTotalSql = "SELECT SUM(draw_amount) AS num FROM t_jsd_account_draw WHERE draw_handle_status='30' AND draw_amount > 0 AND user_Id = :userId AND add_time >= :startTime AND add_time <= :endTime";
+		Query query = em.createNativeQuery(rechargeTotalSql).setParameter(
+				"userId", userId);
+		query.setParameter("startTime", startTime);
+		query.setParameter("endTime",endTime);
+		
+
+		Object obj = query.getSingleResult();
+		
+		  if (obj != null) {
+			   return Double.parseDouble(obj.toString());
+		   }
+		return 0.0;
+	}
+
+	@Override
+	public String drawCashTotal(AccountDrawModel draw) {
+		StringBuffer sql = new StringBuffer("SELECT SUM(draw.draw_amount) AS drawAmount,SUM(draw.draw_in_account_amount) AS inAccount,"
+				+ "SUM(draw.draw_fee) AS drawFee FROM t_jsd_account_draw draw,t_jsd_user_cache uc,t_jsd_user u WHERE  draw.user_id = uc.user_id "
+				+ "and u.user_id = draw.user_id ");
+		
+
+		if(StringUtil.isNotBlank(draw.getUserName())){
+			sql.append(" and u.user_name like '%"+draw.getUserName()+"%' ");
+		}
+		if(StringUtil.isNotBlank(draw.getUserType())){
+			sql.append(" and uc.user_type = :userType ");
+		}
+		if(StringUtil.isNotBlank(draw.getDrawHandleStatus()) && !draw.getDrawHandleStatus().equals("0")){
+			sql.append(" and draw.draw_handle_status =:status ");
+		}
+		// 提现方式 
+		// JSDP-208 sxy 20150703 start
+		if (StringUtil.isNotBlank(draw.getDrawWay())) {
+			sql.append(" and draw.draw_way = '" + draw.getDrawWay() + "'");
+		}
+		// JSDP-208 sxy 20150703 start
+		// JSD生产 BUG27 2015年4月15日 10:25:03 孙晓勇 start
+		if(StringUtil.isNotBlank(draw.getStartTime())){
+			sql.append(" and draw.add_time >= :startTime ");
+		}
+		if(StringUtil.isNotBlank(draw.getEndTime())){
+			sql.append(" and draw.add_time <= :endTime ");
+		}
+		//JSD生产   BUG27 2015年4月15日 10:25:03 孙晓勇 end
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if(StringUtil.isNotBlank(draw.getUserType())){
+			query.setParameter("userType", draw.getUserType());
+		}
+		if(StringUtil.isNotBlank(draw.getDrawHandleStatus()) && !draw.getDrawHandleStatus().equals("0")){
+			query.setParameter("status", draw.getDrawHandleStatus());
+		}
+		if(StringUtil.isNotBlank(draw.getStartTime())){
+			query.setParameter("startTime", draw.getStartTime());
+		}
+		if(StringUtil.isNotBlank(draw.getEndTime())){
+			query.setParameter("endTime", draw.getEndTime());
+		}
+		Object obj = query.getSingleResult();
+		Object[] objs = new Object[3];
+		objs = (Object[]) obj;
+		StringBuffer drawTotalStr = new StringBuffer();
+		for(int i=0;i<objs.length;i++){
+			if(objs[i]==null){
+				return null;
+			}else{
+				drawTotalStr.append(objs[i].toString()+",");
+			}
+		}
+		//JSDP-83 wcw 2015-04-29 start
+		objs=null;
+		//JSDP-83 wcw 2015-04-29 end
+		return drawTotalStr.toString();
+	}
+
+	@Override
+	public String drawStatusTotal(long userId, AccountDrawModel model) {
+		StringBuffer sql = new StringBuffer("SELECT SUM(draw.draw_amount) AS drawAmount, SUM(draw.draw_fee) AS drawFee ,"
+				+ " COUNT(draw.id) AS countDraw FROM t_jsd_account_draw draw,t_jsd_user_cache uc,t_jsd_user u WHERE  draw.user_id = uc.user_id "
+				+ "and u.user_id = draw.user_id ");
+		
+		if(userId != 0){
+			sql.append(" and u.user_id = :userId ");
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and u.user_name like '%"+model.getUserName()+"%' ");
+		}
+		if(StringUtil.isNotBlank(model.getUserType())){
+			sql.append(" and uc.user_type = :userType ");
+		}
+		if(StringUtil.isNotBlank(model.getDrawHandleStatus()) && !model.getDrawHandleStatus().equals("0")){
+			sql.append(" and draw.draw_handle_status =:status ");
+		}else{
+			sql.append(" and draw.draw_handle_status in ('"+30+"','"+42+"')");
+		}
+		//JSD生产   ... 2015年4月15日 10:25:03 孙晓勇 start
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" and draw.add_time >= :startTime ");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" and draw.add_time <= :endTime ");
+		}
+		//JSD生产   ... 2015年4月15日 10:25:03 孙晓勇 end
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if(userId!=0){
+			query.setParameter("userId", userId);
+		}
+		if(StringUtil.isNotBlank(model.getUserType())){
+			query.setParameter("userType", model.getUserType());
+		}
+		if(StringUtil.isNotBlank(model.getDrawHandleStatus()) && !model.getDrawHandleStatus().equals("0")){
+			query.setParameter("status", model.getDrawHandleStatus());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		Object obj = query.getSingleResult();
+		Object[] objs = new Object[3];
+		objs = (Object[]) obj;
+		StringBuffer drawTotalStr = new StringBuffer();
+		for(int i=0;i<objs.length;i++){
+			if(objs[i]==null){
+				return null;
+			}else{
+				drawTotalStr.append(objs[i].toString()+",");
+			}
+		}
+		//JSDP-83 wcw 2015-04-29 start
+		objs=null;
+		//JSDP-83 wcw 2015-04-29 end
+		return drawTotalStr.toString();
+	}
+
+	@Override
+	public List excelListDraw(AccountDrawModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT  ad.id id,u.user_name userName,u.real_name realName,ad.bank_no bankNo,ad.bank_branch_name branchName,"
+				+" ad.bank_province province,ad.bank_city city,ad.bank_name bankName,"
+				+" ad.draw_amount drawAmount,ad.draw_in_account_amount inAccount,ad.draw_fee drawFee, "
+				
+				+" CASE ad.draw_way "
+				+" WHEN 'A' THEN '手机端' "
+				+" WHEN 'P' THEN 'PC端' "
+				+" ELSE '无' "
+				+" END AS drawWay, "
+				
+				+" ad.add_time ADDTIME,"
+				+" CASE ad.draw_handle_status"
+				+" WHEN 00 THEN '申请提现'"
+				+" WHEN 11 THEN '初审成功'"
+				+" WHEN 10 THEN '初审失败'"  
+				+" WHEN 21 THEN '复审成功'" 
+				+" WHEN 20 THEN '复审失败'"
+				+" WHEN 99 THEN '取消体现'"
+				+" WHEN 30 THEN '提现成功'"
+				+" WHEN 42 THEN '等待银行转账'"
+				+" WHEN 41 THEN '汇潮请求失败'" 
+				+" WHEN 88 THEN '银行处理失败'"
+				+" ELSE '无'"
+				+" END AS handleStatus"
+				+" FROM t_jsd_account_draw ad,t_jsd_user u,t_jsd_user_cache uc "
+				+" WHERE ad.user_id=u.user_id and u.user_id=uc.user_id ");
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" AND u.user_name like '%"+model.getUserName()+"%'");
+		}
+		// 提现方式
+		if(StringUtil.isNotBlank(model.getDrawWay())){
+			sql.append(" AND ad.draw_way = '"+model.getDrawWay()+"'");
+		}
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" and ad.add_time >=:startTime");
+		}
+		
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" and ad.add_time <:endTime");
+		}
+		
+		if(StringUtil.isNotBlank(model.getUserType())){
+			sql.append(" and uc.user_type =:userType");
+		}
+		
+		if (StringUtil.isNotBlank(model.getDrawHandleStatus()) && !("0").equals(model.getDrawHandleStatus()) && !"undefined".equals(model.getDrawHandleStatus())) {
+			sql.append(" and ad.draw_handle_status =:handleStatus ");
+		}
+
+		sql.append(" order by ad.add_time desc,ad.first_trial_time desc,ad.recheck_time desc ");
+		
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			Date start = DateUtil.valueOf(model.getStartTime());
+			query.setParameter("startTime", start);
+		}
+		
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			Date end = DateUtil.valueOf(model.getEndTime());
+			query.setParameter("endTime", end);
+		}
+		
+		if(StringUtil.isNotBlank(model.getUserType())){
+			query.setParameter("userType", model.getUserType());
+		}
+		
+		if (StringUtil.isNotBlank(model.getDrawHandleStatus()) && !("0").equals(model.getDrawHandleStatus()) && !"undefined".equals(model.getDrawHandleStatus())) {
+			query.setParameter("handleStatus", model.getDrawHandleStatus());
+		}
+		
+		List list = query.getResultList();
+		return list;
+	}
+
+	// JSDP-BUG99 20150527 sxy start
+	@Override
+	public PageDataList<AccountDraw> drawMoneyStatisticsListForSQL(
+			AccountDrawModel model, int page, int size) {
+
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT  ad.id,u.user_name,u.real_name,uc.user_type,ad.bank_no,"
+				//+ "ad.bank_branch_name branchName,"
+				//+"ad.bank_province province,ad.bank_city city,ad.bank_name bankName,"
+				
+				+" ad.draw_amount,ad.draw_in_account_amount,ad.draw_fee,ad.add_time,"
+				+" ad.draw_handle_status"
+				/*
+				+" WHEN 00 THEN '申请提现'"
+				+" WHEN 11 THEN '初审成功'"
+				+" WHEN 10 THEN '初审失败'"  
+				+" WHEN 21 THEN '复审成功'" 
+				+" WHEN 20 THEN '复审失败'"
+				+" WHEN 99 THEN '取消体现'"
+				+" WHEN 30 THEN '提现成功'"
+				+" WHEN 42 THEN '等待银行转账'"
+				+" WHEN 41 THEN '汇潮请求失败'" 
+				+" WHEN 88 THEN '银行处理失败'"
+				+" ELSE '无'"
+				+" END AS handleStatus"*/
+				+" FROM t_jsd_account_draw ad,t_jsd_user u,t_jsd_user_cache uc "
+				+" WHERE ad.user_id=u.user_id and u.user_id=uc.user_id ");
+		
+		
+		
+		// 时间类型
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+			
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ad.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(ad.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+			
+		}
+		
+		sql.append("  AND u.islocked != 'FF'");
+		sql.append("  ORDER BY ad.add_time DESC");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		Page pages = new Page(query.getResultList().size(), size, page);
+		PageDataList<AccountDraw> pageList = new PageDataList<AccountDraw>();
+		query.setFirstResult((page - 1) * size);
+		query.setMaxResults(size);
+		List queryList = query.getResultList();
+		List<AccountDraw> dataList = new ArrayList<AccountDraw>();
+		Object[] object = new Object[13];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			AccountDrawModel obj = new AccountDrawModel();
+//			userM.setUserId((Long) object[0]);
+			// 编号
+			obj.setId(Integer.parseInt((String.valueOf((object[0])))));
+			// 用户名
+			obj.setUserName(String.valueOf((object[1])));
+			// 真实姓名
+			obj.setRealName(String.valueOf((object[2])));
+			// 用户类型
+			obj.setUserType(String.valueOf((object[3])));
+			// 银行卡卡号
+			obj.setBankNo(String.valueOf((object[4])));
+			// 提现总额
+			obj.setDrawAmountStr(String.valueOf(object[5]));
+			// 到账金额
+			obj.setDrawInAccountAmountStr(String.valueOf(object[6]));
+			// 手续费
+			obj.setDrawFeeStr(String.valueOf(object[7]));
+			// 提现时间
+			obj.setAddTime((Date) object[8]);
+			// 状态
+			obj.setDrawHandleStatus(String.valueOf(object[9]));
+			
+			
+			dataList.add(obj);
+		}
+		
+		
+		pageList.setList(dataList);
+		pageList.setPage(pages);
+
+		return pageList;
+		
+	}
+    
+}

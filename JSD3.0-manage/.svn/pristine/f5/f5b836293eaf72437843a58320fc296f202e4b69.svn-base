@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户分析</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../include/resources.html">
+<script src="/plugins/handlebars-v1.3.0/handlebars-v1.3.0.js" type="text/javascript"></script>
+<script>
+$(function(){
+	$.ajax({
+		url:"itemMomenyAnalysisInfo.html",
+		type:"POST",
+		dataType:"json",
+		cache:false,
+		success:function(json){
+			var source = $("#template").html(); 
+			var template = Handlebars.compile(source);
+			var html    = template(json);
+			$('#template_con').html(html);
+		}
+	})
+})
+</script>
+</head>
+<body>
+	  <script id="template" type="text/x-handlebars-template">
+		<table border="1" style="border-collapse:collapse;width: 100%;">
+		  	<thead>
+				<tr>
+					<th rowspan="2">项目总金额</th>
+					<th colspan="2">已完成项目金额</th>
+					<th colspan="5">未完成项目金额</th>
+				</tr>
+				<tr>
+					<th>正常项目金额</th>
+					<th>逾期项目金额</th>
+					<!--<th>待登记项目金额</th>-->
+					<th>待初审项目金额</th>
+					<th>投资中项目金额</th>
+					<th>待满标复审项目金额</th>
+					<th>还款中项目金额</th>
+					<th>逾期中项目金额</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>{{allMomeny}} 元</td>
+					<td>{{allNormalMomeny}} 元</td>
+					<td>{{allOverduedMomeny}} 元</td>
+					<!--<td>{{registerelessMomeny}} 元</td>-->
+					<td>{{registeredMomeny}} 元</td>
+					<td>{{investingMomeny}} 元</td>
+					<td>{{verifyFullMomeny}} 元</td>
+					<td>{{repayingMomeny}} 元</td>
+					<td>{{allOverdueingMomeny}} 元</td>
+				</tr>
+			</tbody>
+		</table>
+	  </script>
+	  <div id="template_con"></div>
+</body>
+</html>

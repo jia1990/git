@@ -1,0 +1,107 @@
+package com.ddtkj.p2psys.subbranch.domain;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：加盟商和市场专员关系实体
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+@Entity
+@Table(name = "t_jsd_branch_marketer")
+public class BranchMarketer {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;//自增主键
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "branch_id")
+	private Branch branch;//加盟商id
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;//市场专员id
+	
+	
+	public BranchMarketer() {
+		
+	}
+	
+	
+
+
+	/**
+	 * @param branch
+	 * @param user
+	 */
+	public BranchMarketer( Branch branch, User user) {
+		this.branch = branch;
+		this.user = user;
+	}
+
+
+
+
+	/**
+	 * @return 自增主键
+	 */
+	
+	public long getId() {
+		return id;
+	}
+
+
+	/**
+	 * @param 自增主键
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
+
+	/**
+	 * @return  加盟商id
+	 */
+	public Branch getBranch() {
+		return branch;
+	}
+
+
+	/**
+	 * @param 加盟商id
+	 */
+	public void setBranch(Branch branch) {
+		this.branch = branch;
+	}
+
+
+	/**
+	 * @return 用户id
+	 */
+	public User getUser() {
+		return user;
+	}
+
+
+	/**
+	 * @param 用户id
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+
+	
+	
+
+}

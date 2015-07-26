@@ -1,0 +1,83 @@
+package com.rongdu.p2psys.user.service.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.user.dao.KefuChangeDao;
+import com.rongdu.p2psys.user.domain.KefuRecord;
+import com.rongdu.p2psys.user.model.KefuModel;
+import com.rongdu.p2psys.user.service.KefuChangeService;
+@Service("kefuChangeService")
+public class KefuChangeServiceImpl implements KefuChangeService {
+	
+	Logger logger = Logger.getLogger(KefuChangeServiceImpl.class);
+	
+	@Resource
+	private KefuChangeDao kefuChangeDao;
+
+	@Override
+	public int count(QueryParam param) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void verifyKefuRecord(long userId, long newKefuId) throws Exception {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public KefuRecord getKefuRecordById(long id) throws Exception {
+		// TODO Auto-generated method stub
+		return kefuChangeDao.getKefuRecordById(id);
+	}
+
+	@Override
+	public PageDataList<KefuModel> kefuRecordList(int pageNumber, int pageSize,
+			KefuRecord model) throws Exception {
+		
+		return kefuChangeDao.kefuRecordList(pageNumber, pageSize, model);
+	}
+
+	@Override
+	public void updateKefuRecord(KefuRecord kefuRecord) throws Exception {
+		kefuChangeDao.update(kefuRecord);
+	}
+
+	@Override
+	public PageDataList<KefuModel> kefuRecordListByMap(int pageNumber,
+			int pageSize,  Map<String, Object> map) throws Exception {
+		
+		return kefuChangeDao.kefuRecordListByMap(pageNumber, pageSize, map);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.rongdu.p2psys.user.service.KefuChangeService#save(com.rongdu.p2psys.user.domain.KefuRecord)
+	 */
+	@Override
+	public KefuRecord save(KefuRecord kfr) throws Exception {
+		
+		return this.kefuChangeDao.save(kfr);
+	}
+	
+	
+	@Override
+	public KefuRecord getKefuByUseridAndType(long userid,long kfid,int type) throws Exception {
+		return this.kefuChangeDao.getKefuByUserIdAndType(userid, kfid, type);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<KefuModel> excelListChangeKF(KefuModel model) {
+		return this.kefuChangeDao.excelListChangeKF(model);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+
+}

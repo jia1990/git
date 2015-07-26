@@ -1,0 +1,42 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.weixin.service.impl;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+
+import com.rongdu.p2psys.weixin.service.WxService;
+import com.rongdu.p2psys.weixin.util.SignUtils;
+import com.rongdu.p2psys.weixin.util.WxUtil;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年6月17日 
+ */
+@Service("wxService")
+public class WxServiceImpl implements WxService{
+    @Override
+	public String bindWx(long userId){
+		StringBuffer sb=new StringBuffer();
+	    String bindUrl=WxUtil.getConfigValue("wx.bindurl");
+	    String appId=WxUtil.getConfigValue("wx.appid");
+	    String callBack=WxUtil.getConfigValue("wx.callback");
+	    String signKey=WxUtil.getConfigValue("wx.signkey");
+	    callBack=callBack+"?uid="+userId;
+	    sb=sb.append(bindUrl).append("?appId=").append(appId).append("&url=").append(callBack);
+	    Map<String, Object> map=new HashMap<String,Object>();
+	    map.put("appId", appId);
+	    map.put("url", callBack);
+	    Map<String,Object> data=new HashMap<String,Object>();
+	    data= SignUtils.signMap(map,signKey);
+	    String sign=(String) data.get("sign");
+	    sb.append("&sign=").append(sign);
+	    String url=sb.toString();
+	    return url;
+	}
+	
+}

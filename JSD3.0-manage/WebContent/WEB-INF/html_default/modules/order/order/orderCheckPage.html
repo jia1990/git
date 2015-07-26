@@ -1,0 +1,70 @@
+
+<div class="popShow" style="padding-bottom:0;">
+<br />
+	<div class="showItem">
+		<span>购买方式：</span>
+		<#if goodsOrder.payWay=="12" || goodsOrder.payWay=="13">
+		分期购买
+		<#elseif goodsOrder.payWay=="11">
+		全额付款
+		<#else>
+		其他
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>订单编号：</span>
+		${goodsOrder.orderNo!}
+	</div>
+	<div class="showItem">
+		<span>订单状态：</span>
+		<!--  cd已完成 ck审核通过  dw待审核 dd撤销 -->
+		<#if goodsOrder.status=="cd">
+		已完成
+		<#elseif goodsOrder.status=="ck">
+		审核通过(已发标)
+		<#elseif goodsOrder.status=="dw">
+		待审核
+		<#else>
+		撤销
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>借款人邮箱：</span>
+		${userName!}
+	</div>
+	<div class="showItem">
+		<span>商品名称：</span>
+		${goodsName!}
+	</div>
+	<div class="showItem">
+		<span>商品价格：</span>
+		${goodsCost!}
+	</div>
+	<div class="showItem">
+		<span>商品颜色：</span>
+		${goodsColor!}
+	</div>
+	<div class="showItem">
+		<span>商品利率：</span>
+		${goodsApr!}%
+	</div>
+
+	<div class="showItem">
+		<span>订单生成时间：</span>
+		${goodsOrder.addTime?string("yyyy-MM-dd HH:mm:ss")}
+	</div>
+	<div class="showItem">
+		<span>购买方式：</span>
+		${goodsPayWay!}
+	</div>
+	<div class="showItem">
+		<span>首付金额：</span>
+		${goodsOnePay!}
+	</div>
+	<div class="showItem">
+		<span>分期金额：</span>
+		${goodsStagePay!}
+	</div>
+	
+</div>
+

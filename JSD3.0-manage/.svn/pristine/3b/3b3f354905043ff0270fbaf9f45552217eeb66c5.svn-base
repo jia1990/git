@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>校园招募信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+    var dataGrid;
+    var winWidth =  700;
+    var winHeight = 280;
+    var verifyTitle = "校园招募";
+    var verifyUrl =  "/modules/market/schoolRecruit/schoolRecruitEditPage.html";
+    var verifyWinParmeters = "'{0}','"+verifyTitle+"',550,500,'"+verifyUrl+"'";
+    //查看
+    var viewTitle = "查看校园招募";
+    var viewUrl =  "/modules/market/schoolRecruit/schoolRecruitViewPage.html";
+    var viewWinParmeters = "'{0}','"+viewTitle+"',550,500,'"+viewUrl+"'";
+    
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'schoolRecruitList.html',
+            /* fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+			fixed : true, */ 
+			fit : true,
+            fitColumns : true,
+            border : true,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true, 
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50,sortable:false },
+              { field: 'realName', title: '用户姓名', width: 100, sortable:false },
+              { field: 'phoneNo', title: '手机号码', width: 120, sortable:false },
+              { field: 'schoolStr', title: '学校名称', width: 200, sortable:false },   
+              
+              { field: 'provinceName', title: '省', width: 100, sortable:false },
+              { field: 'cityName', title: '市', width: 100, sortable:false },
+              //{ field: 'countyName', title: '区(县)', width: 100, sortable:false },
+
+              { field: 'addTime', title: '添加时间', width: 140, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              }, 
+              { field: 'addIp', title: '添加IP', width: 100, sortable:false },
+              { field: 'doTime', title: '处理时间', width: 150,sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+				  }  
+              },
+              { field: 'doUser', title: '处理人员', width: 100, sortable:false },
+              { field: 'status', title: '状态', width: 100, sortable:false,
+            	  formatter: function(value,row,index){
+					
+					if(value == '0'){
+						return "未处理";
+					}else if(value == '1'){
+						return "已回访";
+					}else if(value == '2'){
+						return "不回访";
+					}
+					return "";
+				}
+              },   
+              
+              { field : 'action',
+                title : '操作',
+                width :60,
+                fixed:true,
+                formatter : function(value, row, index) {
+                	var str = '';
+                	if(row.status == 0){
+                		str += "<@secAuthorizeUrl value='/schoolRecruitOPeBtn.html'>";
+                        str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+verifyWinParmeters+');" src="{1}" title="操作" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+                        str += "</@secAuthorizeUrl>";
+                	} else {
+                		str += "<@secAuthorizeUrl value='/schoolRecruitViewBtn.html'>";
+                		str += $.formatString('<img onclick="$.fn.dataGridOptions.closeFun('+viewWinParmeters+');" src="{1}" title="查看" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/map/magnifier.png');
+                		str += "</@secAuthorizeUrl>";
+                	}
+                    return str;
+                }
+              } 
+             ] ],
+             toolbar : '#toolbar'
+        });
+    });
+  	//校园招募管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/market/schoolRecruit/schoolRecruitExcel.html";
+		var realName = $("#realName").val();
+		var status = $("#status").val();
+		var sou = "?status=" + status + "&realName=" + realName;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+  
+    <div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+	           		<li>用户姓名：<input type="text" name="realName" id="realName" autocomplete="off"/></li>
+            		<li> 状态：
+		                <select name="status" id="status" class="type">
+		                  <option value="" selected="selected">全部</option>
+		                  <option value="0">未处理</option>
+		                  <option value="1">已回访</option>
+		                  <option value="2">不回访</option>
+		                </select>
+		            </li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');" ondragstart="return false">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');" ondragstart="return false">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center',border:false">
+            <table id="dataGrid"></table>
+        </div>
+	</div>
+	<div id="toolbar" style="display: none;padding-top:25px;">		
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn" ondragstart="return false">导出excel</a>
+	</div>
+    
+    
+    
+    
+    
+</body>
+</html>

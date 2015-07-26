@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>邀请好友所得红包</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+    var dataGrid;
+   
+    $(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'recommendFriendList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width:20},
+			{ field: 'userName', title: '用户名', width:80},
+			{ field: 'realName', title: '真实姓名', width: 80},
+			{ field: 'type', title: '红包类型', width: 60},
+			{ field: 'rpStaticStatus', title: '红包状态', width: 60,formatter:function(value,row,index){
+				if(value=='1'){
+					return "红包已使用";
+				}else if(value=='2'){
+					return "红包未使用";
+				}else if(value=='3'){
+					return "红包已过期";
+				}else if(value=='4'){
+					return "红包未过期";
+				}else if(value=='5'){
+					return "红包冻结";
+				}
+			}},
+			{ field: 'rpStaticRes', title: '红包描述', width: 80,formatter:function(value, row, index){
+				if(value=='static_rp_recommend'){
+					return "推荐好友";
+				}else if(value=='static_rp_identify'){
+					return "认证"
+				}else if(value=='static_rp_invited_first_invest'){
+					return "被推荐人首次投资";
+				}
+				return value;
+			}},
+			{ field: 'rpProMoney', title: '产生总额', width: 60,formatter:function(value, row, index){
+				
+				if(value=='null'){
+					return "0";
+				}
+				return value;
+			}},
+			{ field: 'rpStaticReferrerName', title: '被推荐人', width: 80 },
+			{ field: 'addTime', title: '添加时间', width: 150,fixed:true,formatter: function(value,row,index){
+          	  return getLocalTime(value,4);
+          	}}]],
+			 toolbar : '#toolbar',
+			 onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip');
+			 }
+		});
+		
+	});
+    function exportExcel(){
+    	
+    	var pStaticReferrerName = $("#rpStaticReferrerName").val();
+    	var startTime = $("#startTime").val();
+    	var endTime = $("#endTime").val();
+    	var userName = $("#userName").val();
+    	var rpStatus = $("#rpStatus  option:selected").val();
+    	
+		var url = "/modules/redPackage/recommendFriendExcel.html";
+		var sou = "?userName="+userName+"&startTime="+startTime+"&endTime="+endTime+"&rpStaticReferrerName="+pStaticReferrerName+"&rpStatus="+rpStatus;
+		
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>红包状态：
+            			<select name="rpStatus" id="rpStatus" class="type">
+            				<option value="99" selected="selected">全部</option> 
+				            <option value="1">红包已使用</option>
+				            <option value="2">红包未使用</option>
+				            <option value="3">红包已过期</option>
+				            <option value="4">红包未过期</option>
+				            <option value="5">红包冻结</option>
+						</select>
+            		</li>
+            		
+            		<li>被推荐人用户名：<input type="text" name="rpStaticReferrerName" id="rpStaticReferrerName" autocomplete="off"/></li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/redPackage/recommendFriendExcelBtn.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

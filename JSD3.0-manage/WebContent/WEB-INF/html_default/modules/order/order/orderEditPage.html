@@ -1,0 +1,288 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/loan/borrow/updateBorrow.html');	
+	    $("#isDXB").click(function(){
+	    	if($('#isDXB').attr("checked"))
+			{	
+		        $('#pwd').attr("disabled",false);
+		    }else{
+		        $('#pwd').attr("disabled",true);
+		        $('#pwd').val("");
+		    }
+	    });
+	    $('#changetoDay').click(function(){
+			if(!$('#borrow_day').is(":animated")){
+				var borrowTimeType=$('#borrowTimeType').val();
+				if(borrowTimeType==0){
+					$(this).addClass("dayhover")
+					$('#borrowTimeType').val('1');
+					$('#time_limit_day_box').html('<@linkage name="timeLimit" id="time_limit_day" class="select_low"  type="value" nid="borrow_time_limit_day"/>');
+					$('#borrow_day').show();
+					$('#time_limit_day').addClass("J_input")
+					$('#time_limit_box').html('')
+					$('#style').html('<option value="2">一次性还</option>');
+					$('#changetoDay').html('按月');
+				}else{
+					$(this).removeClass("dayhover")
+					$('#borrowTimeType').val('0');
+					$('#time_limit_day_box').html('')
+					$('#time_limit_box').html('<@linkage name="timeLimit" id="time_limit" class="J_input select_low" type="value" nid="borrow_time_limit"/>')
+					$('#borrow_day').hide();
+					$('#time_limit').addClass("J_input");
+					$('#time_limit').show();
+					$('#style').html('<option value="1">等额本息</option><option value="2">一次性还</option><option value="3">每月付息</option>');
+					$('#changetoDay').html('按天');
+				}
+				borrowTimeType=$('#borrowTimeType').val();
+			}
+	    });
+	});
+</script>
+<form id="form" method="post" enctype="multipart/form-data">
+<input type="hidden" name="borrowUpdatePageToken" value="${borrowUpdatePageToken}">
+<div class="borrowForm" style="border-top:none;">
+<#if map??&&map.get("award")??>
+	<#assign award=map.get("award")?eval />
+</#if>
+<#if map??&&map.get("partAccount")??>
+	<#assign partAccount=map.get("partAccount") />
+</#if>
+<#if map??&&map.get("funds")??>
+	<#assign funds=map.get("funds") />
+</#if>
+	<h1 class="borrowFormTitle">基本信息</h1>
+	<ul>
+		<li><span>借款标题：</span><input type="text" name="name" maxlength="20" value="${borrow.name!}" autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true,validType:'maxLength[25]'"></li>
+		<li><span>借款人邮箱：</span>${user.email}</li>
+		<#if alreadyAccount != borrow.allAccount>
+		<li><span>合同总金额：</span>${borrow.allAccount}</li>
+		<li><span>已借款金额：</span>${alreadyAccount!}&nbsp;(包含本次)</li>
+		<li><span>本次借款金额：</span>
+			<input type="text"  maxlength="7" value="${borrow.account!}" autocomplete="off"  size="15" class="borrowFormTxt1 easyui-validatebox" disabled="disabled" ><em>元</em>
+			<input type="hidden" name="account" value="${borrow.account!}">
+		</li>
+		<#else>
+		<li><span>借款金额：</span>
+			<input type="text" id="account" name="account" maxlength="7" value="${borrow.account!}" autocomplete="off" onkeyup="value=value.replace(/[^0-9]/g,'')" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'accout[500,100000000]'"><em>元</em>
+		</li>
+		</#if>
+		
+		<!-- <li><span>借款总金额：</span><input type="text" name="account" maxlength="7" value="${borrow.account!}" autocomplete="off" onkeyup="value=value.replace(/[^0-9]/g,'')" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'accout[500,5000000]'"><em>元</em></li>-->
+		<li><span>借款年利率：</span><input type="text" name="apr" maxlength="15" value="${borrow.apr!}" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'apr[1,24]'"><em>%</em></li>
+		<#if alreadyAccount != borrow.allAccount>
+		<li><span>合同号：</span>
+		<input type="text"  value="${borrow.dealParent!}" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" disabled="disabled" >
+		<input type="hidden" name="dealParent" value="${borrow.dealParent!}" >
+		</li>
+		<#else>
+		<input type="hidden" name="dealParent" value="${borrow.dealParent!}">
+		</#if>
+		<li><span>担保公司：</span>
+			<select name="vouchFirm.userId">
+			<#list vouchFirms as item>
+				<option value="${item.userId}" <#if borrow.vouchFirm.userId==item.userId>selected="selected"</#if>>
+				${item.userCache.companyName}
+				</option>
+			</#list>
+			</select>
+		</li>
+		<li><span>借款用途：</span><@linkage name="borrowUse" id="use" class="borrowFormTxt J_input" default="${borrow.borrowUse}" type="value" nid="borrow_use" /></li>
+		<li><span>锁定期限：</span>
+			<#if borrow.type==101>
+	        <input type="text"  class="borrowFormTxt J_input easyui-validatebox" value="满标即还" readonly="readonly" />
+	        <#else>
+	        <#if borrow.borrowTimeType==0>
+	        <@linkage name="timeLimit" id="time_limit" class="J_input select_low" default="${borrow.timeLimit!}" type="value" nid="borrow_time_limit" />
+	        <#else>
+	        <@linkage name="timeLimit" id="time_limit_day" class="select_low"  default="${borrow.timeLimit!}" type="value" nid="borrow_time_limit_day" disabled="disabled"/>
+	        </#if>
+	        </#if>
+		</li>
+		<li id="borrow_day" style="display:none;">
+			<span>是否天标：</span>
+			<input type="hidden" name="borrowTimeType" id="borrowTimeType" value="0" />
+			<input type="checkbox" checked="checked" disabled="disabled">
+		</li>
+		<li>
+			<span>还款方式：</span>
+			<#if borrow.type!=101 && borrow.borrowTimeType==0>
+	        <@linkage name="style" id="style" default="${borrow.style}" nid="borrow_style" type="value" class="J_input" />
+	        <#elseif borrow.borrowTimeType==1>
+	        <select name="style">
+	        	<option value="2">
+	        		一次性还
+	        	</option>
+	        </select>
+	        <#else>
+	        <@linkage name="style" id="style" nid="borrow_style" type="value" class="J_input" />
+	        </#if>
+		</li>
+		<!--<li><span>投标奖励比例：</span><input type="text" name="partAccount" <#if borrow.partAccount==0>value=""<#else>value="${borrow.partAccount!}"</#if> autocomplete="off" class="borrowFormTxt1 easyui-validatebox" size="15" data-options="validType:'rewardRatio[0.1,6]'"><em>%</em></li>
+		 <li><span>还款结束后奖励：</span><input type="hidden" name="lateAward" class="w300 easyui-validatebox" value="${borrow.lateAward!}" size="15"></li> -->
+		<li><span>是否是定向标：</span><input id="isDXB" type="checkbox" name="isDXB" value="1" size="15" class="easyui-validatebox" <#if borrow.pwd?exists&&borrow.pwd!="">checked="true"</#if>> </li>
+		<li><span>定向标密码：</span><input type="text" name="pwd"  size="15" class="borrowFormTxt easyui-validatebox" id="pwd" <#if borrow.pwd?exists&&borrow.pwd!="">value="${borrow.pwd}"<#else>disabled="disabled"</#if>> </li>
+		<#if borrow.type!=110>
+		<li><span>最低投标金额：</span>
+			<#if borrow?exists>
+	        <@linkage name="lowestAccount" class="J_input" id="lowest_account" default="${borrow.lowestAccount}" nid="borrow_lowest_account"  type="value"/>
+	        <#else>
+	        <@linkage name="lowestAccount" class="J_input" id="lowest_account" nid="borrow_lowest_account" type="value" />
+	        </#if>
+        </li>
+		<li><span>最多投标总额：</span>
+			<#if borrow?exists>
+	        <@linkage name="mostAccount" class="J_input" id="most_account" default="${borrow.mostAccount}" nid="borrow_most_account" type="value" />
+	        <#else>
+	        <@linkage name="mostAccount" class="J_input" id="most_account" nid="borrow_most_account" type="value" />
+	        </#if>
+	        <input type="hidden" id="typeStr" name="typeStr" value="${borrow.type}" />
+		</li>
+		</#if>
+		<#if borrow.type==110>
+		<li><span>每份投标金额：</span><input type="text" name="flowMoney" value="${borrow.flowMoney}" class="borrowFormTxt easyui-validatebox" size="15"><em>元</em></li>
+		<li><span>单笔最低投标金额：</span><@linkage name="lowestSingleLimit" class="J_input" id="lowest_single_limit" default="${borrow.lowestSingleLimit}" nid="borrow_most_account"  type="value"/></li>
+		<li><span>单笔最多投标总额：</span><@linkage name="mostSingleLimit" class="J_input" id="most_single_limit" default="${borrow.mostSingleLimit}" nid="borrow_most_account" type="value" /></li>
+		</#if>
+		<li><span>满标有效期限：</span><@linkage name="validTime" id="valid_time" default="${borrow.validTime}" nid="borrow_valid_time" class="J_input"  type="value" /></li>
+		<#if borrow.type!=101>
+		<li><span>借款手续费：</span><input type="text" value="${borrow.borrowManageRate!}" name="borrowManageRate" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width:60px" data-options="required: true,validType:'manageFee[0,90]'"><em>%</em></li>
+		<li><span>担保年化费：</span><input type="text" value="${borrow.guaranteeRate!}" name="guaranteeRate" autocomplete="off" size="15" class="borrowFormTxt1 easyui-validatebox" style="width:60px" data-options="required: true,validType:'manageFee[0,90]'"><em>%</em></li>
+		</#if>
+		<!-- <li><span>是否测试标：</span><input id="isTest" type="checkbox" name="isTest" value="1" size="15" class="easyui-validatebox" <#if borrow.isTest==1>checked="true"</#if>> </li> -->
+		<li><span>标的星级：</span><input  type="text" size="15" class="borrowFormTxt easyui-validatebox" maxlength="1" value="${borrow.star!}" name="star" data-options="required: true,validType:'maxNum[0,5]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>财务实力评分：</span><input  type="text" size="15" maxlength="3"  class="borrowFormTxt easyui-validatebox" value="${borrow.financeScore!}" name="financeScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>经营状况评分：</span><input  type="text" size="15" maxlength="3" class="borrowFormTxt easyui-validatebox" value="${borrow.statusScore}" name="statusScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>偿债保障评分：</span><input  type="text" size="15" maxlength="3" class="borrowFormTxt easyui-validatebox" value="${borrow.sinkScore!}" name="sinkScore" data-options="required: true,validType:'maxNum[0,100]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span>添加时间：</span>${borrow.addTime?string("yyyy-MM-dd HH:mm:ss")}</li>
+		<li><span>IP：</span>${borrow.addIp}</li>
+		
+		<input type="hidden" name=portfolioProp value="质押">
+		<input type="hidden" name="allAccount" value="${borrow.allAccount!}" />
+		<input type="hidden" name="userId" value="${user.userId}">
+		<input type="hidden" name="dealNo" value="${borrow.dealNo}">
+		<input type="hidden" name="addTime" value="${borrow.addTime?string('yyyy-MM-dd HH:mm:ss')}">
+		<input type="hidden" name="id" value="${borrow.id}">
+		<input type="hidden" name="type" value="${borrow.type}">
+		<input type="hidden" name="period" value="${borrow.period!}">
+		<input type="hidden" name="borrowUpdatePageToken" value="${borrowUpdatePageToken!}">
+	</ul>
+	<div class="borrowFormMuti"><span>借款详情：</span><textarea id="content" name="content" maxlength="1000" class="easyui-validatebox borrowFormTextarea" data-options="required: true">${borrow.content!}</textarea></div>
+</div>
+
+<#if borrow.type!=101>
+<div class="borrowForm">
+	<h2 class="borrowFormTitle">资产监控</h2>
+	<#list list as item>
+	
+	<div class="car_type">
+	
+	<input type="hidden" name="ids" class="listId" value="${item.id}">
+		<div class="car_type_item">
+			<ul class="type_item">
+				<li><span>类型：</span><input type="text" class="car_type_input easyui-validatebox" name="carType" value="${item.carType!}" data-options="required: true" autocomplete="off"/></li>
+				<li><span>编号：</span><input type="text" class="car_type_input easyui-validatebox" name="carNo" value="${item.carNo!}" data-options="required: true" autocomplete="off" /></li>
+				<span class="remove_car_type delMortgage" name="delMortgage" data-val="${item.id}">&nbsp;</span>
+				<li><span>评估价：</span><input type="text" class="car_type_input easyui-validatebox" name="assessPrice" value="${item.assessPrice!}" data-options="required: true" autocomplete="off"/></li>
+				<li><span>抵押价：</span><input type="text" class="car_type_input easyui-validatebox" name="mortgagePrice" value="${item.mortgagePrice!}" data-options="required: true" autocomplete="off"/></li>
+			</ul>
+		</div>
+		<div class="car_type_item">
+			<span>上传实物照：</span>
+	        <div id="uploadRealPhotoShowBox" data-arr="uploadFile" style="height: auto;">
+	            <ul id="uploadPiclist" class="photoUpload  realPhotosList" style="list-style: none; padding: 0; margin: 0;">
+	            	<li class="add_btn" style="float: left;">
+	                  <i class="a"></i> <i class="b"></i>
+	                  <input type="file" name="file" id="physical${item.id}" onchange="return ajaxFileUpload1('physical${item.id}','/imageUp.jsp','physicalPicPath${item_index}');" title="点击上传图片" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/>
+	                </li>
+	            </ul>
+	       </div>
+		</div>
+		<div class="car_type_item">
+			<span>上传档案照：</span>
+	        <div id="uploadFilePhotoShowBox" data-arr="uploadFile" style="height: auto;">
+	            <ul id="uploadPiclist1" class="photoUpload filePhotoList" style="list-style: none; padding: 0; margin: 0;">
+	            	<li class="add_btn" style="float: left;">
+	                  <i class="a"></i> <i class="b"></i>
+	                  <input type="file" name="file" id="archives${item.id}" onchange="return ajaxFileUpload1('archives${item.id}','/imageUp.jsp','archivesPicPath${item_index}');" title="点击上传图片" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/>
+	                </li>
+	            </ul>
+	       </div>
+		</div>
+	</div>
+	</#list>
+
+</div>
+<div class="borrowForm" style="border-bottom:0;">
+	<h2 class="borrowFormTitle">担保函</h2>
+	<div class="guarantee_type">
+		<span>担保函：</span>
+        <div id="uploadGuaranteeShowBox" style="height: auto;">
+        	<ul id="uploadPiclist2" class="photoUpload editGuaranteeShow" style="list-style: none; padding: 0; margin: 0;">
+                <li class="add_btn" style="float: left;">
+                  <i class="a"></i> <i class="b"></i>
+                  <input type="file" name="file" id="uploadFile4" onchange="return ajaxFileUpload1('uploadFile4','/imageUp.jsp','guaranteePicPath');" title="点击上传图片" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/>
+                </li>
+                <#list uploadList as item>
+                <li data-mum="${item.id}">
+                    <a href="${item.picPath}" class="fileshow" rel="guaranteePic"><img src="${item.picPath}" alt=""/></a>
+                    <a class="closePic" style="float:left;" href="javascript:;" title="删除图片">x</a>                     
+                </li>
+				</#list>
+            </ul>
+       </div>
+	</div>	
+</div>
+
+</#if>
+</form>
+<script>
+
+   //抵押车型增加
+	var count = 0;
+	function countSub(num)
+	{
+		$(".car_type"+num).remove();
+		count = count - 1;
+	}
+	$(".addCarTypeBtn").click(function(){
+		var html ='<div class="car_type car_type'+count+'"><div class="car_type_item"><ul class="type_item"><li><span>车型：</span><input type="text" class="car_type_input easyui-validatebox" name="borrowMortgageList['+count+'].carType" data-options="required: true" autocomplete="off"/></li><li><span>车驾号：</span><input type="text" class="car_type_input easyui-validatebox" name="borrowMortgageList['+count+'].carNo" data-options="required: true" autocomplete="off" /></li><span class="remove_car_type" onclick="countSub('+count+')">&nbsp;</span><li><span>评估价：</span><input type="text" class="car_type_input easyui-validatebox" name="borrowMortgageList['+count+'].assessPrice" data-options="required: true"  autocomplete="off"/></li><li><span>抵押价：</span><input type="text" class="car_type_input easyui-validatebox" name="borrowMortgageList['+count+'].mortgagePrice" data-options="required: true" autocomplete="off"/></li></ul></div><div class="car_type_item"><span>上传实物照：</span><div id="uploadRealPhotoBox'+count+'" data-arr="uploadFile" style="height: auto;"><ul id="uploadPiclist" class="photoUpload" style="list-style: none; padding: 0; margin: 0;"><li class="add_btn" style="float: left;"><i class="a"></i> <i class="b"></i><input type="file" name="uploadRealPhotoStatus" id="uploadFile2'+count+'" onchange="return ajaxFileUpload1(\'uploadFile2'+count+'\',\'/imageUp.jsp\',\'newPhysicalPicPath'+count+'\');" title="点击上传图片" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/></li></ul></div></div><div class="car_type_item"><span>上传档案照：</span><div id="uploadFilePhotoBox'+count+'" data-arr="uploadFile" style="height: auto;"><ul id="uploadPiclist1'+count+'" class="photoUpload" style="list-style: none; padding: 0; margin: 0;"><li class="add_btn" style="float: left;"><i class="a"></i> <i class="b"></i><input type="file" name="uploadFilePhotoStatus" id="uploadFile3'+count+'" onchange="return ajaxFileUpload1(\'uploadFile3'+count+'\',\'/imageUp.jsp\',\'newArchivesPicPath'+count+'\');" title="点击上传图片" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/></li></ul></div></div>';
+		$(this).parent().before(html);
+		count = count + 1;
+	});
+	
+	$(".delMortgage").eq(0).remove();
+	
+	
+	
+	//图片列表
+	for(var j = 0;j <= $(".listId").length;j++){
+	$.ajax({
+		url:"/modules/loan/borrow/getUpdateMortgageList.html?id="+$(".listId").eq(j).val(),
+		type:"get",
+		async:false,
+		dataType:"json",
+		success:function(data){
+			if(data.list.length > 0){
+				for(var i = 0;i < data.list.length; i++){
+					var sHtml = "";
+					sHtml += '<li data-mum="' + data.list[i].id + '">';
+					sHtml += '<a href="' + data.list[i].picPath + '" class="fileshow"><img src="' + data.list[i].picPath + '" alt="" /></a>';
+					sHtml += '<a class="closePic" style="float:left;" href="javascript:;" title="删除图片">x</a>';
+					sHtml += '</li>';
+					if(data.list[i].type == 1){
+						$(".realPhotosList").eq(j).append(sHtml);
+					}else{
+						$(".filePhotoList").eq(j).append(sHtml);
+					}
+				}
+			}
+		}
+	});
+	
+  };
+</script>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>

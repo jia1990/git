@@ -1,0 +1,574 @@
+package com.ddtkj.p2psys.borrow.model;
+
+import java.util.Date;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardSumDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardSum;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月13日
+ */
+public class BorrowTenderModel extends BorrowTender {
+	private static final long serialVersionUID = -1628100039600579170L;
+
+	/** 投资待处理状态 */
+	public static final String BORROW_TENDER_STATUS_DISPOSE = "0";
+	/** 投资成功状态 */
+	public static final String BORROW_TENDER_STATUS_SUCCESS = "1";
+	/** 投资失败状态 */
+	public static final String BORROW_TENDER_STATUS_FAIL = "2";
+	
+	private int lineId; //行ID
+	/** 当前页面 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+
+	/** 借款标ID **/
+	private long borrowId;
+	/** 借款标名 **/
+	private String borrowName;
+	/** 借款标名隐藏后 **/
+	private String borrowNameHide;
+	/** 标的类型 */
+	private String type;
+	/** 标的状态*/
+	private String borrowStatus;
+	/** 实还总金额 **/
+	private double accountYes;
+	/** 借款总额 **/
+	private double account;
+	/** 投资人ID **/
+	private long userId;
+	/** 投资人用户名 **/
+	private String userName;
+	
+	//2015年4月15日 14:24:11  孙晓勇
+	/** 真实姓名 */
+	private String realName;
+	/** 投资人账户总额 */
+	private String tenderUserAccountStr;
+	/** 借款类型 **/
+	private int borrowTimeType;
+	/** 借款期限Str **/
+	private String timeLimitStr;
+	/** 借款利率 **/
+	private double borrowApr;
+	
+	// 20150529 sxy
+	/** 投资金额汇总 */
+	private double moneySum;
+	/** 有效投资金额汇总 */
+	private double accountSum;
+	/** 回收本息金额汇总 */
+	private double repaymentAccountSum;
+	/** 利息金额汇总 */
+	private double interestSum;
+	/** 成功有效投资金额 */
+	private double successTenderMoneySum;
+	/** 投资失败金额 */
+	private double failTenderMoneySum;
+	//操作员ID
+	private long operatorId;
+	
+	public long getOperatorId() {
+		return operatorId;
+	}
+
+	public void setOperatorId(long operatorId) {
+		this.operatorId = operatorId;
+	}
+
+	public double getSuccessTenderMoneySum() {
+		return successTenderMoneySum;
+	}
+
+	public void setSuccessTenderMoneySum(double successTenderMoneySum) {
+		this.successTenderMoneySum = successTenderMoneySum;
+	}
+
+	public double getFailTenderMoneySum() {
+		return failTenderMoneySum;
+	}
+
+	public void setFailTenderMoneySum(double failTenderMoneySum) {
+		this.failTenderMoneySum = failTenderMoneySum;
+	}
+
+	public double getMoneySum() {
+		return moneySum;
+	}
+
+	public void setMoneySum(double moneySum) {
+		this.moneySum = moneySum;
+	}
+
+	public double getAccountSum() {
+		return accountSum;
+	}
+
+	public void setAccountSum(double accountSum) {
+		this.accountSum = accountSum;
+	}
+
+	public double getRepaymentAccountSum() {
+		return repaymentAccountSum;
+	}
+
+	public void setRepaymentAccountSum(double repaymentAccountSum) {
+		this.repaymentAccountSum = repaymentAccountSum;
+	}
+
+	public double getInterestSum() {
+		return interestSum;
+	}
+
+	public void setInterestSum(double interestSum) {
+		this.interestSum = interestSum;
+	}
+
+	// 20150507
+	private String tenderTypeStr;
+	
+	public String getTenderTypeStr() {
+		return tenderTypeStr;
+	}
+
+	public void setTenderTypeStr(String tenderTypeStr) {
+		this.tenderTypeStr = tenderTypeStr;
+	}
+
+	public double getBorrowApr() {
+		return borrowApr;
+	}
+
+	public void setBorrowApr(double borrowApr) {
+		this.borrowApr = borrowApr;
+	}
+
+	/** 客服工号 **/
+	private String customerUserId;
+	/** 投资人注册时间 **/
+	private Date registerTime;
+	
+	public Date getRegisterTime() {
+		return registerTime;
+	}
+
+	public void setRegisterTime(Date registerTime) {
+		this.registerTime = registerTime;
+	}
+
+	public String getCustomerUserId() {
+		return customerUserId;
+	}
+
+	public void setCustomerUserId(String customerUserId) {
+		this.customerUserId = customerUserId;
+	}
+	// JSDPBUG-99 20150505  sxy
+	// 2015年4月27日 18:18:06
+	private String timeType;
+	
+	public String getTimeType() {
+		return timeType;
+	}
+
+	public void setTimeType(String timeType) {
+		this.timeType = timeType;
+	}
+
+	public String getTimeLimitStr() {
+		return timeLimitStr;
+	}
+
+	public void setTimeLimitStr(String timeLimitStr) {
+		this.timeLimitStr = timeLimitStr;
+	}
+
+	public int getBorrowTimeType() {
+		return borrowTimeType;
+	}
+
+	public void setBorrowTimeType(int borrowTimeType) {
+		this.borrowTimeType = borrowTimeType;
+	}
+
+	public String getTenderUserAccountStr() {
+		return tenderUserAccountStr;
+	}
+
+	public void setTenderUserAccountStr(String tenderUserAccountStr) {
+		this.tenderUserAccountStr = tenderUserAccountStr;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	/** 借款人用户名 **/
+	private String borrowUserName;
+	/** 还款方式 **/
+	private int borrowStyle;
+	
+	/** 借款期限 **/
+	private int timeLimit;
+	/** 预计还款时间 **/
+	private int repayTime;
+	/** 已经还款时间 **/
+	private int repayYesTime;
+	/** 预还金额 **/
+	private int repayAccount;
+
+	/** 应收开始日期 **/
+	private String startTime;
+	/** 应收结束开始日期 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+
+	/** 按投标金额比例(0.1-0.6) **/
+	private double partAccount;
+
+	/** 还款结束后奖励 **/
+	private double lateAward;
+	/** 进度 **/
+	private double scales;
+
+	public String getBorrowNameHide() {
+		if (StringUtil.isNotBlank(borrowName) && borrowName.length() > 7) {
+			return borrowName.substring(0, 6) + "***";
+		}
+		return "";
+	}
+
+	public void setBorrowNameHide(String borrowNameHide) {
+		this.borrowNameHide = borrowNameHide;
+	}
+
+	public static BorrowTenderModel instance(BorrowTender borrowTender) {
+		BorrowTenderModel model = new BorrowTenderModel();
+		BeanUtils.copyProperties(borrowTender, model);
+		return model;
+	}
+    //JSDBET-944 投标优化    wcw 2015-04-15 start
+	public BorrowTender fillBorrowTender(BorrowTender tender,BorrowModel model, User user) {
+		//BorrowTender tender = new BorrowTender();
+		tender.setBorrow(model.prototype());
+		tender.setMoney(model.getMoney());
+		tender.setStatus(0);
+		tender.setAddTime(new Date());
+		//tender.setAddIp(Global.getIP());
+		tender.setUser(user);
+		//tender.setAutoRepurchase(auto_repurchase);
+		return tender;
+	}
+	
+	public BorrowTender getValidTender(BorrowTender tender, Borrow borrow,BorrowModel model) {
+		BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+		AccountDao accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		BorrowTenderDao tenderDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		// 获取最新的数据库的记录
+		Borrow data = borrowDao.find(tender.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(data);
+		Account act = accountDao.findObjByProperty("user.userId", tender.getUser().getUserId());
+		//用户实际投标金额（考虑是否将晋商贷体验卡扩充）
+		//JSDP-171 xingjia 2015717 start 第三次修改
+		double petCardUsable = model.getPetCardMoney();
+		double validAccount = worker.validAccount(tender);
+		tender.setAccount(validAccount);
+		worker.checkTender(tender,model);
+		//JSDP-171 xingjia 2015717 end 第三次修改
+		//--------ymd---------------处理 钱袋子使用 -------------------------------------------------
+		//判断此时的投标金额是否都是有体验卡组成
+		if(petCardUsable<validAccount){
+			if(model.getMdAccount()>0){
+				validAccount = BigDecimalUtil.add(validAccount, -model.getMdAccount()) ;
+			}
+		}else{
+			model.setMdAccount(0);
+		}
+		//JSDP-171 xingjia 20150714 end
+		//-----------end-------------
+		
+		//--------wcw---------------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----start-------
+		
+		double usableMoney=BigDecimalUtil.add(act.getRechargeUsable(),act.getAwardUsable(),act.getInterestUsable(),act.getReturnCapitalUsable());
+		//JSDP-171 xingjia 20150714 start
+		usableMoney = BigDecimalUtil.add(usableMoney,petCardUsable);
+		//JSDP-171 xingjia 20150714 end
+		if(validAccount>usableMoney){
+			validAccount=usableMoney;
+		}
+    	double currRecharge = 0;
+		double currAward = 0;
+		double currInterest = 0;
+		double currReturnCapital = 0;
+		//充值可用
+		double rechargeUsable=act.getRechargeUsable();
+		//JSDP-171 xingjia 20150714 start
+		rechargeUsable = BigDecimalUtil.add(rechargeUsable,petCardUsable);
+		//JSDP-171 xingjia 20150714 end
+		//奖励可用
+		double awardUsable=act.getAwardUsable();
+		//回款本金可用
+		double returnCapitalUsable=act.getReturnCapitalUsable();
+		
+		//计算投标金额冻结归属（使用充值、使用奖励、使用利息、使用回款）
+		if(rechargeUsable>=validAccount){
+			currRecharge=validAccount;
+		}else{
+			if((rechargeUsable+awardUsable)>=validAccount){
+				currRecharge=rechargeUsable;
+				currAward=BigDecimalUtil.sub(validAccount,rechargeUsable);
+			}else{
+				double currMoney=BigDecimalUtil.add(rechargeUsable,awardUsable,returnCapitalUsable);
+				if(currMoney>=validAccount){
+					currRecharge=rechargeUsable;
+					currAward=awardUsable;
+					currReturnCapital=BigDecimalUtil.add(validAccount,-rechargeUsable,-awardUsable);
+				}else{
+					currRecharge=rechargeUsable;
+					currAward=awardUsable;
+					currReturnCapital=returnCapitalUsable;
+					currInterest=BigDecimalUtil.sub(validAccount, currMoney);
+				}
+			}
+		}
+		tender.setUseAward(currAward);
+		tender.setUseInterest(currInterest);
+		tender.setUseRecharge(currRecharge);
+		tender.setUseReturnedMoney(currReturnCapital);
+		//------------wcw-----------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----end-------
+		tender.setTenderBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_INVEST));
+		tender.setBorrowManageFeeBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_FEE));
+		if(data.getAward()!=0){
+		    tender.setTenderAwardBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_AWARD));
+		}
+		if(borrow.getType()==113||borrow.getType()==115){
+			tender.setTenderTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));
+		}
+		//JSDBET-872 wcw 2015-3-28 start
+		if(data.getVouchFirm()!=null&&StringUtil.isNotBlank(data.getVouchFirm().getUserName())){
+			tender.setGuaranteeTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_GUARANTEE_FEE));
+		}
+		//if(tender.getUseRpDynamic()>0){
+		if(model.getMdAccount()>0){
+			tender.setUseRpDynamic(model.getMdAccount());
+			tender.setRpBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+		}
+		//JSDBET-872 wcw 2015-3-28 end
+		tender = tenderDao.save(tender);
+		return tender;
+	}
+	 //JSDBET-944 投标优化    wcw 2015-04-15 end
+	
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size > 0 ? size : Page.ROWS;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public long getBorrowId() {
+		return borrowId;
+	}
+
+	public void setBorrowId(long borrowId) {
+		this.borrowId = borrowId;
+	}
+
+	public String getBorrowName() {
+		return borrowName;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public void setBorrowName(String borrowName) {
+		this.borrowName = borrowName;
+	}
+
+	public double getAccountYes() {
+		return accountYes;
+	}
+
+	public void setAccountYes(double accountYes) {
+		this.accountYes = accountYes;
+	}
+
+	public double getAccount() {
+		return account;
+	}
+
+	public void setAccount(double account) {
+		this.account = account;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public int getBorrowStyle() {
+		return borrowStyle;
+	}
+
+	public void setBorrowStyle(int borrowStyle) {
+		this.borrowStyle = borrowStyle;
+	}
+
+	public int getTimeLimit() {
+		return timeLimit;
+	}
+
+	public void setTimeLimit(int timeLimit) {
+		this.timeLimit = timeLimit;
+	}
+
+	public int getRepayTime() {
+		return repayTime;
+	}
+
+	public void setRepayTime(int repayTime) {
+		this.repayTime = repayTime;
+	}
+
+	public int getRepayYesTime() {
+		return repayYesTime;
+	}
+
+	public void setRepayYesTime(int repayYesTime) {
+		this.repayYesTime = repayYesTime;
+	}
+
+	public int getRepayAccount() {
+		return repayAccount;
+	}
+
+	public void setRepayAccount(int repayAccount) {
+		this.repayAccount = repayAccount;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public double getLateAward() {
+		return lateAward;
+	}
+
+	public void setLateAward(double lateAward) {
+		this.lateAward = lateAward;
+	}
+
+	public double getScales() {
+		return scales;
+	}
+
+	public void setScales(double scales) {
+		this.scales = scales;
+	}
+
+	public double getPartAccount() {
+		return partAccount;
+	}
+
+	public void setPartAccount(double partAccount) {
+		this.partAccount = partAccount;
+	}
+
+	public String getBorrowUserName() {
+		return borrowUserName;
+	}
+
+	public void setBorrowUserName(String borrowUserName) {
+		this.borrowUserName = borrowUserName;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public long getUserId() {
+		return userId;
+	}
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+	public String getBorrowStatus() {
+		return borrowStatus;
+	}
+
+	public void setBorrowStatus(String borrowStatus) {
+		this.borrowStatus = borrowStatus;
+	}
+
+	public int getLineId() {
+		return lineId;
+	}
+
+	public void setLineId(int lineId) {
+		this.lineId = lineId;
+	}
+	
+}

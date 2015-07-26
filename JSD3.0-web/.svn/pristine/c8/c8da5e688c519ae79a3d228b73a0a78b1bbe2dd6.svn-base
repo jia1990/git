@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<title>晋商贷-诚信、安全、方便、快捷、高效的投资理财平台！</title>
+<!-- index.js是为了那个分页样式，如果不用这个分页，就去掉这个 -->
+<#include "../include/resource1.html"> 
+<style>
+	.y-new-stages-ul{width: 1000px;margin:0px auto;overflow: hidden;}
+	.y-new-stages-ul li{border: 1px solid #e4e4e4;height: 354px;width: 225px;margin-bottom: 34px;position: relative;border-radius: 2px;float: left;margin-left: 30px;}
+	.y-new-stages-ul li img{width: 190px;height: 190px;margin-left: 15px;margin-top: 8px;}
+	.y-new-stages-ul li p{width: 210px;margin: 0 auto;color: #555555;font-size: 14px;line-height: 24px;overflow: hidden;max-height: 48px;}
+	.p-bottom-div{color: #f58232;font-size: 14px;padding-left: 10px;}
+	.p-bottom-div em{font-size: 20px;font-style: normal;}
+	.p-bottom-a{display: block;position: absolute;left: 0;bottom: 0;width: 225px;height: 46px;background: #12adff;color: #fff;text-align: center;line-height: 46px;font-size: 16px;}
+	.p-bottom-a:hover{background:#0d95dd;}
+	.y_PageNums {margin: 0px auto 60px;overflow: hidden;}
+	.c_company_all {margin: 0 auto;}
+	.y-list-div-ul{margin: 26px auto 20px;width: 1000px;height:48px;border-bottom: 1px solid #DCDCDC;}
+	.y-list-div-ul li{float: left;height: 46px;color: #333;text-align: center;width: 100px;line-height: 46px;cursor: pointer;background: #fff;position: relative;z-index: 1;color: #525252;font-size: 16px;}
+	.y-list-div-ul li.stages-liclick{border-left: 1px solid #DCDCDC;border-right: 1px solid #DCDCDC;border-top: 2px solid #12adff;top: 3px;height:44px;line-height: 38px;}
+	.y-list-div-con2{display: none;}
+	.c_company_intro{line-height: 26px;height: auto;color: #555;}
+	.c_company_relative{height:auto;}
+	.c_company_contact{padding: 20px;width: 205px;}
+</style>
+</head>
+<body onselectstart ='return false'  >
+<#assign nid="company_home"> 
+<#include "../include/b_header.html"> 
+	<!-- 不同时间段的信息 -->
+	<input type="hidden" id="webpath" value="${webroot}${theme_dir}"></input>
+	<input type="hidden" id="webpathnodir" value="${webroot}"></input>
+	<input type="hidden" id="adminurl" value="${adminurl}"></input>
+	 <div class="MemberCenter_con1 MemberCenter_con1">
+		<div class="MemberCenter_con1in">
+			<div class="y_user_img"><a href="/member_borrow/info/face.html" hidefocus title="编辑资料"><img src="${webroot}/avatar/${session_user.userId?c}.jpg" style="width: 84px;height: 84px;border-radius: 50%;"></a></div>
+		</div>
+	</div>
+	<#if session_user??&&session_user.thirdPartyIsOpen??&&session_user.thirdPartyIsOpen=="N">
+	<div class="noAuthentication" style="display:none">
+	  <i class="iconfont error">&#xe62a;</i>您还未开通第三方支付账户，为了尽快进行投资服务，请<a href="/member_borrow/security/realNameIdentify.html">立即开通</a>。
+	</div>
+	</#if>
+		<!-- 不同时间段的信息 -->
+	<ul class="y-list-div-ul">
+		<#if session_user.userCache.borrowType == "F">
+		<li class="stages-liclick">分期宝</li>
+		<li>个人信息</li>
+		<#else>
+		<li class="stages-liclick">个人信息</li>
+		</#if>
+	</ul>
+	<div class="y-list-div-header">
+		<#if session_user.userCache.borrowType == "F">
+		<div class="y-list-div-con y-list-div-con1">
+			<div class="y-new-stages-ul">
+				<ul>
+				</ul>
+			</div>
+			<div class="y_par_out" style="margin:0 auto;">
+				<dl class="y_parlex_project y_parlex_projects" style="position: relative;">
+				</dl>
+				<div id="kkpager"></div>
+			</div>
+		</div>
+		<div class="c_company_all y-list-div-con y-list-div-con2">
+			<div class="c_company_relative">
+				<h2>更多信息</h2>
+				<div class="c_company_intro">
+					<p>还款来源：<span>${session_user.userCache.sourceRepay!}</span></p>
+					<p>就读大学：<span>${session_user.userCache.college!}</span></p>
+					<p>就读专业：<span>${session_user.userCache.major!}</span></p>
+					<p>学号：<span>${session_user.userCache.studentId!}</span></p>
+				</div>
+				<h2>相关图片</h2>
+				<div class="c_company_list">
+					<ul>
+						<li>
+						 <span><a class="fancybox" title="学生证" href="${adminurl}${session_user.userCache.studentCardPicPath!}">
+						 <img src="${adminurl}${session_user.userCache.studentCardPicPath!}" title="学生证" style="width:200px;height:150px;"></a></span><i>学生证</i>
+						</li>
+						<li>
+						 <span><a class="fancybox" title="宿舍或教室生活照" href="${adminurl}${session_user.userCache.liveImgPicPath!}">
+						 <img src="${adminurl}${session_user.userCache.liveImgPicPath!}" title="宿舍或教室生活照" style="width:200px;height:150px;"></a></span><i>宿舍或教室生活照</i>
+						</li>
+						<li>
+						 <span><a class="fancybox" title="学信网" href="${adminurl}${session_user.userCache.hirerightPicPath!}">
+						 <img src="${adminurl}${session_user.userCache.hirerightPicPath!}" title="学信网" style="width:200px;height:150px;"></a></span><i>学信网</i>
+						</li>
+						<div class="c_clear"></div>
+					</ul>
+					<div class="c_team_btn c_team_left"></div>
+					<div class="c_team_btn c_team_right"></div>
+				</div>
+			</div>
+			<!-- 相关信息 -->
+			<div class="c_company_contact">
+				<h2 style="margin-bottom:16px;">相关信息</h2>
+				<dl>
+					<dd>姓名：<span>${session_user.hideRealName!}</span></dd>
+					<dd>手机：<span>${session_user.hideMobilePhone!}</span></dd>
+					<dd>邮箱：<span>${session_user.hideEmail!}</span></dd>
+					<dd>身份证：<span>${session_user.hideCardNO!}</span></dd>
+					<dd>户口地址：<span>${province.name!}${city.name!}${area.name!}</span></dd>
+				</dl>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+		<#else>
+		<div class="c_company_all y-list-div-con y-list-div-con1">
+			<div class="c_company_relative">
+				<h2>更多信息</h2>
+				<div class="c_company_intro">
+					<p>还款来源：<span>${session_user.userCache.sourceRepay!}</span></p>
+					<p>个人描述：<span>${session_user.userCache.college!}</span></p>
+				</div>
+				<h2>相关图片</h2>
+				<div class="c_company_list">
+					<ul>
+						<li>
+						 <span><a class="fancybox" title="银行卡流水" href="${adminurl}${session_user.userCache.zzjgPicPath!}">
+						 <img src="${adminurl}${session_user.userCache.zzjgPicPath!}" title="银行卡流水" style="width:200px;height:150px;"></a></span><i>银行卡流水</i>
+						</li>
+						<li>
+						 <span><a class="fancybox" title="信用报告" href="${adminurl}${session_user.userCache.dkkPicPath!}">
+						 <img src="${adminurl}${session_user.userCache.dkkPicPath!}" title="信用报告" style="width:200px;height:150px;"></a></span><i>信用报告</i>
+						</li>
+						<div class="c_clear"></div>
+					</ul>
+					<div class="c_team_btn c_team_left"></div>
+					<div class="c_team_btn c_team_right"></div>
+				</div>
+			</div>
+			<!-- 相关信息 -->
+			<div class="c_company_contact">
+				<h2 style="margin-bottom:16px;">相关信息</h2>
+				<dl>
+					<dd>姓名：<span>${session_user.hideRealName!}</span></dd>
+					<dd>手机：<span>${session_user.hideMobilePhone!}</span></dd>
+					<dd>邮箱：<span>${session_user.hideEmail!}</span></dd>
+					<dd>身份证：<span>${session_user.hideCardNO!}</span></dd>
+					<dd>户口地址：<span>${province.name!}${city.name!}${area.name!}</span></dd>
+				</dl>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+		</#if>
+	</div>
+</body>
+<script>
+	seajs.use('${webroot}${theme_dir}/media/js/member_borrow/userHome');
+</script>
+<#include "../include/b_foot.html">
+</html>
+
+

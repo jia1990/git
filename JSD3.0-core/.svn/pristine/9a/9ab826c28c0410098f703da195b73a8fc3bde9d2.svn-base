@@ -1,0 +1,70 @@
+package com.ddtkj.p2psys.redpacket.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.redpacket.domain.RedPacket;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+/**
+ * 红包类型Service 
+ * 
+ * @author YJF
+ *
+ */
+
+public interface RedPacketService {
+	
+	/**
+	 * 查询  根据ID查询
+	 */
+	public RedPacket getEntityById(long id) ;
+	/**
+	 * 查询 根据是否开启查询红包类型
+	 * 
+	 */
+	public PageDataList<RedPacket> getEntityByIsOpen(String isopen,int currentPage,int pagenum) ;
+	/**
+	 * 查询 根据TypeCode
+	 */
+	public RedPacket getEntityByTypeCode(String typecode) ;
+	/**
+	 * 分页 多条件查询等复杂查询
+	 */
+	public PageDataList<RedPacket> getEntityList(QueryParam param);
+	
+	/**
+	 * 保存 红包类型
+	 * @param rp
+	 * @return
+	 */
+	public RedPacket save(RedPacket rp) ;
+	/**
+	 * 修改 红包类型
+	 * @param rp
+	 * @return
+	 */
+	public RedPacket update(RedPacket rp) ;
+	/**
+	 * 删除 红包类型
+	 * @param rp
+	 */
+	public void delete(RedPacket rp) ;
+	
+	/**
+	 * 返回所有的红包类型 
+	 * @return
+	 */
+	public List<RedPacket> getAll();
+	
+	/**
+	 * 条件查询红包列表
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param map
+	 * @return
+	 */
+	PageDataList<RedPacket> getPageRedPacketList(int pageNumber, int pageSize, Map<String, Object> map);
+	
+	
+}

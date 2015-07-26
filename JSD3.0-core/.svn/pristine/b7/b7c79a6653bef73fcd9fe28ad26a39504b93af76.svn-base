@@ -1,0 +1,177 @@
+package com.ddtkj.p2psys.tpp.ymd.model;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.log4j.Logger;
+
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * 查询一麻袋交易记录
+ * @author wcw
+ * 2014-12-4
+ */
+public class YmdQuery extends YmdModel{
+	private static Logger logger = Logger.getLogger(YmdQuery.class);
+	/**
+	 * 商户批次号
+	 */
+	private String tradeNo;
+	/**
+	 * 开始时间（商户交易开始时间） 格式：2014-03-13 10:19:23
+	 */
+	private String beginTime;
+	/**
+	 * 结束时间（商户交易结束时间）格式：2014-03-13 10:19:23
+	 */
+	private String endTime;
+	/**
+	 * 页码
+	 */
+	private String pageIndex;
+	public YmdQuery() {
+		super();
+	}
+
+	/**
+     * 签名方法
+     */
+    public void createSign() {
+        StringBuffer str = new StringBuffer();
+        if (StringUtil.isNotBlank(this.getNumberId())) {
+            str.append("number_id=").append(this.getNumberId()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMode())) {
+            str.append("mode=").append(this.getMode()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getOutTradeNo())) {
+            str.append("out_trade_no=").append(this.getOutTradeNo()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getTradeNo())) {
+            str.append("trade_no=").append(this.getTradeNo()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getBeginTime())) {
+            str.append("begin_time=").append(this.getBeginTime()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getEndTime())) {
+            str.append("end_time=").append(this.getEndTime()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getPageIndex())) {
+            str.append("page_index=").append(this.getPageIndex()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMerchantKey())) {
+            str.append("merchantKey=").append(this.getMerchantKey());
+        }
+        String signInfo=str.toString();
+        logger.info("需要加密字符串======="+signInfo);
+        try {
+            signInfo = DigestUtils.md5Hex(signInfo.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            logger.info("签名异常信息====" + e.getMessage());
+        }
+        logger.info("加密后字符串======="+signInfo);
+        this.setSignInfo(signInfo);
+        
+    }
+    
+    /**
+     * 获取参数拼串
+     * @return
+     */
+    public String getParams(){
+    	StringBuffer str = new StringBuffer();
+    	if (StringUtil.isNotBlank(this.getNumberId())) {
+            str.append("number_id=").append(this.getNumberId()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMode())) {
+            str.append("mode=").append(this.getMode()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getOutTradeNo())) {
+            str.append("out_trade_no=").append(this.getOutTradeNo()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getTradeNo())) {
+            str.append("trade_no=").append(this.getTradeNo()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getBeginTime())) {
+            str.append("begin_time=").append(getUtf8Str(this.getBeginTime())).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getEndTime())) {
+            str.append("end_time=").append(getUtf8Str(this.getEndTime())).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getPageIndex())) {
+            str.append("page_index=").append(this.getPageIndex()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getSignInfo())) {
+            str.append("sign_info=").append(this.getSignInfo()).append("&");
+        }
+        return str.toString();
+    }
+
+    public List<NameValuePair> getHttpPostParams(){
+    	List<NameValuePair> formparams = new ArrayList<NameValuePair>();
+    	if (StringUtil.isNotBlank(this.getNumberId())) {
+            formparams.add(new BasicNameValuePair("number_id", this.getNumberId()));  
+        }
+        if (StringUtil.isNotBlank(this.getMode())) {
+            formparams.add(new BasicNameValuePair("mode", this.getMode()));  
+        }
+        if (StringUtil.isNotBlank(this.getOutTradeNo())) {
+            formparams.add(new BasicNameValuePair("out_trade_no", this.getOutTradeNo()));  
+        }
+        if (StringUtil.isNotBlank(this.getTradeNo())) {
+            formparams.add(new BasicNameValuePair("trade_no", this.getTradeNo())); 
+        }
+        if (StringUtil.isNotBlank(this.getBeginTime())) {
+            formparams.add(new BasicNameValuePair("begin_time", this.getBeginTime())); 
+        }
+        if (StringUtil.isNotBlank(this.getEndTime())) {
+            formparams.add(new BasicNameValuePair("end_time", this.getEndTime())); 
+        }
+        if (StringUtil.isNotBlank(this.getPageIndex())) {
+            formparams.add(new BasicNameValuePair("page_index", this.getPageIndex()));  
+        }
+        if (StringUtil.isNotBlank(this.getSignInfo())) {
+            formparams.add(new BasicNameValuePair("sign_info", this.getSignInfo())); 
+        }
+        return formparams;
+    }
+	public String getTradeNo() {
+		return tradeNo;
+	}
+
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+
+	public String getBeginTime() {
+		return beginTime;
+	}
+
+	public void setBeginTime(String beginTime) {
+		this.beginTime = beginTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getPageIndex() {
+		return pageIndex;
+	}
+
+	public void setPageIndex(String pageIndex) {
+		this.pageIndex = pageIndex;
+	}
+
+	
+    
+}

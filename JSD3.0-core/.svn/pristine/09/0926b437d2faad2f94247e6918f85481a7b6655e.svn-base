@@ -1,0 +1,102 @@
+package com.ddtkj.p2psys.core.quartz.vip;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.member.service.MemberVipAwardService;
+import com.ddtkj.p2psys.member.service.MemberVipService;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.BeanUtil;
+/**
+ * vip业务处理
+ * @author wcw
+ */
+public class VipTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(VipTask.class);
+
+	@Resource
+	private MemberVipService memberVipService;
+	
+	
+	@Resource
+	private MemberVipAwardService memberVipAwardService;
+	
+
+	public MemberVipAwardService getMemberVipAwardService() {
+		return memberVipAwardService;
+	}
+
+	public void setMemberVipAwardService(MemberVipAwardService memberVipAwardService) {
+		this.memberVipAwardService = memberVipAwardService;
+	}
+
+	public MemberVipService getMemberVipService() {
+		return memberVipService;
+	}
+
+	public void setMemberVipService(MemberVipService memberVipService) {
+		this.memberVipService = memberVipService;
+	}
+
+	public VipTask(MemberVipService memberVipService,MemberVipAwardService memberVipAwardService) {
+		super();
+		task.setName("vip.Task");
+		this.memberVipService = memberVipService;
+		this.memberVipAwardService=memberVipAwardService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (VipJobQueue.VIP!=null && VipJobQueue.VIP.size() > 0) {
+			VipBean tb = VipJobQueue.VIP.peek();
+			if (tb != null) {
+				String result="success";
+				try {
+					if("buyVipTransfer".equals(tb.getType())){
+						MemberVipService memberVipService = (MemberVipService)BeanUtil.getBean("memberVipService");
+						memberVipService.buyVipTransfer(tb.getMemberVipSubModel());
+						result="buyVIPSuccess";
+					}else if("convertVipForVipAward".equals(tb.getType())){
+						MemberVipAwardService memberVipAwardService = (MemberVipAwardService)BeanUtil.getBean("memberVipAwardService");
+						memberVipAwardService.convertVipForVipAward(tb.getMemberVipAwardSubModel());
+						result="VIP兑换成功";
+					}
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					VipJobQueue.VIP.remove(tb);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				    if(tb.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(tb.getResultFlag(), result);
+			            }
+			        }
+				}
+		}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return VipTask.VIP_STATUS;
+	}
+
+}

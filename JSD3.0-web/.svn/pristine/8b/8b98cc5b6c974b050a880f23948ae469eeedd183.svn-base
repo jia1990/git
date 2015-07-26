@@ -1,0 +1,421 @@
+<#include "header.htm"/>
+<#import "../macros/pagination.ftl" as pagination/>
+<#import "../macros/presentation.ftl" as presentation/>
+
+<#assign canEditSomeMessage = false/>
+
+<script type="text/javascript" src="${contextPath}/bbs/templates/${templateName}/js/jquery.js?${startupTime}"></script>
+<script type="text/javascript" src="${contextPath}/bbs/templates/${templateName}/js/jquery.jeditable.pack.js?${startupTime}"></script>
+<script type="text/javascript" src="${contextPath}/bbs/templates/${templateName}/js/post_show.js?${startupTime}"></script>
+<script type="text/javascript" src="${contextPath}/bbs/templates/${templateName}/js/post.js?${startupTime}"></script>
+<script type="text/javascript" src="${contextPath}/bbs/templates/${templateName}/js/pagination.js?${startupTime}"></script>
+
+<#if logged>
+	<script type="text/javascript" src="${contextPath}/bbs/templates/${templateName}/js/watch.js?${startupTime}"></script>
+</#if>
+
+<script type="text/javascript">
+</script>
+
+<#if moderator>
+	<script type="text/JavaScript" src="${JForumContext.encodeURL("/js/list/moderation")}"></script>
+</#if>
+
+<table cellspacing="0" cellpadding="10" width="100%" align="center" border="0">
+	<tr>
+		<td class="bodyline">
+            <!--分页代码-->
+		<table width="100%" align="right">
+        <tr>
+        <td>
+        <#assign paginationData><@pagination.doPagination "list", topic.id/></#assign>${paginationData}
+        </td>
+        </tr>
+        </table>
+         <!--//分页代码-->
+         
+			<table class="post_content" cellspacing="0" cellpadding="3" width="100%" border="0">
+				<#if poll?exists>
+					<tr>
+						<td class="cathead cattitle" align="center" colspan="2" nowrap="nowrap" width="100%">${I18n.getMessage("PostShow.pollTitle")}</td>
+					</tr>
+					<tr>
+						<td class="row1 " colspan="2" align="center">
+							<#if (poll.open && canVoteOnPoll && !request.getParameter("viewResults")?exists)>
+								<form action="${JForumContext.encodeURL("/jforum")}" method="post">
+									<input type="hidden" name="action" value="vote" />
+									<input type="hidden" name="module" value="${moduleName}" />
+									<input type="hidden" name="poll_id" value="${poll.id}" />
+									<input type="hidden" name="topic_id" value="${topic.id}" />
+									<div class="poll">
+                                    <span class="strong">${poll.label?html}</span>
+                                    <table class="poll">
+                                    <#list poll.options as option>
+                                        <tr>
+                                            <td><input type="radio" name="poll_option" value="${option.id}">${option.text?html}</input></td>
+                                        </tr>
+                                    </#list>
+                                    </table>
+                                    <input type="submit" value="${I18n.getMessage("PostShow.pollVote")}"></input><br />
+                                    <span class="gensmall" align="center"><a href="${JForumContext.encodeURL("/jforum${extension}?module=posts&amp;action=list&amp;topic_id=${topic.id}&amp;viewResults=true", "")}">${I18n.getMessage("PostShow.showPollResults")}</a></span>
+                                	</div>
+								</form>
+							<#else>
+								<@presentation.renderPoll poll/>
+							</#if>
+						</td>
+					</tr>
+				</#if>
+				
+                <!--标题-->
+				<tr class="topic_th">
+					<th class="thleft" nowrap="nowrap" width="130" height="26">${I18n.getMessage("PostShow.author")}</th>
+					<th class="thright" nowrap="nowrap" width="100%">${I18n.getMessage("PostShow.messageTitle")}</th>
+				</tr>
+			
+                <tr class="topic_data" cellspacing="0" height="50">
+						<td class="border_r">
+                        <table width="100%" cellpadding="0">
+                        <tr>
+                        <td class="check" width="50%">
+                         <p class="num">${topic.totalViews}</p>
+    						<p>${I18n.getMessage("ForumIndex.views")}</p>
+                        </td>
+                        <td class="reply" width="50%">
+                        	<p class="num">${topic.totalReplies}</p>
+                            <p>${I18n.getMessage("ForumIndex.answers")}</p>
+                        </td>
+                        </tr>
+                        </table>
+                            </td>
+   					 <td class="forum_name">${forum.name}</td>
+					</tr>
+                    	<!--//标题-->
+                
+				<!-- POST LISTING --> 
+				<#assign rowColor = ""/>
+				<#list posts as post>
+					<#if post_index % 2 == 0>
+						<#assign rowColor = "row1">
+					<#else>
+						<#assign rowColor = "row2">
+					</#if>
+	
+					<#assign user = users.get(post.userId)/>
+					<#assign canEditCurrentMessage = (post.canEdit && topic.status != STATUS_LOCKED) || moderatorCanEdit/>
+					<tr class="topic_head" cellspacing="0" height="30">
+						<td class="topic_head_left border_r"> <div class="username"><b>${user.username?html}</b></div></td>
+                        <td class="topic_head_right">
+                        <div class="subject"><b>${I18n.getMessage("PostShow.subject")}:</b> <a name="${post.id}">${post.subject?default("")?html}</a></div>
+                        <div class="action">
+                        <#if post_index==0><font><b>楼主</b></font><#else><font ><b>${post_index}楼</b></font></#if>
+                        <a class="nav" href="#top"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/icon_up.gif"/></a>
+                        </div>
+						</td>
+					</tr>
+
+					<tr>
+						<!-- Username -->
+						<#assign rowspan = "3"/>
+						<#assign useSignature = (user.attachSignatureEnabled && user.signature?exists && user.signature?length > 0 && post.isSignatureEnabled())/>
+
+						<#if useSignature>
+							<#assign rowspan = "3"/>
+						<#else>
+							<#assign rowspan = "2"/>
+						</#if>
+
+						<td class="${rowColor} userinfo border_r" valign="top" align="left" rowspan="${rowspan}">
+							<#include "post_show_user_inc.htm"/>
+                            <#include "post_show_user_profile_inc.htm"/>	
+						</td>
+		
+						<!-- Message -->
+						<td class="${rowColor} message" valign="top" id="post_text_${post.id}">
+                        <div class="date">
+                        <#assign startStr = ""/>
+                        <#if (start > 0)><#assign startStr = "${start}/"/></#if>
+                        <a href="${JForumContext.encodeURL("/posts/list/${startStr}${post.topicId}")}#${post.id}">
+                        <img src="${contextPath}/themes/bbs/templates/${templateName}/images/icon_minipost_new.gif" alt="[Post New]" />${post.formatedTime}</a>
+                        <#if logged>
+                        <#if karmaEnabled>
+                            <script type="text/javascript">writeStars(${post.karma.karmaPoints}, ${post.id});</script>
+                        </#if>
+                        
+                        
+                        <#if (canEditCurrentMessage) && !session.deleted>
+                            <a href="${JForumContext.encodeURL("/jforum${extension}?module=${moduleName}&amp;action=edit&amp;post_id=${post.id}&amp;start=${start}","")}" rel="nofollow" class="icon_edit"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/edit.png" alt="编辑" />编辑</a>  
+                        </#if>
+                        <#if canRemove && !session.deleted>
+                            <a href="${JForumContext.encodeURL("/jforum${extension}?module=${moduleName}&amp;action=delete&amp;post_id=${post.id}&amp;start=${start}","")}" id="delete${post.id}" ><img src="${contextPath}/themes/bbs/templates/${templateName}/images/icon_delete.png" alt="删除"/>删除</a>  
+                        </#if>
+                        </#if>
+                        </div>
+							<span class="postbody">
+								<#if canEditCurrentMessage>
+									<#assign canEditSomeMessage = true/>
+									<div class="edit_area" id="${post.id}">
+                                    ${post.text}
+                                
+                                    </div>
+								<#else>
+									${post.text}
+								</#if>
+							</span>
+
+							<!-- Attachments -->
+							<#if post.hasAttachments() && (canDownloadAttachments || attachmentsEnabled)>
+								<#assign attachments = am.getAttachments(post.id, post.forumId)/>
+
+								<#include "post_show_attachments_inc.htm"/>
+							</#if>
+
+							<#if (post.editCount > 0) && post.editTime?exists>
+								<#if post.editCount == 1>
+									<#assign editCountMessage = "PostShow.editCountSingle"/>
+								<#else>
+									<#assign editCountMessage = "PostShow.editCountMany"/>
+								</#if>
+								
+								<p><i><span class="gensmall">${I18n.getMessage(editCountMessage, [post.editCount, post.editTime?datetime?string])}</span></i></p>
+                                
+							</#if>
+                                   
+                                 
+						</td>
+					</tr>
+
+					<#if useSignature>
+						<tr>
+							<td colspan="2" class="${rowColor}" width="100%" height="28"><hr/><span class="gensmall">${user.signature}</span></td>
+						</tr>
+					</#if>
+		
+					<tr> 
+						<td class="${rowColor} topic_reply" valign="bottom" nowrap="nowrap" height="35" width="100%">
+					 	<#if logged>
+        					<!--//话题回复-->
+        					<#--topic.status:${topic.status} ${STATUS_LOCKED}  readonly:<#if readonly>1<#else>0</#if> replyOnly:<#if replyOnly>1<#else>0</#if> replyWithoutModeration：<#if replyWithoutModeration>1<#else>0</#if>-->
+							<#if topic.status = STATUS_LOCKED || replyWithoutModeration  || session.deleted>
+		 					<a href="#"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/topic_reply.png" alt="无权限回复" />无权限回复</a>
+		 					<#elseif topic.status != STATUS_LOCKED && !readonly && !replyWithoutModeration>
+        					<!--话题引用--> 
+		 					<a href="${JForumContext.encodeURL("/posts/quote/${start}/${post.id}")}" rel="nofollow" class="icon_quote"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/quote.png" alt="话题引用" />话题引用</a>
+       						<!--话题回复-->
+        					<a href="${JForumContext.encodeURL("/posts/reply/${start}/${topic.id}")}" ><img src="${contextPath}/themes/bbs/templates/${templateName}/images/topic_reply.png" alt="话题回复" />话题回复</a>
+        					<#elseif topic.status != STATUS_LOCKED && readonly && !replyWithoutModeration>
+        					<!--话题回复-->
+        					<a href="${JForumContext.encodeURL("/posts/reply/${start}/${topic.id}")}" ><img src="${contextPath}/themes/bbs/templates/${templateName}/images/topic_reply.png" alt="话题回复" />话题回复</a>
+        					</#if>
+						<#elseif !logged>
+		 				<a href="/user/login.html" ><img src="${contextPath}/themes/bbs/templates/${templateName}/images/topic_reply.png" alt="登录回复" />登录回复</a>
+         				</#if>	
+						</td>
+					</tr>
+				</#list>
+				<!-- END OF POST LISTING -->
+		
+				
+			</table>
+		
+			<table cellspacing="2" cellpadding="2" width="100%" align="center" border="0">
+				<tr>
+			<td align="left">	<@presentation.forumsComboTable/>
+					</td>
+					
+			
+					<td valign="middle" align="right">${paginationData}</td>
+				</tr>
+			</table>
+			
+			<table width="100%" align="center">
+				
+				<#if (logged || anonymousPosts) && topic.status != STATUS_LOCKED && !readonly>
+					<tr>
+						<td colspan="3">
+					<script type="text/javascript">
+					function newCaptcha()
+					{
+						document.getElementById("captcha_img").src = "${contextPath}/jforum${extension}?module=captcha&action=generate&timestamp=" + new Date().getTime();
+					}
+					
+					function activateQuickReply()
+					{
+						$("#captcha_img").attr("src", "${JForumContext.encodeURL("/captcha/generate/${timestamp}")}");
+						$("#quickReply").slideToggle('slow', function() {
+							window.scrollBy(0, 1000);
+						});
+					}
+
+					function validatePostForm(f)
+					{
+						if (f.message.value.replace(/^\s*|\s*$/g, "").length == 0) {
+							alert("${I18n.getMessage("PostForm.textEmpty")}");
+							f.message.focus();
+						
+							return false;
+						}
+					
+						$("#icon_saving").css("display", "inline");
+						$("#btnSubmit").attr("disabled", "disabled").val("${I18n.getMessage("PostForm.saving")}...");
+					
+						return true;
+					}
+					
+					</script>
+						<form action="${JForumContext.encodeURL("/jforum")}" method="post" name="post" id="post" onsubmit="return validatePostForm(this);" enctype="multipart/form-data" accept-charset="${encoding}">
+						<input type="hidden" name="action" value="insertSave" />
+						<input type="hidden" name="module" value="posts" />
+						<input type="hidden" name="forum_id" value="${forum.id}" />
+						<input type="hidden" name="start" value="${start?default("")}" />
+						<input type="hidden" name="topic_id" value="${topic.id}" />
+						<input type="hidden" name="disable_html" value="1" />
+						<input type="hidden" name="quick" value="1" />
+	
+						
+						
+						<p align="center" style="display: none;" id="quickReply">
+							<table>
+								<tr>
+									<td align="center">
+										<textarea class="post" style="width: 350px" name="message" rows="10" cols="35" onkeyup="enterText(this);" onclick="enterText(this);" onselect="enterText(this);" onblur="leaveText();"></textarea>
+									</td>
+								</tr>
+								<#if needCaptcha?default(false)>
+									<tr>
+										<td>
+											<img border="0" align="middle" id="captcha_img"/>
+											<br />
+											<span class="gensmall">${I18n.getMessage("User.captchaResponse")}</span>
+											<input type="text" class="post" style="width: 80px; font-weight: bold;" maxlength="25" name="captcha_anwser" /> 
+											<br />
+											<span class="gensmall">${I18n.getMessage("User.hardCaptchaPart1")} <a href="#newCaptcha" onClick="newCaptcha()"><b>${I18n.getMessage("User.hardCaptchaPart2")}</b></a></span>
+										</td>
+									</tr>
+								</#if>
+								<tr>
+									<td align="right" valign="center">
+										<input type="submit" id="btnSubmit" value="${I18n.getMessage("PostForm.submit")}" class="mainoption" />
+										<img src="${contextPath}/images/transp.gif" id="icon_saving">
+									</td>
+								</tr>
+							</table>
+						</p>
+					</form>
+					
+					<form action="${JForumContext.encodeURL("/jforum")}" method="post" name="post" id="post" onsubmit="return validatePostForm(this);" enctype="multipart/form-data" accept-charset="${encoding}">
+						<input type="hidden" name="action" value="insertSave" />
+						<input type="hidden" name="module" value="posts" />
+						<input type="hidden" name="forum_id" value="${forum.id}" />
+						<input type="hidden" name="start" value="${start?default("")}" />
+						<input type="hidden" name="topic_id" value="${topic.id}" />
+						<input type="hidden" name="disable_html" value="1" />
+						<input type="hidden" name="quick" value="1" />
+						<p align="center" style="display: none;" id="quickReply">
+							<table>
+								<tr>
+									<td align="center">
+										<textarea class="post" style="width: 350px" name="message" rows="10" cols="35" onkeyup="enterText(this);" onclick="enterText(this);" onselect="enterText(this);" onblur="leaveText();"></textarea>
+									</td>
+								</tr>
+								<#if needCaptcha?default(false)>
+									<tr>
+										<td>
+											<img border="0" align="middle" id="captcha_img"/>
+											<br />
+											<span class="gensmall">${I18n.getMessage("User.captchaResponse")}</span>
+											<input type="text" class="post" style="width: 80px; font-weight: bold;" maxlength="25" name="captcha_anwser" /> 
+											<br />
+											<span class="gensmall">${I18n.getMessage("User.hardCaptchaPart1")} <a href="#newCaptcha" onClick="newCaptcha()"><b>${I18n.getMessage("User.hardCaptchaPart2")}</b></a></span>
+										</td>
+									</tr>
+								</#if>
+								<tr>
+									<td align="right" valign="center">
+										<input type="submit" id="btnSubmit" value="${I18n.getMessage("PostForm.submit")}" class="mainoption" />
+										<img src="${contextPath}/themes/bbs/images/transp.gif" id="icon_saving">
+									</td>
+								</tr>
+							</table>
+						</p>
+					</form>
+					</p>
+
+						</td>
+					</tr>
+				</#if>
+				
+				
+				<#if isModerator || isAdmin>
+					<form action="${JForumContext.encodeURL("/jforum")}" method="post" name="formModeration" id="formModeration">
+					<input type="hidden" name="action" value="doModeration" />
+					<input type="hidden" name="module" value="moderation" />
+					<input type="hidden" name="returnUrl" value="${JForumContext.encodeURL("/${moduleName}/${action}/${start}/${topic.id}")}" />
+					<input type="hidden" name="forum_id" value="${topic.forumId}" />
+					<input type="hidden" name="topic_id" value="${topic.id}" />
+					<input type="hidden" name="log_type" value="0"/>
+					<input type="hidden" name="log_description">
+					<input type="hidden" id="moderationTodo" />
+					<#if logged && sso>
+					<tr>
+						<td align="left" colspan="3">
+							<@presentation.moderationImages/>
+						</td>
+					</tr>
+					</#if>
+					</form>
+				</#if>
+			</table>
+		</td>
+	</tr>
+</table>
+
+<a name="quick"></a>
+
+<script type="text/javascript">
+$(document).ready(function() {
+	limitURLSize();
+
+	<#if moderatorCanEdit || canEditSomeMessage>
+		$(".edit_area").editable("${contextPath}/jforum${extension}?module=ajax&action=savePost", {
+			submit: '${I18n.getMessage("Update")}',
+			cancel: '${I18n.getMessage("cancel")}',
+			type: 'textarea',
+			tooltip: '${I18n.getMessage("PostShow.doubleClickEdit")}',
+			rows: 15,
+			width: '100%',
+			event: 'dblclick',
+			indicator: "<img src='${contextPath}/bbs/templates/${templateName}/images/indicator.gif'>",
+			postload: '${contextPath}/jforum${extension}?module=ajax&action=loadPostContents',
+			cssclass: 'inlineedit',
+			loadtext: '${I18n.getMessage("PostShow.loading")}...',
+			beforesubmit: function(submitdata) { 
+				<#if moderationLoggingEnabled>
+					var message = prompt("${I18n.getMessage("ModerationLog.changeReason")}");
+
+					if (message == null || message == "") {
+						alert("${I18n.getMessage("ModerationLog.reasonIsEmpty")}");
+						return false;
+					}
+					else {
+						submitdata["log_description"] = message;
+						submitdata["log_type"] = 2;
+					}
+				</#if>
+
+				return true;
+			}
+		}, function(s) {
+			<#if hasCodeBlock>
+				dp.sh.HighlightAll('code');
+			<#else>
+				if (s.indexOf("name=\"code\"") > -1) {
+					document.location.reload(true);
+				}
+			</#if>
+		});
+	</#if>
+});
+</script>
+
+<#include "bottom.htm"/>

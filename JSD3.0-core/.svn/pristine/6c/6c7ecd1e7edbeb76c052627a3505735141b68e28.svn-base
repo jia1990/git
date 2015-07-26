@@ -1,0 +1,67 @@
+package com.ddtkj.p2psys.award.dao.jdbc;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.award.dao.ActivityAwardDao;
+import com.ddtkj.p2psys.award.domain.ActivityAward;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+/**
+ * @描述：活动配置的dao层实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2014年12月12日
+ */
+@Repository("activityAwardDao")
+public class ActivityAwardDaoImpl extends BaseDaoImpl<ActivityAward> implements ActivityAwardDao{
+	@Resource
+	private ActivityAwardDao activityAwardDao;
+	
+	/**
+	 * 活动奖励的添加
+	 * 
+	 * @param award
+	 * @return ActivityAward
+	 */
+	@Override
+	public ActivityAward addActivityAward(ActivityAward award) {
+		return activityAwardDao.save(award) ;
+	}
+	
+	/**
+	 * 查询活动奖励的分页
+	 * 
+	 * @param param
+	 * @return PageDataList<ActivityAward>
+	 */
+	@Override
+	public PageDataList<ActivityAward> getPagelist(QueryParam param) {
+		return this.findAllPageList(param);
+	}
+	
+	/**
+	 * 修改活动奖励
+	 * 
+	 * @param takeWay
+	 * @return ActivityAward
+	 */
+	@Override
+	public ActivityAward updateActivityAward(ActivityAward activityAward) {
+		return this.update(activityAward);
+	}
+	
+	/**
+	 * 根据id查找活动奖励信息
+	 * 
+	 * @param actId
+	 * @return ActivityAward
+	 */
+	@Override
+	public ActivityAward findActivityAwardById(int actId) {
+		return this.find(actId);
+	}
+	
+
+}

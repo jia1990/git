@@ -1,0 +1,229 @@
+package com.ddtkj.p2psys.account.service.impl;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryBalance;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Service("accountService")
+public class AccountServiceImpl implements AccountService{
+	@Resource
+	private AccountDao accountDao;
+	
+
+	@Override
+	public PageDataList<AccountModel> list(AccountModel model) {
+		return accountDao.list(model);
+	}
+
+	public Account findByUser(long userId) {
+		return accountDao.findObjByProperty("user.userId", userId);
+	}
+	@Override
+	public AccountModel getUserCollectionAccount(long userId) throws Exception {
+		AccountModel accountModel = null;
+		/*
+		 * borrowCollectionDao.getCollectionCapitalAndInterest(userId); BorrowCollection borrowCollection =
+		 * borrowCollectionDao.getNewestCollection(userId);
+		 * accountModel.setNewestCollectMoney(borrowCollection.getRepay_account() );
+		 * accountModel.setNewestCollectDate(borrowCollection.getRepay_time());
+		 */
+		return accountModel;
+	}
+
+	public void updateAccount(Account act) {
+		accountDao.update(act);
+	}
+	@Override
+	public void updateAccountCompareResult(String compareResult,long accountId){
+		//accountCompareDao.updateCompareResult(compareResult, accountId);
+		accountDao.updateCompareResult(compareResult, accountId);
+	}
+
+	@Override
+	public PageDataList<AccountModel> getPageDataList(AccountModel accountModel) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		if (StringUtil.isNotBlank(accountModel.getUsername())) {
+			param.addParam("user.userName", Operators.LIKE, accountModel.getUsername());
+		}
+		if (StringUtil.isNotBlank(accountModel.getRealname())) {
+			param.addParam("user.realName", Operators.LIKE, accountModel.getRealname());
+		}
+		param.addPage(accountModel.getPage(), accountModel.getRows());
+//		if (accountModel.getOrder().equals("desc")) {
+//			param.addOrder(OrderType.DESC, accountModel.getSort());
+//		} else {
+//			param.addOrder(OrderType.ASC, accountModel.getSort());
+//		}
+		PageDataList<Account> accountPageDataList = accountDao.findPageList(param);
+		PageDataList<AccountModel> pageDateList_ = new PageDataList<AccountModel>();
+		List<AccountModel> list = new ArrayList<AccountModel>();
+		pageDateList_.setPage(accountPageDataList.getPage());
+		if (accountPageDataList.getList().size() > 0) {
+			for (int i = 0; i < accountPageDataList.getList().size(); i++) {
+				Account account = (Account) accountPageDataList.getList().get(i);
+				AccountModel am = new AccountModel();
+				BeanUtils.copyProperties(account, am);
+				try{
+					am.setUserId(account.getUser().getUserId());
+    				am.setUsername(account.getUser().getUserName());
+    				am.setRealname(account.getUser().getRealName());
+    				list.add(am);
+				}catch(Exception e){
+				    e.printStackTrace();
+				}
+			}
+		}
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+
+	/**
+	 * 查询投资人账户可用余额(总额)
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double getAllUseMoney() {
+		
+		return accountDao.getAllUseMoney();
+	}
+
+	@Override
+	public PageDataList<Account> accountDataList(AccountModel accountModel) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		if (StringUtil.isNotBlank(accountModel.getUsername())) {
+			param.addParam("user.userName", Operators.LIKE, accountModel.getUsername());
+		}
+		if (StringUtil.isNotBlank(accountModel.getRealname())) {
+			param.addParam("user.realName", Operators.LIKE, accountModel.getRealname());
+		}
+		param.addPage(accountModel.getPage(), accountModel.getRows());
+		
+		PageDataList<Account> accountPageDataList = accountDao.findPageList(param);
+		return accountPageDataList;
+	}
+	 //JSDBET-802 wcw 2015-3-12 start
+	@Override
+	public void accountCompare(long userId)throws Exception{
+		Map<String, Object> compareMap =new HashMap<String, Object>();
+		//Account account=accountDao.find(userId);
+		Account account=accountDao.findObjByProperty("user.userId",  userId);
+		AccountModel am=new AccountModel();
+		compareMap=am.accountCompare(account);
+		boolean result=(Boolean) compareMap.get("result");
+		String msg= (String) compareMap.get("msg");
+		if(compareMap.size()>0){
+			if(!result){
+				//throw new BussinessException(msg,1);
+				//JSDBET-812 gjh 2015-3-16 start
+    			throw new HandleException(msg,
+    					"本地账户资金和一麻袋对账出错",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_ACCOUNT,
+    					ErrorLogConstant.CODE_ACCOUNT_COMPARE_TPOS,account.getUser(),ErrorLogConstant.MODULE_ACCOUNT,
+    					userId,1);
+    			//JSDBET-812 gjh 2015-3-16 end
+			}
+		}else{
+			//throw new BussinessException(msg,1);
+			//JSDBET-812 gjh 2015-3-16 start
+			throw new HandleException(msg,
+					"本地账户资金和一麻袋对账出错",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_ACCOUNT,
+					ErrorLogConstant.CODE_ACCOUNT_COMPARE_TPOS,account.getUser(),ErrorLogConstant.MODULE_ACCOUNT,
+					userId,1);
+			//JSDBET-812 gjh 2015-3-16 end
+		}
+		
+	}
+	@Override
+	public List<AccountModel> accountList(AccountModel am){
+		List<AccountModel> list=accountDao.accountList(am);
+		return list;
+	}
+	@Override
+	public void accountCompareList(AccountModel model)throws Exception{
+		List<AccountModel> list=accountDao.accountList(model);
+		for(Account account:list){
+			try {
+				String userType=account.getUser().getUserCache().getUserType();
+				YmdQueryBalance  ymdQueryBalance=new YmdQueryBalance();
+				ymdQueryBalance=YmdTPPWay.checkBalance(account.getUser().getUserName());
+				double localhostBalance=0;
+				if("10".equals(userType)){
+					localhostBalance=BigDecimalUtil.add(account.getUsableAccount(),account.getFreezeAccount());
+				}else if("11".equals(userType)||"12".equals(userType)){
+					localhostBalance=BigDecimalUtil.add(account.getBorrowerUsableTotal(),account.getBorrowerFreezeTotal());
+				}
+				double balance=BigDecimalUtil.sub(localhostBalance, NumberUtil.getDouble(ymdQueryBalance.getBalance()));
+				if("00".equals(ymdQueryBalance.getStatus())&&Math.abs(balance)>0.1){
+					//accountCompareDao.updateCompareResult(Account.COMPARE_ERROR, account.getId());
+					accountDao.updateCompareResult(Account.COMPARE_ERROR, account.getUser().getUserId());
+				}else{
+					//accountCompareDao.updateCompareResult(Account.COMPARE_OK, account.getId());
+					accountDao.updateCompareResult(Account.COMPARE_OK, account.getUser().getUserId());
+				}
+			} catch (Exception e) {
+				continue;
+			}
+		}
+		//JSDP-83 wcw 2015-04-29 start
+		list=null;
+		//JSDP-83 wcw 2015-04-29 end
+	}
+	 //JSDBET-802 wcw 2015-3-12 end
+	@Override
+	public void accountCompare(Account account)throws Exception{
+		String userType=account.getUser().getUserCache().getUserType();
+		YmdQueryBalance  ymdQueryBalance=new YmdQueryBalance();
+		ymdQueryBalance=YmdTPPWay.checkBalance(account.getUser().getUserName());
+		double localhostBalance=0;
+		if("10".equals(userType)){
+			localhostBalance=BigDecimalUtil.add(account.getUsableAccount(),account.getFreezeAccount());
+		}else if("11".equals(userType)||"12".equals(userType)){
+			localhostBalance=BigDecimalUtil.add(account.getBorrowerUsableTotal(),account.getBorrowerFreezeTotal());
+		}
+		double balance=BigDecimalUtil.sub(localhostBalance, NumberUtil.getDouble(ymdQueryBalance.getBalance()));
+		if("00".equals(ymdQueryBalance.getStatus())&&Math.abs(balance)>0.1){
+			accountDao.updateCompareResult(Account.COMPARE_ERROR, account.getUser().getUserId());
+		}else{
+			accountDao.updateCompareResult(Account.COMPARE_OK, account.getUser().getUserId());
+		}
+	}
+	@Override
+	public List excelListAccount(AccountModel model) {
+		
+		return accountDao.excelListAccount(model);
+	}
+	//JSDP-169 xingjia 20150529 start
+	@Override
+	public Object[] accountTotal(AccountModel model) {
+		
+		return accountDao.accountTotal(model);
+	}
+	//JSDP-169 xingjia 20150529 end
+}

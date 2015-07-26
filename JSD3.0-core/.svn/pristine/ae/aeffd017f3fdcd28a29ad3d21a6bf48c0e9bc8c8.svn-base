@@ -1,0 +1,187 @@
+package com.rongdu.p2psys.account.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.dao.AccountBankDao;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.account.model.AccountBankModel;
+import com.rongdu.p2psys.account.service.AccountBankService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.dao.DictDao;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+
+@Service("accountBankService")
+public class AccountBankServiceImpl implements AccountBankService {
+
+	@Resource
+	private AccountBankDao accountBankDao;
+	/**
+	 * 用户详细信息dao
+	 */
+	@Resource
+	private UserCacheDao userCacheDao;
+	/**
+	 * 数据字典dao
+	 */
+	@Resource
+	private DictDao dictDao;
+	@Resource
+	private RegionDao regionDao;
+	@Override
+	public List<AccountBank> list(long userId) {
+		return accountBankDao.list(userId);
+	}
+
+	@Override
+	public List<AccountBank> listAll(long userId) {
+		return accountBankDao.listAll(userId);
+	}
+
+	@Override
+	public AccountBank save(AccountBank bank) {
+		/*if (BaseTPPWay.isOpenApi()) {
+			YjfDrawBank yb = yjfDrawBankDao.getYjfDrawBankByBankName(bank.getBank());
+			if (yb != null) {
+				TPPWay dw = TPPFactory.getTPPWay();
+				BankNoQuery bnq = PayModelHelper.bankNoQuery(bank.getCity(), yb.getBankCode());
+				if (StringUtil.isBlank(bnq.getBankLasalle())) {
+					throw new AccountException(" 根据您提供的银行卡所在市区，我们查询不到任何交易银行，" 
+							+ " 请您核对绑定银行卡时选择的省市区 ", 1);
+				}
+				VerifyFacade vf = null;
+			    vf = PayModelHelper.verifyFacade(bank.getBankNo(), yb, bank.getUser(), bank.getUser());
+			    //校验银行卡的有效性失败
+			    if (!"VS".equals(vf.getVerifyStatus())) {
+			    	throw new AccountException("绑卡校验信息失败：" + vf.getResultMessage(), 1);
+			    }  
+				boolean success = dw.bindBank(bank, bank.getUser(), yb.getBankCode());
+				if (!success) {
+					throw new AccountException("绑卡出现异常，请联系客服处理！", 1);
+				}
+				bank.setBank(yb.getBankName());
+				bank.setYjfDrawBank(yb);
+			} else {
+				throw new AccountException("绑卡出现异常，请联系客服处理！", 1);
+			}
+		}*/
+		
+		bank.setAddTime(new Date());
+		bank.setAddIp(Global.getIP());
+		bank.setStatus(1);
+		return accountBankDao.save(bank);
+	}
+	@Override
+    public AccountBank update(AccountBank bank) {
+	    return accountBankDao.update(bank);
+	}
+
+	@Override
+	public void disable(long userId, long id) {
+		/*if (BaseTPPWay.isOpenApi()) {
+			UserCache uc = userCacheDao.findByUserId(userId);
+			AccountBank ab = accountBankDao.find(id);
+			TPPWay dw = TPPFactory.getTPPWay();
+			boolean success = dw.bankBindRemove(ab, uc.getUser());
+			if (!success) {
+				throw new AccountException("解绑银行卡失败", 1);
+			}
+		}*/
+		accountBankDao.disable(userId, id);
+	}
+
+	@Override
+	public int count(long userId) {
+		return accountBankDao.count(userId);
+	}
+
+	@Override
+	public AccountBank find(long userId, String account) {
+		AccountBank ab=accountBankDao.find(userId, account);
+		return ab;
+	}
+
+	@Override
+	public PageDataList<AccountBankModel> accountBankList(AccountBankModel model, int pageNumber, int pageSize) {
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber, pageSize);
+		if (model != null && !StringUtil.isBlank(model.getUserName())) {
+			param.addParam("user.userName", Operators.LIKE, model.getUserName());
+		}
+		if (model != null && !StringUtil.isBlank(model.getBankNo())) {
+			param.addParam("bankNo", Operators.LIKE, model.getBankNo());
+		}
+		if (model != null) {
+			if(model.getStatus() != -1){
+				param.addParam("status", model.getStatus());
+			}
+			param.addParam("user.isLocked",Operators.NOTEQ, "FF");
+		}
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<AccountBank> pList = accountBankDao.findPageList(param);
+		PageDataList<AccountBankModel> modelList = new PageDataList<AccountBankModel>();
+		List<AccountBankModel> list = new ArrayList<AccountBankModel>();
+		modelList.setPage(pList.getPage());
+		if (pList.getList().size() > 0) {
+			for (int i = 0; i < pList.getList().size(); i++) {
+				AccountBank accountBank = (AccountBank) pList.getList().get(i);
+				AccountBankModel abm = AccountBankModel.instance(accountBank);
+				Region regionProv = regionDao.findById(StringUtil.toLong(abm.getProvince()));
+				Region regionCity = regionDao.findById(StringUtil.toLong(abm.getCity()));
+				Region regionArea = regionDao.findById(StringUtil.toLong(abm.getArea()));
+				Dict dictBank = dictDao.find("account_bank", abm.getBank());
+				abm.setUserName(accountBank.getUser().getUserName());
+				if(dictBank != null){
+					abm.setBankName(dictBank.getName());
+				}else{
+					abm.setBankName(abm.getBank());
+				}
+//				abm.setProvinceStr(accountBank.getProvince());
+//				abm.setCityStr(accountBank.getCity());
+//				abm.setAreaStr(accountBank.getArea());
+				if(regionProv != null){
+					abm.setProvinceStr(regionProv.getName());
+				}
+				if(regionCity != null){
+					abm.setCityStr(regionCity.getName());
+				}
+				if(regionArea != null){
+					abm.setAreaStr(regionArea.getName());
+				}
+				abm.setBankRealName(accountBank.getUser().getRealName());
+				abm.setMobilePhone(accountBank.getUser().getMobilePhone());
+				list.add(abm);
+			}
+		}
+		modelList.setList(list);
+		return modelList;
+	}
+	
+	/*@Override
+	public List<YjfDrawBank> getYjfDrawBankBySearchParam(QueryParam param) {
+		return yjfDrawBankDao.findByCriteria(param);
+	}*/
+	@Override
+	public AccountBank find(long id) {
+		// TODO Auto-generated method stub
+		return accountBankDao.find(AccountBank.class,id);
+	}
+
+	@Override
+	public List excelListBankCard(AccountBankModel model) {
+		
+		return accountBankDao.excelListBankCard(model);
+	}
+}

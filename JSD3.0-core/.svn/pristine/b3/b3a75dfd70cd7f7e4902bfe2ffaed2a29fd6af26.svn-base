@@ -1,0 +1,79 @@
+package com.ddtkj.p2psys.goods.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.goods.dao.GoodsPicDao;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.goods.model.GoodsPicModel;
+import com.ddtkj.p2psys.goods.service.GoodsPicService;
+import com.rongdu.common.model.jpa.QueryParam;
+@Service("ddtkjGoodsPicSerivce")
+public class GoodsPicServiceImpl implements GoodsPicService{
+
+
+    @Resource
+    private GoodsPicDao goodsPicDao;
+    
+    
+    @Override
+    public DdtkjGoodsPic addGoodsPic(DdtkjGoodsPic pic) {
+        return goodsPicDao.save(pic);
+    }
+
+    @Override
+    public void deleteGoodsPic(long id) {
+        goodsPicDao.delete(id);
+    }
+
+    @Override
+    public List<DdtkjGoodsPic> getGoodsPicByGoodsId(long goodsId) {
+        return goodsPicDao.findByProperty("goodsId", goodsId);
+    }
+    /*
+    @Override
+    public List<DdtkjGoodsPic> findByGoods(DdtkjGoods goods) {
+    //public List<DdtkjGoodsPic> findByGoods(GoodsModel model) {
+        QueryParam param = QueryParam.getInstance();
+        //param.addParam("goods", goods);
+        //param.addParam(key, value);
+        //param.addParam("goods.id", goods.getId());
+       // param.addParam("goods", model.getGoods());
+        List<DdtkjGoodsPic> list = new ArrayList<DdtkjGoodsPic>();
+         list = goodsPicDao.findByCriteria(param);
+        
+        
+        for(int i=0;i<list.size();i++){
+        	
+        	DdtkjGoodsPic ddtkjGoodsPic = new DdtkjGoodsPic();
+        	
+        	ddtkjGoodsPic = goodsPicDao.find(list.get(i).getGoodsId());
+        	//ddtkjGoodsPic = goodsPicDao.find(list.get(i).getGoods().getId());
+        	if(null != ddtkjGoodsPic){
+        		list.add(ddtkjGoodsPic);
+        	}
+        }
+        
+       // list = (List<DdtkjGoodsPic>) goodsPicDao.find(goods.getId());
+        list = goodsPicDao.getGoodsPic(goods.getId());
+        
+        //list.get(0).getGoodsId()
+        
+        
+        return list;
+    }
+*/
+    /*
+	@Override
+	public List<GoodsPicModel> findGoodsPicByGoodsId(GoodsModel model) {
+		// TODO Auto-generated method stub
+		return goodsPicDao.findGoodsPicByGoodsId(model);
+	}
+*/
+}

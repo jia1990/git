@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>认证查询</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  400;
+	var winHeight = 450;
+	
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'userIdentifyList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'userId',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'userId',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'userId', title: '编号', width: 50, checkbox : false},
+			{ field: 'userName', title: '用户名', width: 100, checkbox : false},
+			{ field: 'realName', title: '真实姓名', width: 100, checkbox : false},
+			{ field: 'emailStatus', title: '邮箱认证状态', width: 100, checkbox : false,
+				formatter: function(value,row,index){
+					if(value==80){
+						return "未认证";
+					} else if(value==81){
+						return "认证成功";
+					} else{
+						return "";
+					}
+				}
+			},
+			
+			
+			{ field: 'mobilePhoneStatus', title: '手机认证状态', width: 100, checkbox : false,
+				formatter: function(value,row,index){
+					if(value==85){
+						return "未认证";
+					} else if(value==86){
+						return "认证成功";
+					}else if(value==87){
+						return "未认证通过";
+					}else{
+						return "";
+					}
+				}
+			},
+			{ field: 'mobilePhoneVerifyTime', title: '手机认证审核时间', width: 160, sortable:false,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'realNameStatus', title: '实名认证状态', width: 100, checkbox : false,
+				formatter: function(value,row,index){
+					if(value==82){
+						return "未认证";
+					} else if(value==83){
+						return "认证成功";
+					} else if(value==88){
+						return "认证待审核";
+					} else if(value==84){
+						return "认证未通过";
+					}else{
+						return "";
+					}
+				}
+			},
+			{ field: 'realNameVerifyTime', title: '实名认证审核时间', width: 160, sortable:false,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			}
+			] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+
+			}
+		});
+	});
+	//用户认证查询管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/user/user/userIdentify/userIdentifyExcel.html";
+		var userName = $("#userName").val();
+		var realName = $("#realName").val();
+		var emailStatus = $("#emailStatus").val();
+		var mobilePhoneStatus = $("#mobilePhoneStatus").val();
+		var realNameStatus = $("#realNameStatus").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		
+		
+		
+		
+		var sou = "?userName=" + userName +"&realName=" + realName+ "&emailStatus=" + emailStatus + "&mobilePhoneStatus=" + mobilePhoneStatus+ "&realNameStatus=" + realNameStatus+ "&startTime=" + startTime+ "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>真实姓名：<input type="text" name="realName" id="realName" autocomplete="off"/></li>
+					<li>邮箱状态：
+		            	<select name="emailStatus" id="emailStatus" class="type" style="width:100px;">
+							<option value="" selected="selected">全部</option>
+							<option value="80">未认证</option>
+							<option value="81">认证成功</option>
+						</select>
+					</li>
+					<li>手机状态：
+		            	<select name="mobilePhoneStatus" id="mobilePhoneStatus" class="type" style="width:100px;">
+							<option value="" selected="selected">全部</option>
+							<option value="85">未认证</option>
+							<option value="86">认证成功</option>
+							<option value="87">未认证通过</option>
+						</select>
+					</li>
+					<li>实名状态：
+		            	<select name="realNameStatus" id="realNameStatus" class="type" style="width:100px;">
+							<option value="" selected="selected">全部</option>
+							<option value="82">未认证</option>
+							<option value="83">认证成功</option>
+							<option value="88">认证待审核</option>
+							<option value="84">认证未通过</option>
+						</select>
+					</li>
+					<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+		<div id="toolbar" style="display: none;">
+		        <@secAuthorizeUrl value='/user/userIdentifyExcel.html'>
+		            <a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		        </@secAuthorizeUrl>
+        </div>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

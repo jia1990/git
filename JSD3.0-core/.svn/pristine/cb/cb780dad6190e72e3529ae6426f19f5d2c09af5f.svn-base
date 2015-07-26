@@ -1,0 +1,168 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.worker;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransferDetails;
+import com.ddtkj.p2psys.transfer.dao.AccountTransferDao;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com  JSDBET-943
+ * @创建时间：2015年4月14日 
+ */
+public class BaseTransferWorker implements TransferWorker{
+	
+	AccountTransferModel atm;
+	AccountTransfer at;
+	//JSDP-171 xingjia 20150605 start
+	AccountRechargeModel arm;
+	AccountRecharge recharge;
+	//JSDP-171 xingjia 20150605 end
+	
+	//JSDP-184 xingjia 20150623 start
+	RpActivityProduceModel rpm;
+	RpActivityProduce rp;
+	//JSDP-184 xingjia 20150623 end
+	/**
+	 * 
+	 */
+	public BaseTransferWorker(AccountTransferModel atm) {
+		this.atm=atm;
+	}
+	
+	public BaseTransferWorker(AccountTransferModel atm,AccountTransfer ac){
+		this.atm = atm;
+		this.at = ac;
+	}
+	//JSDP-171 xingjia 20150605 start
+	public BaseTransferWorker(AccountRechargeModel arm,AccountRecharge recharge){
+		this.arm = arm;
+		this.recharge =recharge;
+	}
+	//JSDP-171 xingjia 20150605 end
+
+	
+	//JSDP-171 xingjia 20150605 start
+	public BaseTransferWorker(RpActivityProduceModel rpm,RpActivityProduce rp){
+		this.rpm = rpm;
+		this.rp =rp;
+	}
+	//JSDP-171 xingjia 20150605 end
+		
+		
+	@Override
+	public void transfer() {
+		//JSDP-55 gjh 2015-04-21 start
+		User newUser=null;
+		User newPopUser=null;
+		AccountTransferDao accountTransferDao = (AccountTransferDao) BeanUtil.getBean("accountTransferDao");
+		UserDao userDao = (UserDao) BeanUtil.getBean("userDao");
+		if(StringUtil.isNotBlank(atm.getUserName())){
+			newUser=userDao.getUserByUserName(atm.getUserName());
+		}
+		if(StringUtil.isNotBlank(atm.getPopUserName())){
+			newPopUser=userDao.getUserByUserName(atm.getPopUserName());
+		}
+		AccountTransfer accountTransfer = this.at;
+		
+		if(atm!=null&&StringUtil.isNotBlank(atm.getTransferNo())){
+			AccountTransfer at=accountTransferDao.findObjByProperty("transferNo", atm.getTransferNo());
+			//JSDP-55 gjh 2015-5-21 start
+			if(at==null || atm.getMend() == 1 || (AccountTransfer.ACCOUNT_TRANSFER_APPLY.equals(at.getTransferStatus()))){//只有没有订单和初审的情况才会进入
+				//JSDP-55 gjh 2015-5-21 end
+				at=accountTransferDao.save(accountTransfer);//转账记录添加
+				YmdQuery ymdQuery=new YmdQuery();
+				ymdQuery.setOutTradeNo(atm.getTransferNo());
+				ymdQuery.setMode("trade");
+				YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+				try {
+					ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+					List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+					if(queryDetaillist.size()<1){
+						//处理汇潮第三方转账
+						YmdTransfer ymdTransfer = new  YmdTransfer();
+						ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+						ymdTransfer.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));
+						ymdTransfer.setTradeType(AccountTradeConstant.TRADE_YMD_TRADE);
+						YmdTransferDetails ymdTransferDetails=new YmdTransferDetails();
+						ymdTransferDetails.setAmount(BigDecimalUtil.decimal(atm.getTransferAmount(),2)+"");
+						//JSDP-55 gjh 2015-5-21 start
+						if(newUser == null){
+							if(atm.getUserName().equals(Global.getValue("ymd_merchant_id"))){
+								ymdTransferDetails.setInName(ymdTransfer.getNumberId()); //收款人：平台
+							}else{
+								throw new BussinessException("转出用户有误", 1);
+							}
+						}else{
+							ymdTransferDetails.setInName(newUser.getUserName()); //收款人 :用户（任意用户）
+						}
+						//JSDP-55 gjh 2015-5-21 end
+						if(newPopUser == null){
+							if(atm.getPopUserName().equals(Global.getValue("ymd_merchant_id"))){
+								ymdTransferDetails.setOutName(ymdTransfer.getNumberId()); //付款人：平台
+							}else{
+								throw new BussinessException("转出用户有误", 1);
+							}
+						}else{
+							ymdTransferDetails.setOutName(newPopUser.getUserName()); //付款人：用户（任意用户）
+						}
+						ymdTransfer=YmdTPPWay.transfer(ymdTransfer.getTradeType(), ymdTransfer.getTradeNo(), atm.getTransferNo(), ymdTransferDetails.getAmount(), ymdTransferDetails.getOutName(), ymdTransferDetails.getInName());
+						if("0000".equals(ymdTransfer.getErrCode())){
+							/*//处理本地3.0账户资金
+						map.put("returnCapitalMoney", accountTransfer.getTransferAmount());
+						Global.setTransfer("transferAmount", accountTransfer.getTransferAmount());
+						Global.setTransfer("transferNo", accountTransfer.getTransferNo());
+				    	AccountTransferExecuter atExecuter = (AccountTransferExecuter) ExecuterHelper.doExecuter("accountTransferExecuter");
+				    	atExecuter.execute(map, newUser);*/
+							//处理汇潮转账状态
+							at.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_SUCCESS);
+							accountTransferDao.update(at);
+						}else{
+							at.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_FAIL);
+							accountTransferDao.update(at);
+							throw new BussinessException(ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+						}
+					}else{
+						throw new BussinessException("转账订单号重复", 1);
+					}
+				} catch (Exception e) {
+				/*	at.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_FAIL);
+					accountTransferDao.update(at);*/
+					throw new BussinessException(e.getMessage(), 1);
+				}
+			}else{
+				throw new BussinessException("转账订单号重复", 1);
+			}
+		}else{
+			throw new BussinessException("请求参数异常", 1);
+		}
+		//JSDP-55 gjh 2015-04-21 end
+	}
+
+	
+	
+	
+}

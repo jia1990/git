@@ -1,0 +1,129 @@
+package com.ddtkj.p2psys.subbranch.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.subbranch.dao.BranchDao;
+import com.ddtkj.p2psys.subbranch.domain.Branch;
+import com.ddtkj.p2psys.subbranch.model.BranchModel;
+import com.ddtkj.p2psys.subbranch.service.BranchService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+
+/**
+ * @描述：分店管理service实现层
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+@Service("branchService")
+public class BranchServiceImpl implements BranchService {
+
+	
+	@Resource
+	private BranchDao branchDao;
+	@Resource
+	private RegionDao regionDao;
+	
+	@Override
+	public PageDataList<BranchModel> pageDataList(BranchModel model) {
+		
+/*		QueryParam param = QueryParam.getInstance();
+		if(StringUtil.isNotBlank(model.getIsDelete())){
+			if(model.getIsDelete().equals("Y")){
+				param.addParam("isDelete", true);
+			}else if(model.getIsDelete().equals("N")){
+				param.addParam("isDelete", false);
+			}
+		}else{
+			param.addParam("isDelete", false);
+		}
+		if(StringUtil.isNotBlank(model.getBranchName())){
+			param.addParam("name", Operators.LIKE, model.getBranchName());
+		}
+		if(StringUtil.isNotBlank(model.getDetail())){
+			param.addParam("detail", Operators.LIKE, model.getDetail());
+		}
+		PageDataList<Branch> pageDataList = branchDao.findPageList(param);
+		
+		List<Branch> branchList = pageDataList.getList();*/
+		PageDataList<BranchModel> pageDataModelList = branchDao.pageDataList(model);
+		/*List<BranchModel> branchModelList = new ArrayList<BranchModel>();
+		for(int i =0;i<branchList.size();i++){
+			BranchModel bm = BranchModel.instance(branchList.get(i));
+			
+			
+			Region regionProv = regionDao.findById(StringUtil.toLong(bm.getProvince()));
+			Region regionCity = regionDao.findById(StringUtil.toLong(bm.getCity()));
+			Region regionArea = regionDao.findById(StringUtil.toLong(bm.getArea()));
+			if(regionProv != null){
+				bm.setProvinceStr(regionProv.getName());
+			}
+			if(regionCity != null){
+				bm.setCityStr(regionCity.getName());
+			}
+			if(regionArea != null){
+				bm.setAreaStr(regionArea.getName());
+			}
+			if(bm.isDelete()){
+				bm.setIsDelete("Y");
+			}else{
+				bm.setIsDelete("N");
+			}
+			branchModelList.add(bm);
+		}
+		pageDataModelList.setPage(pageDataList.getPage());
+		pageDataModelList.setList(branchModelList);*/
+		return pageDataModelList;
+	}
+
+	@Override
+	public Branch findBranchById(long id) {
+		
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("id", id);
+		Branch branch = branchDao.findByCriteriaForUnique(param);
+		return branch;
+	}
+
+	@Override
+	public Branch saveBranch(Branch branch) {
+		Branch branchs = branchDao.save(branch);
+		if(null != branchs){
+			return branchs;
+		}
+		return null;
+	}
+
+	@Override
+	public List<Branch> findAllBranch() {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("isDelete", false);
+		List<Branch> branchList = branchDao.findByCriteria(param);
+		if(null != branchList && branchList.size()!=0){
+			return branchList;
+		}
+		return null;
+	}
+
+	@Override
+	public Branch delBranchById(long id) {
+		Branch branch = branchDao.find(id);
+		if(null != branch){
+			branch.setDelete(true);
+		}
+		Branch branchUp = branchDao.update(branch);
+		if(null != branchUp){
+			return branchUp;
+		}
+		return null;
+	}
+
+}

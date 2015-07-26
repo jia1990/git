@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>借款人待还记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+    var winWidth =  800;
+    var winHeight = 280;
+    
+    
+    var viewBorrowTitle = "查看借款信息";
+    var viewBorrowUrl = "/modules/loan/borrow/borrowViewPage.html"
+    var viewBorrowWinParmeters = "'{0}','" + viewBorrowTitle + "',800,500,'" + viewBorrowUrl + "'";
+    //JSDP-85 gjh 2015-5-4 start
+    var viewContrastTitle = "对账信息查询";
+    var viewContrastUrl = "/modules/loan/repayment/repaymentContrastPage.html"
+    var viewContrastWinParmeters = "'{0}','" + viewContrastTitle + "',800,500,'" + viewContrastUrl + "'";
+    //JSDP-85 gjh 2015-5-4 end
+    //JSDP-85 gjh 2015-5-6 start
+    var viewRepaymentListTitle = "标的待还列表";
+    var viewRepaymentListUrl = "/modules/loan/repayment/borrowRepaymentPage.html"
+    var viewRepaymentListWinParmeters = "'{0}','" + viewRepaymentListTitle + "',800,500,'" + viewRepaymentListUrl + "'";
+    //JSDP-85 gjh 2015-5-6 end
+    
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'repaymentList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            //sortName : 'id',
+            //sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+			showFooter: true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50, fixed: true,sortable:false },              
+			  { field: 'borrowId', title: '标编号', width: 50, fixed: true,sortable:false,},              
+              { field: 'userName', title: '借款人用户名', width: 150, sortable:false },
+              //{ field: 'borrowName', title: '标名', width: 150, sortable:false },
+              { field: 'borrowNa', title: '标名', width: 150, sortable:false,
+    				formatter:function(value, row, index){
+    					if(row.typeName=='应还金额'){
+    						return '';
+    					}else{
+	    					var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+	    					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+	    					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}" title="预览标">'+row.borrowName+'</a>', row.borrowId, '${theme_dir}/css/images/extjs_icons/link.png');
+    					}
+    					
+    				}
+    		  },
+                
+              //{ field: 'borrowTimeType', title: '类型', width: 150, sortable:false },//0：月标，1：天标
+              //{ field: 'validTime', title: '有效时间', width: 150, sortable:false },
+              { field: 'timeLimit', title: '借款期限', width: 60, sortable:false,
+            	  formatter: function(value,row,index){
+            		  if(row.borrowTimeType == 0){
+            			  return value + "个月";
+            		  }else if(row.borrowTimeType == 1){
+            			  return value + "天";
+            		  }
+                	  
+            	  }
+              },
+              { field: 'contractNo', title: '合同编号', width: 150, sortable:false },
+              { field: 'period', title: '本次期数', width: 50,fixed:true, sortable:false, 
+            	  	formatter: function(value,row,index){
+  						if(row.typeName=='应还金额'){
+  							return '';
+  						}else{
+  							return row.period+1;
+  						}
+				  	}
+              },
+              { field: 'typeName', title: '借款类型', width: 60, sortable:false },
+         
+              { field: 'repaymentAccountStr', title: "预还金额", width: 100, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              { field: 'repaymentYesAccountStr', title: "已还金额", width: 90, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              { field: 'capitalStr', title: "本金", width: 90, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              { field: 'interestStr', title: "利息", width: 90, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              { field: 'forfeitStr', title: "滞纳", width: 80, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              { field: 'repaymentTime', title: '预计还款时间', width: 120, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              },
+              { field: 'repaymentYesTime', title: '实际还款时间', width: 120, sortable:false,formatter: function(value,row,index){
+            	  if(value!=null){	
+            		  return getLocalTime(value,4);
+            	  }else{
+            		  return "-";
+            	  }
+				 }  
+              },
+              { field: 'status', title: '状态', width: 80,fixed: true, sortable:false , 
+					formatter: function(value,row,index){
+  					if (row.status == 0){
+  						return '未还款';
+  					} else if (row.status == 1){
+  						return '已还款';
+  					} else if (row.status == 2){
+  						return '网站垫付';
+  					} else {
+  						return value;
+  					}
+  				}  
+              },
+              { field : 'action',
+                  title : '操作',
+                  width :80,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                  	
+                  		 var str = '';
+                  		 str += "<@secAuthorizeUrl value='/viewBorrowDetailBtn.html' >";
+                         str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewBorrowWinParmeters + ');" src="{1}" title="查看借款信息"/>', row.borrowId, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                         str += "</@secAuthorizeUrl>";
+                         str += '&nbsp;';
+                         //JSDP-85 gjh 2015-5-4 start
+                  		 str += "<@secAuthorizeUrl value='/repaymentContrastBtn.html' >";
+                         str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun(' + viewContrastWinParmeters + ');" src="{1}" title="还款对账"/>', row.id, '${theme_dir}/css/images/extjs_icons/zoom/zoom.png');
+                         str += "</@secAuthorizeUrl>";
+                         str += '&nbsp;';
+                         //JSDP-85 gjh 2015-5-4 end
+                         //JSDP-85 gjh 2015-5-6 start
+                  		 str += "<@secAuthorizeUrl value='/repaymentContrastBtn.html' >";
+                         str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun(' + viewRepaymentListWinParmeters + ');" src="{1}" title="标的待还列表"/>', row.id, '${theme_dir}/css/images/extjs_icons/plugin.png');
+                         str += "</@secAuthorizeUrl>";
+                         str += '&nbsp;';
+                         //JSDP-85 gjh 2015-5-6 end
+       	                return str;
+                  	}
+                     
+              }
+              ] ],
+              toolbar : '#toolbar'
+        });
+    });
+
+  //借款人还款管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/loan/borrow/repaymentListExcel.html";
+		var userName = $("#userName").val();
+		 //JSDP-85 gjh 2015-5-7 start
+		var borrowId = $("#borrowId").val();
+		 //JSDP-85 gjh 2015-5-7 start
+		var borrowName = $("#borrowName").val();
+		var borrowType = $("#borrowType").val();
+		var status = $("#status").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var contractNo = $("#contractNo").val();
+		var sou = "?userName=" + userName + "&status=" + status + "&borrowId=" + borrowId + "&startTime=" + startTime + "&endTime=" + endTime + "&contractNo=" + contractNo+ "&borrowName=" + borrowName+ "&borrowType=" + borrowType;
+		window.location.href = url + sou;
+	}
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>标名：<input type="text" name="borrowName" id="borrowName" autocomplete="off"/></li>
+            		 <!-- JSDP-85 gjh 2015-5-7 start -->
+            		<li>标的编号：<input type="text" name="borrowId" id="borrowId" autocomplete="off"/></li>
+            		<!-- JSDP-85 gjh 2015-5-7 start -->
+            		<li>借款人用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+		            <li>合同号：<input type="text" name="contractNo" id="contractNo" autocomplete="off"/></li>
+		            <li>标种：
+            		
+            			<select name="borrowType" class="type" id="borrowType">
+            				<option value="">全部</option>
+            				<option value="113">能源宝</option>
+            				<option value="115">微商贷</option>
+            				<option value="103">车贷宝</option>
+            				<option value="105">分期宝</option>
+            				<!-- <option value="113">债权</option> -->
+            			
+            			</select>
+            		</li>
+            		<li>状态：
+		                <select name="status" id="status" class="status">
+		                  <option value="99">全部</option>
+		                  <option value="0" selected="selected">未还款</option>
+		                  <option value="1">已还款</option>
+		                  <option value="2">代偿</option>
+		                </select>
+		            </li>
+					<li>预计还款时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+					<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');" ondragstart="return false">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');" ondragstart="return false">清空</a>
+					</li>            		
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+        <div id="toolbar" style="display: none;">
+		        <@secAuthorizeUrl value='/repaymentExcel.html'>
+		            <a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn" ondragstart="return false">导出excel</a>
+		        </@secAuthorizeUrl>
+        </div>
+    </div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

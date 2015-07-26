@@ -1,0 +1,115 @@
+
+package com.ddtkj.p2psys.autotender.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述:自动投标设置查询service
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-12   
+ */
+public interface BorrowAutoSetService {
+	
+	/**
+	 * 关联user查询用户自动投标设置, 分页
+	 * @param  borrowAutoSetModel
+	 * @return PageDataList<BorrowAutoSetModel> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<BorrowAutoSetModel> getBorrowAutoSetPageDataList(BorrowAutoSetModel borrowAutoSetModel);
+	
+	/**
+	 * 更新自动投标设置时间
+	 * @param auto
+	 * @return 
+	 */
+	public void updateAutoTime(BorrowAutoSet autoset);
+
+	/**
+	 * 根据用户id获取自动投标设置信息
+	 * @param user_id
+	 * @return List<BorrowAutoSet>
+	 */
+	List<BorrowAutoSet> getBorrowAutoSetList(long user_id);
+	
+	/**
+	 * 新增自动投标设置
+	 * @param autoset
+	 * @return 
+	 */
+	void addBorrowAutoSet(BorrowAutoSet autoset);
+
+	/**
+	 * 修改自动投标设置
+	 * @param autoset
+	 * @rerutn 
+	 */
+	void modifyBorrowAutoSet(BorrowAutoSet autoset);
+
+	/**
+	 * 根据id获取信息
+	 * @param id
+	 * @return BorrowAutoSet
+	 */
+	BorrowAutoSet getBorrowAutoSetById(long id);
+	
+	/**
+	 * 计算启动时符合条件的设置自动投标的用户数
+	 * @param borrow
+	 * @return
+	 */
+	int countBorrowAutoSet(Borrow borrow);
+
+	/**
+	 * 获取符合条件的设置自动投标的用户列表
+	 * @param borrow
+	 * @return
+	 */
+	List<BorrowAutoSet> getBorrowAutoSetList(Borrow borrow);
+	
+	/**
+	 * 调用存储过程
+	 */
+	void callProcedure(BorrowAutoSet autoset);
+	
+	/**
+	 * 获取用户的自动投标设置信息
+	 * @param  用户userId 
+	 * @return BorrowAutoSet 
+	 * @throws Exception   
+	 */ 
+	BorrowAutoSet findByUserId(long user_id);
+	
+	/**
+	 * 修改用户自动投标设置状态
+	 * @param  自动投标设置对象 
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	void modifyStatus(BorrowAutoSet auto);
+	
+	BorrowAutoSet init(User user);
+	
+	/**
+	 * 更新自动投标设置信息
+	 * @param  auto
+	 * @return BorrowAutoSet 
+	 * @throws Exception   
+	 */ 
+	BorrowAutoSet updateBorrowAutoSet(BorrowAutoSet auto);
+	
+	/**
+	 * 自动投标设置更新
+	 * JSDP-116  sxy
+	 * @param borrowAutoSetModel
+	 * @return
+	 */
+	public List<BorrowAutoSet> excelBorrowAutoSetDatalist(BorrowAutoSetModel borrowAutoSetModel);
+	
+}

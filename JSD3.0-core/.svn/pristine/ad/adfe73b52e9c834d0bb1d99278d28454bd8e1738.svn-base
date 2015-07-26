@@ -1,0 +1,119 @@
+package com.ddtkj.p2psys.account.dao;
+
+import java.util.Date;
+import java.util.List;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月9日 
+ */
+public interface AccountRechargeDao extends BaseDao<AccountRecharge>{
+	/**
+	 * 通过流水号来查询充值对象
+	 */
+	public AccountRecharge getRechargeByTradeno(String tradeNo);
+	/**
+	 * 充值失败后业务逻辑处理
+	 * @param tradeStatus
+	 * @param returnText
+	 * @param tradeNo
+	 * @return
+	 */
+	public int updateRecharge(String tradeStatus, String returnText, String tradeNo);
+	/**
+	 * 充值额度汇总
+	 * @param userId
+	 * @return
+	 */
+	public AccountRechargeModel getRechargeSummary(long userId);
+	
+	/**
+	 *@author 李建云 
+	 * 截止某个时间点用户累计充值
+	 * 
+	 * */
+	public AccountRechargeModel getRechargeSummaryByendTime(Date date,long userId);
+
+	/**
+	 * 查询充值用户数
+	 * @param status
+	 * @return
+	 * @author 孙晓勇
+	 */
+	public int rechargedUserCount(String islocked);
+	
+	/**
+	 * 查询累计充值金额总和
+	 * @param status
+	 * @return
+	 * @author 孙晓勇
+	 */
+	public double rechargedAllMomeny();
+	
+	
+	/**
+	 * @author 李建云
+	 * 今日充值
+	 * @param userId
+	 * @return
+	 */
+	public double getRechargeToday(long userId);
+	
+	/**
+	 * 查询充值数量
+	 * @param tradeStatus
+	 * @return
+	 */
+	public int count(int tradeStatus);
+	
+	/**
+	 * 查询充值用户数——投资人
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int rechargedTenderUserCount();
+	/**
+	 * 充值金额的汇总
+	 * @param model
+	 * @return
+	 */
+	 List<AccountRechargeModel> rechargeTotal(AccountRechargeModel model);
+	
+	/** 
+	 * 
+	 * 明细——查询时间段内充值金额记录
+	 * // JSDPBUG-99 20150505  sxy
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<AccountRechargeModel> rechargeMoneyStatisticsList(AccountRechargeModel model, int pageNumber, int pageSize);
+	
+	/**
+	 * 使用sql进行充值的导出excel
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 xingjia 2015-05-15 start
+	List excelRechargeList(AccountRechargeModel model);
+	//JSDP-116 xingjia 2015-05-15 start
+	
+	/**
+	 * 
+	 * 明细——查询时间段内充值金额记录
+	 * // JSDPBUG-99 20150527  sxy
+	 * @author sxy 2015年0527
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<AccountRecharge> rechargeMoneyStatisticsListForSQL(AccountRechargeModel model, int pageNumber, int pageSize);
+	
+}

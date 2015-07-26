@@ -1,0 +1,69 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+
+
+/**
+ * @描述：JSDP-203
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年4月14日 
+ */
+public class RpActivityBaseWorker implements RpActivityWorker{
+
+	RpActivity rpActivity;
+	RpActivityProduce rpActivityProduce;
+	RpActivityProduceModel model;
+	BorrowTender tender;
+	Account account;
+	double consumeMoney;
+	
+	protected Map<String,Object> map=new HashMap<String, Object>();
+	
+	public RpActivityBaseWorker(RpActivity rpActivity){
+		this.rpActivity = rpActivity;
+	}
+	public RpActivityBaseWorker(RpActivityProduce rpActivityProduce){
+		this.rpActivityProduce = rpActivityProduce;
+	}
+	
+	public RpActivityBaseWorker(RpActivityProduceModel model,RpActivityProduce rpActivityProduce){
+		this.rpActivityProduce = rpActivityProduce;
+		this.model = model;
+	}
+	public RpActivityBaseWorker(RpActivity rpActivity,RpActivityProduce rpActivityProduce){
+		this.rpActivityProduce = rpActivityProduce;
+		this.rpActivity = rpActivity;
+	}
+	public RpActivityBaseWorker(RpActivity rpActivity,RpActivityProduceModel model,RpActivityProduce rpActivityProduce){
+		this.rpActivity = rpActivity;
+		this.model = model;
+		this.rpActivityProduce = rpActivityProduce;
+	}
+	
+	public RpActivityBaseWorker(RpActivity rpActivity,BorrowTender tender){
+		this.rpActivity = rpActivity;
+		this.tender = tender;
+	}
+	public RpActivityBaseWorker(Account account,BorrowTender tender,double consumeMoney){
+		this.account = account;
+		this.tender = tender;
+		this.consumeMoney = consumeMoney;
+	}
+	
+	
+	@Override
+	public void autoHandld() {
+		
+	}
+	
+}

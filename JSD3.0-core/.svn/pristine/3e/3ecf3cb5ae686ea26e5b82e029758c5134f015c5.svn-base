@@ -1,0 +1,35 @@
+package com.ddtkj.p2psys.analysis.dao;
+
+import com.ddtkj.p2psys.analysis.domain.UserSource;
+import com.ddtkj.p2psys.analysis.model.UserSourceModel;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+public interface UserSourceDao extends BaseDao<UserSource>{
+	/**
+	 * 分页查询用户来源
+	 * @param userSorceModel
+	 * @return
+	 */
+	PageDataList<UserSourceModel> pageListUserSource(UserSourceModel userSourceModel);
+	/**
+	 * 根据用户来源查询详细的用户
+	 * @param userSourceModel
+	 * @return
+	 */
+	PageDataList<UserSourceModel> pageListUserBySource(UserSourceModel userSourceModel);
+	
+	/**
+	 * 来源用户所投资金额汇总
+	 * @param userSourceModel
+	 * @return
+	 */
+	PageDataList<UserSourceModel> pageListSourceAndInvest(UserSourceModel userSourceModel);
+	/**
+	 * 根据来源查询详细用户投资金额
+	 * @param userSourceModel
+	 * @return
+	 */
+	PageDataList<UserSourceModel> pageListSourceInvestDetail(UserSourceModel userSourceModel);
+}

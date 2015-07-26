@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<#include "../../include/resource1.html"> 
+<body>
+<#assign nid="my_account"> 
+<#include "../../include/b_header.html">
+<!--header-end-->
+<!--用户中心的主栏目 开始-->
+ <div class="c_deal">
+		<div class="c_deal_content">
+			<#assign mid="m_identify" >
+			<#include "../account_menu.html">
+			<div class="c_deal_record">
+				<div class="c_deal_title c_pay_count">个人资料</div>
+				<div class="c_look_deal">
+					<ul class="c_deal_menu" >
+						<li class="c_menu_this c_header_icon"><a class="c_safe_center">用户头像</a></li>
+					</ul>
+					<div class="c_menu_content">
+						<!-- 用户头像 -->
+						<div class="c_deal_operate c_safe" style="display:block;">
+							<div class="c_upload_header">
+								<embed tplayername="SWF" splayername="SWF"
+									type="application/x-shockwave-flash"
+									src="/plugins/uploadportrait/face.swf" mediawrapchecked="true"
+									pluginspage="http://www.macromedia.com/go/getflashplayer"
+									id="tagcloudflash" name="tagcloudflash" bgcolor="#ffffff"
+									quality="high" wmode="transparent" allowscriptaccess="always"
+									FlashVars="uploadServerUrl=/upfile.jsp?userId=${session_user.userId}&defaultImg=/imgurl.html?userId=${session_user.userId}&size=big"
+									width="500" height="500" />
+							</div>
+						</div>
+						<!-- 安全中心 -->
+						<div class="c_deal_operate c_safe">
+							<ul>
+								<li class="c_num_safety">
+									<dd class="c_user_safe">您的账号安全度<span><#if realNameStatus=='82'>低<#else>高</#if></span></dd>
+									<dd class="c_rate_bar"><i style="width: <#if realNameStatus=='82'>30%<#else>100%</#if>;"></i></dd>
+									<dd class="c_safe_descrip">如果您的邮箱已认证，则账号安全度等级为低。如果您的邮箱和手机都已认证，则账户安全等级为中。如果邮箱、手机和实名都已认证，则您的安全等级为高。</dd>
+								</li>
+								<li class="c_num_safety c_pwd_safety">
+									<dd>登录密码</dd>
+									<dd class="c_safe_descrip">登录账户时需要输入的密码，定期更换密码让您的账户更安全。<a href="javascript:;" hidefocus class="c_safe_update">修改</a></dd>
+								</li>
+							</ul>
+							<div class="c_safe_repwd">
+								<form class="c_safe_form" action="/member/security/modifyPwd.html"  method="post" id="modifyPwdForm">
+									<div class="c_password"><label>原密码：</label><input type="password" name="pwd" id="oldpassword" class="c_old_pwd"><span><i class="iconfont">&#xe614;</i><em class="myc">请输入原密码</em></span></div>
+									<div class="c_password"><label>新密码：</label><input type="password" name="newPwd" id="password" class="c_new_pwd"><span><i class="iconfont">&#xe614;</i><em class="myc">请输入新密码</em></span></div>
+									<div class="c_password"><label>确认密码：</label><input type="password" name="confirmNewPwd" id="confirm_password" class="c_new_repwd"><span><i class="iconfont">&#xe614;</i><em class="myc">请输入确认新密码</em></span></div>
+									<div class="c_pwd_btn"><input type="submit" class="c_safe_confirm" value="确认"></div>
+								</form>
+							</div>
+							<div class="successMsg">
+								
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+	<script>seajs.use("member_borrow/face");</script>
+	<script>seajs.use("/plugins/layer-v1.8.4/skin/layer.css");</script>
+	<script>seajs.use("/plugins/layer-v1.8.4/layer.min");</script>
+	<script> 
+		function avatar_success(){
+			layer.msg('修改头像成功！', 1, 1,function(){
+				location.href = "/member_borrow/info/face.html";
+			});
+		}
+	</script>
+<#include "../../include/b_foot.html"> 
+</body>
+</html>

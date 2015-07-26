@@ -1,0 +1,143 @@
+package com.ddtkj.p2psys.tpp.ymd.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.alibaba.fastjson.annotation.JSONField;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：提现交易记录实体
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月8日
+ */
+@Entity
+@Table(name = "t_jsd_account_draw_history")
+public class AccountDrawHistory implements Serializable {
+
+	private static final long serialVersionUID = -8513363427758430593L;
+
+	@JSONField
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user; // 用户ID
+	private String accountNumber;// 托管方数字账号
+	private String nickName;// 托管方昵称
+	@Id
+	private String tradeNo;// 交易流水号
+	private String tradeType;// 交易类别： 投资人提现-11 借款人提现-12
+	private String tradeInfo;// 交易信息（以JSON格式保存交易信息）
+	private String tradeReturnCode;// 托管方返回交易代码（交易状态） 参考一麻袋资金托管API V1.2.doc
+	private String tradeBankCode;// 银行返回交易代码（交易状态）00 银行处理成功 88 银行处理失败 66
+										// 银行处理处理中
+	private String returnMsg;// 银行转账失败返回信息描述（按照JSON格式的保存托管方本次交易返回的信息）
+	private String sendCleartextInfo;// 提现服务，发往托管平台的签名明文参数信息
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime;// 记录添加时间
+
+	public AccountDrawHistory() {
+		super();
+	}
+
+	public String getAccountNumber() {
+		return accountNumber;
+	}
+
+	public void setAccountNumber(String accountNumber) {
+		this.accountNumber = accountNumber;
+	}
+
+	public String getNickName() {
+		return nickName;
+	}
+
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
+	}
+
+	public String getTradeNo() {
+		return tradeNo;
+	}
+
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+
+	public String getTradeType() {
+		return tradeType;
+	}
+
+	public void setTradeType(String tradeType) {
+		this.tradeType = tradeType;
+	}
+
+	public String getTradeInfo() {
+		return tradeInfo;
+	}
+
+	public void setTradeInfo(String tradeInfo) {
+		this.tradeInfo = tradeInfo;
+	}
+
+	public String getTradeReturnCode() {
+		return tradeReturnCode;
+	}
+
+	public void setTradeReturnCode(String tradeReturnCode) {
+		this.tradeReturnCode = tradeReturnCode;
+	}
+
+
+	public String getReturnMsg() {
+		return returnMsg;
+	}
+
+	public void setReturnMsg(String returnMsg) {
+		this.returnMsg = returnMsg;
+	}
+
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getTradeBankCode() {
+		return tradeBankCode;
+	}
+
+	public void setTradeBankCode(String tradeBankCode) {
+		this.tradeBankCode = tradeBankCode;
+	}
+
+	public String getSendCleartextInfo() {
+		return sendCleartextInfo;
+	}
+
+	public void setSendCleartextInfo(String sendCleartextInfo) {
+		this.sendCleartextInfo = sendCleartextInfo;
+	}
+
+	
+}

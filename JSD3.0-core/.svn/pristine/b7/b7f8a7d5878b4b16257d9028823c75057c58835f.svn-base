@@ -1,0 +1,294 @@
+package com.rongdu.p2psys.core.dao.jdbc;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.dao.ArticleDao;
+import com.rongdu.p2psys.core.domain.Article;
+import com.rongdu.p2psys.core.domain.Site;
+import com.rongdu.p2psys.core.model.ArticleModel;
+
+@Repository("articleDao")
+public class ArticleDaoImpl extends BaseDaoImpl<Article> implements ArticleDao {
+
+	@Override
+	public List<ArticleModel> listBySize(String nid, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("site.nid", nid);
+		param.addParam("status", 1);
+		Date date = new Date();
+		param.addAddFilter("onlineTime", Operators.LT, date, "nolineTime",
+				Operators.GT, date);
+		param.addOrder(OrderType.DESC, "isTop");
+		param.addOrder(OrderType.DESC, "isRecommend");
+		param.addOrder(OrderType.ASC, "sort");
+		param.addOrder(OrderType.DESC, "id");
+		List<Article> list = super.findByCriteria(param, 0, size);
+		List<ArticleModel> mlist = new ArrayList<ArticleModel>();
+		for (Article articleNew : list) {
+			ArticleModel anm = ArticleModel.instance(articleNew);
+			anm.setNid(articleNew.getSite().getNid());
+			anm.setPicPath(Global.getValue("adminurl")
+					+ articleNew.getPicPath());
+			anm.setSite(null);
+			mlist.add(anm);
+		}
+		return mlist;
+	}
+
+	@Override
+	public PageDataList<ArticleModel> list(String nid, int page) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("site.nid", nid);
+		param.addParam("status", 1);
+		param.addOrder(OrderType.DESC, "isTop");
+		param.addOrder(OrderType.DESC, "isRecommend");
+		param.addOrder(OrderType.ASC, "sort");
+		param.addOrder(OrderType.DESC, "id");
+		param.addPage(page);
+		PageDataList<Article> pageDataList = super.findPageList(param);
+		PageDataList<ArticleModel> pageDataList_ = new PageDataList<ArticleModel>();
+		List<ArticleModel> list = new ArrayList<ArticleModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				Article an = (Article) pageDataList.getList().get(i);
+				ArticleModel anm = ArticleModel.instance(an);
+				anm.setNid(an.getSite().getNid());
+				list.add(anm);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+
+	@Override
+	public Article findBySiteId(long siteId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("site.id", siteId);
+		param.addParam("status", 1);
+		param.addOrder(OrderType.DESC, "isTop");
+		param.addOrder(OrderType.DESC, "isRecommend");
+		param.addOrder(OrderType.ASC, "sort");
+		return super.findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public void addClick(long id) throws Exception {
+		Article article = super.find(id);
+		article.setClicks(article.getClicks() + 1);
+		super.update(article);
+	}
+
+	@Override
+	public PageDataList<ArticleModel> articleList(ArticleModel model,
+			int pageNumber, int pageSize) {
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber,
+				pageSize);
+		if (model.getStatus() != -1 && model.getStatus() != 0) {
+			if (model.getStatus() == 2) {
+				param.addParam("status", 0);
+			} else {
+				param.addParam("status", model.getStatus());
+			}
+		}
+		if (!StringUtil.isBlank(model.getTitle())) {
+			param.addParam("title", Operators.LIKE, model.getTitle());
+		}
+
+		if (!StringUtil.isBlank(model.getNid())) {
+			param.addParam("site.nid", model.getNid());
+		}
+		if (!StringUtil.isBlank(model.getSiteId())) {
+			param.addParam("site.id", model.getSiteId());
+		}
+		param.addParam("isDelete", false);
+		param.addOrder(OrderType.DESC, "id");
+		
+		PageDataList<Article> pageDataList = super.findPageList(param);
+		PageDataList<ArticleModel> pageDataList_ = new PageDataList<ArticleModel>();
+		List<ArticleModel> list = new ArrayList<ArticleModel>();
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				Article articleNew = (Article) pageDataList.getList().get(i);
+
+				// 判断是查询轮展图还是文章,当展示轮转图会默认给nid传一个值
+				if (!StringUtil.isBlank(model.getNid())) {
+					ArticleModel articleNewModel = ArticleModel
+							.instance(articleNew);
+					articleNewModel.setName(articleNew.getSite().getName());
+					articleNewModel.setNid(articleNew.getSite().getNid());
+					list.add(articleNewModel);
+				} else {
+					// 查询文章时将首页的内容和晋商文化过滤掉
+					// if( !"scrollPic".equals(articleNew.getSite().getNid()) &&
+					// !"media".equals(articleNew.getSite().getNid())
+					// && !"jsculture".equals(articleNew.getSite().getNid()) &&
+					// !"supervise".equals(articleNew.getSite().getNid())
+					// && !"ad".equals(articleNew.getSite().getNid())){
+					ArticleModel articleNewModel = ArticleModel
+							.instance(articleNew);
+					articleNewModel.setName(articleNew.getSite().getName());
+					articleNewModel.setNid(articleNew.getSite().getNid());
+					list.add(articleNewModel);
+					// }
+				}
+			}
+		}
+
+		pageDataList_.setList(list);
+		pageDataList_.setPage(pageDataList.getPage());
+		return pageDataList_;
+	}
+
+	@Override
+	public void articleEdit(Article articleNew) {
+		String jpql = "Update Article set site.id = :siteId, title = :title,status = :status,sort = :sort,"
+				+ "isRecommend = :isRecommend, isTop = :isTop,introduction = :introduction,content = :content where id = :id";
+		String[] names = new String[] { "siteId", "title", "status", "sort",
+				"isRecommend", "isTop", "introduction", "content", "id" };
+		Object[] values = new Object[] { articleNew.getSite().getId(),
+				articleNew.getTitle(), articleNew.getStatus(),
+				articleNew.getSort(), articleNew.getIsRecommend(),
+				articleNew.getIsTop(), articleNew.getIntroduction(),
+				articleNew.getContent(), articleNew.getId() };
+		super.updateByJpql(jpql, names, values);
+
+	}
+
+	@Override
+	public Article findNextArticle(Article article) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("site", article.getSite());
+		param.addParam("status", 1);
+		param.addParam("id", Operators.GT, article.getId());
+		param.addPage(1, 1);
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public Article findPrevArticle(Article article) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("site", article.getSite());
+		param.addParam("status", 1);
+		param.addParam("id", Operators.LT, article.getId());
+		param.addPage(1, 1);
+		return findByCriteriaForUnique(param);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<Object> getIds(Site site) {
+		if(site!=null){
+			return em
+		.createNativeQuery(
+				"select id from rd_article where site_id=? and status=1 and is_delete=0 order by is_top desc, "
+						+ "is_recommend desc, sort asc, id desc")
+		.setParameter(1, site.getId()).getResultList();
+		}
+		return new ArrayList<Object>();
+		
+	}
+
+	@Override
+	public PageDataList<ArticleModel> articleParamList(ArticleModel model,
+			int pageNumber, int pageSize) {
+		// TODO Auto-generated method stub
+		// JSDP-176  sxy start
+		StringBuffer sql = new StringBuffer("SELECT a.* FROM rd_article a,rd_site s WHERE a.site_id=s.id AND s.nid NOT IN "
+				+ "(\'scrollPic\',\'media\',\'jsculture\',\'supervise\',\'indexAd\',\'notice\',\'ad\',\'borrowAd\',\'questions\',\'qualiQuestions\',\'borrowQuestions\',\'investQuestions\',\'loginQuestions\',\'bondQuestions\',\'riskMoney\') and a.is_delete=false ");
+		
+		if(!StringUtil.isBlank(model.getSiteId())){
+			sql.append(" and a.site_id="+model.getSiteId());
+		}
+		if (model.getStatus() != -1 && model.getStatus() != 0) {
+			if (model.getStatus() == 2) {
+				sql.append(" and a.status="+0);
+			} else {
+				sql.append(" and a.status="+model.getStatus());
+			}
+		}
+		if (!StringUtil.isBlank(model.getTitle())) {
+			sql.append(" and a.title like '%"+model.getTitle()+"%'");
+		}
+		sql.append("  order by a.add_time desc");
+		Query query = em.createNativeQuery(sql.toString(),Article.class);
+		
+		 Page page = new Page(query.getResultList().size(), pageNumber, pageSize);
+	     query.setFirstResult((pageNumber - 1) * pageSize);
+	     query.setMaxResults(pageSize);
+	     List<Article> articleList = query.getResultList();
+
+		PageDataList<Article> pageDataList = new PageDataList<Article>();
+		pageDataList.setList(articleList);
+		pageDataList.setPage(page);
+		PageDataList<ArticleModel> pageDataList_ = new PageDataList<ArticleModel>();
+		List<ArticleModel> list = new ArrayList<ArticleModel>();
+		if (articleList.size() > 0) {
+			for (int i = 0; i < articleList.size(); i++) {
+				Article articleNew = articleList.get(i);
+				ArticleModel articleNewModel = ArticleModel.instance(articleNew);
+				articleNewModel.setName(articleNew.getSite().getName());
+				articleNewModel.setNid(articleNew.getSite().getNid());
+				list.add(articleNewModel);
+			}
+		}
+
+		pageDataList_.setList(list);
+
+		pageDataList_.setPage(pageDataList.getPage());
+		return pageDataList_;
+	}
+
+	@Override
+	public List<ArticleModel> listAdBySize(String nid, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("site.nid", nid);
+		param.addParam("status", 1);
+		param.addParam("isDelete", 0);
+		Date date = new Date();
+		//param.addOrder(OrderType.DESC, "updateTime");
+		//param.addOrder(OrderType.DESC, "isTop");
+		//param.addOrder(OrderType.DESC, "isRecommend");
+		//param.addOrder(OrderType.ASC, "sort");
+		param.addOrder(OrderType.DESC, "sort");
+		//param.addOrder(OrderType.DESC, "id");
+		if("scrollPic".equals(nid)){
+			param.addParam("onlineTime", Operators.LT, new Date());
+			param.addParam("nolineTime", Operators.GT, new Date());
+		}
+		List<Article> list = super.findByCriteria(param, 0, size);
+		List<ArticleModel> mlist = new ArrayList<ArticleModel>();
+		if (list != null && list.size() != 0) {
+			for (Article articleNew : list) {
+				ArticleModel anm = ArticleModel.instance(articleNew);
+				anm.setNid(articleNew.getSite().getNid());
+				if(nid.equals("media")){
+					anm.setLogoPath(Global.getValue("adminurl")
+							+articleNew.getLogoPath());
+				}
+					anm.setPicPath(Global.getValue("adminurl")
+				+ articleNew.getPicPath());
+			
+				anm.setSite(null);
+				mlist.add(anm);
+			}
+		}
+		return mlist;
+	}
+
+}

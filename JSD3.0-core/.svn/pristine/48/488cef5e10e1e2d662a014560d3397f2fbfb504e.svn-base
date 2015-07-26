@@ -1,0 +1,81 @@
+package com.rongdu.p2psys.cooperation.service;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.cooperation.domain.CooperationLogin;
+
+public interface CooperationLoginService {
+
+	/**
+	 * 新增联合登录信息
+	 * 
+	 * @param cooperation
+	 */
+	public void addCooperationLogin(CooperationLogin cooperation);
+
+	/**
+	 * 据openId和type查询联合登录信息
+	 * 
+	 * @param openId
+	 * @param type
+	 * @return
+	 */
+	public CooperationLogin getCooperationLogin(String openId, int type);
+	
+	/**
+	 * 联合登录注册
+	 * 
+	 * @param user User实体类
+	 * @param openType 联合登录类型
+	 * @param openId 联合登录开放ID
+	 * @return User实体类
+	 */
+	public User doQQRegister(User user, String openType, String openId);
+	
+	/**
+	 * 登录,绑定QQ
+	 * 
+	 * @param user User实体类
+	 * @param isRsa 是否加密
+	 * @param openType 联合登录类型
+	 * @param openId 联合登录开放ID
+	 * @return User实体类
+	 * @throws Exception 异常
+	 */
+	User doQQLogin(User user, int isRsa, String openType, String openId) throws Exception;
+
+	//JSDP-31  fengguoqin 5.21 start
+	/**
+	 * 将openId和openType入库之后需要绑定用户，添加用户ID
+	 * 
+	 * @param cooperation
+	 */
+	public void updateCooperationLogin(CooperationLogin cooperation);
+	//JSDP-31  fengguoqin 5.21 end
+	//fengguoqin@ddtkj.com JSDP-214   20150707 start
+	
+	/**
+	 * 根据存在的参数查询获取CooperationLogin
+	 * 
+	 * @param openId
+	 * @param type 合作登录类型
+	 * @return
+	 */
+	public CooperationLogin getCooperationLogin(CooperationLogin cooperationLogin);
+	
+	
+	/**
+	 * 解除绑定，根据用户ID和类型解除绑定
+	 * 
+	 * @param userID
+	 * @param type 合作登录类型
+	 * @return
+	 */
+	public void updateCooperationLoginUnbind(long userId,int type);
+	/**
+	 * 将userId和openType入库之后需要绑定用户，添加openId,wx绑定用户
+	 * 
+	 * @param cooperation
+	 */
+	public void updateCooperationLoginWx(CooperationLogin cooperation);
+	//fengguoqin@ddtkj.com JSDP-214   20150707 end
+}

@@ -1,0 +1,55 @@
+package com.rongdu.p2psys.core.notice.email;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Notice;
+import com.rongdu.p2psys.core.service.NoticeService;
+
+public class EmailNoticeTask extends AbstractEmailLoanTask {
+	private Logger logger = Logger.getLogger(EmailNoticeTask.class);
+
+	@Resource
+	private NoticeService noticeService;
+
+	public NoticeService getNoticeService() {
+		return noticeService;
+	}
+
+	public void setNoticeService(NoticeService noticeService) {
+		this.noticeService = noticeService;
+	}
+
+	public EmailNoticeTask(NoticeService noticeService) {
+		super();
+		emailtask.setName("emailNoticeTask");
+		this.noticeService = noticeService;
+	}
+
+	@Override
+	public void doLoan() {
+		logger.debug("EmailNoticeTask start");
+		while (EmailNoticeJobQueue.EMAILNOTICE != null && EmailNoticeJobQueue.EMAILNOTICE.size() > 0) {
+			Notice notice = EmailNoticeJobQueue.EMAILNOTICE.peek();
+			if (notice != null) {
+				try {
+					noticeService.sendNotice(notice);
+				} catch (Exception e) {
+					logger.error(e.getMessage(), e);
+					e.printStackTrace();
+				} finally {
+					EmailNoticeJobQueue.EMAILNOTICE.remove(notice);
+					Global.removeTransfer();
+				}
+			}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return EmailNoticeTask.MESSAGE_STATUS;
+	}
+
+}

@@ -1,0 +1,44 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record.recharge;
+
+import com.ddtkj.p2psys.account.dao.AccountRechargeDao;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月9日 
+ */
+public class AccountRechargeReturnRecord extends AbstractYmdEvent<AccountRecharge>{
+
+	public AccountRechargeDao accountRechargeDao;
+	
+	
+	public AccountRechargeReturnRecord(YmdRecharge y,User u,String addIp) {
+		init();
+		getT();
+		AccountRecharge accountRecharge=accountRechargeDao.getRechargeByTradeno(t.getTradeNo());
+        if(accountRecharge!=null){
+        	t=accountRecharge;
+        	t.setReturnMsg(y.returnSignInfoJsonStr());
+        }
+	}
+
+	@Override
+	public void modifyRecord() {
+		if(t!=null&&StringUtil.isNotBlank(t.getTradeNo())){
+		    accountRechargeDao.update(t);
+		}
+	}
+
+	@Override
+	public void init() {
+		accountRechargeDao =(AccountRechargeDao) BeanUtil.getBean("ymdAccountRechargeDao");
+	}
+
+
+}

@@ -1,0 +1,86 @@
+package com.ddtkj.p2psys.redpacket.service;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：活动红包的产生service接口    JSDP-184
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+public interface RpActivityProduceService {
+	/**
+	 * 查询活动红包的产生
+	 * @param model
+	 * @return
+	 */
+	PageDataList<RpActivityProduceModel> getPageList(RpActivityProduceModel model);
+	
+	/**
+	 * 活动红包产生金额汇总
+	 * @param model
+	 * @return
+	 */
+	List<RpActivityProduceModel> getSumListRpProduce(RpActivityProduceModel model);
+	/**
+	 * 活动红包产生导出excel
+	 * @param model
+	 * @return
+	 */
+	List excelListRpProduce(RpActivityProduceModel model);
+	
+	/**
+	 * 查询活动产生的记录
+	 * @return
+	 */
+	List<Map<String,Object>> getRpActivityList(String activityType);
+	//JSDP-184 xingjia 20150618 start
+	/**
+	 * 保存活动产生的红包
+	 * @param rpActivityProduce
+	 */
+	void save(RpActivityProduce rpActivityProduce);
+	/**
+	 * 判断此种标的活动红包是否已给  true已给，false未给
+	 * @param borrowId
+	 * @param awardType
+	 * @return
+	 */
+	public boolean findReapetData(long borrowId, String awardType,String isEnable) ;
+	//JSDP-184 xingjia 20150618 end
+	/**
+	 * 获取活动红包产生表中的土豪记录
+	 * @param borrowId
+	 * @param awardType
+	 * @return
+	 */
+	RpActivityProduce findMostTender(long borrowId,String awardType);
+	
+	/**
+	 * 修改活动红包中土豪的类型为旧土豪（mt->ot）
+	 * @param rp
+	 * @return
+	 */
+	boolean updateMostTender(RpActivityProduce rp);
+	/**
+	 * 查询端午节活动产生记录
+	 * @param borrowId
+	 * @param startTime
+	 * @param endTime
+	 * @param rpm
+	 */
+	public void rpActivityProduce(long borrowId,Date startTime,Date endTime,RpActivityProduceModel rpm);
+	/**
+	 * 更新土豪以及终结者账户资金
+	 * @param borrowId
+	 * @param rpm
+	 * @param activityRp
+	 * @throws Exception
+	 */
+	public void rpActivityProduceAndAccount(long borrowId,Map<String,Object> activityRp)throws Exception;
+}

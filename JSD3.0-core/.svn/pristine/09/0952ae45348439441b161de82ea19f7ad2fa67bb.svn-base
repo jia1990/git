@@ -1,0 +1,96 @@
+package com.ddtkj.p2psys.subbranch.dao.impl;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.subbranch.dao.BranchDao;
+import com.ddtkj.p2psys.subbranch.domain.Branch;
+import com.ddtkj.p2psys.subbranch.model.BranchModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+
+/**
+ * @描述：分店dao层实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+@Repository("branchDao")
+public class BranchDaoImpl extends BaseDaoImpl<Branch> implements BranchDao {
+	@Resource
+	private RegionDao regionDao;
+
+	@Override
+	public PageDataList<BranchModel> pageDataList(BranchModel branchModel) {
+		
+		String branchName = null;
+		String detailName = null;
+		if(StringUtil.isNotBlank(branchModel.getBranchName())){
+			branchName = "'"+branchModel.getBranchName()+"'";
+		}
+		if(StringUtil.isNotBlank(branchModel.getDetail())){
+			detailName = "'"+ branchModel.getDetail()+ "'";
+		}
+		StringBuffer sql = new StringBuffer();
+		StringBuffer sqlCount = new StringBuffer();
+	
+		
+		int start = (branchModel.getPage() - 1) *branchModel.getSize();
+		int end = branchModel.getPage()*branchModel.getSize();
+		sqlCount.append("{call branchProcedure(" + branchName + ","+detailName+", 0, 0)}");
+		sql.append("{call branchProcedure(" + branchName + "," + detailName + ","+start+","+end+")}");
+		
+		Query queryCount = em.createNativeQuery(sqlCount.toString());
+		Query query = em.createNativeQuery(sql.toString());
+		
+		List list = query.getResultList();
+		List listCount = queryCount.getResultList();
+		Page page = new Page(listCount.size(), branchModel.getPage(), branchModel.getSize());
+		PageDataList<BranchModel> branchPageData = new PageDataList<BranchModel>();
+		Object[] object = new Object[8];
+		List<BranchModel> branchList = new ArrayList<BranchModel>();
+		
+		
+		for(int i=0;i<list.size();i++){
+			object = (Object[]) list.get(i);
+			BranchModel bm = new BranchModel();
+			bm.setId(Long.parseLong((Integer)object[0]+""));
+			bm.setBranchName((String) object[1]);
+			Region regionProv = regionDao.findById(Long.parseLong((String) object[2]));
+			Region regionCity = regionDao.findById(Long.parseLong((String) object[3]));
+			Region regionArea = regionDao.findById(Long.parseLong((String) object[4]));
+			bm.setProvinceStr(regionProv.getName());
+			bm.setCityStr(regionCity.getName());
+			bm.setAreaStr(regionArea.getName());
+			bm.setDetail((String) object[5]);
+			if(null == object[6]){
+				bm.setInviteCounts(0);
+			}else{
+				bm.setInviteCounts(Long.parseLong((BigInteger)object[6]+""));
+			}
+			if(null == object[7]){
+				bm.setValidCounts(0);
+			}else{
+				bm.setValidCounts(Long.parseLong((BigInteger)object[7]+""));
+			}
+			branchList.add(bm);
+		}
+		
+		branchPageData.setList(branchList);
+        
+		branchPageData.setPage(page);
+
+		return branchPageData;
+	}
+
+
+}

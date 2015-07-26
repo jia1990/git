@@ -1,0 +1,36 @@
+package com.ddtkj.p2psys.reset.global.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.reset.global.dao.GlobalResetDao;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.domain.Rule;
+
+/**
+ * @描述:全局配置数据操作实现
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月23日
+ */
+@Repository("globalResetDao")
+public class GlobalResetDaoImpl extends BaseDaoImpl implements GlobalResetDao {
+	/**
+	 * 查询指定规则记录
+	 * 
+	 * @param id
+	 *            规则code
+	 * */
+	public Rule queryRuleCheckById(long id) {
+		return (Rule) this.find(id);
+	}
+
+	/**
+	 * 查询指定通知记录
+	 * 
+	 * @param id
+	 * */
+	public NoticeType queryNoticType(long id) {
+		return (NoticeType) this.find(id);
+	}
+	
+}

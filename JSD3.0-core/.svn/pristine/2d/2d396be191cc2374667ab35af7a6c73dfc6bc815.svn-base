@@ -1,0 +1,150 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：红包生产实体类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月30日 
+ */
+@Entity
+@Table(name="t_jsd_rp_produce")
+public class RpProduce implements Serializable {
+	
+	private static final long serialVersionUID = -774695408303551621L;
+	
+	/*********************** 红包类型 ****************************************/
+	public static final int RP_STATIC = 1;  // 静态
+	public static final int RP_DYNAMIC = 2;  // 动态
+	//红包产生
+	public static final String RP_RPODUCE_RULE="redPacketProduce";
+
+	//静态红包来源--认证 (李建云加)
+	public static final String STATIC_RP_RES_IDENTIFY="static_rp_identify";
+	//静态红包来源---好友首次投资超过一定数 (李建云加)
+	public static final String STATIC_RP_RES_INVEST="static_rp_invited_first_invest";
+	//JSDP-203 xingjia 20150723 start
+	//静态红包来源---夺宝骑兵活动送现金红包
+	public static final String STATIC_RP_RES_INDIANAJONES = "indianaJones";
+	//JSDP-203 xingjia 20150723 end
+	//动态红包来源----投资(李建云加)
+	public static final String DYNAMIC_RP_RES_INVEST="dynamic_rp_invest";
+	//动态红包来源----积分抽奖(沈国平加)
+	public static final String DYNAMIC_RP_RES_SCOREAWARD = "dynamic_rp_score_award";
+	//动态红包来源----微信红包奖励(沈国平加)
+	public static final String DYNAMIC_RP_RES_WXAWARD = "dynamic_rp_wx_award";
+		
+	public static final String STATIC_RP_RES_RECOMMENT = "static_rp_recommend";//推荐好友送红包
+	public static final String STATIC_RP_RES_GOLDHAMMER = "static_rp_goldhammer";//砸金蛋送静态红包
+	
+	public static final int RP_STATIC_RP_ALREADY_USE=1; //静态红包已使用
+	public static final int RP_STATIC_RP_NO_USE=2; //静态红包未使用
+	public static final int RP_STATIC_RP_HAS_EXPIRED=3; //静态红包已过期
+	public static final int RP_STATIC_RP_NO_EXPIRED=4;	 //静态红包未过期
+	public static final int RP_STATIC_RP_FREEZE=5 ;//静态红包冻结
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ;   //平台用户ID
+	@ManyToOne
+	@JoinColumn(name="user_id")
+	private User user ;
+	private int rpType ;  //红包分类
+	private String rpStaticRes ;// 静态红包来源
+	private int rpStaticStatus ;  //静态红包状态
+	private Date rpCreateTime ; //静态红包生成时间
+	private int rpStaticValidTime ;  // 静态红包有效期
+	private double rpStaticMoney ; //静态红包金额
+	@OneToOne
+	@JoinColumn(name="rp_static_referrer_id")
+	private User invitedUser; //静态红包被推荐人ID
+	private String rpStaticReferrerName;  //静态红包被推荐人昵称
+	private String rpDynamicRes ;   //动态红包来源
+	private double rpDynamicMoney ;  //动态红包产生金额
+	
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public int getRpType() {
+		return rpType;
+	}
+	public void setRpType(int rpType) {
+		this.rpType = rpType;
+	}
+	public String getRpStaticRes() {
+		return rpStaticRes;
+	}
+	public void setRpStaticRes(String rpStaticRes) {
+		this.rpStaticRes = rpStaticRes;
+	}
+	public int getRpStaticStatus() {
+		return rpStaticStatus;
+	}
+	public void setRpStaticStatus(int rpStaticStatus) {
+		this.rpStaticStatus = rpStaticStatus;
+	}
+	public int getRpStaticValidTime() {
+		return rpStaticValidTime;
+	}
+	public void setRpStaticValidTime(int rpStaticValidTime) {
+		this.rpStaticValidTime = rpStaticValidTime;
+	}
+	public double getRpStaticMoney() {
+		return rpStaticMoney;
+	}
+	public void setRpStaticMoney(double rpStaticMoney) {
+		this.rpStaticMoney = rpStaticMoney;
+	}
+
+	public String getRpStaticReferrerName() {
+		return rpStaticReferrerName;
+	}
+	public void setRpStaticReferrerName(String rpStaticReferrerName) {
+		this.rpStaticReferrerName = rpStaticReferrerName;
+	}
+	public String getRpDynamicRes() {
+		return rpDynamicRes;
+	}
+	public void setRpDynamicRes(String rpDynamicRes) {
+		this.rpDynamicRes = rpDynamicRes;
+	}
+	public double getRpDynamicMoney() {
+		return rpDynamicMoney;
+	}
+	public void setRpDynamicMoney(double rpDynamicMoney) {
+		this.rpDynamicMoney = rpDynamicMoney;
+	}
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public Date getRpCreateTime() {
+		return rpCreateTime;
+	}
+	public void setRpCreateTime(Date rpCreateTime) {
+		this.rpCreateTime = rpCreateTime;
+	}
+	public User getInvitedUser() {
+		return invitedUser;
+	}
+	public void setInvitedUser(User invitedUser) {
+		this.invitedUser = invitedUser;
+	}
+}

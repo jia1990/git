@@ -1,0 +1,440 @@
+package com.rongdu.p2psys.core.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.dao.MessageDao;
+import com.rongdu.p2psys.core.dao.NoticeDao;
+import com.rongdu.p2psys.core.domain.Message;
+import com.rongdu.p2psys.core.domain.Notice;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.model.NoticeModel;
+import com.rongdu.p2psys.core.notice.email.EmailNoticeJobQueue;
+import com.rongdu.p2psys.core.notice.message.MessageNoticeJobQueue;
+import com.rongdu.p2psys.core.notice.sms.SmsNoticeJobQueue;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.sms.PublicSmsPortalImpl;
+import com.rongdu.p2psys.core.sms.SmsPortal;
+import com.rongdu.p2psys.core.util.mail.Mail;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+import com.rongdu.p2psys.user.dao.UserNoticeConfigDao;
+import com.rongdu.p2psys.user.domain.UserNoticeConfig;
+import com.rongdu.p2psys.user.service.UserService;
+
+@Service("noticeService")
+public class NoticeServiceImpl implements NoticeService {
+
+	private Logger logger = Logger.getLogger(NoticeServiceImpl.class);
+	@Resource
+	private NoticeDao noticeDao;
+	@Resource
+	private MessageDao messageDao;
+	@Resource
+	private UserNoticeConfigDao userNoticeConfigDao;
+	@Resource
+	private UserCacheDao userCacheDao;
+	@Resource
+	private UserService userService;
+	
+	private SmsPortal smsPortal;
+	private SmsPortal[] smsPortalBackups;
+    
+	/**
+     * 发送短信
+     * */
+	private void sendSms(Notice s) {
+
+		String mobile = s.getReceiveAddr();
+		String content = StringUtil.isNull(s.getContent());
+
+		logger.debug("contentString=========" + content);
+		logger.debug("mobile=========" + mobile);
+
+		// 如果没有为短信配置特殊的send_route则直接通过默认的短信通道发送
+		NoticeType smsType = Global.getNoticeType(s.getNid(), NoticeConstant.NOTICE_SMS);
+		String sendRoute = smsType.getSendRoute();
+
+		List<SmsPortal> sps = new ArrayList<SmsPortal>();
+
+		//smsPortal = new SDTYSmsPortalImpl() ;//时代天元
+		smsPortal = new PublicSmsPortalImpl(); 
+		// 根据配置的发送路由生成通道列表
+		try {
+			if(sendRoute!=null){
+				String[] spIdxs = sendRoute.split(":");
+				for (String idx : spIdxs) {
+					if (StringUtil.isNotBlank(idx)) {
+						int spIdx = Integer.parseInt(idx);
+						if (0 == spIdx) {
+							sps.add(smsPortal);
+						} else {
+							smsPortalBackups = new SmsPortal[1];
+							//smsPortalBackups[0] = (SmsPortal) new SDTYSmsPortalImpl();	
+							smsPortalBackups[0] = (SmsPortal) new PublicSmsPortalImpl();
+							if (0 < spIdx && smsPortalBackups.length >= spIdx) {
+								sps.add(smsPortalBackups[spIdx - 1]);
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		if (0 == sps.size()) {
+			// 如果没有配置，就把默认的通道放入列表
+			sps.add(smsPortal);
+		}
+
+		String result;
+		StringBuilder sb = new StringBuilder();
+		for (SmsPortal sp : sps) {
+			result = sp.send(mobile, content);
+			if (StringUtils.containsIgnoreCase(result, "ok")) {
+				s.setStatus(1);
+				sb.append("通过短信通道" + sp.getSPName() + "发送短信成功。"+result);
+				// 如果发送成功，就不再继续发送
+				break;
+			} else {
+				s.setStatus(2);
+				sb.append("通过短信通道" + sp.getSPName() + "发送短信失败：" + result + "。");
+				// 失败后换下一个通道继续发送
+			}
+		}
+		s.setResult(sb.toString());
+		noticeDao.save(s);
+	}
+	
+	
+	/**
+	 * 发送站内信息
+	 * */
+	private void sendMessage(Notice s) {
+		Message m = new Message();
+		m.setTitle(s.getTitle());
+		m.setSentUser(s.getSentUser());
+		m.setReceiveUser(s.getReceiveUser());
+		m.setContent(s.getContent());
+		m.setAddTime(new Date());
+		m.setAddIp(Global.getIP());
+		messageDao.save(m);
+		s.setStatus(1);
+		s.setResult("ok");
+		noticeDao.save(s);
+	}
+
+	@Override
+	public void sendNotice(String noticeTypeNid, Map<String, Object> sendData) {
+		User user = (User) sendData.get("user");
+		UserNoticeConfig unConfig=null;//用户自定义通知
+		if(user != null){
+			long userId = user.getUserId();//用户ID
+			UserCache userCache = userCacheDao.getUserCache(userId);
+			unConfig= userNoticeConfigDao.getUNConfig(userId, noticeTypeNid);
+		}
+		//JSDP-209 gjh 2015-7-4 start
+		//获取配置信息
+		NoticeType smsType = Global.getNoticeType(noticeTypeNid, NoticeConstant.NOTICE_SMS);
+		NoticeType messageType = Global.getNoticeType(noticeTypeNid, NoticeConstant.NOTICE_MESSAGE);
+		NoticeType emailType = Global.getNoticeType(noticeTypeNid, NoticeConstant.NOTICE_EMAIL);
+		
+		/*
+		 *用户无自定义通知,系统默认制定通知   
+		 * */
+		if (unConfig == null) {
+			unConfig = new UserNoticeConfig();
+			if(smsType != null && smsType.getType() == 2){
+				unConfig.setSms(NoticeConstant.NOTICE_NOT_RECEIVE);
+			}else{
+				unConfig.setSms(NoticeConstant.NOTICE_RECEIVE);
+			}
+			if(messageType != null && messageType.getType() == 2){
+				unConfig.setEmail(NoticeConstant.NOTICE_NOT_RECEIVE);
+			}else{
+				unConfig.setEmail(NoticeConstant.NOTICE_RECEIVE);
+			}
+			if(emailType != null && emailType.getType() == 2){
+				unConfig.setMessage(NoticeConstant.NOTICE_NOT_RECEIVE);
+			}else{
+				unConfig.setMessage(NoticeConstant.NOTICE_RECEIVE);
+			}
+		}
+
+		//JSDP-209 gjh 2015-7-4 end
+		// 生成短信
+		//系统通知配置的权限高于用户通知配置
+		
+		if(smsType !=null && smsType.getNid() != null){
+			if (isSmssend(smsType)) {		
+				//判断用户是否配置   此类型发送短信短信
+				if (unConfig.getSms() == NoticeConstant.NOTICE_RECEIVE) {
+					
+					//判断系统是否配置  此类型要发送短信
+					if (smsType.getSend() == NoticeConstant.NOTICE_SEND) {
+						Notice sms = new Notice();
+						sms.setNid(noticeTypeNid);
+						sms.setType(String.valueOf(NoticeConstant.NOTICE_SMS));
+						sms.setSentUser(new User(Constant.ADMIN_ID));
+						sms.setContent(StringUtil.fillTemplet(smsType.getTemplet(), sendData));
+						sms.setAddTime(new Date());
+						// 收信人  如果sendDate中没有 mobile 的时候，发送到用户手机中
+						if(user == null && null == sendData.get("optId")){
+							sms.setReceiveAddr((String)sendData.get("mobile"));
+						}else if(user == null && null != sendData.get("optId") && 0!= (Long)sendData.get("optId")){
+							//新增，给后台管理员发送登录验证码时，将用户id写入notice中
+							user = new User((Long)sendData.get("optId"));
+							sms.setReceiveUser(user);
+							sms.setReceiveAddr((String)sendData.get("mobile"));
+							
+						}else if(StringUtils.isNotEmpty((String)sendData.get("mobile"))){
+							sms.setReceiveUser(user);
+							sms.setReceiveAddr((String)sendData.get("mobile"));
+						}else{
+							sms.setReceiveUser(user);
+							sms.setReceiveAddr(user.getMobilePhone());
+						}
+						sms.setTitle(StringUtil.fillTemplet(smsType.getTitleTemplet(), sendData));
+						if (!"".equals(sms.getReceiveAddr()) && !"".equals(sms.getContent())) {
+							SmsNoticeJobQueue.SMSNOTICE.offer(sms);
+						}
+					}
+				}
+			}
+		}
+		
+
+		// 生成邮件
+		if (unConfig.getEmail() == NoticeConstant.NOTICE_RECEIVE) {
+			if (emailType!=null && emailType.getSend() == NoticeConstant.NOTICE_SEND) {
+				Notice email = new Notice();
+				email.setNid(noticeTypeNid);
+				email.setType(String.valueOf(NoticeConstant.NOTICE_EMAIL));
+				email.setSentUser(new User(Constant.ADMIN_ID));
+				email.setTitle(StringUtil.fillTemplet(emailType.getTitleTemplet(), sendData));
+				email.setContent(StringUtil.fillTemplet(emailType.getTemplet(), sendData));
+				email.setAddTime(new Date());
+				if(user == null){
+					email.setReceiveAddr((String)sendData.get("email"));
+				}else if(StringUtils.isNotEmpty((String)sendData.get("email"))){
+					email.setReceiveUser(user);
+					email.setReceiveAddr((String)sendData.get("email"));
+				}else{
+					email.setReceiveUser(user);
+					email.setReceiveAddr(user.getEmail());
+				}
+				if (!"".equals(email.getReceiveAddr()) && !"".equals(email.getTitle())
+						&& !"".equals(email.getContent())) {
+					EmailNoticeJobQueue.EMAILNOTICE.offer(email);
+				}
+			}
+		}
+
+		// 生成站内信
+		if (unConfig.getMessage() == NoticeConstant.NOTICE_RECEIVE) {
+			if (messageType!=null && messageType.getSend() == NoticeConstant.NOTICE_SEND) {
+				Notice message = new Notice();
+
+				message.setNid(noticeTypeNid);
+				message.setType(String.valueOf(NoticeConstant.NOTICE_MESSAGE));
+				message.setSentUser(new User(Constant.ADMIN_ID));
+				message.setReceiveUser(user);
+				message.setTitle(StringUtil.fillTemplet(messageType.getTitleTemplet(), sendData));
+				message.setContent(StringUtil.fillTemplet(messageType.getTemplet(), sendData));
+				message.setAddTime(new Date());
+				message.setReceiveAddr(user.getMobilePhone());
+
+				if (!"".equals(message.getReceiveAddr()) && !"".equals(message.getTitle())
+						&& !"".equals(message.getContent())) {
+					MessageNoticeJobQueue.MESSAGENOTICE.offer(message);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void sendNotice(Notice notice) {
+		switch (Byte.parseByte(notice.getType())) {
+			case NoticeConstant.NOTICE_SMS:
+				this.sendSms(notice);
+				break;
+			case NoticeConstant.NOTICE_EMAIL:
+				this.sendEmail(notice);
+				break;
+			case NoticeConstant.NOTICE_MESSAGE:
+				this.sendMessage(notice);
+				break;
+		}
+	}
+    /**
+     * 发送邮件
+     * */
+	private void sendEmail(Notice notice) {
+		Mail mail = Mail.getInstance();
+		mail.setTo(notice.getReceiveAddr());
+		mail.setSubject(notice.getTitle());
+		mail.setBody(notice.getContent());
+		try {
+			mail.sendMail();
+			notice.setStatus(1);
+			notice.setResult("ok");
+			logger.info("发送邮件成功！！");
+		} catch (Exception e) {
+			notice.setStatus(2);
+			notice.setResult("fail");
+			logger.error("发送邮件失败", e);
+		}
+
+		noticeDao.save(notice);
+	}
+	
+	
+	
+	
+
+	// 在系统发送且用户接收的情况下再进行这个发送判断
+	private boolean isSmssend(NoticeType noticeType) {
+		boolean smssend = false;
+		
+		// 手机激活验证码肯定发送
+		if (noticeType.getNid().equalsIgnoreCase("phone_code")) {
+			smssend = true;
+			return smssend;
+		}
+		
+		// 手机没认证不能发送
+		/*
+		 * if (1 != user.getPhone_status()){ return smssend; }
+		 */
+		
+		// 系统短信也发送
+		if (noticeType.getType() == Constant.SYSTEM_NOTICE && noticeType.getSend() == NoticeConstant.NOTICE_SEND) {
+			smssend = true;
+		}else if(noticeType.getType() == Constant.USER_NOTICE && noticeType.getSend() == NoticeConstant.NOTICE_SEND){
+			smssend = true;
+		} else {
+			// 用户短信需要付费
+			/*
+			 * long smspayEndtime = userCache.getSmspay_endtime(); if (smspayEndtime > DateUtil.getTime(new Date())) {
+			 * smssend = true; }
+			 */
+		}
+		
+		return smssend;
+	}
+	// 在系统发送且用户接收的情况下再进行这个发送判断
+	private boolean isSmssend(NoticeType noticeType, UserCache userCache, User user) {
+		boolean smssend = false;
+
+		// 手机激活验证码肯定发送
+		if (noticeType.getNid().equalsIgnoreCase("phone_code")) {
+			smssend = true;
+			return smssend;
+		}
+
+		// 手机没认证不能发送
+	
+
+		// 系统短信也发送
+		if (noticeType.getType() == Constant.SYSTEM_NOTICE && noticeType.getSend() == NoticeConstant.NOTICE_SEND) {
+			smssend = true;
+		} else {
+			// 用户短信需要付费
+			/*
+			 * long smspayEndtime = userCache.getSmspay_endtime(); if (smspayEndtime > DateUtil.getTime(new Date())) {
+			 * smssend = true; }
+			 */
+		}
+
+		return smssend;
+	}
+
+	public SmsPortal getSmsPortal() {
+		return smsPortal;
+	}
+
+	public void setSmsPortal(SmsPortal smsPortal) {
+		this.smsPortal = smsPortal;
+	}
+
+	public SmsPortal[] getSmsPortalBackups() {
+		return smsPortalBackups;
+	}
+
+	public void setSmsPortalBackups(SmsPortal[] smsPortalBackups) {
+		this.smsPortalBackups = smsPortalBackups;
+	}
+
+	@Override
+	public PageDataList<NoticeModel> noticeList(NoticeModel model, int pageNumber, int pageSize) {
+
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber, pageSize);
+		if (!StringUtil.isBlank(model.getTitle())) {
+			param.addParam("title", Operators.LIKE, model.getTitle());
+		}
+		if (!StringUtil.isBlank(model.getType())) {
+			param.addParam("type", model.getType());
+		}
+		if (model.getStatus() != 0) {
+			param.addParam("status", model.getStatus());
+		}
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			User user = userService.getUserByUserName(model.getUserName());
+			param.addParam("receiveUser", user.getUserId());
+		}
+		if(StringUtil.isNotBlank(model.getMobilePhone())){
+			param.addParam("receiveAddr", model.getMobilePhone());
+		}
+		
+		param.addOrder(OrderType.DESC, "addTime");
+		PageDataList<Notice> plist = noticeDao.findPageList(param);
+
+		PageDataList<NoticeModel> uList = new PageDataList<NoticeModel>();
+		uList.setPage(plist.getPage());
+		List<NoticeModel> list = new ArrayList<NoticeModel>();
+		if (plist.getList().size() > 0) {
+			for (int i = 0; i < plist.getList().size(); i++) {
+				Notice notice = (Notice) plist.getList().get(i);
+				NoticeModel noticeModel = NoticeModel.instance(notice);
+				noticeModel.setSentName(notice.getSentUser().getUserName());
+				//用户注册时没有receive_user
+				if(null!=notice.getReceiveUser()){
+					noticeModel.setReceiveName(notice.getReceiveUser().getUserName());
+				}
+				list.add(noticeModel);
+			}
+		}
+		uList.setList(list);
+		return uList;
+	}
+	@Override
+	public long getNoticeAddTime(String nid,String addr) throws Exception {
+		
+		return noticeDao.getNoticeAddTime(nid,addr);
+	}
+	@Override
+	public Notice findById(long id) {
+
+		return noticeDao.find(id);
+	}
+
+}

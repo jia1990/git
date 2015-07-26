@@ -1,0 +1,26 @@
+package com.ddtkj.p2psys.analysis.dao;
+
+import com.ddtkj.p2psys.analysis.domain.Analysis;
+import com.rongdu.common.dao.BaseDao;
+/**
+ * @描述：用户来源收集dao接口
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+public interface AnalysisDao extends BaseDao<Analysis>{
+	/**
+	 * 由于使用到了月表，使用sql存数据
+	 * @param analysis
+	 * @return
+	 */
+	public int saveAnalysis(Analysis analysis);
+	
+	/**
+	 * 根据sessionId获取用户来源
+	 * @param sessionId
+	 * @param sucUrl
+	 * @return
+	 */
+	public Analysis findAnalysisSource(String sessionId,String sucUrl);
+
+}

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>标信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+    var winWidth =  800;
+    var winHeight = 400;
+    var viewTitle = "查看订单";
+    var viewUrl =  "/modules/order/order/orderViewPage.html";
+    var viewWinParmeters = "'{0}','"+viewTitle+"',winWidth,winHeight,'"+viewUrl+"'";
+    
+    var viewGoodsUrl = "${weburl}/member_borrow/stagesDetail.html";
+    var viewGoodsWinParmeters = "'{0}','" + viewGoodsUrl + "'";
+    
+/*     var viewOrderUrl = "/modules/order/order/orderViewPage.html"
+    var viewOrderWinParmeters = "'{0}','" + viewOrderTitle + "',winWidth,winHeight,'" + viewOrderUrl + "'"; */
+    
+    var deleteUrl = "/modules/order/order/orderDel.html";	//删除记录接口地址
+    var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+    
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'orderList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 40, fixed:true,sortable:false },              
+			  { field: 'orderNo', title: '订单号', width: 150, fixed:true,sortable:false },              
+              { field: 'userName', title: '借款人邮箱', width: 150,fixed:true, sortable:false },
+              { field: 'goodsNo', title: '商品编号', width: 120,fixed:true, sortable:false },
+              { field: 'goodsName', title: '商品名称', width: 100, sortable:false },   
+              { field: 'payWay', title: '购买方式', width: 80, sortable:false},
+              { field: 'borrowId', title: '分期宝编号', width: 60, sortable:false,formatter: function(value,row,index){
+            	  if(row.borrowId == 0 || row.borrowId == null){
+            		  return "无";
+            	  }else{
+            		  return value;
+            	  }
+            	  
+			  }},
+              { field: 'borrowName', title: '分期宝标题', width: 120, sortable:false,
+            	  formatter:function(value, row, index){
+    					var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+    					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+    					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}">'+row.borrowName+'</a>', row.borrowId, '${theme_dir}/css/images/extjs_icons/link.png');
+    					
+    				}
+			  },
+              { field: 'orderStatus', title: '订单状态', width: 100, sortable:false},
+              { field: 'addTime', title: '订单生成时间', width: 120, sortable:false,formatter: function(value,row,index){
+            	  
+            	  return getLocalTime(value,4);
+			  }},
+              { field : 'action',title : '操作',width :100,fixed:true,formatter : function(value, row, index) {
+                    var str = '';
+                    
+                    
+		            str += '&nbsp;';
+	                str += "<@secAuthorizeUrl value='/order/orderPreviewBtn.html' >";
+	                str += $.formatString('<img onclick="$.fn.dataGridOptions.viewGoodsFun('+viewGoodsWinParmeters+');" src="{1}" title="预览商品信息"/>', row.id, '${theme_dir}/css/images/extjs_icons/link.png');
+	                str += "</@secAuthorizeUrl>";
+	                str += '&nbsp;';
+                    str += "<@secAuthorizeUrl value='/order/goodsOrderViewBtn.html' >";
+                    str += $.formatString('<img onclick="$.fn.formOptions.viewFun('+viewWinParmeters+');" src="{1}" title="查看订单"/>', row.id, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                    str += "</@secAuthorizeUrl>";
+                    str += '&nbsp;';
+                    if(row.status=="dw" || row.status=="ck"){
+	                    str += "<@secAuthorizeUrl value='/order/goodsOrderCancleBtn.html' >";
+		                str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="撤销订单"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+		                str += "</@secAuthorizeUrl>";
+                    }
+	                
+	                
+	                
+	                return str;
+                }
+            }
+            ] ],
+            toolbar : '#toolbar'
+        });
+    });
+
+	//借款管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/order/order/orderExcel.html";
+		var userName = $("#userName").val();
+		var orderNo = $("#orderNo").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&orderNo=" + orderNo + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>订单号：<input type="text" name="orderNo" id="orderNo"></li>
+            		<li>借款人邮箱：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>订单状态：
+            			<select name="status" id="status" class="type">
+		                  <option value="all" selected="selected">全部</option>
+		                  <option value="dw">订单未审核</option>
+		                  <option value="ck">订单审核通过(已发标)</option>
+		                  <option value="cd">订单已完成</option>
+		                  <option value="oo">已经通知商城发货</option>
+		                  <option value="dd">订单被撤销</option>
+		                </select>
+            		</li>
+	                <li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+        <div id="toolbar" style="display: none;">
+		        <@secAuthorizeUrl value='/borrowManagerExcel.html'>
+		            <a onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		        </@secAuthorizeUrl>
+        </div>
+    </div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

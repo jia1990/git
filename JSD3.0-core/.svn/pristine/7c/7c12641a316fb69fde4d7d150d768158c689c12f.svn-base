@@ -1,0 +1,144 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.UserActivityDao;
+import com.ddtkj.p2psys.redpacket.domain.UserActivity;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.Page;
+
+@Repository("userActivityDao")
+public class UserActivityDaoImpl extends BaseDaoImpl<UserActivity> implements UserActivityDao {
+	
+	private int count ;
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public PageDataList<UserActivity> getUserActivity(long id,int currentPage,int pagenum) {
+		// a.act_name anem,u.user_name auser,arp.account useraccount, ua.user_rp_isuse userisuse,u2.user_id refid,a2.act_name aref, u2.user_name ref,arp2.account refaccount,ua.referrer_rp_isuse refisuse
+		List<UserActivity> list = query(id,null,null,false,currentPage,pagenum).getResultList() ;
+		Page page = new  Page(count, currentPage, pagenum) ;
+		PageDataList<UserActivity> pl = new PageDataList<UserActivity>(page, list);
+        return pl;
+	}
+	private Query query(long id,Integer isuse,String typecode,boolean isRef,int currentPage,int pagenum) {
+		// a.act_name anem,u.user_name auser,arp.account useraccount, ua.user_rp_isuse userisuse,u2.user_id refid,a2.act_name aref, u2.user_name ref,arp2.account refaccount,ua.referrer_rp_isuse refisuse 
+		StringBuffer jpql = new StringBuffer("SELECT ua.* FROM t_jsd_user_activity ua");
+        jpql.append(" left join  t_jsd_activity_rp arp on ua.actrp_id = arp.id");
+        jpql.append(" left join  t_jsd_activity_rp arp2 on ua.referrer_actrp_id = arp2.id");
+        jpql.append(" left join  t_jsd_activity a on arp.act_id = a.act_id");
+        jpql.append(" left join  t_jsd_activity a2 on arp2.act_id = a2.act_id");
+        jpql.append(" left join  t_jsd_rp rp on arp.rp_id = rp.rp_id");
+        jpql.append(" left join  t_jsd_rp rp2 on arp2.rp_id = rp2.rp_id");
+        jpql.append(" left join  t_jsd_user u on ua.user_id = u.user_id");
+        jpql.append(" left join  t_jsd_user u2 on ua.referrer_id = u2.user_id ");
+        if(isRef){
+        	jpql.append("where u2.user_id=?");
+        }else{
+        	jpql.append("where u.user_id=?") ;
+        }
+        Query query = null ;
+        if(isuse==null && StringUtils.isNotEmpty(typecode)){
+        	jpql.append(" and rp.type_code=? or rp2.type_code=?");
+        	query = em.createNativeQuery(jpql.toString(),UserActivity.class); 
+        	query.setParameter(1,id) ;
+        	query.setParameter(2, typecode);
+        	query.setParameter(3, typecode);
+        }else if(isuse!=null && StringUtils.isEmpty(typecode)){
+        	if(isRef){
+        		jpql.append(" and ua.referrer_rp_isuse=? ") ;
+        	}else{
+        		jpql.append(" and ua.user_rp_isuse=? ") ;
+        	}
+        	query = em.createNativeQuery(jpql.toString(),UserActivity.class); 
+        	query.setParameter(1,id) ;
+        	query.setParameter(2,isuse);
+        }else if(isuse!=null && StringUtils.isNotEmpty(typecode)){
+        	jpql.append(" and rp.type_code=? or rp2.type_code=?");
+        	if(isRef){
+        		jpql.append(" and ua.referrer_rp_isuse=? ") ;
+        	}else{
+        		jpql.append(" and ua.user_rp_isuse=? ") ;
+        	}
+        	query = em.createNativeQuery(jpql.toString(),UserActivity.class); 
+        	query.setParameter(1,id) ;
+        	query.setParameter(2, typecode);
+        	query.setParameter(3, typecode);
+        	query.setParameter(4,isuse);
+        }else{
+        	query = em.createNativeQuery(jpql.toString(),UserActivity.class); 
+        	query.setParameter(1,id) ;
+        }
+        String countsql = "select count(s.id) from ("+jpql.toString()+") s" ;
+        Query countQuery = em.createNativeQuery(countsql);
+        if(isuse==null && StringUtils.isNotEmpty(typecode)){
+        	countQuery.setParameter(1,id) ;
+        	countQuery.setParameter(2, typecode);
+        	countQuery.setParameter(3, typecode);
+        }else if(isuse!=null && StringUtils.isEmpty(typecode)){
+        	countQuery.setParameter(1,id) ;
+        	countQuery.setParameter(2,isuse);
+        }else if(isuse!=null && StringUtils.isNotEmpty(typecode)){
+        	countQuery.setParameter(1,id) ;
+        	countQuery.setParameter(2, typecode);
+        	countQuery.setParameter(3, typecode);
+        	countQuery.setParameter(4,isuse);
+        }else{
+        	countQuery.setParameter(1,id) ;
+        }
+        Object o = countQuery.getSingleResult() ;
+        if(o!=null){
+        	count = Integer.parseInt(o.toString());
+        }
+        query.setMaxResults(pagenum) ;
+        query.setFirstResult(pagenum*(currentPage-1)) ;
+        return query;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,
+			int isuse,int currentPage,int pagenum) {
+		List<UserActivity> list = query(userid, isuse, null, false,currentPage,pagenum).getResultList();
+		Page page = new  Page(count, currentPage, pagenum) ;
+		PageDataList<UserActivity> pl = new PageDataList<UserActivity>(page, list);
+        return pl;
+	}
+
+	@Override
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,
+			int isuse, String typecode,int currentPage,int pagenum) {
+		// TODO Auto-generated method stub
+		@SuppressWarnings("unchecked")
+		List<UserActivity> list = query(userid, isuse, typecode, false,currentPage,pagenum).getResultList() ;
+		Page page = new  Page(count, currentPage, pagenum) ;
+		PageDataList<UserActivity> pl = new PageDataList<UserActivity>(page, list);
+        return pl;
+	}
+
+	@Override
+	public PageDataList<UserActivity> getModleByUseridAndTJ(long userid, int isuse,int currentPage,int pagenum) {
+		// TODO Auto-generated method stub
+		@SuppressWarnings("unchecked")
+		List<UserActivity> list = query(userid, isuse, null, true,currentPage,pagenum).getResultList();
+		Page page = new  Page(count, currentPage, pagenum) ;
+		PageDataList<UserActivity> pl = new PageDataList<UserActivity>(page, list);
+        return pl;
+	}
+	@Override
+	public PageDataList<UserActivity> getUserActivityRef(long id, int currentPage,
+			int pagenum) {
+		@SuppressWarnings("unchecked")
+		List<UserActivity> list = query(id,null,null,true,currentPage,pagenum).getResultList() ;
+		Page page = new  Page(count, currentPage, pagenum) ;
+		PageDataList<UserActivity> pl = new PageDataList<UserActivity>(page, list);
+        return pl;
+	}
+
+}

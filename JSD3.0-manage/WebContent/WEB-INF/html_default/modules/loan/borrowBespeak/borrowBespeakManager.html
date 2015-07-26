@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>预约借款信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+    var dataGrid;
+    var winWidth =  700;
+    var winHeight = 280;
+    var verifyTitle = "预约借款";
+    var verifyUrl =  "/modules/loan/borrowBespeak/borrowBespeakEditPage.html";
+    var verifyWinParmeters = "'{0}','"+verifyTitle+"',550,500,'"+verifyUrl+"'";
+    //查看
+    var viewTitle = "查看预约借款";
+    var viewUrl =  "/modules/loan/borrowBespeak/borrowBespeakViewPage.html";
+    var viewWinParmeters = "'{0}','"+viewTitle+"',550,500,'"+viewUrl+"'";
+    
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'borrowBespeakList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50,fixed:true, sortable:false },
+              { field: 'typeName', title: '借款类型', width: 100,fixed:true, sortable:false },
+              { field: 'companyName', title: '公司名称', width: 120,fixed:true, sortable:false },
+              { field: 'name', title: '联系人', width: 100, fixed:true,sortable:false },   
+              { field: 'sex', title: '性别', width: 100, fixed:true,sortable:false,
+            	  formatter: function(value,row,index){
+					//M:男性 F:女性 X:保密
+					if(value == 'F'){
+						return "女";
+					}else if(value == 'M'){
+						return "男";
+					}else if(value == 'X'){
+						return "保密";
+					}
+					return "";
+				}
+              },   
+              { field: 'telephone', title: '联系电话', width: 100, sortable:false },
+              { field: 'money', title: '借款金额', width: 100, sortable:false,formatter: function(value,row,index){
+            	  if (value == 0){
+            		  return "";
+            	  }
+            	  return value + "元";
+              }},
+              { field: 'limitTime', title: '借款期限', width: 100, sortable:false ,formatter: function(value,row,index){
+            	  if (value == 0){
+            		  return "";
+            	  }
+            	  return value;
+              }},
+              { field: 'provinceName', title: '省', width: 100,fixed:true, sortable:false },
+              { field: 'cityName', title: '市', width: 100,fixed:true, sortable:false },
+              { field: 'countyName', title: '区(县)', width: 100,fixed:true, sortable:false },
+
+              { field: 'addTime', title: '添加时间', width: 140,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              }, 
+              { field: 'addIp', title: '添加IP', width: 80,fixed:true,fixed:true, sortable:false },
+              { field: 'doTime', title: '处理时间', width: 80,fixed:true,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+				  }  
+              },
+              { field: 'status', title: '状态', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == 0){
+             		 return "未处理"; 
+             	  }else if(value == 1){
+             	 	 return "已回访";
+             	  }else if(value == 2){
+             		 return "不回访";
+             	  }
+              }},
+              { field : 'action',
+                title : '操作',
+                width :70,
+                fixed:true,
+                formatter : function(value, row, index) {
+                	var str = '';
+                	if(row.status == 0){
+                		str += "<@secAuthorizeUrl value='/borrowBespeakBtn.html'>";
+                        str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+verifyWinParmeters+');" src="{1}" title="操作"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+                        str += "</@secAuthorizeUrl>";
+                	} else {
+                		str += $.formatString('<img onclick="$.fn.dataGridOptions.closeFun('+viewWinParmeters+');" src="{1}" title="查看"/>', row.id, '${theme_dir}/css/images/extjs_icons/map/magnifier.png');
+                	}
+                    return str;
+                }
+              } 
+             ] ],
+             toolbar : '#toolbar'
+        });
+    });
+  //预约借款管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/loan/borrow/borrowBespeakExcel.html";
+		var companyName = $("#companyName").val();
+		var status = $("#status").val();
+		var sou = "?status=" + status + "&companyName=" + companyName;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>公司名称：<input type="text" name="companyName" id="companyName" autocomplete="off"/></li>
+            		<li> 状态：
+		                <select name="status" id="status" class="type">
+		                  <option value="0" selected="selected">未处理</option>
+		                  <option value="1">已回访</option>
+		                  <option value="2">不回访</option>
+		                </select>
+		            </li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+            </form>
+        </div>
+        <div id="toolbar" style="display: none;">
+		        <@secAuthorizeUrl value='/borrowBespeakExcel.html'>
+		            <a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		        </@secAuthorizeUrl>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,341 @@
+package com.ddtkj.manage.action.goods;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.alibaba.fastjson.JSONArray;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsCategory;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.goods.service.GoodsCategoryService;
+import com.ddtkj.p2psys.goods.service.GoodsPicService;
+import com.ddtkj.p2psys.goods.service.GoodsService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.p2psys.core.model.TreeModel;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class ManageGoodsAction extends BaseAction implements ModelDriven<GoodsModel> {
+
+	private GoodsModel model = new GoodsModel();
+	
+	@Override
+	public GoodsModel getModel() {
+		return model;
+	}
+	
+	@Resource
+	private UserService userService;
+	@Resource
+	private GoodsService goodsService;
+	@Resource
+	private GoodsCategoryService goodsCategoryService;
+	@Resource
+	private GoodsPicService goodsPicService;
+	
+	private Map<String, Object> data;
+	
+	private long[] delIds; // 删除的图片ID
+	
+	public long[] getDelIds() {
+		return delIds;
+	}
+
+	public void setDelIds(long[] delIds) {
+		this.delIds = delIds;
+	}
+	/**
+	 * 商品列表页面
+	 * 
+	 * @return
+	 */
+	@Action("/modules/goods/goodsMessage/goodsManager")
+	public String goodsManager(){
+		return "goodsManager";
+	}
+	
+	/**
+	 * 查询商品信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/goods/goodsMessage/goodsList")
+	public void goodsList() throws Exception{
+		
+		String name = this.paramString("name");
+		
+		if(null != name && !"".equals(name)){
+			model.setName(name);
+		}
+		
+		/*
+		int stock = this.paramInt("stock");
+		
+		if(0 != stock){
+			if(stock != 99){
+				model.setStock(stock);
+			}
+		}*/
+		//所属商户用户名
+		String userName = this.paramString("userName");
+		
+		if(null != userName && !"".equals(userName)){
+			model.setUserName(userName);
+			//User user = userService.getUserByUserName(userName);
+			
+			//if(null != user){
+				//model.setUser(user);
+			//}
+			
+		}
+		
+		int type = this.paramInt("type");
+		if(99 != type && 0 != type){
+			model.setType(type);
+		}
+		
+		PageDataList<GoodsModel> page = goodsService.getGoodsPage(model);
+		data = new HashMap<String, Object>();
+		
+		if(page.getPage() == null){
+			data.put("total", 0); // 总行数
+		}else {
+			data.put("total", page.getPage().getTotal()); // 总行数
+		}
+		data.put("rows", page.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 商品添加页面
+	 * 
+	 * @return
+	 */
+	@Action("/modules/goods/goodsMessage/addGoodsPage")
+	public String addGoodsPage(){
+		
+		List<DdtkjGoodsCategory> parentList = goodsCategoryService.getCategoryAll();
+		
+		request.setAttribute("parentList", parentList);
+		this.saveToken("goodsMessageAddToken");
+		return "addGoodsPage";
+	}
+	
+	/**
+	 * 商品信息添加
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/goods/goodsMessage/addGoods")
+	public void addGoods() throws Exception{
+		
+		long categoryId = this.paramLong("categoryId");
+		long userId = this.paramLong("userId");
+		
+		if(categoryId == 0){
+			throw new BussinessException("请选择商品所属类型", 1);
+		}
+		if(userId == 0){
+			throw new BussinessException("请选择商品所属商户", 1);
+		}
+		model.setGoodsCategory(new DdtkjGoodsCategory(categoryId));//商品分类
+		model.setAddUser(this.getOperatorUserName()); // 添加人
+		model.setUser(userService.find(userId));
+		// 商品图片
+		String[] goodsPics = request.getParameterValues("goodsPic");
+		
+		if (goodsPics != null) {
+			List<String> list = new ArrayList<String>();
+		
+			for(int i=0;i<goodsPics.length;i++){
+			
+				list.add(goodsPics[i]);
+				
+			}
+			
+			model.setFiles(list);
+		}
+		checkToken("goodsMessageAddToken");
+		Boolean result = goodsService.addGoods(model);
+		
+		if (result) {
+			printResult(MessageUtil.getMessage("I10001"), true);
+		} else {
+			printResult(MessageUtil.getMessage("I10004"), false);
+		}
+		
+	}
+	
+	/**
+	 * 修改商品页面
+	 * 
+	 */
+	@Action("/modules/goods/goodsMessage/editGoodsPage")
+	public String editGoodsPage(){
+		
+		//long id = paramLong("id");
+		// 查询所有商品分类
+		//List<DdtkjGoodsCategory> itemList =goodsCategoryService.getCategoryAll();
+		// 根据ID查询商品信息
+		DdtkjGoods goods = goodsService.getGoodsById(model.getId());
+		// 根据ID查询商品分类信息
+		DdtkjGoodsCategory ddtkjGoodsCategory = goodsCategoryService.getCategoryById(goods.getGoodsCategory().getId());
+		
+		//List<DdtkjGoodsPic> goodsPicList = goodsPicService.getGoodsPicByGoodsId(goods.getId());
+		
+		User user = goods.getUser();
+		
+		request.setAttribute("user", user);
+		//goods.getUser().getUserId();
+		request.setAttribute("ddtkjGoodsCategory", ddtkjGoodsCategory);
+		//model.setId(id);
+		request.setAttribute("goods", goods);
+		
+		//request.setAttribute("itemList", itemList);
+		//request.setAttribute("goodsPicList", goodsPicList);
+		//request.setAttribute("category", goods.getGoodsCategory());
+		this.saveToken("goodsMessageEditToken");
+		
+		return "editGoodsPage";
+	}
+	
+	/**
+	 * 修改商品信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/goods/goodsMessage/editGoods")
+	public void editGoods() throws Exception{
+		
+		try {
+			long goodsId = paramLong("id");
+			
+			List<DdtkjGoodsPic> list = new ArrayList<DdtkjGoodsPic>();
+	
+			String[] picPaths = request.getParameterValues("goodsPic");
+	
+			
+			DdtkjGoods goods = goodsService.getGoodsById(goodsId);
+			if (picPaths != null) {
+				for (String path : picPaths) {
+					DdtkjGoodsPic uu = new DdtkjGoodsPic();
+					uu.setGoodsId(goodsId);
+					uu.setPicUrl(path);
+					uu.setAddTime(new Date());
+					list.add(uu);
+				}
+			}
+			
+			String typeStr = paramString("type");
+			int type = Integer.parseInt(typeStr);
+	     	goods.setGoodsNo(model.getGoodsNo());
+	     	goods.setName(model.getName());
+	     	//goods.setType(model.getType());
+	     	goods.setType(type);
+	     	goods.setStock(model.getStock());
+	     	goods.setDetail(model.getDetail());
+	     	goods.setDescription(model.getDescription());
+			goods.setCost(model.getCost());
+			goods.setSize(model.getSize());
+	     	goods.setColor(model.getColor());
+	     	goods.setVesion(model.getVesion());
+	     	goods.setGoodsApr(model.getGoodsApr());
+	     	goods.setRemark(model.getRemark());
+	     	
+	     	goods.setUpdateTime(new Date());
+	     	goods.setUpdateUser(getOperatorUserName());
+	     	checkToken("goodsMessageEditToken");
+	     	goodsService.update(goods, list, delIds);
+	     	
+	     	printResult("修改商品成功", true);
+	     	
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+     	
+	}
+	
+	/**
+     * 获取实物照
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/goods/goodsMessage/getGoodsPic")
+    public void getUserPic() throws Exception {
+    	
+    	long id = paramLong("id");
+    	
+    	if(id != 0){
+	    	
+	    	DdtkjGoods goods = goodsService.getGoodsById(paramLong("id"));
+	     	
+	    	model.setGoods(goods);
+
+	     	List<DdtkjGoodsPic> list = goodsPicService.getGoodsPicByGoodsId(goods.getId());
+	     	
+	        data = new HashMap<String, Object>();
+	    	data.put("list", list);
+			printJson(getStringOfJpaObj(data));
+
+    	}
+    }
+	
+	
+	/**
+	 * 栏目tree列表展示
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/goods/goodsMessage/goodsCategoryTreeList")
+	public void articleTreePage() throws Exception {
+		List<DdtkjGoodsCategory> parentList = goodsCategoryService.getCategoryParent(0);
+		List<TreeModel> treeList = new ArrayList<TreeModel>();
+		for (DdtkjGoodsCategory siteNew : parentList) {
+			TreeModel tree = new TreeModel();
+			tree.setId(siteNew.getId());
+			tree.setText(siteNew.getName());
+			//tree.setText(siteNew.getName()+" <a style=\"display:none;\"> "+siteNew.getNid()+" </a>");
+			tree.setChildren(this.getChild((int)siteNew.getId()));
+			treeList.add(tree);
+		}
+		response.setContentType("text/json;charset=GBK");
+		String jsonStr = "" + JSONArray.toJSONString(treeList);
+		response.getWriter().write(jsonStr);
+	}
+	
+	/**
+	 * 获取栏目的子目录
+	 * 
+	 * @param nid
+	 * @return
+	 */
+	private List<TreeModel> getChild(int pid) {
+		List<DdtkjGoodsCategory> parentList = goodsCategoryService.getCategoryParent(pid);
+		//List<Site> siteList = siteService.findByNid(nid);
+		List<TreeModel> childList = new ArrayList<TreeModel>();
+		for (DdtkjGoodsCategory siteNew : parentList) {
+			
+				TreeModel tree = new TreeModel();
+				tree.setId(siteNew.getId());
+				tree.setText(siteNew.getName());
+				//tree.setText(siteNew.getName()+" <a style=\"display:none;\"> "+siteNew.getNid()+" </a>");
+				tree.setChildren(this.getChild((int)siteNew.getId()));
+				childList.add(tree);
+		}
+		return childList;
+	}
+	
+	
+}

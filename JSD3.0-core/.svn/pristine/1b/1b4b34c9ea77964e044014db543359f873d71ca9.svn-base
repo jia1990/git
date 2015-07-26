@@ -1,0 +1,23 @@
+package com.ddt.test.util;
+
+import com.alibaba.fastjson.serializer.JSONSerializer;
+import com.alibaba.fastjson.serializer.SerializeWriter;
+/**
+ * 对象描述工具类
+ * <p>可以把对象信息输出到控制台等</p>
+ * @author ddt_xinggw  
+ * */
+public class  ObjDescUtil{
+	/**
+	 * 对象信息输出到控制台
+	 * @param  obj
+	 *                要描述的对象
+	 * */
+	public static  void print2console(Object obj){
+		 SerializeWriter sw = new SerializeWriter();
+		 JSONSerializer serializer = new JSONSerializer(sw);
+		 serializer.write(obj);
+		 System.out.println(obj.getClass().getName()+"-->"+sw.toString());
+	}
+	
+}

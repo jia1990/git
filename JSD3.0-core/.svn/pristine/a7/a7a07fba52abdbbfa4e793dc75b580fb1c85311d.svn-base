@@ -1,0 +1,69 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.Calendar;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardLogDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardLog;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的消费（端午节）
+ * @作者：wangchangwei@ddtkj.com  JSDP-203
+ * @创建时间：2015年4月14日 
+ */
+public class PetCardConsumeWorker extends RpActivityBaseWorker{
+	
+	public PetCardConsumeWorker(Account account,BorrowTender tender,double consumeMoney){
+		super(account,tender, consumeMoney);
+	}
+
+	@Override
+	public void autoHandld() {
+		PetCardLogDao petCardLogDao = (PetCardLogDao) BeanUtil.getBean("petCardLogDao");
+		
+		double validAccount = tender.getAccount();
+		
+		double petCardFreeze = consumeMoney;
+		
+		double unFreeze = 0.0;
+		if(petCardFreeze >0){
+			//体验卡金额，更新账户表
+			if(petCardFreeze>=validAccount){
+				unFreeze = validAccount;
+			}else if(petCardFreeze < validAccount){
+				unFreeze = petCardFreeze;
+			}
+			if(unFreeze > 0){
+				
+				//加入体验卡的消费日志
+				PetCardLog petCardLog = new PetCardLog();
+				petCardLog.setConsumeMoney(unFreeze);
+				petCardLog.setConsumeTime(Calendar.getInstance().getTime());
+				petCardLog.setConsumeUser(tender.getUser());
+				petCardLog.setRemark("投标"+tender.getBorrow().getId()+",使用体验卡"+unFreeze);
+				petCardLog.setStatus(PetCardLog.TRANSFER_RECHARGE_PET_CARD_SUC);
+				petCardLogDao.save(petCardLog);
+				
+				//记录晋商贷体验卡的消费资金日志，第三方不需要处理，只是解冻资金
+				Global.setTransfer("user", tender.getUser());
+				Global.setTransfer("rpMoney", unFreeze);
+				
+				map.put("rechargeMoney", unFreeze);
+				AbstractExecuter executer = ExecuterHelper.doExecuter("petCardConsumeInvesterExecuter");
+				executer.execute(map, tender.getUser());
+			}
+			
+		}
+
+	}
+	
+
+}

@@ -1,0 +1,106 @@
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/header_footer.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script>
+	$(function(){
+		$(".c_contact_icon").hover(function(){
+			var index=$(this).index(".c_contact_icon");
+			$(".pophover-content").hide();
+			$(".pophover-content").eq(index).show();
+		},function(){
+			$(".pophover-content").hide();
+		})
+		
+		var userName  = $("#userName").html();
+		if(userName.length >11){
+			var partUserName  = userName.substring(0,7);
+			var showUserName =partUserName+"..."
+			$("#userName").html(showUserName);
+			$(".dlddhovers1").hover(function(){
+				$("#userName").attr("title",userName);
+				
+			})
+		}
+	})
+</script>
+<style>
+	.headerTop .topContent .c_mobile{background: url(${webroot}${theme_dir}/images/header_footer/mobile.png) no-repeat 20px 16px;padding-left:0;}
+	.headerTop .topContent .c_mobile a{padding-left: 36px;}
+	.headerTop .topContent .c_mobile:hover{background-image:url(${webroot}${theme_dir}/images/header_footer/mobile1.png);}
+	.headerTop .topContent dd{margin-right:0;border-right: 1px solid #dddddd;}
+	.topContent dd a{display:block;padding: 0 20px;}
+	.topContent dd.dlddhovers a:hover{color: #fff;}
+	.topContent dd.dlddhovers1 a{color: #0697da;}
+	.topContent dd.dlddhovers2 a{color: #ff7900;}
+	.topContent dd.dlddhovers:hover{background-color:#12adff; }
+	.oldversions{background-color:#E3E3E3}
+	.oldversions:hover{background-color:#E3E3E3;}
+	#returnOld{color:#333}
+	#returnOld:hover{color:#fff}
+</style>
+	<!-- 头部 -->
+	<div class="headerTop">
+		<div class="topContent">
+			<ul class="c_servive">
+				<li>客服热线：<span class="c_telphone">400-080-3000</span></li>
+				<li>服务时间：24小时</li>
+				<li>
+					<span class="c_contact_icon c_microblog">
+						<div id="weibo-popover-content" class="pophover-content popover bottom" style="top: 40px;left: -60px;">
+							<div class="arrow"></div>
+							<div class="popover-content">
+								<p style="text-align: center;">
+									点击关注晋商贷微博 <a href="http://www.weibo.com/jinshangdai" target="_blank" hidefocus>@jinshangdai</a>
+								</p>
+							</div>
+						</div>
+					</span>
+					<span class="c_contact_icon c_kik">
+						<div id="wechat-popover-content" class="pophover-content popover bottom" style="top: 40px;left: -60px;">
+                            <div class="arrow"></div>
+                            <div class="popover-content">
+                                <p style="white-space: nowrap">扫码晋商贷微信</p>
+                                <div style="width: 100px; height: 100px; margin-left: 10px;">
+                                    <img src="${webroot}${theme_dir}/images/header_footer/code.jpg" width="100" height="100" border="0" alt="">
+                                </div>
+                            </div>
+                        </div>
+					</span>
+					<a href="javascript:(void)" onclick="javascript:window.open('http://b.qq.com/webc.htm?new=0&amp;sid=4000803000&amp;eid=218808P8z8p8K808R8x8x&amp;o=&amp;q=7&amp;ref='+document.location, '_blank', 'height=544, width=644,toolbar=no,scrollbars=no,menubar=no,status=no');">
+					<span class="c_contact_icon c_qq">
+						<div id="qq-popover-content" class="pophover-content" style="top: 40px;left: -60px;">
+                            <div class="arrow"></div>
+                            <div class="popover-content">
+                                <p style="white-space: nowrap">点击访问企业QQ</p>
+                            </div>
+                        </div>
+					</span>
+					</a>
+				</li>
+				
+			</ul>
+			
+			 <dl>
+				<dd class="dlddhovers"><a href="${webroot}/common/faquestions.html">常见问题</a></dd>
+		      <dd class="dlddhovers"><a href="${webroot}/desktop.html" title="添加到桌面快捷方式" >收藏</a></dd>
+				<dd class="dlddhovers"><a href="/user/activity.html" hidefocus>活动专区</a></dd>
+				<!-- <dd class="c_mobile dlddhovers"><a href="${webroot}/app.html" hidefocus>移动客户端</a></dd> -->
+				<dd class="dlddhovers dlddhovers1"><a href="/member/main.html" class="hovercolors" hidefocus  id="userName">${session_user.userName}</a></dd>
+				<dd class="dlddhovers" ><a href="${webroot}/user/logout.html"  class="hovercolors" hidefocus>退出</a></dd>
+				<dd class="oldversions dlddhovers"><a href="http://old.jinshangdai.com" target="_blank" hidefocus id="returnOld"  title="返回旧版本">返回旧版本</a></dd>
+		  </dl>
+		</div>
+	</div>
+    <div class="header">
+		<div class="logo_nav logo_nav_MemberCenter">
+			<a href="/" class="logo logo3" hidefocus></a><img src="${webroot}${theme_dir}/images/my_03.png" style="float:left;margin-top:28px;">
+			<dl class="nav nav_MemberCenter">
+				<dd><a class="c_nav3_this" href="https://www.jinshangdai.com/member/main.html" hidefocus>我的主页</a></dd>
+				<dd><a href="https://www.jinshangdai.com/member/useridentify/identify.html" hidefocus>我的账户</a></dd>
+				<dd><a href="https://www.jinshangdai.com/member/invest/myInvest.html" hidefocus>我的交易</a></dd>
+			</dl>
+			<dl class="nav nav_MemberCenter1"> 
+				<dd class="top_last top_register"><a href="https://www.jinshangdai.com/user/activity.html" hidefocus>活动列表</a></dd>
+				<dd class="top_last"><a href="https://www.jinshangdai.com/invest/index.html" hidefocus>我要理财</a></dd>
+			</dl>
+		</div>
+	</div>

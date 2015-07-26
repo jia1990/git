@@ -1,0 +1,474 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+
+/**
+ * @描述：债权转让规则
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月23日
+ */
+public class CreditSwingOutRuleCheck extends RuleCheck {
+
+	private static final long serialVersionUID = -98841786655188496L;
+	
+	private static final int STATUS_OPEN = 1;
+	private static final int STATUS_CLOSE = 0;
+	
+	private BorrowTypeLime[] swingoutrul ;
+	private int is_verify_full_auto ; //是否需要手动复审  1 不需要 2 需要
+	
+	/* 标种类型 */
+	private static class BorrowTypeLime implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -2046269564483568937L;
+		private int borrow_type ;
+		private SwingOutTime swing_out_time; // 转出时间限制
+		private SwingOutFee swing_out_fee ; //	转出手续费
+		private NoNormalCredit nonormal_fee;// 非正常转出
+		public SwingOutTime getSwing_out_time() {	
+			return swing_out_time;
+		}
+		public void setSwing_out_time(SwingOutTime swing_out_time) {
+			this.swing_out_time = swing_out_time;
+		}
+		public SwingOutFee getSwing_out_fee() {
+			return swing_out_fee;
+		}
+		public void setSwing_out_fee(SwingOutFee swing_out_fee) {
+			this.swing_out_fee = swing_out_fee;
+		}
+		public int getBorrow_type() {
+			return borrow_type;
+		}
+		public void setBorrow_type(int borrow_type) {
+			this.borrow_type = borrow_type;
+		}
+		public NoNormalCredit getNonormal_fee() {
+			return nonormal_fee;
+		}
+		public void setNonormal_fee(NoNormalCredit nonormal_fee) {
+			this.nonormal_fee = nonormal_fee;
+		}
+	};
+
+	/* 原始投资  转出 时间 限定 */
+	private static class SwingOutTime implements java.io.Serializable{
+		
+		private static final long serialVersionUID = 1328193535371768765L;
+		
+		private TenderLimit[] tender;
+		private CreditLimit credit;
+		private String remark;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public TenderLimit[] getTender() {
+			return tender;
+		}
+		public void setTender(TenderLimit[] tender) {
+			this.tender = tender;
+		}
+		public CreditLimit getCredit() {
+			return credit;
+		}
+		public void setCredit(CreditLimit credit) {
+			this.credit = credit;
+		}
+	};
+	/* 原始投资  转出 手续费 限定 */
+	private static class SwingOutFee implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -1644027291250463261L;
+		
+		private int out_type ; // 扣费类型  1 比率 2 金额
+		private int buy_type ; // 扣费类型  1 比率 2 金额
+		private CreditFee credit_out;
+		private CreditFee credit_buy;
+		private String remark;
+		
+		public String getRemark() {
+			return remark;
+		}
+
+		public CreditFee getCredit_out() {
+			return credit_out;
+		}
+
+		public void setCredit_out(CreditFee credit_out) {
+			this.credit_out = credit_out;
+		}
+
+		public CreditFee getCredit_buy() {
+			return credit_buy;
+		}
+
+		public void setCredit_buy(CreditFee credit_buy) {
+			this.credit_buy = credit_buy;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+
+
+		public int getOut_type() {
+			return out_type;
+		}
+
+
+
+		public void setOut_type(int out_type) {
+			this.out_type = out_type;
+		}
+
+
+
+		public int getBuy_type() {
+			return buy_type;
+		}
+
+
+
+		public void setBuy_type(int buy_type) {
+			this.buy_type = buy_type;
+		}
+	};
+	/* 原始投资  非正常转出  */
+	private static class NoNormalCredit implements java.io.Serializable{
+		
+		private static final long serialVersionUID = 7956422295272527977L;
+		
+		private int type ; // 扣费类型  1 比率 2 金额
+		private CreditFee no_normal_dedit; // 违约金
+		
+		private String remark;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public int getType() {
+			return type;
+		}
+		public void setType(int type) {
+			this.type = type;
+		}
+		public CreditFee getNo_normal_dedit() {
+			return no_normal_dedit;
+		}
+		public void setNo_normal_dedit(CreditFee no_normal_dedit) {
+			this.no_normal_dedit = no_normal_dedit;
+		}
+	};
+	
+	/*原投资 时间限制类 */
+	private static class TenderLimit implements java.io.Serializable {
+
+		private static final long serialVersionUID = -413364272807756004L;
+		
+		private int time_limit ;  // 标期限  月标单位是（月） 天标单位是（天）
+		private int min_time ; //  可转让最小时间  月标单位是（月） 天标单位是（天）
+		private int borrow_time_type ; // 标类型    0月标 1天标
+		private int maxday ; //  当期还款日  多少天 可以申请转出
+		
+		public int getTime_limit() {
+			return time_limit;
+		}
+		public void setTime_limit(int time_limit) {
+			this.time_limit = time_limit;
+		}
+		public int getMin_time() {
+			return min_time;
+		}
+		public void setMin_time(int min_time) {
+			this.min_time = min_time;
+		}
+		public int getBorrow_time_type() {
+			return borrow_time_type;
+		}
+		public void setBorrow_time_type(int borrow_time_type) {
+			this.borrow_time_type = borrow_time_type;
+		}
+		public int getMaxday() {
+			return maxday;
+		}
+		public void setMaxday(int maxday) {
+			this.maxday = maxday;
+		}
+	};
+	/*原投资 时间限制类 */
+	private static class CreditLimit implements java.io.Serializable {
+
+		private static final long serialVersionUID = 1699900436742459035L;
+		
+		private int min_time ; //  可转让最小时间  月标单位是（月） 天标单位是（天）  债权再转出也是天
+		private int maxday ; //  当期还款日  多少天 可以申请转出
+		
+		public int getMin_time() {
+			return min_time;
+		}
+		public void setMin_time(int min_time) {
+			this.min_time = min_time;
+		}
+		public int getMaxday() {
+			return maxday;
+		}
+		public void setMaxday(int maxday) {
+			this.maxday = maxday;
+		}
+	}
+	
+	/*原投资 时间限制类 */
+	private static class CreditFee implements java.io.Serializable {
+
+		private static final long serialVersionUID = 4061718612485705438L;
+		
+		private double credit_rate ; //  比率
+		
+		private FeeAccount[] credit_account ; // 金额
+
+		public double getCredit_rate() {
+			return credit_rate;
+		}
+
+		public void setCredit_rate(double credit_rate) {
+			this.credit_rate = credit_rate;
+		}
+
+		public FeeAccount[] getCredit_account() {
+			return credit_account;
+		}
+
+		public void setCredit_account(FeeAccount[] credit_account) {
+			this.credit_account = credit_account;
+		} 
+	
+	}
+	
+	private static class FeeAccount implements java.io.Serializable,Comparable<FeeAccount>{
+		
+		private static final long serialVersionUID = 386291120364649863L;
+		
+		private double min_account ; //  最小金额   达到多少满足条件
+		private double yes_account ; //  应扣多少
+		
+		public double getMin_account() {
+			return min_account;
+		}
+		public void setMin_account(double min_account) {
+			this.min_account = min_account;
+		}
+		public double getYes_account() {
+			return yes_account;
+		}
+		public void setYes_account(double yes_account) {
+			this.yes_account = yes_account;
+		}
+		@Override
+		public int compareTo(FeeAccount o) {
+			int num =new Double(this.getMin_account()).compareTo(new Double(o.getMin_account()));
+		    return num;
+		}
+	}
+	@Override
+	public boolean checkRule() {
+		// TODO Auto-generated method stub
+		return false;
+	};
+	public Map<Integer,BorrowTypeLime> ruleMap(){
+		Map<Integer,BorrowTypeLime> map = new HashMap<Integer,BorrowTypeLime>() ;
+		for (BorrowTypeLime borrowTypeLime : swingoutrul) {
+			map.put(borrowTypeLime.getBorrow_type(), borrowTypeLime) ;
+		}
+		return map ; 
+	}
+	/**
+	 * @param borrowType // 标类型
+	 * @param borrowTimeType // 天标 还是 日标
+	 * @return
+	 */
+	public Map<Integer,Integer> tenderTimeMap(int borrowType,int borrowTimeType){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		SwingOutTime sot = btl.getSwing_out_time() ;
+		Map<Integer,Integer> tenderMap = new HashMap<Integer, Integer>() ;
+		for (TenderLimit tl : sot.getTender()) {
+			if(tl.getBorrow_time_type()==borrowTimeType){
+				tenderMap.put(tl.getTime_limit(), tl.min_time) ;
+			}
+		}
+		return tenderMap ;
+		
+	}
+	/**
+	 * 原投资 还款前时间 限定
+	 * @param borrowType // 标类型
+	 * @param borrowTimeType // 天标 还是 日标
+	 * @param timelimit  // 标月数
+	 * @return
+	 */
+	public Integer tenderTimeBeforeMap(int borrowType,int borrowTimeType,int timelimit){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		SwingOutTime sot = btl.getSwing_out_time() ;
+		for (TenderLimit tl : sot.getTender()) {
+			if(tl.getBorrow_time_type()==borrowTimeType && tl.getTime_limit() == timelimit){
+				return tl.getMaxday() ; 
+			}
+		}
+		return 0 ;
+		
+	}
+	/**
+	 * 债权再转出  时间 限定
+	 * @param borrowType
+	 * @param borrowTimeType
+	 * @return
+	 */
+	public Integer creditTimeMap(int borrowType){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		SwingOutTime sot = btl.getSwing_out_time() ;
+		CreditLimit cl = sot.getCredit() ;
+		return  cl.getMin_time() ;
+	}
+	/**
+	 * 债权再转出  还款时间前时间 限定
+	 * @param borrowType
+	 * @return
+	 */
+	public Integer creditTimeBeforeMap(int borrowType){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		SwingOutTime sot = btl.getSwing_out_time() ;
+		CreditLimit cl = sot.getCredit() ;
+		return  cl.getMaxday() ;
+	}
+	/**
+	 * 转出手续费  费率
+	 * @param type 手续费扣费类型 
+	 * @param borrotType 标类型
+	 * @return
+	 */
+	public double outRateFee(int borrowType){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		return  btl.getSwing_out_fee().getCredit_out().getCredit_rate() ;
+	}
+	/**
+	 * 购买手续费 费率
+	 * @param type 手续费扣费类型 
+	 * @param borrotType 标类型
+	 * @return
+	 */
+	public double buyRateFee(int borrowType){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		return  btl.getSwing_out_fee().getCredit_buy().getCredit_rate() ;
+	}
+	/**
+	 *  转出手续费  金额
+	 * @param borrowType // 标 类型
+	 * @param account  // 转出本金
+	 * @return
+	 */
+	public double outAccountFee(int borrowType,double account){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		SwingOutFee sof  = btl.getSwing_out_fee() ;
+		Arrays.sort(sof.getCredit_out().getCredit_account());  
+		for (int i=0; i<sof.getCredit_out().getCredit_account().length;i++) {
+			if(sof.getCredit_out().getCredit_account()[i].getMin_account()>account){
+				return sof.getCredit_out().getCredit_account()[i-1].getYes_account() ;
+			}
+		}
+		return 0.00 ;
+	}
+	/**
+	 * 购买手续费 金额
+	 * @param borrowType // 标 类型
+	 * @param account  // 转出本金
+	 * @return
+	 */
+	public double buyAccountFee(int borrowType,double account){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		SwingOutFee sof  = btl.getSwing_out_fee() ;
+		Arrays.sort(sof.getCredit_buy().getCredit_account());  
+		for (int i=0; i<sof.getCredit_buy().getCredit_account().length;i++) {
+			if(sof.getCredit_buy().getCredit_account()[i].getMin_account()>account){
+				return sof.getCredit_buy().getCredit_account()[i-1].getYes_account() ;
+			}
+		}
+		return 0.00 ;
+	}
+	/**
+	 * 非正常转出 费率
+	 * @param type 手续费扣费类型 
+	 * @param borrotType 标类型
+	 * @return
+	 */
+	public double noNormalRate(int borrowType){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		return btl.getNonormal_fee().getNo_normal_dedit().getCredit_rate() ;
+	}
+	/**
+	 *  非正常转出  金额
+	 * @param borrowType
+	 * @return
+	 */
+	public Map<Double,Double> noNormalAccount(int borrowType){
+		BorrowTypeLime btl = ruleMap().get(borrowType) ;
+		Map<Double,Double> outMap = new HashMap<Double, Double>() ;
+		for (FeeAccount tl : btl.getNonormal_fee().getNo_normal_dedit().getCredit_account()) {
+			outMap.put(tl.getMin_account(),tl.getYes_account()) ;
+		}
+		return outMap ;
+	}
+	public int getBuyFeeType(int borrowType){
+		return ruleMap().get(borrowType).getSwing_out_fee().getBuy_type() ;
+	}
+	public int getOutFeeType(int borrowType){
+		return ruleMap().get(borrowType).getSwing_out_fee().getOut_type() ;
+	}
+	public int getNoNormalType(int borrowType){
+		return ruleMap().get(borrowType).getNonormal_fee().getType() ;
+	}
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = CreditSwingOutRuleCheck.class.getResourceAsStream("债权转让规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n","").replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<CreditSwingOutRuleCheck> clazz = CreditSwingOutRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		CreditSwingOutRuleCheck test = (CreditSwingOutRuleCheck) jsonObj;
+
+
+	}
+
+
+	public BorrowTypeLime[] getSwingoutrul() {
+		return swingoutrul;
+	}
+
+	public void setSwingoutrul(BorrowTypeLime[] swingoutrul) {
+		this.swingoutrul = swingoutrul;
+	}
+	public int getIs_verify_full_auto() {
+		return is_verify_full_auto;
+	}
+	public void setIs_verify_full_auto(int is_verify_full_auto) {
+		this.is_verify_full_auto = is_verify_full_auto;
+	}
+}

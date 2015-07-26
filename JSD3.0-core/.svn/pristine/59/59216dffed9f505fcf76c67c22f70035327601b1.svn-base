@@ -1,0 +1,125 @@
+
+package com.ddtkj.p2psys.score.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.score.dao.ScoreRuleAwardDao;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.model.ScoreRuleAwardModel;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+
+@Service("scoreRuleAwardService")
+public class ScoreRuleAwardServiceImpl implements ScoreRuleAwardService{
+	
+	private static Logger logger = Logger.getLogger(ScoreRuleAwardServiceImpl.class);
+
+	@Resource ScoreRuleAwardDao scoreRuleAwardDao;
+	
+	@Override
+	public long getRuleIdByAwardType(int awardType) {
+		return scoreRuleAwardDao.getRuleAwardByAwardType(awardType).getId();
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByAwardType(int awardType) {
+		return scoreRuleAwardDao.findObjByProperty("awardType", awardType);
+	}
+	
+	@Override
+	public ScoreRuleAward getRuleAwardByRuleId(long ruleId) {
+		return scoreRuleAwardDao.find(ruleId);
+	}
+
+	@Override
+	public void updateRuleAward(ScoreRuleAward data) {
+		scoreRuleAwardDao.update(data);
+
+	}
+
+	@Override
+	public void addRuleAward(ScoreRuleAward data) {
+		scoreRuleAwardDao.save(data);
+	}
+	
+	@Override
+	public List<ScoreRuleAward> getRuleAwardList() {
+		return scoreRuleAwardDao.getRuleAwardList();
+	}
+	
+	@Override
+	public void updateTotalMoney(long ruleId, double money) {
+		scoreRuleAwardDao.updateTotalMoney(ruleId, money);
+
+	}
+
+	@Override
+	public PageDataList<ScoreRuleAwardModel> getRuleAwardList(
+			ScoreRuleAwardModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if(model != null){
+			if(StringUtil.isNotBlank(model.getName())){
+				param.addParam("name", Operators.LIKE, model.getName());	
+			}
+			if(model.getAwardType() != 99 && model.getAwardType() != 0){
+				param.addParam("awardType", model.getAwardType());
+			}
+			if(model.getBackType()!= 99 && model.getAwardType() != 0){
+				param.addParam("backType", model.getBackType());
+			}
+			if (StringUtil.isNotBlank(model.getStatus()) && !"99".equals(model.getStatus()) ) {
+				param.addParam("status", model.getStatus());
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		
+		param.addOrder(OrderType.DESC,"id");
+		PageDataList<ScoreRuleAward> list = scoreRuleAwardDao.findPageList(param);
+		PageDataList<ScoreRuleAwardModel> pageDataList = new PageDataList<ScoreRuleAwardModel>();
+		List<ScoreRuleAwardModel> ruleAwardList = new ArrayList<ScoreRuleAwardModel>();
+		pageDataList.setPage(list.getPage());
+		if (list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				ScoreRuleAward scoreRuleAward = (ScoreRuleAward)list.getList().get(i);
+				ScoreRuleAwardModel ruleAwardModel = ScoreRuleAwardModel.instance(scoreRuleAward);
+				ruleAwardList.add(ruleAwardModel);
+			}
+		}
+		pageDataList.setList(ruleAwardList);
+		return pageDataList;
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatus(String status) {
+		
+		return scoreRuleAwardDao.getRuleAwardByStatus(status);
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatusAndId(String status, long id) {
+		return scoreRuleAwardDao.getRuleAwardByStatusAndId(status, id);
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatusAndType(String status, long id,
+			String activityType) {
+		return scoreRuleAwardDao.getRuleAwardByStatusAndType(status, id, activityType);
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatusAndActiType(String status,
+			String activityType) {
+		return scoreRuleAwardDao.getRuleAwardByStatusAndActiType(status, activityType);
+	}
+	
+}

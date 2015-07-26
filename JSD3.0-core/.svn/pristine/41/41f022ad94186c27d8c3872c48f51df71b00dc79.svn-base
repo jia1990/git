@@ -1,0 +1,59 @@
+package com.ddtkj.p2psys.redpacket.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.model.RpActivityModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+
+/**
+ * @描述：红包活动service层接口  JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+public interface RpActivityService {
+	/**
+	 * 分页查询红包活动列表
+	 * @param model
+	 * @return
+	 */
+	PageDataList<RpActivityModel> pageDataList(RpActivityModel model); 
+	/**
+	 * 红包活动添加方法
+	 * @param rpActivity
+	 * @return
+	 */
+	RpActivity addRpActivity(RpActivity rpActivity);
+	/**
+	 * 根据id查询红包活动
+	 * @param id
+	 * @return
+	 */
+	RpActivity findRpActivityById(long id);
+	/**
+	 * 修改红包活动
+	 * @param rpActivity
+	 * @return
+	 */
+	RpActivity updateRpActivity(RpActivity rpActivity);
+	/**
+	 * 删除红包活动
+	 * @param rpActivity
+	 * @return
+	 */
+	RpActivity delRpActivity(RpActivity rpActivity);
+	/**
+	 * 判断正在进行的活动有哪些
+	 * @return
+	 */
+	List<RpActivity> getActivitingList();
+	//fengguoqin@ddtkj.com  JSDP-215  20150709 start
+	/**
+	 * 根据活动类型获取活动名称
+	 * @param model
+	 * @return
+	 */
+	RpActivity getRpActivity(RpActivityModel model); 
+	//fengguoqin@ddtkj.com  JSDP-215  20150709 end
+}

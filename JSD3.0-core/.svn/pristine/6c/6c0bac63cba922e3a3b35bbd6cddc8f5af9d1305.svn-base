@@ -1,0 +1,41 @@
+package com.rongdu.p2psys.user.dao;
+
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserLoginHisotry;
+import com.rongdu.common.dao.BaseDao;
+
+/**
+ * @描述:用户登录历史Dao接口
+ * @作者:fengguoqin@ddtkj.com
+ * @创建时间: 2014年12月16日
+ */
+public interface UserLoginHisotryDao extends BaseDao<UserLoginHisotry>{
+
+	
+	/**
+	 * @author 冯国琴
+	 * 查询用户最近一次登录时间
+	 * @return  UserLoginHisotry用户登录日志实体
+	 */
+	UserLoginHisotry getLastTimeLogin(long userId)throws Exception;
+	
+	/**
+	 * @author 郭俊辉
+	 * 查询用户当天连续错误登录次数
+	 * 
+	 * @param user 用户
+	 * @return 用户当天连续错误登录次数
+	 * @throws Exception
+	 */
+	long getLoginFindCount(User user)throws Exception;
+	/**
+	 * @author 郭俊辉
+	 * 查询用户当天登录次数
+	 *  
+	 * @param user 用户对象
+	 * @return 用户当天登录次数
+	 * @throws Exception
+	 */
+	long getLoginNowDayCount(User user)throws Exception;
+}

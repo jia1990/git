@@ -1,0 +1,166 @@
+package com.ddtkj.p2psys.redpacket.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+
+/**
+ * 红包产生 service
+ * @描述：
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月30日
+ */
+public interface RpProduceService {
+	
+	/**
+	 * 添加一个红包
+	 * 
+	 * @param rp
+	 * @return
+	 */
+	public RpProduce save(RpProduce rp);
+	
+	 /**
+	  * @author 李建云
+	 * 用户静态红包可用金额总数
+	 * 
+	 * @return
+	 */
+	double sRedPackSumMoney(long userId);
+	
+	/**
+	  * @author 李建云
+	 * 用户静态红包已使用总额
+	 * 
+	 * @return
+	 */
+	double sRedPackUsedSumMoney(long userId);
+	
+	
+	 /**
+	  * @author 李建云
+	 * 用户动态红包产生总额
+	 * 
+	 * @return
+	 */
+	double dRedPackGenerateSumMoney(long userId);
+		
+	/**
+	 * @author fgq 
+	 * 静态红包消费记录分页查询
+	 * 
+	 * 动态红包生成记录
+	 * 
+	 * @param userAwardModel
+	 * @return
+	 */
+	PageDataList<RpProduceModel> getPageDataList(RpProduceModel rpProduceModel);
+	
+	/**
+	 * @author 李建云
+	 * 
+	 * 已奖励邀请
+	 * @param userAwardModel
+	 * @return
+	 */
+	PageDataList<RpProduceModel> getAwardedInvitePageDataList(RpProduceModel rpProduceModel,long userId);
+	
+	/**
+	 *@author 李建云
+	 *已奖励邀请总数 
+	 * */
+	int getInviteAwardSum(RpProduceModel model, long userId);
+	
+	/**
+	 * @author 李建云
+	 * 已奖励邀请红包总计
+	 * */
+	public double awardInvitedRPSum(long userId);
+	
+	/**
+	  * @author guojunhui@ddtkj.com
+	 * 全部用户静态红包可用金额总数
+	 * 
+	 * @return
+	 */
+	double sRedPackSumMoneyAll(String startDate,String endDate);
+	
+	 /**
+	  * 
+	  * @author guojunhui.ddtkj.com
+	 * 全部用户动态红包产生总额
+	 * 
+	 * @return
+	 */
+	double dRedPackGenerateSumMoneyAll(String startDate,String endDate);
+	//JSDP-167 xingjia 2015-05-28 start
+	/**
+	 * 后台查询红包记录的分页方法
+	 * @param model
+	 * @return
+	 */
+	PageDataList<RpProduceModel> getPageList(RpProduceModel model);
+	
+	/**
+	 * 后台查询红包的总额分页方法
+	 * @param model
+	 * @return
+	 */
+	PageDataList<RpProduceModel> getRpSumPageList(RpProduceModel model);
+	/**
+	 * 导出excel使用方法
+	 * @param model
+	 * @return
+	 */
+	List getExcelList(RpProduceModel model);
+	
+	/**
+	 * 红包明细导出excel
+	 * @param model
+	 * @return
+	 */
+	List getDetailExcelList(RpProduceModel model);
+	//JSDP-167 xingjia 2015-05-28 end
+	
+	//JSDP-181 wcw 20150615 start
+	/*
+	 * 获取红包列表
+	 */
+	public List<RpProduce> getRpList(RpProduceModel model);
+	/**
+	 * 红包金额修改
+	 * @param rp
+	 * @param beforeRpStaticMoney
+	 * @param afteRpStaticMoney
+	 */
+	public void modifyRp(RpProduce rp,double beforeRpStaticMoney,double afteRpStaticMoney);
+	//JSDP-181 wcw 20150615 end
+	//JSDP-195 xingjia 20150625 start
+	/**
+	 * 邀请好友获得的红包导出excel
+	 * @param model
+	 * @return
+	 */
+	public List recommendFriendExcel(RpProduceModel model);
+	//JSDP-195 xingjia 20150625 end
+	/**
+	 * 查询用户获取的红包 JSDP-203
+	 * @param userId
+	 * @param rpStaticRes
+	 * @return
+	 */
+	RpProduce findRpProduceByUserId(long userId,String rpStaticRes);
+	//JSDP-228 fengguoqin  2015.07.23  start 
+	/**
+	  * @author冯国琴   红包某种状态的红包总额(eg：某用户的冻结资金总额)
+	 * @param userId
+	 * @param type  红包类型
+	 * @param status   红包状态
+	 * @return
+	 */
+	double gerRpSumWithStatus(long userId,int type,int status);
+	//JSDP-228 fengguoqin  2015.07.23  end 
+}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>商品分类管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+    var dataGrid;
+    var winWidth =  600;
+    var winHeight = 400;
+    
+	var editSurveyTitle = "编辑商品分类";
+    var editSurveyUrl =  "/modules/goods/goodsCategory/editGoodsCategoryPage.html";
+    var editSurveyWinParmeters = "'{0}','"+editSurveyTitle+"',600,500,'"+editSurveyUrl+"'";
+    
+    
+    var deleteUrl = "/modules/goods/goodsCategory/deleteGoodsCategory.html";	//删除
+    var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+    
+    //var addTitle = "添加菜单";
+	//var addUrl =  "/modules/system/menu/menuAddPage.html";
+	
+	var addTitle = "添加商品分类";
+	var addUrl =  "/modules/goods/goodsCategory/addGoodsCategoryPage.html";
+
+    var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+    
+    $(function() {
+    	treeGrid = $('#treeGrid').treegrid({
+            url : '/modules/goods/goodsCategory/goodsCategoryList.html',
+            fit : true,
+            loadFilter: function(rows){return $.convert(rows.rows); },
+            fitColumns : true,
+            border : false,
+            checkbox:true,
+            idField : 'id',
+            treeField : 'name',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  //{ field: 'id', title: '编号', width: 50,fixed:true, sortable:false },              
+              { field: 'name', title: '商品分类名', width: 300,fixed:true, sortable:false },
+              //{ field: 'parentId', title: '所属分类编号', width: 120, sortable:false }, 
+              { field: 'sort', title: '排序', width: 100, sortable:false }, 
+             
+              { field: 'addTime', title: '添加时间', width: 150, fixed:true,sortable:false, 
+            	  	formatter: function(value,row,index){
+            	  		return getLocalTime(value,4);
+  				  	}  
+              },
+              { field: 'addUser', title: '添加人', width: 150, sortable:false }, 
+              /* { field: 'updateTime', title: '更新时间', width: 180, fixed:true,sortable:false, 
+          	  	formatter: function(value,row,index){
+          	  		return getLocalTime(value,4);
+				  	}  
+              }, */
+              //{ field: 'updateUser', title: '更新者', width: 200, sortable:false }, 
+              { field: 'remark', title: '备注', width: 200, sortable:false }, 
+              { field : 'action',
+                title : '操作',
+                width :110,
+                fixed:true,
+                formatter : function(value, row, index) {
+                    var str = '';
+                    str += "<@secAuthorizeUrl value='/goods/goodsCategoryAddNextBtn.html'>";
+                    str += $.formatString('<img onclick="$.fn.treeGridOptions.addFun('+addWinParmeters+');" src="{1}" title="添加" ondragstart="return false" oncontextmenu="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil_add.png');
+                    str += "</@secAuthorizeUrl>";
+                    str += '&nbsp;';
+                    str += "<@secAuthorizeUrl value='/goods/goodsCategoryEditBtn.html'>";
+                    str += $.formatString('<img onclick="$.fn.treeGridOptions.editFun('+editSurveyWinParmeters+');" src="{1}" title="编辑商品分类" ondragstart="return false" oncontextmenu="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+                    str += "</@secAuthorizeUrl>";
+                    str += '&nbsp;';
+                   	str += $.formatString('<img onclick="$.fn.treeGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除" ondragstart="return false" oncontextmenu="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+                   	str += '&nbsp;';
+                   	
+                   	
+                    return str;
+                }
+            } ] ],
+            toolbar : '#toolbar',
+            onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip');
+			}
+        });
+    });
+    
+    //平滑数据格式转换
+	$.convert = function (rows){
+	    if(!rows) return;
+		function exists(rows, parentId){
+			for(var i=0; i<rows.length; i++){
+				if (rows[i].id == parentId) return true;
+			}
+			return false;
+		}		
+		var nodes = [];
+		// 获取顶级菜单
+		for(var i=0; i<rows.length; i++){
+			var row = rows[i];
+			if (!exists(rows, row.parentId)){
+				nodes.push({id:row.id,name:row.name,sort:row.sort,remark:row.remark,addTime:row.addTime,addUser:row.addUser});
+			}
+		}		
+		var toDo = [];
+		for(var i=0; i<nodes.length; i++){
+			toDo.push(nodes[i]);
+		}
+		while(toDo.length){
+			var node = toDo.shift();	// 父级节点
+			// 获取子级节点
+			for(var i=0; i<rows.length; i++){
+				var row = rows[i];
+				if (row.parentId == node.id){
+					//var child = {id:row.id,name:row.name,parentId:row.parentId,status:row.status,type:row.type,sort:row.sort,size:row.size,addTime:row.addTime};					
+					var child = {id:row.id,name:row.name,parentId:row.parentId,status:row.status,sort:row.sort,addTime:row.addTime,addUser:row.addUser,remark:row.remark};					
+					if (node.children){
+						node.children.push(child);
+					} else {
+						node.children = [child];
+					}					
+					toDo.push(child);
+				}
+			}
+		}
+		return nodes;
+	} 
+</script>
+</head>
+<body  style="padding:0 20px;" >
+	<!-- <div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+	           		<li>商品分类名：<input type="text" name="name"/></li>
+            		<li>开始时间：<input type="text" name="startTime" onClick="WdatePicker({dateFmt:'yyyy-MM-dd'})"/></li>
+            		<li>结束时间：<input type="text" name="endTime" onClick="WdatePicker({dateFmt:'yyyy-MM-dd'})"/></li>
+            		
+					
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div style="">
+			
+		</div>
+		<div data-options="region:'center',border:false">
+            <table id="treeGrid"></table>
+        </div>
+	</div> -->
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'center'" style="margin-top:20px;padding-bottom:20px;">
+			<table id="treeGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;padding-top:10px;">
+			<@secAuthorizeUrl value='/goods/goodsCategoryAddBtn.html'>	
+			<a onclick="$.fn.treeGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn" ondragstart="return false">添加</a>				
+			</@secAuthorizeUrl>
+	</div>
+</body>
+</html>

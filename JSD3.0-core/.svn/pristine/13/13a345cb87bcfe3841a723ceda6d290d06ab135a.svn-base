@@ -1,0 +1,64 @@
+package com.ddtkj.p2psys.account.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import com.ddtkj.p2psys.user.domain.User;
+
+
+/**
+ * @描述：用户账户实体增加表    JSDP-228
+ * @作者:fenggq@ddtkj.com
+ * @创建时间:  2015.07.22
+ */
+@Entity
+@Table(name = "t_jsd_account_extra")
+public class AccountExtra implements Serializable{
+	private static final long serialVersionUID = 3738147829994275471L;
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+    private User user; //用户ID
+	
+	private double rpStaticTotal ;// 静态红包总额
+	private double freezeRpStatic ; //静态红包冻结总额
+	
+	
+
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public double getRpStaticTotal() {
+		return rpStaticTotal;
+	}
+	public void setRpStaticTotal(double rpStaticTotal) {
+		this.rpStaticTotal = rpStaticTotal;
+	}
+	public double getFreezeRpStatic() {
+		return freezeRpStatic;
+	}
+
+	public void setFreezeRpStatic(double freezeRpStatic) {
+		this.freezeRpStatic = freezeRpStatic;
+	}
+	
+}

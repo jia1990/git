@@ -1,0 +1,206 @@
+package com.ddtkj.p2psys.credit.dao;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述：
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+public interface CreditAssignmentDao extends BaseDao<CreditAssignment>{
+
+
+	/**
+	 * 获取所有的债权转让记录 分页
+	 * @param param  查询条件
+	 * @return 债权转让集合
+	 */
+	public PageDataList<CreditAssignment> getAll(QueryParam param) ;
+	
+	/**
+	 * 根据标查出所有的债权申请
+	 * @param borrowId
+	 * @return
+	 */
+	public List<CreditAssignment> getListByBorrowId(long borrowId) ;
+	/**
+	 * 查询用户所有出售的债权信息
+	 * @param user  用户
+	 * @param param 条件
+	 * @return
+	 */
+	public PageDataList<CreditAssignment> getDateByUser(UserModel user) ;
+	/**
+	 * 查询某个用户的某个状态下的  债权转出信息
+	 * @param user  用户
+	 * @param param 条件
+	 * @return
+	 */
+	public PageDataList<CreditAssignment> getDateByUserAndStatus(UserModel user,String status) ;
+	
+	/**
+	 * 查询某条债权转让信息是否被撤回
+	 * @param id 债权ID
+	 * @return
+	 */
+	public Boolean getRepealById(long id) ; 
+	/**
+	 * 添加一条转让记录
+	 * @param ca 债权装让实体
+	 * @return
+	 */
+	public CreditAssignment save(CreditAssignment ca);
+	/**
+	 * 主动撤销一条 转让记录
+	 * @param ca  债权转让实体
+	 * @return
+	 */
+	public boolean Repeal(CreditAssignment ca) ;
+	/**
+	 * 更新一条记录
+	 * @param ca  债权转让实体
+	 * @return
+	 */
+	public CreditAssignment update(CreditAssignment ca) ;
+	/**
+	 * 查询是否已经申请  不包括申请不通过的
+	 * @param user
+	 * @param borrow
+	 * @param tender
+	 * @return
+	 */
+	public int isPublish(User user,Borrow borrow,BorrowTender tender);
+	/**
+	 * 根据债权再转出  查询是否已经申请  不包括申请不通过的
+	 * @param user
+	 * @param borrow
+	 * @param tender
+	 * @return
+	 */
+	public int isPublishByCredit(User user,CreditLog log);
+	/**
+	 * 获取 转让中和已申请的
+	 * @param user
+	 * @param status
+	 * @return
+	 */
+	PageDataList<CreditAssignment> getDateByUserAndStatus(UserModel user, List<String> status);
+	
+	List<CreditAssignment> getDateByUserAndStatusList(UserModel user, List<String> status);
+	/**
+	 * @param status
+	 * @param page
+	 * @param size
+	 * @return
+	 */
+	PageDataList<CreditAssignmentModel> getDateStatus(List<String> status, int page, int size,CreditAssignmentModel camodel);
+	/**
+	 * 查询即投即生息的初审通过的债权列表
+	 * @param status
+	 * @param b
+	 * @return
+	 */
+	public List<CreditAssignment> getList(String status);
+	
+	/**
+	 * 计算债权转出金额
+	 * @param  user
+	 * @param  status
+	 * @return double 
+	 * @throws Exception   
+	 */ 
+	double getCreditAssignmentSum(User user, String status);
+	
+	/**
+	 * @author  李建云
+	 * 根据标类型计算债权转出金额
+	 * @param  user
+	 * @param  status
+	 * @return double 
+	 * @throws Exception   
+	 */ 
+	double getCreditAssignmentSum(User user, String status,int type);
+	
+	/**
+	 * 计算债权转出数量
+	 * @param  user
+	 * @param  status
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	int getCreditAssignmentCount(User user, String status);
+	
+	/**
+	 * @author 李建云 
+	 * 计算用户本月转出的份数
+	 * */
+	int getCreditAssignmentCount(User user, String status,Date startTime,Date endTime);
+	
+	/**
+	 * 计算债权转出份数
+	 * @param  user
+	 * @param  status
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	int getCreditAssignmentCopiesCount(User user, String status);
+	
+	/**
+	 * 计算债权转出盈亏
+	 * @param  user
+	 * @param  status
+	 * @throws Exception   
+	 */ 
+	double calcProfitAndLoss(User user, String status);
+	
+	/**
+	 *@author 李建云 
+	 *本月转出缴纳的手续费
+	 * */
+	double calcCreditSellFee(User user, String status,Date startTime,Date endTime);
+	
+	/**
+	 *@author 李建云
+	 *债权转让本月成交金额 
+	 * */
+	double calcCreditSoldAccount(User user, String status,Date startTime,Date endTime);
+	
+	List<CreditAssignment> getListByTimeOver(String status) ;
+	
+	//JSDP-116 xingjia 2015-05-18 start
+	/**
+	 * 债权转让记录查询导出excel
+	 * @param model
+	 * @return
+	 */
+	List excelCreditList(CreditAssignmentModel model);
+	//JSDP-116 xingjia 2015-05-18 start
+	/**
+	 * 查询债权转让(售出)金额记录
+	 * 
+	 * // JSDPBUG-99 20150527  sxy
+	 * @author sxy
+	 * @param  model
+	 * @return PageDataList<CreditAssignment> 
+	 * @throws Exception   
+	 */ 
+	public PageDataList<CreditAssignment> getCreditOutAssignmentListForSQL(CreditAssignmentModel model,int page,int size);
+	/**
+	 * 查询二次转让的债权
+	 * @param type
+	 * @return
+	 */
+	 List<CreditAssignment> creditAssList();
+}

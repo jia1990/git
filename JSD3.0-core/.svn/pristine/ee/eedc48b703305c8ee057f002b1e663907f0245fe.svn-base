@@ -1,0 +1,105 @@
+package com.ddtkj.p2psys.credit.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+
+/**
+ * @描述：债权待收记录关联表
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月18日 
+ */
+@Entity
+@Table(name="t_jsd_collection_credit")
+public class CollectionCredit implements Serializable{
+
+	private static final long serialVersionUID = 1939947633277962689L;
+	public static final long OUTSTAND_COLLECTION_TYPE=1;  //该债权未满金额生成新待收类型
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ;  // 标识ID
+	@ManyToOne
+	@JoinColumn(name="collection_id")
+	private BorrowCollection borrowCollection ; // 待收记录ID
+	@ManyToOne
+	@JoinColumn(name="buy_credit_assignment_id")
+	private CreditAssignment buyCa ;  // 本次购买的债权ID
+	@ManyToOne
+	@JoinColumn(name="credit_assignment_id")
+	private CreditAssignment oldCa ;  // 原债权ID
+	@ManyToOne
+	@JoinColumn(name="ca_id")
+	private CreditAssignment newCa ;  // 债权父ID
+	@ManyToOne
+	@JoinColumn(name="cl_id")
+	private CreditLog creditLog;   //购买债权记录ID
+	
+	private int cType; //债权子类型   01:一级债权  02 ：二级债权  03 ：三级债权  
+	public CreditLog getCreditLog() {
+		return creditLog;
+	}
+	public void setCreditLog(CreditLog creditLog) {
+		this.creditLog = creditLog;
+	}
+	private Date addTime ;  // 添加时间
+	private String addIp ;  // 服务器IP
+	
+	public int getcType() {
+		return cType;
+	}
+	public void setcType(int cType) {
+		this.cType = cType;
+	}
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public BorrowCollection getBorrowCollection() {
+		return borrowCollection;
+	}
+	public void setBorrowCollection(BorrowCollection borrowCollection) {
+		this.borrowCollection = borrowCollection;
+	}
+	public CreditAssignment getBuyCa() {
+		return buyCa;
+	}
+	public void setBuyCa(CreditAssignment buyCa) {
+		this.buyCa = buyCa;
+	}
+	public CreditAssignment getOldCa() {
+		return oldCa;
+	}
+	public void setOldCa(CreditAssignment oldCa) {
+		this.oldCa = oldCa;
+	}
+	public CreditAssignment getNewCa() {
+		return newCa;
+	}
+	public void setNewCa(CreditAssignment newCa) {
+		this.newCa = newCa;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+}

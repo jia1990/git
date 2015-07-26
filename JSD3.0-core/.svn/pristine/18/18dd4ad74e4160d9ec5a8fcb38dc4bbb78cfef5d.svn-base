@@ -1,0 +1,79 @@
+package com.ddtkj.p2psys.returnmoney.dao.impl;
+
+import java.util.Date;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.returnmoney.dao.ReturnMoneyDao;
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2014年12月30日 
+ */
+@Repository("returnMoneyDao")
+public class ReturnMoneyDaoImpl extends BaseDaoImpl<ReturnMoneyUse> implements ReturnMoneyDao{
+
+	@Override
+	public double getContinueInvestAwardCount(String startDate,String endDate) {
+		StringBuffer jpal = new StringBuffer("SELECT SUM(continuedInvestAward) FROM ReturnMoneyUse WHERE 1=1 ");
+		if(startDate != null){
+			jpal.append(" AND addTime > '" + startDate + "'");
+		}
+		if(endDate != null){
+			jpal.append(" AND addTime < '" + endDate + "'");
+		}
+		Query query = em.createQuery(jpal.toString());
+		Object obj = query.getSingleResult();
+		if (obj == null) {
+			obj = 0;
+		}
+		return Double.parseDouble(obj.toString());
+	}
+
+	@Override
+	public double getContinueInvestAwardCountByUserId(long userId) {
+		StringBuffer jpal = new StringBuffer("SELECT SUM(continuedInvestAward) FROM ReturnMoneyUse WHERE 1=1 ");
+	
+		jpal.append(" AND user.userId = :userId ");
+	
+		Query query = em.createQuery(jpal.toString());
+		query.setParameter("userId", userId);
+		
+		Object obj = query.getSingleResult();
+		if (obj == null) {
+			obj = 0;
+		}
+		return Double.parseDouble(obj.toString());
+	}
+
+
+	@Override
+	public double getContinuedInvestMoneyCount(long userId, Date startDate,
+			Date endDate) {
+		StringBuffer jpal = new StringBuffer("SELECT SUM(continuedInvestMoney) FROM ReturnMoneyUse WHERE 1=1 ");
+		if(startDate != null){
+			String start = DateUtil.dateStr2(startDate) + " 00:00:00";
+			
+			jpal.append(" AND addTime > '" + start + "'");
+		}
+		if(endDate != null){
+			String end = DateUtil.dateStr2(endDate) + " 23:59:59";
+			jpal.append(" AND addTime < '" + end + "'");
+		}
+			jpal.append(" AND user.userId = :userId ");
+		
+		Query query = em.createQuery(jpal.toString());
+		query.setParameter("userId", userId);
+		Object obj = query.getSingleResult();
+		if (obj == null) {
+			obj = 0;
+		}
+		return Double.parseDouble(obj.toString());
+	}
+}

@@ -1,0 +1,108 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.core.domain.Operator;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：红包类型基础实体类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月8日
+ */
+
+@Entity
+@Table(name="t_jsd_rp")
+public class RedPacket implements Serializable{
+
+	private static final long serialVersionUID = 906609756065766974L;
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name="rp_id")
+	private long id ; // 主键ID
+
+	private String name ; // 名称
+	
+	private int validtime ;  //  红包有效期 单位（天）
+	
+	private String  isopen ; //是否开启
+	
+	private Date createtime ;  // 创建时间
+	
+	@ManyToOne
+    @JoinColumn(name = "add_user")
+	private Operator operator ; //  添加记录的用户
+	
+	private String typeCode ;
+	
+	
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public int getValidtime() {
+		return validtime;
+	}
+
+	public void setValidtime(int validtime) {
+		this.validtime = validtime;
+	}
+
+	public String getIsopen() {
+		return isopen;
+	}
+
+	public void setIsopen(String isopen) {
+		this.isopen = isopen;
+	}
+
+	public Date getCreatetime() {
+		return createtime;
+	}
+
+	public void setCreatetime(Date createtime) {
+		this.createtime = createtime;
+	}
+
+	
+	public Operator getOperator() {
+		return operator;
+	}
+
+	public void setOperator(Operator operator) {
+		this.operator = operator;
+	}
+
+	public String getTypeCode() {
+		return typeCode;
+	}
+
+	public void setTypeCode(String typeCode) {
+		this.typeCode = typeCode;
+	}
+	
+}

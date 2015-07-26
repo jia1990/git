@@ -1,0 +1,129 @@
+package com.ddtkj.mobile.action;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.phone.model.PhoneActivityModel;
+import com.ddtkj.p2psys.phone.model.PhoneScrollPicModel;
+import com.ddtkj.p2psys.phone.service.PhoneScrollPicService;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.ddtkj.mobile.Constants;
+import com.ddtkj.mobile.MobileBaseAction;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class MainPageAction extends MobileBaseAction {
+	
+	@Resource
+	private UserService userService;
+	
+	@Resource
+	private PhoneScrollPicService PhoneScrollPicService;
+	
+	
+	//主页 - 将原1.0app全部转入运维状态
+	@Action("/jsdmobile/invest/index") 
+	public String old_version_tip() throws Exception{
+		HashMap<String, Object> data = new HashMap<String, Object>();
+        String paramAppkey = request.getParameter("appkey");
+		
+		//仅对ios进行提示
+		if ("1546C93354D4F790F456B8AAA84E622B".equals(paramAppkey)) {
+			String json_weburl = (String)Constants.getPropertyFile().get("json_weburl");
+			if(null==json_weburl || "".equals(json_weburl)){
+				json_weburl = this.getWebsiteUrl();
+			}
+			data.put("redirect", json_weburl+"/data/phone/download/old/old_version_tip.htm");
+			
+			
+			ArrayList<String> imageArray = new ArrayList<String>();
+			for(int i=0; i<3; i++){
+				imageArray.add(json_weburl+"/data/phone/download/old/old_version_tip.jpg");
+			}
+			data.put("image_array", imageArray);	
+			
+			data.put("res_code", "0");
+			data.put("res_msg", "版本升级审核,请网页操作");
+		}else{
+			data.put("res_code", "0");
+			data.put("res_msg", "此版本已停用, 请按页面提示进行更新! 或进入  更多设置-检查更新 升级当前版本!");
+		}		
+
+		this.printMap(data);
+		return null;
+	}
+	
+	//主页 - 取得界面信息
+	@Action("/jsdmobile/home")
+	public String home() throws Exception {
+		
+		String rspJson = context.getRealPath("/") + Constants.getPropertyFile().get("json_path") + "home.json";
+		rspJson = readJsonToString(rspJson);
+		String json_weburl = (String)Constants.getPropertyFile().get("json_weburl");
+		if(null==json_weburl || "".equals(json_weburl)){
+			json_weburl = this.getWebsiteUrl();
+		}
+		rspJson = rspJson.replace("{weburl}", json_weburl);
+        printJson(rspJson);
+		return null;
+	}
+	
+	//主页 - 取得活动信息
+	@Action("/jsdmobile/home_activity")
+	public String home_activity() throws Exception {
+		
+		String rspJson = context.getRealPath("/") + Constants.getPropertyFile().get("json_path") + "home_activity.json";
+		rspJson = readJsonToString(rspJson);
+		String json_weburl = (String)Constants.getPropertyFile().get("json_weburl");
+		if(null==json_weburl || "".equals(json_weburl)){
+			json_weburl = this.getWebsiteUrl();
+		}
+		rspJson = rspJson.replace("{weburl}", json_weburl);
+        JSONObject json = JSON.parseObject(rspJson);     
+        
+        PhoneScrollPicModel spModel = (PhoneScrollPicModel)paramModel(PhoneScrollPicModel.class);
+        spModel.setStatus((byte)1);
+        PageDataList<PhoneScrollPicModel> pageDataList = PhoneScrollPicService.phoneScrollPicList(spModel, 1, 3);
+        JSONArray activityArray = json.getJSONArray("activity_array");
+        for(int i=0; i<activityArray.size() && i<pageDataList.getList().size(); i++){
+        	PhoneScrollPicModel am = pageDataList.getList().get(i);
+        	activityArray.getJSONObject(i).put("image", am.getPicPath());
+        	activityArray.getJSONObject(i).put("detail", am.getLinkPath());
+        }        
+        
+        json.put("activity_user_counter", userService.count(QueryParam.getInstance()));
+		printJson(json.toJSONString());
+		return null;
+	}
+	
+	//主页 - 安卓专用辅助方法
+	@Action(value = "/jsdmobile/yemadai_return", results = { 
+			@Result(name = "yemadai_result", type="ftl", location = "phone/pages/yemadai_result.html"), 
+			@Result(name = "android_redirect_account", type="ftl", location = "phone/pages/android_redirect_account.html"), 
+			@Result(name = "android_redirect_rechage", type="ftl", location = "phone/pages/android_redirect_rechage.html") })
+	public String yemadai_return() {
+
+		// 安卓跳转汇潮时对请求进行特殊处理
+		String android_redirect = this.paramString("android_redirect");
+		if (null != android_redirect && !"".equals(android_redirect)) { // 安卓必须添加Referer头才能访问一麻袋
+
+			String account_name = this.paramString("account_name");
+			if (null != account_name && !"".equals(account_name)) {
+				return "android_redirect_account"; // 开户
+			} else {
+				return "android_redirect_rechage"; // 充值
+			}
+		}
+
+		// 返回静态页面
+		return "yemadai_result";
+	}
+}

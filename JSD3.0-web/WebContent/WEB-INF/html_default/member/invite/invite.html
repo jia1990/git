@@ -1,0 +1,188 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html">
+<head>
+<meta name="robots" content="" />
+<meta name="author" content="网页作者的资料">
+	<meta name="description" content="晋商贷官网-互联网金融理财投资平台" />
+	<meta name="keywords" content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财" />
+	<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="renderer" content="webkit">
+	<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/contact.css">
+	<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/account.css">
+	<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+	<script src="${webroot}${theme_dir}/media/js/index.js"></script>
+	<script type="text/javascript" src="${webroot}${theme_dir}/media/js/ZeroClipboard.js"></script>
+	<script>
+	 $(function(){
+		 ZeroClipboard.setMoviePath('${webroot}${theme_dir}/media/js/ZeroClipboard.swf'); 
+		//创建ZeroClipboard对象 
+		 clip = new ZeroClipboard.Client(); 
+		 clip.setHandCursor(true); 
+		 //加载事件，在mouseOver事件中将需要复制的内容传到flahs文件中保存 
+		 clip.addEventListener('mouseOver', function(client) { 
+		 clip.setText($("#domainLink").val()); 
+		 }); 
+		 //复制成功后弹出对话框 
+		 clip.addEventListener('complete', function(client, text) { 
+		 $(".c_copy_success").show().fadeOut(1000);
+		 }); 
+		 //指定实现复制功能对象 
+		 clip.glue('Copy'); 
+
+		 
+		//分享   824  fgq
+			bShareOpt = {
+			   uuid: "", 
+			   url: "http://www.ddtkj.com.cn", //商品的永久链接
+			   summary: "{晋商贷}", //商品描述
+			   pic: "./../{$goods_info.goods_img}", //商品图片链接
+			   vUid: "$_SESSION['user_id']|$_SESSION['user_name']", //用户id，为了让您能够知道您网站的注册用户分享、喜欢了哪些商品
+			   product: "{$goods_info.goods_name}", //商品名称
+			   price: "{$goods_info.promote_price}", //商品价格
+			   brand: "{$brand_name}", //商品品牌
+			   tag: "{$value.label}", //商品标签
+			   category: "{$cat_data.cat_name}", //商品分类
+			   template: "1" 
+			};
+			$(".y_invite_div .w_show").click(function(){
+				 $(".w_duo").css({display:"block"});
+				 $(".w_hide").css({display:"block"});
+				 $(".y_invite_div .w_show").css({display:"none"});
+			 })
+			 $(".y_invite_div .w_hide").click(function(){
+				 $(".w_duo").css({display:"none"});
+				 $(".w_show").css({display:"block"});
+				 $(".y_invite_div .w_hide").css({display:"none"});
+			 })
+	 })
+	 
+</script>
+<style>
+.y_account_right .record_conss li dd {
+	width: 190px;
+	text-align: center;
+}
+.y_account_right .record_conss li dd.ddwidth90two{width:90px;}
+.y_account_right .record_conss li dd.ddwidth290two{width:290px;}
+.y_account_right .record_conss li dd span {
+	color: #ff7800;
+}
+.c_copy_success{display:none;margin: 0 20px 0 113px;}
+.nextAword{ text-indent:20px;}
+.w_duo{background:#efefef;width:714px;padding:0px 40px 10px;display:none;}
+.w_duo li{  color: #777777;font-size: 14px;line-height: 30px;}
+.y_invite_ul{width:714px;padding-right:40px;}
+.y_invite_div{width:794px;height:auto;position:relative;}
+.y_invite_div .w_show,.y_invite_div .w_hide{cursor:pointer;position:absolute;bottom:10px;right:80px;padding-right:14px;color:#0697da;background:url(${webroot}${theme_dir}/images/small_02.jpg) no-repeat center right;}
+.y_invite_div .w_hide{display:none;background:url(${webroot}${theme_dir}/images/small_03.jpg) no-repeat center right;}
+</style>
+<title>晋商贷</title> <script>
+	$(function(){
+		$(".y_invite_ul_bottom li").click(function(){
+			var index=$(this).index(".y_invite_ul_bottom li");
+			$(".y_invite_ul_bottom li").removeClass("y_inviteliclicks");
+			$(this).addClass("y_inviteliclicks");
+			$(".record_conssin_num").hide();
+			$($(".record_conssin_num")[index]).show();
+		})
+	})
+</script>
+</head>
+<body>
+	<#include "../../include/headerMemberCenter.html">
+	<!--  -->
+	<div class="c_deal">
+		<div class="c_deal_content" style="overflow: hidden;">
+			<!-- 左侧导航 -->
+			<#assign mid="m_info" > <#include "../account_menu.html">
+			<!-- 右侧 -->
+			<div class="c_deal_record y_account_right">
+				<!-- 账户设置 -->
+				<div class="c_deal_title">邀请有礼</div>
+				<p class="y_invite_title">温馨提示：</p>
+				<div class="y_invite_div">
+				<ul class="y_invite_ul" style='height:210px;'>
+					<li>1、复制如下推广链接发给您的好友，邀请并加入晋商贷，好友通过三项认证您即可获赠红包收入。</li>
+					<li>2、您邀请加入晋商贷的好友越多，所获赠的红包越多。（注：邀请好友所得红包只可提现不可投资）</li>
+					<li>3、邀请好友所得奖励红包等同现金，可提现(待收本金大于10000元)，但不能用来投资。</li>
+					<li>4、有效邀请奖励：指所邀请好友已全部通过三项认证，并准备或已经投资的好友邀请。</li>
+					<li>5、暂时无效邀请：指所邀请好友暂时还未全部通过三项认证，暂时还未投资的好友邀请。</li>
+					<li>6、推广奖励:</li>
+				    <li class="nextAword">(1)、被邀请人完成三项认证，全部认证通过之后将实时赠送邀请人1元红包；</li>
+				 </ul>
+				 <ul class="w_duo">
+					<li class="nextAword"> (2)、当被邀请人首次投标金额≥10000元时，为邀请人按照月标投资金额*月份*0.1%=赠送红包金额；</li>
+					<li class="nextAword"> (3)、当被邀请人首次投标金额≥10000元时，为邀请人按照天标投资金额*（天/30）*0.1%=赠送红包金额；</li>
+					<li>7、推广达人兑换VIP：当邀请好友人数达到对应基准人数，点击申请获取，获取对应的等级VIP会员包，之后推荐好友总数不变，基数重新开始计数。</li>
+					<li class="nextAword">(1)、推荐好友（完成三项认证）超过50 人，即可获得6个月铜牌勋章会员包；</li>
+					<li class="nextAword">(2)、推荐好友（完成三项认证）超过100人，即可获得12个月铜牌勋章会员包；</li>
+					<li class="nextAword"> (3)、推荐好友（完成三项认证）超过200人，即可获得6个月银牌勋章会员包；</li>
+					<li class="nextAword">(4)、推荐好友（完成三项认证）超过300人，即可获得12个月银牌勋章会员包；</li>
+					<li class="nextAword">(5)、推荐好友（完成三项认证）超过400人，即可获得6个月金牌勋章会员包；</li>
+					<li class="nextAword">(6)、推荐好友（完成三项认证）超过500人，即可获得12个月金牌勋章会员包；</li>
+					<li class="nextAword">(7)、推荐好友（完成三项认证）超过600人，即可获得6个月钻石勋章会员包；</li>
+					<li class="nextAword">  (8)、推荐好友（完成三项认证）超过1000人，即可获得12个月钻石勋章会员包；</li>
+					<li>8、推广方法：</li>
+					<li class="nextAword">(1)、【我的账户】→【邀请有礼】→【点击复制邀请链接】→将带有您个人唯一识别码的推广链接通过微信、QQ、微博等方式发送给好友。</li>
+					<li class="nextAword">(2)、<a href='http://www.jinshangdai.com/user/activity.html'>【邀请推广专题页】</a>→在登录会员状态选择“短信推广”，输入好友手机号，就可以发送邀请码及邀请注册链接给好友；</li>
+					<li class="nextAword">(3)、直接告诉好友您的邀请码，好友注册时输入，您就可以拿红包；</li>
+			     </ul>
+					<span class="w_show">显示</span>
+					<span class="w_hide">隐藏</span>
+				</div>
+				<div style="overflow:hidden;">
+					<div class="y_chainedAddress" style="width:248px;float:left;height:60px;margin-bottom:0;">
+						<em>邀请链接：</em><input type="text" id="domainLink" value="${inviteUrl!}" style="display: none" >
+							<a href="javascript:;" id="Copy" name="Copy">点击复制邀请链接</a>
+						<div class="c_copy_success">复制成功</div>
+					</div>
+					<!--  824  fgq -->
+					<div class="c_share_list" style="float:left;margin-top:40px;">
+						<script type="text/javascript" charset="utf-8" src="http://static.bshare.cn/b/bshareLike.js#amp;style=2"></script>
+							<div class="bshare-custom icon-medium" style="float:left;">
+									<span>分享到：</span>
+									<a title="分享到QQ空间" class="bshare-qzone"></a>
+									<a title="分享到新浪微博" class="bshare-sinaminiblog"></a>
+									<a title="分享到人人网" class="bshare-renren"></a>
+									<a title="分享到腾讯微博" class="bshare-qqmb"></a>
+									<a title="分享到搜狐微博" class="bshare-sohuminiblog"></a>
+									
+							</div>
+							<script type="text/javascript" charset="utf-8" src="http://static.bshare.cn/b/buttonLite.js#style=-1&amp;uuid=&amp;pophcol=1&amp;lang=zh"></script>
+							<script type="text/javascript" charset="utf-8" src="http://static.bshare.cn/b/bshareC0.js"></script>
+					</div>
+					
+				</div>
+				<!-- // 20150706  JSDP-212  sxy  start -->
+				<div class="c_deal_title" style="margin-bottom: 20px;">我的邀请记录</div>
+				<ul class="y_invite_ul_bottom" id="type">
+					<li id="awardedInvite" data-val="1" style="width:190px;" class="y_inviteliclicks">有效邀请奖励（<span id="awardInviteSum">0</span>）
+					</li>
+					<li id="unAwardedInvite" data-val="0" style="width:190px;">无效邀请奖励（<span id="unAwardInviteSum">0</span>）
+					</li>
+					<li id="exchangeInvite" data-val="2" >推广达人兑换VIP</li>
+					<p>
+						您已获得红包奖励共<span id="rpMoney">0</span>元
+					</p>
+				</ul>
+				<div class="record_conss">
+					
+				</div>
+				
+				<div id="kkpager" style="height:50px;"></div>
+				
+			</div>
+		</div>
+	</div>
+	</div>
+	<#include "../../include/footer.html">
+</body>
+<script>seajs.use("member/invite");</script>
+<script>
+	$(function(){
+		$($(".y_account_nav dd")[8]).addClass("c_invest_this");
+	})
+</script>
+</html>

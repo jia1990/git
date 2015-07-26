@@ -1,0 +1,27 @@
+package com.ddtkj.p2psys.fillorder.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.fillorder.dao.FillOrderLogDao;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.ddtkj.p2psys.fillorder.service.FillOrderLogService;
+
+@Service("fillOrderLogService")
+public class FillOrderLogServiceImpl implements FillOrderLogService {
+
+	@Resource
+	private FillOrderLogDao fillOrderLogDao;
+
+	@Override
+	public void save(FillOrderLog fillOrderLog) {
+		fillOrderLogDao.save(fillOrderLog);
+	}
+
+	@Override
+	public FillOrderLog findByType(String fid, String type) {
+		return fillOrderLogDao.findByType(fid, type);
+	}
+
+}

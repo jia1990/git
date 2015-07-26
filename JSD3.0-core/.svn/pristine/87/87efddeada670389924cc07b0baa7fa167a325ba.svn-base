@@ -1,0 +1,267 @@
+package com.ddtkj.p2psys.goods.service.impl;
+
+import java.io.File;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.goods.dao.GoodsDao;
+import com.ddtkj.p2psys.goods.dao.GoodsPicDao;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.goods.service.GoodsService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.itextpdf.tool.xml.svg.tags.GroupTag;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+import com.rongdu.p2psys.user.service.UserService;
+@Service("ddtkjGoodsSerive")
+public class GoodsServiceImpl implements GoodsService{
+	
+
+    @Resource
+    private GoodsDao goodsDao;
+    @Resource
+    private GoodsPicDao goodsPicDao; 
+    @Resource
+	private UserService userService;
+    
+    /**
+     * 查询商品信息
+     * 
+     */
+    @Override
+    public PageDataList<GoodsModel> getGoodsPage(GoodsModel model) {
+        QueryParam param = QueryParam.getInstance();
+        if (model.getName() != null && model.getName().length() > 0) {
+            param.addParam("name", Operators.LIKE, model.getName());
+        }
+        if (StringUtil.isNotBlank(model.getStartTime())) {
+            //Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+            Date start = DateUtil.valueOf(model.getStartTime());
+            param.addParam("addTime", Operators.GTE, start);
+        }
+        if (StringUtil.isNotBlank(model.getEndTime())) {
+            //Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+            Date end = DateUtil.valueOf(model.getEndTime());
+            param.addParam("addTime", Operators.LTE, end);
+        }
+        /*if ((model.getStock()) != 99) {
+            param.addParam("status", model.getStock());
+        }*/
+        if (99 != model.getType() && 0 != model.getType()) {
+            param.addParam("type", model.getType());
+        }
+        if(model.getStock() > 0){
+        	param.addParam("stock", Operators.GT, 0);
+        }
+        if(model.getGoodsCategory()!=null){
+        	param.addParam("goodsCategory.id", model.getGoodsCategory().getId());
+        }
+        if(StringUtil.isNotBlank(model.getColor())){
+        	param.addParam("color", model.getColor());
+        }
+        if(StringUtil.isNotBlank(model.getVesion())){
+        	param.addParam("vesion", model.getVesion());
+        }
+        if(StringUtil.isNotBlank(model.getSize())){
+        	param.addParam("size", model.getSize());
+        }
+        
+        if(null != model.getUserName()){
+        	
+        	//根据用户名查询用户
+        	param.addParam("user.userName", Operators.LIKE, model.getUserName());
+        	
+        }
+        
+        if(StringUtil.isNotBlank(model.getIsList()) && "min".equals(model.getIsList())){
+        	List<Integer> list = goodsDao.getCostMinIdList();
+        	List<Long> idList = new ArrayList<Long>();
+        	for(Integer l:list){
+        		idList.add(Long.parseLong(""+l));
+        	}
+        	if(idList.size() > 0){
+        		param.addParam("id", Operators.IN,idList);
+        	}
+        }
+        param.addOrder(OrderType.DESC, "id");
+        if(model.getRows() == 0){
+            param.addPage(model.getPage());
+        }else {
+            param.addPage(model.getPage(), model.getRows());
+        }
+        PageDataList<DdtkjGoods> itemPage = goodsDao.findPageList(param);
+        List<GoodsModel> modelList = new ArrayList<GoodsModel>();
+        PageDataList<GoodsModel> modelPage = new PageDataList<GoodsModel>();
+        if (itemPage != null && itemPage.getList() != null && itemPage.getList().size() > 0) {
+            modelPage.setPage(itemPage.getPage());
+            for (int i = 0; i < itemPage.getList().size(); i++) {
+                DdtkjGoods item = itemPage.getList().get(i);
+                GoodsModel model_ = GoodsModel.instance(item);
+                //GoodsPic pic = goodsPicDao.getGoodsFirstPic(item.getId());
+                //model_.setImgSrc(pic.getPicUrl());
+                User user = userService.getUserByUserName(model_.getUser().getUserName());
+                model_.setUserName(user.getUserName());
+                DecimalFormat df = new DecimalFormat("#0.00");
+                model_.setCostStr(df.format(item.getCost()));
+                modelList.add(model_);
+            }
+        }
+        modelPage.setList(modelList);
+        return modelPage;
+    }
+
+    /**
+     * 添加商品
+     */
+    @Override
+    public Boolean addGoods(GoodsModel model) {
+        if (model == null || model.getGoodsCategory() == null || model.getFiles() == null) {
+            return false;
+        }
+        DdtkjGoods item = model.prototype();
+        item.setStock(model.getStock());
+        item.setType(model.getType());
+        item.setAddTime(new Date());
+        item = goodsDao.save(item);
+        if (item == null || item.getId() <= 0) {
+            //throw new ScoreException();
+        }
+        for (String imgUrl : model.getFiles()) {
+            DdtkjGoodsPic pic = new DdtkjGoodsPic();
+            pic.setPicUrl(imgUrl);
+            pic.setGoodsId(item.getId());
+            pic.setAddTime(new Date());
+            goodsPicDao.save(pic);
+        }
+        return true;
+    }
+
+    /**
+     * 查询某商品信息
+     * 
+     */
+    @Override
+    public DdtkjGoods getGoodsById(long id) {
+        return goodsDao.find(id);
+    }
+    /**
+     * 更新商品信息
+     * 
+     */
+    @Override
+    public void update(DdtkjGoods goods) {
+    	goodsDao.update(goods);
+    }
+
+    /**
+     * 修改商品
+     * 
+     */
+    @Override
+    public Boolean editGoods(GoodsModel model, List<DdtkjGoodsPic> list, long[] delIds) {
+        if (model == null || model.getGoodsCategory() == null) {
+            return false;
+        }
+        /*if (delIds != null) {
+	        for (long id : delIds) {
+	        	DdtkjGoodsPic bu = goodsPicDao.find(id);
+	            goodsPicDao.delete(id);
+	            String realPath = ServletActionContext.getServletContext().getRealPath(bu.getPicUrl());
+	            new File(realPath).delete();
+	        }
+        }*/
+        DdtkjGoods item = model.prototype();
+        item.setStock(model.getStock());
+        item.setType(model.getType());
+        item = goodsDao.update(item);
+        if (item == null || item.getId() <= 0) {
+          //  throw new ScoreException();
+        }
+        if (model.getFiles() == null) {
+            return true;
+        }
+       /* if (delIds != null) {
+            for (long id : delIds) {
+                DdtkjGoodsPic bu = goodsPicDao.find(id);
+                goodsPicDao.delete(id);
+                String realPath = ServletActionContext.getServletContext().getRealPath(bu.getPicUrl());
+                new File(realPath).delete();
+            }
+        }*/
+        
+        
+        
+        /*for (String imgUrl : model.getFiles()) {
+        	DdtkjGoodsPic pic = new DdtkjGoodsPic();
+            pic.setPicUrl(imgUrl);
+            pic.setGoodsId(item.getId());
+            pic.setAddTime(new Date());
+            goodsPicDao.save(pic);
+        }*/
+        return true;
+    }
+	@Override
+	public List<String> getColorList(GoodsModel model) {
+		return goodsDao.getColorList(model);
+	}
+	@Override
+	public List<String> getSizeList(GoodsModel model) {
+		return goodsDao.getSizeList(model);
+	}
+	@Override
+	public List<String> getVesionList(GoodsModel model) {
+		return goodsDao.getVesionList(model);
+	}
+    @Override
+    public void updatePic(List<DdtkjGoodsPic> list, long[] delIds) {
+    	goodsPicDao.save(list);
+        if (delIds != null) {
+            for (long id : delIds) {
+            	DdtkjGoodsPic bu = goodsPicDao.find(id);
+                goodsPicDao.delete(id);
+                String realPath = ServletActionContext.getServletContext().getRealPath(bu.getPicUrl());
+                new File(realPath).delete();
+            }
+        }
+    }
+    
+    @Override
+	public void update(DdtkjGoods goods, List<DdtkjGoodsPic> list, long[] delIds) {
+    	goodsPicDao.save(list);
+    	goodsDao.merge(goods);
+	    if (delIds != null) {
+            for (long id : delIds) {
+            	DdtkjGoodsPic uu = goodsPicDao.find(id);
+                goodsPicDao.delete(id);
+                String realPath = ServletActionContext.getServletContext().getRealPath(uu.getPicUrl());
+                new File(realPath).delete();
+            }
+        }
+	}
+
+	@Override
+	public List<DdtkjGoods> getGoodsList(long userId, int type) {
+		// 
+		
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addParam("type",type);
+		List<DdtkjGoods> goodsList = goodsDao.findByCriteria(param);
+		return goodsList;
+	}
+
+}

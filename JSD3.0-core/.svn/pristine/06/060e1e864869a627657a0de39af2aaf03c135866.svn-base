@@ -1,0 +1,51 @@
+package com.ddtkj.p2psys.subbranch.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.ddtkj.p2psys.subbranch.model.BranchMarketerModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+
+/**
+ * @描述：分店市场专员关系管理service接口
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+public interface MarketerBranchService {
+	/**
+	 * 保存市场专员和分店的关系
+	 * @param bm
+	 * @return
+	 */
+	public BranchMarketer save(BranchMarketer bm);
+	/**
+	 * 根据加盟商id查找市场专员
+	 * @param id
+	 * @return
+	 */
+	public List<BranchMarketer> findMarketerByBranchId(long id);
+	
+	/**
+	 * 根据加盟商ID查询市场专员
+	 * @author sunxiayong@ddtkj.com
+	 * @time 2015年4月30日
+	 * @param id
+	 * @return
+	 */
+	int findMarketerCountByBranchId(long id);
+	
+	/**
+	 * 查询加盟下的市场专员分页
+	 * @param branchMarketer
+	 * @return
+	 */
+	public PageDataList<BranchMarketerModel> pageDataList(UserModel userModel);
+	/**
+	 * 邀请管理查询分页
+	 * @param userModel
+	 * @return
+	 */
+	public PageDataList<BranchMarketerModel> invitePageDataList(UserModel userModel);
+}

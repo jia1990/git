@@ -1,0 +1,41 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.activity.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.activity.dao.ActivityGoodsDao;
+import com.ddtkj.p2psys.activity.domain.ActivityGoods;
+import com.ddtkj.p2psys.activity.service.ActivityGoodsService;
+
+/**
+ * @描述：
+ * @作者：shenguoping@ddtkj.com
+ * @创建时间：2015-7-22 
+ */
+@Service("activityGoodsService")
+public class ActivityGoodsServiceImpl implements ActivityGoodsService {
+	
+	@Resource
+	private ActivityGoodsDao activityGoodsDao;
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.activity.service.ActivityGoodsService#saveActivityGoods(com.ddtkj.p2psys.activity.domain.ActivityGoods)
+	 */
+	@Override
+	public ActivityGoods saveActivityGoods(ActivityGoods activityGoods) {
+		return activityGoodsDao.save(activityGoods);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.activity.service.ActivityGoodsService#findActivityGoodsByUserId(long)
+	 */
+	@Override
+	public ActivityGoods findActivityGoodsByUserId(long userId) {
+		ActivityGoods activityGoods = activityGoodsDao.findObjByProperty("user.userId", userId);
+		return activityGoods;
+	}
+
+	
+}

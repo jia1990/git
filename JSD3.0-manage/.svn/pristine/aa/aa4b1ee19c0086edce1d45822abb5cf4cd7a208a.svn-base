@@ -1,0 +1,74 @@
+
+<script type="text/javascript">
+$(function(){
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/redPackage/questions/editQuestions.html'); //表单提交  参数1：表单id 参数2：表单action地址
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="title" value="${question.title!}" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">内容：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="content"  value="" maxlength="120" data-options="required: true">${question.content!}</textarea>	
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">答案A：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="answer1"  value="" maxlength="120" data-options="required: true">${question.answer1!}</textarea>
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">答案B：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="answer2"  value="" maxlength="120" data-options="required: true">${question.answer2!}</textarea>
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">答案C：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="answer3"  value="" maxlength="120"  data-options="required: true">${question.answer3!}</textarea>
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">答案D：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="answer4"  value="" maxlength="120"  data-options="required: true">${question.answer4!}</textarea>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">正确答案：</label>
+		     <div class="ipt">
+		     	<select class="w200 easyui-validatebox" name="rightAnswer" data-options="required: true">
+		     		<option value="">请选择</option>
+		     		<option <#if question.rightAnswer == "A"> selected="selected" </#if> value="A">A</option>
+		     		<option <#if question.rightAnswer == "B"> selected="selected" </#if> value="B">B</option>
+		     		<option <#if question.rightAnswer == "C"> selected="selected" </#if> value="C">C</option>
+		     		<option <#if question.rightAnswer == "D"> selected="selected" </#if> value="D">D</option>
+		     	</select>
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		<input name="id" value="${question.id!}" type="hidden">
+		<input name="editQuestionsToken" value="${editQuestionsToken!}" type="hidden">
+		
+		     	
+	</form>
+</div>
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+

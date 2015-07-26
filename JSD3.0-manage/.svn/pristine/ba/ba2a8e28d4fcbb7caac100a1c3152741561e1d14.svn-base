@@ -1,0 +1,358 @@
+package com.rongdu.manage.action.system;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryBalance;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 用户账户管理
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-4-22
+ */
+public class ManageAccountAction extends BaseAction implements ModelDriven<AccountModel> {
+
+	@Resource
+	private AccountService accountService;
+	
+	@Resource
+	private UserService userService;
+	private AccountModel model = new AccountModel();
+
+	public AccountModel getModel() {
+		return model;
+	}
+
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	/**
+	 * 用户账户页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/account/accountManager")
+	public String userCreditManager() throws Exception {
+		String userType = request.getParameter("userType");
+		request.setAttribute("userType", userType);
+		if(userType.equals("11")){
+			return "accountManagerBorrow";
+		}else if(userType.equals("10")){
+			return "accountManagerInvest";
+		}else if(userType.equals("12")){
+			return "accountManagerGuarantee";
+		}else{
+			return "accountManager";//商户金额页面
+		}
+	}
+
+	/**
+	 * 用户账户列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/account/account/accountList")
+	public void accountList() throws Exception {
+		model.setOrder("desc");
+		model.setSort("accountTotal");
+		//JSDP-169 xingjia 20150529 start
+		Object[] accountTotal = null;
+		//JSDP-169 xingjia 20150529 end
+		if(StringUtil.isNotBlank(model.getUsername()) || StringUtil.isNotBlank(model.getRealname())||model.getCollectionTotal()!=0||StringUtil.isNotBlank(model.getCompareResult())){
+			//JSDP-100 gjh 2015-5-12 start	
+			if("all".equals(model.getCompareResult())){
+				model.setCompareResult("");
+			}
+			//JSDP-100 gjh 2015-5-12 end	
+			PageDataList<AccountModel> pageList = accountService.list(model);
+			//JSDP-169 xingjia 20150529 start
+			//汇总信息
+			accountTotal = accountService.accountTotal(model);
+			//JSDP-169 xingjia 20150529 end
+			int totalPage = pageList.getPage().getTotal();
+			map.put("total", totalPage);
+			map.put("rows", pageList.getList());
+			//JSDP-169 xingjia 20150529 start
+			//获取汇总数据
+			List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+    		Map<String,String> footerMap = new HashMap<String,String>();
+    		
+    		if(StringUtil.isNotBlank(model.getUserType()) && model.getUserType().equals("10")){
+    			
+    			footerMap.put("accountTotalStr", "总额："+accountTotal[0]+"");
+    			footerMap.put("usableMoneyTotal", "可用总额："+accountTotal[1]+"");
+    			footerMap.put("collectionTotalStr", "待收总额："+accountTotal[3]+"");
+    			footerMap.put("freezeUseMoneyTotal", "冻结总额："+accountTotal[2]+"");
+    			footerMap.put("result", "红包总额："+accountTotal[7]+"");
+    		}else if(StringUtil.isNotBlank(model.getUserType()) && model.getUserType().equals("11")){
+    			footerMap.put("repaymentTotalStr", "待还总额："+accountTotal[4]+"");
+        		footerMap.put("borrowerUsableMoney", "可用总额："+accountTotal[5]+"");
+        		footerMap.put("freezeBorrowerMoneyTotal", "冻结总额："+accountTotal[6]+"");
+        		footerMap.put("accountTotalStr", "账户总额："+accountTotal[0]+"");
+    		}else if(StringUtil.isNotBlank(model.getUserType()) && model.getUserType().equals("12")){
+    			footerMap.put("repaymentTotalStr", "待还总额："+accountTotal[4]+"");
+    			footerMap.put("borrowerUsableMoney", "可用总额："+accountTotal[5]+"");
+    			footerMap.put("freezeBorrowerMoneyTotal", "冻结总额："+accountTotal[6]+"");
+    			footerMap.put("accountTotalStr", "账户总额："+accountTotal[0]+"");
+    			
+    		}else{
+    			footerMap.put("repaymentTotalStr", "待还总额："+accountTotal[4]+"");
+    			footerMap.put("borrowerUsableMoney", "可用总额："+accountTotal[5]+"");
+    			footerMap.put("freezeBorrowerMoneyTotal", "冻结总额："+accountTotal[6]+"");
+    			footerMap.put("accountTotalStr", "账户总额："+accountTotal[0]+"");
+    			
+    		}
+    		
+    		footerMap.put("userName", "汇总信息");
+    		footerList.add(footerMap);
+			
+			map.put("footer", footerList);
+			
+			//JSDP-169 xingjia 20150529 end
+		}
+		printJson(getStringOfJpaObj(map));
+		map = null;
+		
+	}
+	
+	
+	
+	/**
+	 * 导出报表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/account/account/exportExcelAccount")
+	public void exportExcelAccountCash() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		String userName = paramString("userName");
+		String realName = paramString("realName");
+		String userType = paramString("userType");
+		String title = null;
+		if(userType.equals("10")){
+			title = "投资人用户资金Excel表";
+		}else if(userType.equals("11")){
+			title = "借款人用户资金Excel表";
+		}else if(userType.equals("12")){
+			title="担保公司用户资金Excel表";
+		}else{
+			title="商城用户资金Excel表";
+		}
+		
+		if(null != userName && "" != userName){
+			model.setUsername(userName);
+		}
+		if(null != realName && "" != realName){
+			model.setRealname(realName);
+		}
+		
+//		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setRows(99999999);
+//		model.setSort("accountTotal");
+//		model.setOrder("desc");
+		// 记录取得
+//		List<AccountModel> list = accountService.list(model).getList();
+		String[] hearders = null;
+		String[] fields = null;
+		if(userType.equals("10")){
+			hearders = new String[] { "用户名","真实姓名","账户总额","利息可用总额","奖励可用总额","充值可用总额","回款本金可用总额","冻结使用利息金额","冻结使用充值金额","冻结使用回款本金金额","冻结使用奖励金额",
+					"待收总额","钱袋子总额","冻结钱袋子总额"};// 表头数组
+			fields = new String[] {"username","realname","accountTotalStr","interestUsableStr","awardUsableStr","rechargeUsableStr","returnCapitalUsableStr","freezeUseInterestStr","freezeUseRechargeStr","freezeUseReturnCapitalStr","freezeUseAwardStr",
+					"collectionTotalStr","rpDynamicTotalStr","freezeRpDynamicStr"};// 对象属性数组
+		}else if(userType.equals("11")){
+			hearders = new String[] { "用户名","真实姓名","还款总额","账户总额","借款人充值可用金额","借款人借款入账可用金额","借款人冻结充值可用金额","借款人冻结借款入账可用金额"};// 表头数组
+			fields = new String[] {"username","realname","rechargeUsableStr","accountTotalStr","repaymentTotalStr","borrowerRechargeUsableStr","borrowerEnterUsableStr","borrowerFreezeUseRechargeStr","borrowerFreezeUseEnterStr"};// 对象属性数组
+		}else if(userType.equals("12")){
+			hearders = new String[] { "用户名","真实姓名","账户总额","担保还款总额","担保公司充值可用金额","担保公司入账可用金额","担保公司冻结充值可用金额","担保公司冻结借款入账可用金额"};// 表头数组
+			fields = new String[] {"username","realname","accountTotalStr","repaymentTotalStr","borrowerRechargeUsableStr","borrowerEnterUsableStr","borrowerFreezeUseRechargeStr","borrowerFreezeUseEnterStr"};// 对象属性数组
+		}else{
+			hearders = new String[] { "用户名","真实姓名","账户总额","商城入账可用金额"};// 表头数组
+			fields = new String[] {"username","realname","accountTotalStr","borrowerEnterUsableStr"};// 对象属性数组
+		}
+		
+		
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = list.size()/sheetRows;
+//		if(list.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountModel> tdList = new ArrayList<AccountModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <list.size(); j++ ){
+//				AccountModel sm = list.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = accountService.excelListAccount(model);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+		
+		
+	}
+	/**
+	 * 账户详情页面
+	 * @return
+	 */
+	@Action("/modules/account/account/accountDetailPage")
+	public String accountDetailPage(){
+		
+		String userId = request.getParameter("id");
+		Integer id = Integer.parseInt(userId);
+		Account account = accountService.findByUser(id);
+		AccountModel accountModel = AccountModel.instance(account);
+		DecimalFormat df =new DecimalFormat("#0.00");
+
+		
+		accountModel.setAccountTotalStr(df.format(account.getAccountTotal()));
+		accountModel.setInterestUsableStr(df.format(account.getInterestUsable()));
+		accountModel.setAwardUsableStr(df.format(account.getAwardUsable()));
+		accountModel.setRechargeUsableStr(df.format(account.getRechargeUsable()));
+		/* JSDBET-842 xingjia 20150323 start**/
+		accountModel.setReturnCapitalUsableStr(df.format(account.getReturnCapitalUsable()));
+		/* JSDBET-842 xingjia 20150323 end**/
+		accountModel.setFreezeUseInterestStr(df.format(account.getFreezeUseInterest()));
+		accountModel.setFreezeUseRechargeStr(df.format(account.getFreezeUseRecharge()));
+		accountModel.setFreezeUseReturnCapitalStr(df.format(account.getFreezeUseReturnCapital()));
+		accountModel.setFreezeUseAwardStr(df.format(account.getFreezeUseAward()));
+		accountModel.setCollectionTotalStr(df.format(account.getCollectionTotal()));
+		
+		accountModel.setRepaymentTotalStr(df.format(account.getRepaymentTotal()));
+		accountModel.setBorrowerRechargeUsableStr(df.format(account.getBorrowerRechargeUsable()));
+		accountModel.setBorrowerEnterUsableStr(df.format(account.getBorrowerEnterUsable()));
+		accountModel.setBorrowerFreezeUseRechargeStr(df.format(account.getBorrowerFreezeUseRecharge()));
+		accountModel.setBorrowerFreezeUseEnterStr(df.format(account.getBorrowerFreezeUseEnter()));
+		accountModel.setFreezeRpDynamicStr(df.format(account.getFreezeRpDynamic()));
+		
+		accountModel.setFreezeUseMoneyTotal(df.format(account.getFreezeAccount()));
+		accountModel.setFreezeBorrowerMoneyTotal(df.format(account.getBorrowerFreezeTotal()));
+		
+		accountModel.setBorrowerUsableMoney(df.format(account.getBorrowerUsableTotal()));
+		accountModel.setUsableMoneyTotal(df.format(account.getUsableAccount()));
+		
+		accountModel.setRpDynamicTotalStr(df.format(account.getRpDynamicTotal()));
+		
+		request.setAttribute("userType", account.getUser().getUserCache().getUserType());
+		request.setAttribute("user", account.getUser());
+		request.setAttribute("account", account);
+		request.setAttribute("accountModel", accountModel);
+		return "accountDetailPage";
+	}
+	/**
+	 * 账户对账详情页面
+	 * @return
+	 */
+	@Action("/modules/account/account/compairAccountDetailPage")
+	public String compairAccountDetailPage()throws Exception{
+		
+		String userId = request.getParameter("id");
+		Integer id = Integer.parseInt(userId);
+		Account account = accountService.findByUser(id);
+		String userType=account.getUser().getUserCache().getUserType();
+		request.setAttribute("userType", userType);
+		request.setAttribute("user", account.getUser());
+		request.setAttribute("account", account);
+		YmdQueryBalance  ymdQueryBalance=new YmdQueryBalance();
+		ymdQueryBalance=YmdTPPWay.checkBalance(account.getUser().getUserName());
+		request.setAttribute("ymdQueryBalance", ymdQueryBalance);
+		double localhostBalance=0;
+		double localhostUseMoney=0;
+		double localhostFreezeMoney=0;
+		String result="";
+		if("10".equals(userType)){
+			localhostUseMoney=account.getUsableAccount();
+			localhostFreezeMoney=account.getFreezeAccount();
+			localhostBalance=BigDecimalUtil.add(account.getUsableAccount(),account.getFreezeAccount());
+		}else if("11".equals(userType)||"12".equals(userType)||"13".equals(userType)){
+			localhostUseMoney=account.getBorrowerUsableTotal();
+			localhostFreezeMoney=account.getBorrowerFreezeTotal();
+			localhostBalance=BigDecimalUtil.add(account.getBorrowerUsableTotal(),account.getBorrowerFreezeTotal());
+		}
+		double balance=BigDecimalUtil.sub(localhostBalance, NumberUtil.getDouble(ymdQueryBalance.getBalance()));
+		if("00".equals(ymdQueryBalance.getStatus())&&Math.abs(balance)>0.1){
+			accountService.updateAccountCompareResult(Account.COMPARE_ERROR, account.getUser().getUserId());
+			result="异常";
+		}else{
+			accountService.updateAccountCompareResult(Account.COMPARE_OK, account.getUser().getUserId());
+			result="正常";
+		}
+		request.setAttribute("localhostBalance", localhostBalance);
+		request.setAttribute("localhostUseMoney", localhostUseMoney);
+		request.setAttribute("localhostFreezeMoney", localhostFreezeMoney);
+		request.setAttribute("result", result);
+		return "compairAccountDetailPage";
+	}
+
+	/**
+	 * 多个账户对账
+	 * @return
+	 */
+	@Action("/modules/account/account/compareAccountList")
+	public void compairAccountList()throws Exception{
+		//JSDP-100 gjh 2015-5-12 start	
+		if("all".equals(model.getCompareResult())){
+			model.setCompareResult("");
+		}
+		//JSDP-100 gjh 2015-5-12 end	
+		//accountService.accountCompareList(model);
+		List<AccountModel> list=accountService.accountList(model);
+		int i=0;
+		if(list.size()>0){
+			for(Account account:list){
+				i++;
+				 try {
+					accountService.accountCompare(account);
+				 }catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					System.out.println("iiiiiiii======="+i);
+					continue;
+				 }
+			}
+		}
+		map.put("result", true);
+		map.put("msg", "对账成功!");
+		printJson(getStringOfJpaObj(map));
+	}
+}

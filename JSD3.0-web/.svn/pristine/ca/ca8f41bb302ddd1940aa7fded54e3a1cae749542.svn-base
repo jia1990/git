@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+    http://www.springframework.org/schema/beans 
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/tx
+    http://www.springframework.org/schema/tx/spring-tx.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+
+	<!-- 使用annotation @Repository,@Service自动注册bean, 并保证@Required、@Autowired的属性被注入的包范围 -->
+	<context:component-scan base-package="com.ddtkj,com.rongdu" />
+	<context:annotation-config />
+	<bean id="propertyConfigurer"
+		class="com.rongdu.common.util.des.DecryptPropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:desddtkj.properties</value><!-- 加密后文件 -->
+			</list>
+		</property>
+		<property name="fileEncoding" value="utf-8" />
+		<property name="keyLocation" value="classpath:desddtkj.key" />
+	</bean>
+
+<!-- 数据源配置, 使用Tomcat JDBC连接池 -->
+	<!-- <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+	
+	    <property name="DriverClassName" value="${jdbc.driverclass}" />
+		<property name="url" value="${jdbc.url}" />
+	    <property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	    <property name="initialSize" value="4" />
+	    <property name="minIdle" value="1" /> 
+	    <property name="maxActive" value="400" />
+	    <property name="maxWait" value="60000" />
+	    <property name="timeBetweenEvictionRunsMillis" value="60000" />
+	    <property name="minEvictableIdleTimeMillis" value="300000" />
+	    对于长时间不使用的连接强制关闭
+	    <property name="removeAbandoned" value="true" />
+	    超过30分钟开始关闭空闲连接  
+	    <property name="removeAbandonedTimeout" value="1800" />
+	    将当前关闭动作记录到日志
+	    <property name="logAbandoned" value="true" />
+	    <property name="validationQuery" value="SELECT 'x'" />
+	    <property name="testWhileIdle" value="true" />
+	    <property name="testOnBorrow" value="false" />
+	    <property name="testOnReturn" value="false" />
+	    <property name="filters" value="stat" />
+	</bean> -->
+	<!-- end -->
+	 <bean id="dataSource" class="com.jolbox.bonecp.BoneCPDataSource"
+		destroy-method="close">
+		<!-- Connection Info -->
+		<property name="driverClass" value="${jdbc.driverclass}"/>
+		<!-- 本地测试环境  -->
+		 <!-- <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/jsd_3?useUnicode=true&amp;characterEncoding=utf8&amp;zeroDateTimeBehavior=convertToNull" /> 
+		<property name="username" value="root" />
+		<property name="password" value="jsdjava" /> -->		
+		<!-- 本机 -->
+	    <!-- <property name="jdbcUrl" value="jdbc:mysql://192.168.251.12:3306/jsd_3_localhost?useUnicode=true&amp;characterEncoding=utf8&amp;zeroDateTimeBehavior=convertToNull" /> 
+		<property name="username" value="jinshangdai" />
+		<property name="password" value="jinshangdai" /> -->  			
+		<property name="jdbcUrl" value="${jdbc.url}" /> 
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		
+		<!-- 检查数据库连接池中空闲连接的间隔时间   单位：分钟 -->
+		<property name="idleConnectionTestPeriod" value="60" />
+		<!-- 连接池中未使用的链接最大存活时间   单位：分钟 -->
+		<property name="idleMaxAge" value="240" />
+		<!-- 设置每个分区含有connection最大个数 -->
+		<property name="maxConnectionsPerPartition" value="60" />
+		<!-- 设置每个分区含有connection最小个数 -->
+		<property name="minConnectionsPerPartition" value="10" />
+		<!-- 设置每个分区数 -->
+		<property name="partitionCount" value="3" />
+		<!-- 设置分区中的connection增长数量 -->
+		<property name="acquireIncrement" value="5" /> 
+		<property name="statementsCacheSize" value="50" />
+		<property name="releaseHelperThreads" value="3" />
+		<property name="disableConnectionTracking" value="true" /> 
+	</bean> 
+
+	<!-- Jpa Entity Manager 配置 -->
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="jpaVendorAdapter" ref="hibernateJpaVendorAdapter" />
+		<property name="packagesToScan" value="com.rongdu.p2psys.*.domain,com.ddtkj.p2psys.*.domain,com.ddtkj.p2psys.tpp.ymd.domain" />
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.service.jdbc.connections.spi.provider_class">com.jolbox.bonecp.provider.BoneCPConnectionProvider
+				</prop>
+				<prop key="hibernate.show_sql">false</prop>
+				<prop key="hibernate.format_sql">false</prop>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQL5InnoDBDialect</prop>
+			 	<prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+				<prop key="hibernate.cache.region.factory_class">org.hibernate.cache.ehcache.EhCacheRegionFactory</prop>
+			</props>
+		</property>
+	</bean>
+	<!-- 定时器定时器 
+    <context:component-scan base-package="com.rongdu,com.rongdu.quartz"/>   -->
+    
+	<bean id="hibernateJpaVendorAdapter"
+		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+	</bean>
+
+	<bean id="txManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+	
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="add*" propagation="REQUIRED" />
+			<tx:method name="delete*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+	<aop:config>
+		<aop:pointcut id="allManagerMethod"
+			expression="execution(* com..service.*.*(..))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="allManagerMethod" />
+	</aop:config>
+	<import resource="spring-memcache.xml"/> 
+</beans>

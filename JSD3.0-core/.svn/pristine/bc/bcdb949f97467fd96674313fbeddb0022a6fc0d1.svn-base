@@ -1,0 +1,47 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.worker;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @描述：活动获取红包转账 
+ * @作者：xingjia@ddtkj.com  JSDP-203
+ * @创建时间：2015年6月25日 
+ */
+public class RpActivityTransferWorker extends BaseTransferWorker{
+
+	public RpActivityTransferWorker(RpActivityProduceModel rpm,RpActivityProduce rp){
+		super(rpm,rp);
+	}
+
+	@Override
+	public void transfer() {
+		String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+		String transferNo=rpm.getBatchNo();
+		String oriMerBillNo=rp.getTradeNo();//流水号
+		String trdAmt= rp.getActivityAward()+"";
+		String fromApiId=Global.getValue("ymd_merchant_id");
+		String toApiId=rp.getAwardUser().getUserName();
+		if(StringUtil.isNotBlank(rp.getAwardUser().getUserName())){
+			YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+		    if("0000".equals(ymdTransfer.getErrCode())){
+		    	
+		    }else{
+		    	throw new BussinessException("本地账户信息和一麻袋不符",1);
+		    }
+		    	
+		}
+	
+	
+	}
+
+}

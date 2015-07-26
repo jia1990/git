@@ -1,0 +1,150 @@
+package com.ddtkj.p2psys.credit.executer;
+
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.dao.AccountLogDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.sms.sendMsg.CreditAssignmentMsg;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+
+/**
+ * 购买债权 扣除钱袋子金额
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-22
+ */
+public class CreditSellerPayRpDynamicExecuter extends BaseExecuter {
+
+	protected AccountLogDao accountLogDao;
+	protected AccountDao accountDao;
+	private String accountLogType = Constant.CREDITSELL_PAYRP;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void prepare() {
+		accountLogDao = (AccountLogDao) BeanUtil.getBean("accountLogDao");
+		accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		//操作金额
+		log.setRechargeMoney(rechargeMoney);
+		log.setAwardMoney(awardMoney);
+		log.setInterestMoney(interestMoney);
+		log.setReturnCapitalMoney(returnCapitalMoney);
+		log.setRpDynamicMoney(rpDynamicMoney);
+		
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		log.setRpDynamicUsable(account.getRpDynamicTotal());
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		log.setFreezeRpDynamic(account.getFreezeRpDynamic());
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)0);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		 
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+	   // 账户扣除红包
+	    account.setRpDynamicTotal(BigDecimalUtil.sub(account.getRpDynamicTotal(),rpDynamicMoney));
+	    accountDao.update(account);
+	    
+
+		if (account.getRpDynamicTotal() < 0) {
+			throw new AccountException("债权复审通过，扣除转出者【"+user.getUserName()+"】 红包可用金额不足！", 1);
+		}
+	}
+
+	@Override
+	public void handleAccountSum() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		//JSDBET-838 wcw 2015-3-20 start
+		Map<String, Object> map=Global.getTransfer();
+		CreditAssignment ca=(CreditAssignment) map.get("creditAssignment");
+		if(ca!=null){
+			BaseMsg msg = new CreditAssignmentMsg(NoticeConstant.CREDIT_SELL_RPPAY,user,ca);
+			msg.doEvent();
+		}
+		//JSDBET-838 wcw 2015-3-20 end
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+	/*	if (BaseTPPWay.isOpenApi()) {
+			if(BaseTPPWay.apiCode().equals("1")){
+				YjfService apiService = new YjfServiceImpl();
+				Borrow borrow = (Borrow) Global.getTransfer().get("borrow");
+				List<Object> taskList = new ArrayList<Object>();
+				if (borrow.getType() == Borrow.TYPE_FLOW) {
+					// 流转标直接打款
+					apiService.flowBorrowLoan(money, super.user, borrow, super.toUser, taskList);
+				} else {
+					apiService.addTenderFreezeMoney(money,  super.user, borrow, super.toUser, taskList);
+				}
+				apiService.doApiTask(taskList);
+			}else if(BaseTPPWay.apiCode().equals("2")){
+				
+			}
+			
+		}*/
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+
+}

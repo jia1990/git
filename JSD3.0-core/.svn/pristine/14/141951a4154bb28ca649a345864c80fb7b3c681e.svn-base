@@ -1,0 +1,49 @@
+package com.rongdu.p2psys.user.model.getpwd;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class BaseGetPwd implements GetPwd {
+	protected UserService userService;
+
+	@Override
+	public User getPwdStep1(HttpServletRequest request, User user, String valid_code) throws Exception {
+		return null;
+	}
+
+	@Override
+	public void getPwdStep2(User user, String code) throws Exception {
+
+	}
+
+	@Override
+	public void getPwdReset(Map<String, Object> session, User user, String confirm_new_pwd) throws Exception {
+		UserModel userModel = UserModel.instance(user);
+		userModel.setConfirmNewPwd(confirm_new_pwd);
+		userModel.validGetPwdReset();
+		userService = (UserService) BeanUtil.getBean("userService");
+		User u;
+		if (!"".equals(user.getEmail()) && user.getEmail() != null) {
+		    u = userService.getUserByEmail(user.getEmail());
+		} else {
+		    u = userService.getUserByMobilePhone(user.getMobilePhone());
+		}
+		u.setPassword(user.getPassword());
+		userService.modifyPwd(u);
+		if(UserConstant.USER_LOCK_LOGIN.equals(user.getIsLocked())){//如果用户是前台登录锁定那么解锁
+			u.setIsLocked(UserConstant.USER_LOCK_NO);
+			u.setLockTime(null);
+			u.setLockRemark(null);
+			userService.updateUser(u);
+		}
+		session.put("logintime", System.currentTimeMillis());
+	}
+
+}

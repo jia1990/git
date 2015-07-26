@@ -1,0 +1,49 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.worker;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @描述：平台转账(如云购卡充值新版) 
+ * @作者：wangchangwei@ddtkj.com  JSDP-171 
+ * @创建时间：2015年4月14日 
+ */
+public class RechargeTransferSecWorker extends BaseTransferWorker{
+
+	public RechargeTransferSecWorker(AccountRechargeModel arm,AccountRecharge recharge){
+		super(arm,recharge);
+	}
+
+	@Override
+	public void transfer() {
+		String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+		String transferNo=arm.getBatchNo();
+		String oriMerBillNo=recharge.getTradeNo();//流水号
+		//JSDP-171 xingjia 20150614 start
+		String trdAmt= recharge.getInAccountAmount()+"";
+		String fromApiId=Global.getValue("ymd_merchant_id");
+		String toApiId=recharge.getUser().getUserName();
+		//JSDP-171 xingjia 20150614 end
+		if(StringUtil.isNotBlank(recharge.getUser().getUserName())){
+			YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+		    if("0000".equals(ymdTransfer.getErrCode())){
+		    	
+		    }else{
+		    	throw new BussinessException("本地账户信息和一麻袋不符",1);
+		    }
+		    	
+		}
+	
+	
+	}
+
+}

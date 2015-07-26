@@ -1,0 +1,125 @@
+
+package com.ddtkj.p2psys.sms.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.sms.dao.SmsInterfaceDao;
+import com.ddtkj.p2psys.sms.domain.SmsInterface;
+import com.ddtkj.p2psys.sms.model.SmsInterfaceModel;
+import com.ddtkj.p2psys.sms.service.SmsInterfaceService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述: 短信接口service实现类
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-2-10   
+ */
+@Service("smsInterfaceService")
+public class SmsInterfaceServiceImpl implements SmsInterfaceService {
+
+	@Resource
+	private SmsInterfaceDao smsInterfaceDao;
+	
+	@Override
+	public SmsInterface findByStatus(String status) {
+		return smsInterfaceDao.find(status);
+	}
+	
+	@Override
+	public SmsInterface findByStatusAndId(String status, long id) {
+		return smsInterfaceDao.findByStatusAndId(status, id);
+	}
+
+	@Override
+	public PageDataList<SmsInterfaceModel> getSmsInterfaceList(
+			SmsInterfaceModel model) {
+		
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC,"id");
+		PageDataList<SmsInterface> list = smsInterfaceDao.findPageList(param); 
+		PageDataList<SmsInterfaceModel> pageDataList = new PageDataList<SmsInterfaceModel>();
+		List<SmsInterfaceModel> modelList = new ArrayList<SmsInterfaceModel>();
+		pageDataList.setPage(list.getPage());
+		if (list.getList().size() > 0 ) {
+			for (int i = 0; i < list.getList().size(); i++) {
+				SmsInterface sms = list.getList().get(i);
+				SmsInterfaceModel smsModel = SmsInterfaceModel.instance(sms);
+				smsModel.setAddUserName(smsModel.getAddUser().getUserName());
+				smsModel.setOperateUserName(smsModel.getOperateUser() != null ?smsModel.getOperateUser().getUserName():"");
+				modelList.add(smsModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	
+	private QueryParam searchParam(QueryParam param, SmsInterfaceModel model){
+		if (model != null){
+			if (StringUtil.isNotBlank(model.getName())) {
+				param.addParam("name", Operators.LIKE, model.getName());
+			}
+			if (StringUtil.isNotBlank(model.getOperateUserName())){
+				param.addParam("operateUser.userName", Operators.LIKE, model.getOperateUserName());
+			}
+			if (StringUtil.isNotBlank(model.getAddUserName())){
+				param.addParam("addUser.userName", Operators.LIKE, model.getAddUserName());
+			}
+			if(StringUtil.isNotBlank(model.getStatus()) && !SmsInterface.SMS_STATUS_ALL.equals(model.getStatus())){
+				param.addParam("status", model.getStatus());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+
+	@Override
+	public SmsInterface findById(long id) {
+		
+		return smsInterfaceDao.find(id);
+	}
+
+	@Override
+	public void addSmsInterface(SmsInterface sms) {
+		
+		smsInterfaceDao.save(sms);
+	}
+
+	@Override
+	public void updateSmsInterface(SmsInterface sms) {
+		smsInterfaceDao.update(sms);
+	}
+	
+}

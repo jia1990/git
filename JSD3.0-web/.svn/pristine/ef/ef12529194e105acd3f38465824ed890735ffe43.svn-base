@@ -1,0 +1,68 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.web.member;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.member.model.MemberVipHistoryModel;
+import com.ddtkj.p2psys.member.service.MemberVipHistoryService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述：用户购买会员历史记录
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月18日
+ */
+public class VipLogAction extends BaseAction<MemberVipHistoryModel>
+		implements ModelDriven<MemberVipHistoryModel> {
+
+	private MemberVipHistoryModel model = new MemberVipHistoryModel();
+
+	public MemberVipHistoryModel getModel() {
+		return model;
+	}
+
+	
+	@Resource
+	private MemberVipHistoryService memberVipHistoryService;
+	
+	private Map<String, Object> data;
+	
+	
+	
+	/**
+	 * @author 李建云
+	 * 会员历史记录页面表
+	 * */
+	@Action("/member/member/memberLog")
+	public String getMemberHistoryLog(){
+		
+		return "memberLog";
+	}
+	
+	/**
+	 *@author 李建云
+	 *
+	 * 用户会员历史记录
+	 */
+	@Action("/member/member/memberLogList")
+	public void getMemberHistory() throws Exception{
+		data = new HashMap<String, Object>();
+		model.setUser(this.getSessionUser());
+		PageDataList<MemberVipHistoryModel> pageDataList = memberVipHistoryService.vipHistoryPageList(model);
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+}

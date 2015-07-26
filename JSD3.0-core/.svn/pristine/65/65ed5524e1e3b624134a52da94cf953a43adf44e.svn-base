@@ -1,0 +1,1146 @@
+package com.ddtkj.p2psys.credit.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.CreditCalculatorUtil;
+import com.ddtkj.p2psys.core.util.CreditCalculatorWorker;
+import com.ddtkj.p2psys.credit.dao.CaLogDao;
+import com.ddtkj.p2psys.credit.dao.CollectionCreditDao;
+import com.ddtkj.p2psys.credit.dao.CreditAssignmentDao;
+import com.ddtkj.p2psys.credit.dao.CreditLogDao;
+import com.ddtkj.p2psys.credit.domain.CaLog;
+import com.ddtkj.p2psys.credit.domain.CollectionCredit;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.model.CreditHelper;
+import com.ddtkj.p2psys.credit.model.CreditInfoModel;
+import com.ddtkj.p2psys.credit.model.CreditShowModel;
+import com.ddtkj.p2psys.credit.model.CreditSwingOutModel;
+import com.ddtkj.p2psys.credit.model.worker.CreditWorker;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.dao.BorrowRepaymentDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.dao.VerifyLogDao;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.CreditSwingOutRuleCheck;
+
+
+/**
+ * @描述：债权转让记录Service实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+@Service("creditAssignmentService")
+public class CreditAssignmentServiceImpl implements CreditAssignmentService{
+	private static final Logger logger = Logger.getLogger(CreditAssignmentServiceImpl.class);
+	@Resource
+	private CreditAssignmentDao creditAssignmentDao ;
+	@Resource
+	private BorrowDao borrowDao ;
+	@Resource
+	private BorrowCollectionDao borrowCollectionDao ;
+	@Resource
+	private BorrowRepaymentDao borrowRepaymentDao; 
+	@Resource
+	private BorrowTenderDao borrowTenderDao ;
+	@Resource
+	private CreditLogDao creditLogDao ;
+	@Resource
+	private CollectionCreditDao collectionCreditDao ;
+	@Resource
+	private VerifyLogDao verifyLogDao ;
+	
+	
+	
+	@Resource
+	private CaLogDao caLogDao;
+	
+	@Override
+	public PageDataList<CreditAssignment> getAll(QueryParam param) {
+		return creditAssignmentDao.getAll(param);
+	}
+	@Override
+	public PageDataList<CreditAssignment> getDateByUser(UserModel user) {
+		return creditAssignmentDao.getDateByUser(user);
+	}
+	@Override
+	public PageDataList<CreditAssignment> getDateByUserAndStatus(
+			UserModel user, List<String> status) {
+		return creditAssignmentDao.getDateByUserAndStatus(user, status);
+	}
+	@Override
+	public List<CreditAssignment> getDateByUserAndStatusList(UserModel user, List<String> status) {
+		return creditAssignmentDao.getDateByUserAndStatusList(user, status);
+	}
+	@Override
+	public Boolean getRepealById(long id) {
+		return creditAssignmentDao.getRepealById(id);
+	}
+
+	@Override
+	public CreditAssignment save(User user,CreditSwingOutModel csom,double disfee) {
+		//判断该债权是否转完
+		if(csom.getCreditCopies()<=0){
+			throw new BussinessException("不能转让该债权，因为该债权已经转完", 1);
+		}
+		if(disfee>1){
+			throw new BussinessException("折让费率不能大于100%", 1);
+		}
+		if(disfee<0.8){
+			throw new BussinessException("折让费率不能低于80%", 1);
+		}
+		// 转出的类型  1 投资转出  2  购买的债权转出
+		CreditAssignment ca = new CreditAssignment() ;
+		if(csom.getType()==1){
+			BorrowTender bt = borrowTenderDao.find(csom.getCreditId()) ;
+			bt.setIscredit(2);
+			this.borrowTenderDao.save(bt);
+			// 判断是否重复申请
+			int oldca = creditAssignmentDao.isPublish(user, bt.getBorrow(), bt) ;
+			if(oldca == 0){
+				CreditLog cl=creditLogDao.find(csom.getCreditId());
+				ca.setCreditLog(cl);
+				ca.setCaType(csom.getType());
+				ca.setAddIp(Global.getIP());
+				ca.setAddTime(new Date());
+				ca.setTender(bt);
+				ca.setBorrow(bt.getBorrow());
+				ca.setUser(bt.getUser());
+				ca.setBuyEndTime(csom.getNextRepayMentTime());  // 到下一期还款时间  或 需要些规则
+				ca.setCopiesInsterest(BigDecimalUtil.decimal(BigDecimalUtil.sub(csom.getInterest(), csom.getThisInterest()), 2)); // 购买者本期应得总利息
+				ca.setSellCopies(0);
+				ca.setCreditCopies(csom.getCreditCopies());
+				ca.setCreditDis(disfee);
+				ca.setCreditEndPeriod(csom.getPeriod());
+				ca.setCreditPrice(BigDecimalUtil.decimal(BigDecimalUtil.mul(csom.getCreditValue(), disfee),2));
+				ca.setCreditStartPeriod(csom.getPeriod()-csom.getResiduePeriod()+1);
+				ca.setCreditValue(BigDecimalUtil.decimal(csom.getCreditValue(),2));
+				ca.setSoldAccount(0.00);
+				ca.setStatus(CreditAssignment.CREDIT_PUBLISH);
+				ca.setHaveInsterest(csom.getThisInterest());
+				ca.setCreditAccount(csom.getCreditAccount());
+				ca.setIsBreach(0);
+				ca.setSellFee(csom.getFee());
+				ca.setBreachAccount(0.00);
+		 		return creditAssignmentDao.save(ca);
+			}else{
+				throw new BorrowException("已提交申请，请勿重复提交",1);
+			}
+			//初审通过后
+			
+		}
+		if(csom.getType()==2){
+			CreditLog cl = creditLogDao.find(csom.getCreditId()) ;
+			cl.setIsSell(1);
+			this.creditLogDao.save(cl);
+			int oldca = creditAssignmentDao.isPublishByCredit(user,cl) ;
+			if(oldca == 0){
+				ca.setCaType(csom.getType());
+				ca.setAddIp(Global.getIP());
+				ca.setAddTime(new Date());
+				ca.setCreditLog(cl);
+				ca.setBorrow(cl.getCreditAssignment().getBorrow());
+				ca.setUser(user);
+				ca.setBuyEndTime(csom.getNextRepayMentTime());  // 到下一期还款时间  或 需要些规则
+				ca.setCopiesInsterest(BigDecimalUtil.sub(csom.getInterest(), csom.getThisInterest())); // 本期转让利息
+				ca.setSellCopies(0);
+				ca.setCreditCopies(csom.getCreditCopies());
+				ca.setCreditDis(disfee);
+				ca.setCreditEndPeriod(csom.getPeriod());
+				ca.setCreditPrice(BigDecimalUtil.mul(csom.getCreditValue(), disfee));
+				ca.setCreditStartPeriod(csom.getPeriod()-csom.getResiduePeriod()+1);
+				ca.setCreditValue(csom.getCreditValue());
+				ca.setSoldAccount(0.00);
+				ca.setStatus(CreditAssignment.CREDIT_PUBLISH);
+				ca.setHaveInsterest(csom.getThisInterest());
+				ca.setCreditAccount(csom.getCreditAccount());
+				ca.setIsBreach(0);
+				ca.setBreachAccount(0.00);
+		 		return creditAssignmentDao.save(ca);
+			}else{
+				throw new BorrowException("已提交申请，请勿重复提交",1);
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public boolean Repeal(CreditAssignment ca) {
+		return creditAssignmentDao.Repeal(ca);
+	}
+
+	@Override
+	public CreditAssignment update(CreditAssignment ca) {
+		return creditAssignmentDao.update(ca);
+	}
+	
+	@Override
+	public PageDataList<CreditSwingOutModel> getSwingOutCreditTender(User user,int page,int size) {
+		// 获取用户所有投的标，并且未完全还款的
+		logger.info("进入可转让业务逻辑");
+		List<BorrowTender> tendList = borrowTenderDao.getSwingOutTender(user);
+		List<CreditSwingOutModel> csomList = new ArrayList<CreditSwingOutModel>() ;
+		for (BorrowTender borrowTender : tendList) {
+			CreditSwingOutModel csom =null ;
+ 			// 获取当前标需要还的还款期数
+ 			Borrow borrow = borrowDao.find(borrowTender.getBorrow().getId()) ;
+ 			int currPeriod=0;
+ 			if(Borrow.TYPE_NETWORK==borrow.getType()||Borrow.TYPE_MORTGAGE_ENERGY==borrow.getType()){
+ 				currPeriod=borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId(),borrowTender.getId());
+ 			}else{
+ 				currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId()); 
+ 			}
+ 			logger.info("currPeriod-====="+currPeriod);
+			// 获取当前用户当前标需要还的待收
+			BorrowCollection  bcm = borrowCollectionDao.getThisPeriod(user, borrow, currPeriod,borrowTender.getId()) ;
+			logger.info("bcm-====="+bcm);
+			//判断代收是否为空
+			if(bcm != null){
+				csom = getSwingOutBuyTend(borrowTender, user,1,BorrowCollectionModel.instance(bcm),borrow,currPeriod) ;
+				logger.info("csom-====="+csom);
+				if(csom != null&&csom.getCreditCopies()>0){
+					csom.setType(1);
+					csom.setCollectionId(bcm.getId());
+					csomList.add(csom);
+				}
+			}
+		}
+		List<CreditSwingOutModel> resultlist = csomList.subList(((page-1)*size), ((page*size)>csomList.size()?csomList.size():(page*size))) ;
+		PageDataList<CreditSwingOutModel> csolist = new PageDataList<CreditSwingOutModel>(new Page(csomList.size(),page,size),resultlist) ;
+		return csolist;
+	}
+	@Override
+	public List<CreditSwingOutModel> getSwingOutCreditTender(User user) {
+		// 获取用户所有投的标，并且未完全还款的
+		List<BorrowTender> tendList = borrowTenderDao.getSwingOutTender(user);
+		List<CreditSwingOutModel> csolist = new ArrayList<CreditSwingOutModel>();
+		for (BorrowTender borrowTender : tendList) {
+			CreditSwingOutModel csom =null ;
+ 			// 获取当前标需要还的还款期数
+ 			Borrow borrow = borrowDao.find(borrowTender.getBorrow().getId()) ;
+ 			int currPeriod=0;
+ 			if(Borrow.TYPE_MORTGAGE==borrow.getType()||Borrow.TYPE_MORTGAGE_ENERGY==borrow.getType()){
+			    currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId(),borrowTender.getId()); 
+			}else{
+				currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId()); 
+			}
+			// 获取当前用户当前标需要还的待收
+			BorrowCollection  bcm = borrowCollectionDao.getThisPeriod(user, borrow, currPeriod,borrowTender.getId()) ;
+			csom = getSwingOutBuyTend(borrowTender, user,1,BorrowCollectionModel.instance(bcm),borrow,currPeriod) ;
+			if(csom != null&&csom.getCreditCopies()>0){
+				csom.setType(1);
+				csom.setCollectionId(bcm.getId());
+				csolist.add(csom);
+			}
+		}
+		return csolist;
+	}
+	@Override
+	public PageDataList<CreditSwingOutModel> getSwingOutCreditCa(User user,int page,int size) {
+		// 获取用户购买的债权，可以再次转出的
+		List<CreditLog> clList = creditLogDao.getSwingOutList(user) ;
+		List<CreditSwingOutModel> csomList = new ArrayList<CreditSwingOutModel>() ;
+		for (CreditLog creditLog : clList) {
+			CreditSwingOutModel csom = getSwingOutBuyCreditLog(creditLog, user,1,false) ;
+			if(csom != null){
+				csom.setType(2);
+				csomList.add(csom);
+			}
+		}
+		List<CreditSwingOutModel> resultlist = csomList.subList(((page-1)*size), ((page*size)>csomList.size()?csomList.size():(page*size))) ;
+		PageDataList<CreditSwingOutModel> csolist = new PageDataList<CreditSwingOutModel>(new Page(csomList.size(),page,size),resultlist) ;
+		return csolist;
+	}
+	@Override
+	public List<CreditSwingOutModel> getSwingOutCreditCa(User user) {
+		// 获取用户购买的债权，可以再次转出的
+		List<CreditLog> clList = creditLogDao.getSwingOutList(user) ;
+		List<CreditSwingOutModel> csolist =new  ArrayList<CreditSwingOutModel>() ;
+		for (CreditLog creditLog : clList) {
+			CreditSwingOutModel csom = getSwingOutBuyCreditLog(creditLog, user,1,false) ;
+			if(csom != null){
+				csom.setType(2);
+				csolist.add(csom);
+			}
+		}
+		return csolist;
+	}
+	@Override
+	public List<CreditSwingOutModel> getSwingOutCreditByOneList(User user,int type,long id,boolean isShow) {
+		CreditSwingOutModel csom = null ;
+		List<CreditSwingOutModel> cList=new ArrayList<CreditSwingOutModel>();
+		if(type == 1 ){
+ 			BorrowTender borrowTender = borrowTenderDao.find(id);
+ 			// 获取当前标需要还的还款期数
+ 			Borrow borrow = borrowDao.find(borrowTender.getBorrow().getId()) ;
+ 			int currPeriod=0;
+ 			if(Borrow.TYPE_MORTGAGE==borrow.getType()||Borrow.TYPE_MORTGAGE_ENERGY==borrow.getType()){
+			    currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId(),borrowTender.getId()); 
+			}else{
+				currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId()); 
+			}
+			// 获取当前用户当前标需要还的待收
+			BorrowCollection bcm= borrowCollectionDao.getThisPeriod(user, borrow, currPeriod,borrowTender.getId()) ;
+			csom = getSwingOutBuyTend(borrowTender, user,1,BorrowCollectionModel.instance(bcm),borrow,currPeriod) ;
+			cList.add(csom);
+		}
+		if(type == 2){
+			CreditLog creditLog = creditLogDao.find(id) ;
+			csom = getSwingOutBuyCreditLog(creditLog, user,1,isShow) ;
+			cList.add(csom);
+		}
+		csom.setType(type);
+		return cList;
+	}
+	@Override
+	public CreditSwingOutModel getSwingOutCreditByOne(User user,int type,long id,boolean isShow) {
+		CreditSwingOutModel csom = null ;
+		if(type == 1 ){
+ 			BorrowTender borrowTender = borrowTenderDao.find(id);
+ 			// 获取当前标需要还的还款期数
+ 			Borrow borrow = borrowDao.find(borrowTender.getBorrow().getId()) ;
+ 			int currPeriod=0;
+ 			if(Borrow.TYPE_MORTGAGE==borrow.getType()||Borrow.TYPE_MORTGAGE_ENERGY==borrow.getType()){
+			    currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId(),borrowTender.getId()); 
+			}else{
+				currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId()); 
+			}
+			// 获取当前用户当前标需要还的待收
+			BorrowCollection bcm =borrowCollectionDao.getThisPeriod(user, borrow, currPeriod,borrowTender.getId()) ;
+			if(bcm==null)return null;
+			csom = getSwingOutBuyTend(borrowTender, user,1,BorrowCollectionModel.instance(bcm),borrow,currPeriod) ;
+		}
+		if(type == 2){
+			CreditLog creditLog = creditLogDao.find(id) ;
+			csom = getSwingOutBuyCreditLog(creditLog, user,1,isShow) ;
+		}
+		if(csom!=null){
+			csom.setType(type);
+		}
+		return csom;
+	}
+	/**
+	 * 原投资
+	 * @param borrowTender
+	 * @param user
+	 * @param dis
+	 * @return
+	 */
+	private CreditSwingOutModel getSwingOutBuyTend(BorrowTender borrowTender,User user,double dis,BorrowCollectionModel bcm,Borrow borrow,int currPeriod){
+		if(borrowTender!=null && user !=null && borrow!=null){
+			CreditSwingOutModel cso = new CreditSwingOutModel() ;
+			
+			VerifyLog v =verifyLogDao.findByType(borrow.getId(),"borrow",2) ;
+			CreditSwingOutRuleCheck creditSwingOutRuleCheck = (CreditSwingOutRuleCheck) Global.getRuleCheck("creditSwingOut");  // 添加规则
+			Map<Integer,Integer> rulmap = creditSwingOutRuleCheck.tenderTimeMap(borrow.getType(), borrow.getBorrowTimeType());
+			
+			int md = -1 ;
+			if(rulmap.size()>0){
+				int i = 0;
+				for (int key:rulmap.keySet()) {
+					if(key==borrow.getTimeLimit()){
+						md = rulmap.get(key) ;
+					}
+					i = key ;
+					logger.info("债权规则配置月份==="+key);
+				}
+				if(md == -1){
+					if(borrow.getTimeLimit()>i){
+						md = rulmap.get(i);
+					}
+				}
+			}
+			boolean flag = false ; 
+			long day=0;
+			if(borrow.getBorrowTimeType()==0){
+				// 复审时间 后的 规则个月才能发
+				if(borrow.getType()==Borrow.TYPE_MORTGAGE_ENERGY || borrow.TYPE_NETWORK == borrow.getType()){
+					day = DateUtil.getSubDayHour(DateUtil.rollMon(borrowTender.getAddTime(),md),new Date()) ;
+					//day=1;
+				}else{
+					day = DateUtil.getSubDayHour(DateUtil.rollMon(v.getTime(),md),new Date()) ;
+				}
+				if(day>=0){
+					flag = true ;
+				}
+			}else{
+				// 复审时间 后的  规则天 后才能发
+				if(borrow.getType()==Borrow.TYPE_MORTGAGE_ENERGY || borrow.TYPE_NETWORK == borrow.getType()){
+					day = DateUtil.getSubDayHour(DateUtil.rollDay(borrowTender.getAddTime(),md),new Date()) ;
+					//day=1;
+				}else{
+					 day = DateUtil.getSubDayHour(DateUtil.rollDay(v.getTime(),md),new Date()) ;
+				}
+				if(day>=0){
+					flag = true ;
+				}
+			}
+			logger.info("债权day==="+day);
+			logger.info("是否满足债权转让==="+flag);
+			if(flag){
+				cso.setCreditId(borrowTender.getId());
+				if(borrow.getStyle()==Borrow.STYLE_ONETIME_REPAYMENT){
+					cso.setPeriod(borrow.getPeriod()+1);
+					cso.setResiduePeriod(borrow.getPeriod()+1);
+				}else{
+					cso.setPeriod(borrow.getTimeLimit());
+					cso.setResiduePeriod(borrow.getTimeLimit()-currPeriod);
+				}
+				cso.setApr(borrow.getApr());
+				// 剩余期数
+				// 获取该该投资的待收本息
+				cso.setCipalInterest(borrowCollectionDao.getCollectionTotal(user, borrow,borrowTender.getId()));
+			
+				// 判断当前时间与还款时间的时间差
+				int beforeRepaymentDay  =  creditSwingOutRuleCheck.tenderTimeBeforeMap(borrow.getType(), borrow.getBorrowTimeType(),borrow.getTimeLimit()) ;
+				long rulbefday = DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-beforeRepaymentDay),new Date()) ;
+				logger.info("判断当前时间与还款时间的时间差==="+rulbefday);
+				if(bcm!=null && rulbefday < 0 ){
+					Date bcmReyDate = bcm.getRepaymentTime() ;
+					long haveday = 0 ;
+					if(borrow.getBorrowTimeType()!=Borrow.BORROW_TIME_TYPE_ISDAY){
+						day = DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-1),new Date()) ;  // 
+						// 一次性还款 不分期
+						haveday = (int)DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-1), bcm.getRepaymentTime()) ;
+					}else{
+						day = DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-1),new Date()) ;  //
+						haveday = (int)DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-1), bcm.getRepaymentTime()) ;
+					}
+					if(day>0 && day<=haveday){  // 小于0 并且 相差大于30天的，当前时间不处于转让第一期
+						haveday = day ;
+					}else{
+						haveday = 0 ;
+					}
+					if(CreditCalculatorWorker.STYLE_ONETIME_REPAYMENT == borrow.getStyle()){
+						cso.setPeriod(borrow.getPeriod()+1);
+						cso.setResiduePeriod(borrow.getPeriod()+1);
+						if(borrow.getBorrowTimeType()==Borrow.BORROW_TIME_TYPE_ISDAY){
+							haveday = DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-borrow.getTimeLimit()),new Date()) ;
+						}else{
+							haveday = DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-borrow.getTimeLimit()),new Date()) ;
+						}
+					}
+					double collCapital = borrowCollectionDao.getCapitalTotal(user, borrow,borrowTender.getId()) ; // 剩余待收本金
+					double haveinsterest = borrowCollectionDao.getHaveInsterest(user, borrow,borrowTender.getId()) ; // 还款部分已收利息
+					cso.setHaveInterest(haveinsterest); 
+					cso.setTenderAccount(borrowTender.getAccount());
+					// 计算本期应计天数
+					CreditCalculatorUtil ccl = new CreditCalculatorWorker(collCapital, borrow.getApr(), dis,(int)haveday,1, cso.getPeriod(), borrow.getStyle(), bcm.getInterest(),bcm.getRepaymentTime(),BigDecimalUtil.div(borrowTender.getAccount(), 100),borrow.getBorrowTimeType()).getCalculator() ;
+					cso.setCreditValue(ccl.calculator());
+					cso.setCreditCopies(ccl.getCopies());
+					cso.setThisInterest(ccl.getCopiesInsterest());
+					cso.setCreditAccount(collCapital);
+					cso.setNextRepayMentTime(bcmReyDate);
+					cso.setInterest(bcm.getInterest());
+					// 根据规则算出手续费
+					if(creditSwingOutRuleCheck.getOutFeeType(borrow.getType())==1){ //  1 比率  2 金额
+						cso.setFee(BigDecimalUtil.mul(cso.getCreditAccount(), creditSwingOutRuleCheck.outRateFee(borrow.getType())));
+					}else{ 
+						cso.setFee(creditSwingOutRuleCheck.outAccountFee(borrow.getType(), cso.getCreditAccount()));
+					}
+					if(haveday>=0){  // 小于0的说明逾期了
+						return cso ;
+					}  // 暂时逾期不能转
+				}
+			}
+		}
+		return null ;
+	}
+	/**
+	 * 债权 
+	 * @param borrowTender
+	 * @param user
+	 * @param dis
+	 * @return
+	 */
+	private CreditSwingOutModel getSwingOutBuyCreditLog(CreditLog creditlog,User user,double dis,boolean isShow){
+		CreditSwingOutRuleCheck creditSwingOutRuleCheck = (CreditSwingOutRuleCheck) Global.getRuleCheck("creditSwingOut");
+		int creditRulDay  = creditSwingOutRuleCheck.creditTimeMap(creditlog.getCreditAssignment().getBorrow().getType()) ;
+		System.out.println(Global.getValue("dc_sotime"));
+		if(creditlog.getCreditAssignment().getBorrow().getBorrowTimeType()==1){  // 标是天标  1 天后可以转出
+			 creditRulDay = Integer.parseInt(Global.getValue("dc_sotime")); 
+		}
+		boolean flag = false ; 
+		// 完成交易 后的 规则个天才能发
+		long rulday = -1 ;
+		if(creditlog.getCreditAssignment().getBorrow().getType() == Borrow.TYPE_MORTGAGE_ENERGY || creditlog.getCreditAssignment().getBorrow().getType() == Borrow.TYPE_NETWORK){
+			rulday = DateUtil.getSubDayHour(DateUtil.rollDay(creditlog.getBuyTime(),creditRulDay),new Date()) ;
+		}else{
+			rulday = DateUtil.getSubDayHour(DateUtil.rollDay(creditlog.getCreditAssignment().getFullVerifyTime(),creditRulDay),new Date()) ;
+		}
+		//long rulday = 1;
+		if(rulday>=0){
+			flag = true ;
+		}
+		System.out.println("债权再转让 规则天数为："+rulday);
+		if(creditlog!=null && user !=null && flag){
+			CreditSwingOutModel cso = new CreditSwingOutModel() ;
+			Borrow borrow = borrowDao.find(creditlog.getCreditAssignment().getBorrow().getId()) ;
+			cso.setCreditId(creditlog.getId());
+			cso.setPeriod(borrow.getPeriod()+1);
+			cso.setApr(borrow.getApr());
+			// 获取当前标需要还的还款期数
+			int currPeriod = borrowRepaymentDao.getCurrPeriod(creditlog.getCreditAssignment().getBorrow().getId()); 
+			// 剩余期数
+			// 获取当前用户当前标需要还的待收  (现有问题，会出现两条以上记录)
+			BorrowCollectionModel bcm = borrowCollectionDao.getThisPeriodByCredit(creditlog, currPeriod);
+			if(bcm!=null){
+				int beforeRepaymentDay  =  creditSwingOutRuleCheck.creditTimeBeforeMap(creditlog.getCreditAssignment().getBorrow().getType()) ; 
+				long rulbefday = DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-beforeRepaymentDay),new Date()) ;
+				if(bcm!=null && (rulbefday < 0 || isShow)){ // 离还款日期不远的时候 不能
+					cso.setResiduePeriod(borrow.getPeriod()+1-currPeriod);
+					// 获取该该投资的待收本息 因为是债权转出 所以应该是该人转出的债权待收
+					cso.setCipalInterest(borrowCollectionDao.getCollectionTotalByCredit(creditlog));
+					// 判断当前时间与还款时间的时间差
+					Date bcmReyDate = bcm.getRepaymentTime() ;
+					long day =0 ;
+					long haveday = 0 ;
+					if(borrow.getBorrowTimeType()!=Borrow.BORROW_TIME_TYPE_ISDAY){
+						day = DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-1),new Date()) ;  // 
+						// 一次性还款 不分期
+						haveday = (int)DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-1), bcm.getRepaymentTime()) ;
+					}else{
+						day = DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-1),new Date()) ;  //
+						haveday = (int)DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-1), bcm.getRepaymentTime()) ;
+					}
+					if(day>0 && day<=haveday){  // 小于0 并且 相差大于30天的，当前时间不处于转让第一期
+						haveday = day ;
+					}else{
+						haveday = 0 ;
+					}
+					if(CreditCalculatorWorker.STYLE_ONETIME_REPAYMENT == borrow.getStyle()){
+						if(borrow.getBorrowTimeType()==Borrow.BORROW_TIME_TYPE_ISDAY){
+							haveday = DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-borrow.getTimeLimit()),new Date()) ;
+						}else{
+							haveday = DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-borrow.getTimeLimit()),new Date()) ;
+						}
+					}
+					double collCapital = borrowCollectionDao.getCapitalTotalByCredit(creditlog) ; // 剩余待收本金
+					double haveinsterest = borrowCollectionDao.getHaveInsterestByCredit(creditlog) ; // 还款部分已收利息
+					cso.setHaveInterest(haveinsterest); 
+					cso.setTenderAccount(creditlog.getCreditAssignment().getCreditValue());  
+					// 计算本期应计天数
+					CreditCalculatorUtil ccl = new CreditCalculatorWorker(collCapital, borrow.getApr(), dis,(int)haveday,1, borrow.getTimeLimit(), borrow.getStyle(), bcm.getInterest(),bcm.getRepaymentTime(),creditlog.getBuyCopies(),borrow.getBorrowTimeType()).getCalculator() ;
+					cso.setCreditValue(ccl.calculator());
+					cso.setCreditCopies(ccl.getCopies());
+					cso.setThisInterest(ccl.getCopiesInsterest());
+					cso.setCreditAccount(collCapital);
+					cso.setNextRepayMentTime(bcmReyDate);
+					cso.setInterest(bcm.getInterest());
+					// 根据规则算出手续费
+					if(creditSwingOutRuleCheck.getOutFeeType(borrow.getType())==1){ //  1 比率  2 金额
+						//JSDP-35 2015-6-3 gjh start
+						cso.setFee(BigDecimalUtil.round(BigDecimalUtil.mul(cso.getCreditAccount(), creditSwingOutRuleCheck.outRateFee(borrow.getType()))));
+					}else{ 
+						cso.setFee(BigDecimalUtil.round(creditSwingOutRuleCheck.outAccountFee(borrow.getType(), cso.getCreditAccount())));
+						//JSDP-35 2015-6-3 gjh end
+					}
+					if(haveday>=0){  // 小于0的说明逾期了
+						return cso ;
+					}  // 暂时逾期不能转
+					else{
+						return null ;
+					}
+				}
+			}else{
+				return null ;
+			}
+		}
+		return null ;
+	}
+	@Override
+	public PageDataList<CreditAssignment> getDateByUserAndStatus(
+			UserModel user, String status) {
+		return this.creditAssignmentDao.getDateByUserAndStatus(user, status);
+	}
+	@Override
+	public PageDataList<CreditAssignmentModel> getDateByStatus(List<String> status,int page,int size) {
+		return this.creditAssignmentDao.getDateStatus(status,page,size,null);
+	}
+	@Override
+	public CreditAssignment getEntityById(long id) {
+		return this.creditAssignmentDao.find(id);
+	}
+	@Override
+	public List<CreditAssignment> getCreditAssignmentByStatus(String status) {
+		return this.creditAssignmentDao.getList(status);
+	}
+	@Override
+	public void creditAssignment(CreditAssignment c){
+		logger.info("进入新增当天债权价值、价格核心业务逻辑开始，债权ID："+c.getId());
+		logger.info("creditAssignment====="+c);
+		// 获取当前用户当前标需要还的待收
+		BorrowCollectionModel bcm=new BorrowCollectionModel();
+		double collCapital =0;
+		// 获取当前标需要还的还款期数
+		int currPeriod=0;
+		logger.info("currPeriod==="+currPeriod);
+		if(c.getCaType()==1){
+			logger.info("原投资转让===");
+ 			BorrowTender borrowTender = borrowTenderDao.find(c.getTender().getId());
+ 			if(Borrow.TYPE_NETWORK==c.getBorrow().getType()||Borrow.TYPE_MORTGAGE_ENERGY==c.getBorrow().getType()){
+				currPeriod=borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId(),borrowTender.getId());
+			}else{
+				currPeriod = borrowRepaymentDao.getCurrPeriod(borrowTender.getBorrow().getId()); 
+			}
+ 			// 获取当前标需要还的还款期数
+ 			Borrow borrow = borrowDao.find(borrowTender.getBorrow().getId()) ;
+			// 获取当前用户当前标需要还的待收
+ 			BorrowCollection b=borrowCollectionDao.getThisPeriod(c.getUser(), borrow, currPeriod,borrowTender.getId());
+ 			if(b!=null){
+			  bcm =BorrowCollectionModel.instance(b) ;
+			}
+ 			//JSDP-210 wcw 2015-07-4 start  剩余待收本金=原待收本金总额-已还款本金总额
+			double collCapitalOne = borrowCollectionDao.getCollectionRepayCapitalTotal(borrow, borrowTender.getId(), 0,2); // 原待收本金
+			double collCapitalTwo = borrowCollectionDao.getCollectionRepayCapitalTotal(borrow, borrowTender.getId(), 1,0); // 已还款本金
+			collCapital=collCapitalOne-collCapitalTwo;
+			//JSDP-210 wcw 2015-07-4 end
+			logger.info("collCapital==="+collCapital);
+		}
+		if(c.getCaType()==2){
+			// 获取当前用户当前标需要还的待收
+			currPeriod = borrowRepaymentDao.getCurrPeriod(c.getBorrow().getId()); 
+			bcm = borrowCollectionDao.getThisPeriodByCredit(c.getCreditLog(), currPeriod);
+			collCapital = borrowCollectionDao.getCapitalTotalByCredit(c.getCreditLog()) ; // 剩余待收本金
+			logger.info("collCapital==="+collCapital);
+		}
+		// 判断当前时间与还款时间的时间差
+		logger.info("bcm==="+bcm);
+		if(bcm!=null){
+			long day = 0;
+			if(c.getBorrow().getBorrowTimeType()!=Borrow.BORROW_TIME_TYPE_ISDAY){
+				day = DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-1),new Date()) ;
+			}else{
+				day = DateUtil.getSubDay(DateUtil.rollDay(bcm.getRepaymentTime(),-1),new Date()) ;
+			}
+			logger.info("day==="+day);
+			// 一次性还款 不分期
+			long haveday = (int)DateUtil.getSubDay(DateUtil.rollMon(bcm.getRepaymentTime(),-1), bcm.getRepaymentTime()) ;
+			if(day>0 && day<haveday){  // 小于0 并且 相差大于30天的，当前时间不处于转让第一期
+				haveday = day ;
+			}else{
+				haveday = 0 ;
+			}
+			if(CreditCalculatorWorker.STYLE_ONETIME_REPAYMENT == c.getBorrow().getStyle()){
+				haveday = day ;
+			}
+			logger.info("haveday==="+haveday);
+			if(haveday>=0){
+				// 计算本期应计天数
+				CreditCalculatorUtil ccl = new CreditCalculatorWorker(collCapital, c.getBorrow().getApr(), 1,(int)haveday,1, c.getBorrow().getTimeLimit(), c.getBorrow().getStyle(), bcm.getInterest(),bcm.getRepaymentTime(),c.getCreditCopies(),c.getBorrow().getBorrowTimeType()).getCalculator() ;
+				//转出者本期所得利息
+				double interest=ccl.getCopiesInsterest();
+				//该债权价值
+			    double caTotalValue=BigDecimalUtil.decimal(BigDecimalUtil.add(interest,collCapital),2);
+			    //该债权价格
+			    double caTotalPrice=BigDecimalUtil.decimal(BigDecimalUtil.mul(c.getCreditDis(), caTotalValue), 2);
+			    //剩余份数
+			    double caSurplusCopies=BigDecimalUtil.add(c.getCreditCopies(),-c.getSellCopies());
+			    logger.info("caTotalPrice==="+caTotalPrice);
+			    logger.info("caTotalValue==="+caTotalValue);
+			    if(caTotalPrice>0&&caTotalValue>0){
+				    CaLog caLog=new CaLog(c, caTotalValue, caTotalPrice, c.getCreditDis(), caSurplusCopies, c.getAddTime(), new Date());
+				    caLogDao.save(caLog);
+			    }
+			    CreditAssignment ca=creditAssignmentDao.find(c.getId());
+			    logger.info("ca==="+ca);
+			    if(ca!=null){
+				    ca.setCreditValue(caTotalValue);
+				    ca.setCreditPrice(caTotalPrice);
+				    ca.setHaveInsterest(interest);
+				    creditAssignmentDao.update(ca);
+			    }
+		    }
+	    }
+	}
+	
+	@Override
+	public PageDataList<CreditAssignmentModel> getCreditAssignmentList(
+			CreditAssignmentModel model) {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		// 债权名  JSDP-185  SXY 20150626
+		if (StringUtil.isNotBlank(model.getCaName())) {
+			param.addParam("borrow.name", Operators.LIKE, model.getCaName());
+		}
+		// 债权类型
+		if (0 < model.getCaType() && 99 != model.getCaType()) {
+			param.addParam("caType", model.getCaName());
+		}
+		// 债权等级
+		if (-1 < model.getLevel() && 99 != model.getLevel()) {
+			param.addParam("level", model.getLevel());
+		}
+		
+		// 时间段 
+		if (StringUtil.isNotBlank(model.getStartTime()) && StringUtil.isNotBlank(model.getEndTime())) {
+			Date start = DateUtil.valueOf(model.getStartTime());
+			Date end = DateUtil.valueOf(model.getEndTime());
+			param.addParam("addTime", Operators.GTE, start);
+			param.addParam("addTime", Operators.LT, end);
+		}
+
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<CreditAssignment> list = creditAssignmentDao.findPageList(param);
+		List<CreditAssignmentModel> modelList = new ArrayList<CreditAssignmentModel>();
+		PageDataList<CreditAssignmentModel> pageDataList = new PageDataList<CreditAssignmentModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				CreditAssignment creditAssignment = (CreditAssignment)list.getList().get(i);
+				CreditAssignmentModel caModel = CreditAssignmentModel.instance(creditAssignment);
+				User user = creditAssignment.getUser();
+				Borrow borrow = creditAssignment.getBorrow();
+				caModel.setSellUserName(user.getUserName());
+				caModel.setCaName(borrow.getName());
+				caModel.setCaScales(BigDecimalUtil.div(creditAssignment.getSellCopies(), creditAssignment.getCreditCopies(), 2));
+				modelList.add(caModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	//JSDP-173 wcw 2015-06-09 start
+	@Override
+	public PageDataList<CreditAssignmentModel> getCreditAssignmentList(
+			CreditAssignmentModel model,List<String> status) {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addParam("status",Operators.IN, status) ;
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<CreditAssignment> list = creditAssignmentDao.findPageList(param);
+		List<CreditAssignmentModel> modelList = new ArrayList<CreditAssignmentModel>();
+		PageDataList<CreditAssignmentModel> pageDataList = new PageDataList<CreditAssignmentModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				CreditAssignment creditAssignment = (CreditAssignment)list.getList().get(i);
+				CreditAssignmentModel caModel = CreditAssignmentModel.instance(creditAssignment);
+				User user = creditAssignment.getUser();
+				Borrow borrow = creditAssignment.getBorrow();
+				caModel.setSellUserName(user.getUserName());
+				caModel.setCaName(borrow.getName());
+				caModel.setCaScales(BigDecimalUtil.div(creditAssignment.getSellCopies(), creditAssignment.getCreditCopies(), 2));
+				modelList.add(caModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	//JSDP-173 wcw 2015-06-09 end
+	/**
+	 * 
+	 * 明细——债权转让(售出)
+	 * // JSDPBUG-99 20150505  sxy
+	 */
+	@Override
+	public PageDataList<CreditAssignmentModel> getCreditOutAssignmentList(
+			CreditAssignmentModel model) {
+		QueryParam param = QueryParam.getInstance();
+		//searchParam(param, model);
+		//param.addOrder(OrderType.DESC, "id");
+		
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		
+		param.addParam("status", "03");
+		
+		if(StringUtil.isNotBlank(model.getTimeType())){
+			
+			// 昨天债权转让金额
+			if(StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())){
+				/*param.addParam("fullVerifyTime", Operators.GTE, DateUtil.rollDay(nowdate, -1));
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("fullVerifyTime", Operators.LT, start);*/
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, -1))).substring(0, 10) + " 00:00:00");
+				param.addParam("fullVerifyTime", Operators.GTE, start);
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("fullVerifyTime", Operators.LT, end);
+			}
+			// 今天债权转让金额
+			if(StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, +1))).substring(0, 10) + " 00:00:00");
+				param.addParam("fullVerifyTime", Operators.GTE, start);
+				param.addParam("fullVerifyTime", Operators.LT, end);
+				/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("fullVerifyTime", Operators.GTE, start);
+				param.addParam("fullVerifyTime", Operators.LT, nowdate);*/
+			}
+			// 一周债权转让金额
+			if(StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("fullVerifyTime", Operators.GTE, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, -7)).substring(0, 10) + " 00:00:00")));
+				param.addParam("fullVerifyTime", Operators.LT, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, 1)).substring(0, 10) + " 00:00:00")));
+				/*param.addParam("fullVerifyTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("fullVerifyTime", Operators.LTE, nowdate);*/
+			}
+			// 本月债权转让金额
+			if(StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollMon(start, +1))).substring(0, 7) + "-01 00:00:00");
+				param.addParam("fullVerifyTime", Operators.GTE, start);
+				param.addParam("fullVerifyTime", Operators.LT, end);
+				/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+				param.addParam("fullVerifyTime", Operators.GTE, start);
+				param.addParam("fullVerifyTime", Operators.LT, nowdate);*/
+			}
+			// 时间段
+			if(StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())){
+				if(StringUtil.isNotBlank(model.getStartTime()) && StringUtil.isNotBlank(model.getEndTime())){
+					Date start = DateUtil.valueOf(model.getStartTime());
+					Date end = DateUtil.valueOf(model.getEndTime());
+					param.addParam("fullVerifyTime", Operators.GTE, start);
+					param.addParam("fullVerifyTime", Operators.LTE, end);
+				}
+			}
+		
+		}
+		
+		PageDataList<CreditAssignment> list = creditAssignmentDao.findPageList(param);
+		List<CreditAssignmentModel> modelList = new ArrayList<CreditAssignmentModel>();
+		PageDataList<CreditAssignmentModel> pageDataList = new PageDataList<CreditAssignmentModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				CreditAssignment creditAssignment = (CreditAssignment)list.getList().get(i);
+				CreditAssignmentModel caModel = CreditAssignmentModel.instance(creditAssignment);
+				User user = creditAssignment.getUser();
+				Borrow borrow = creditAssignment.getBorrow();
+				caModel.setSellUserName(user.getUserName());
+				caModel.setCaName(borrow.getName());
+				caModel.setCaScales(BigDecimalUtil.div(creditAssignment.getSellCopies(), creditAssignment.getCreditCopies(), 2));
+				modelList.add(caModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	
+	
+	@Override
+	public List<CreditAssignmentModel> getCreditAssignmentListTwo(
+			CreditAssignmentModel model) {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		List<CreditAssignment> list = creditAssignmentDao.findByCriteria(param) ;
+		List<CreditAssignmentModel> modelList = new ArrayList<CreditAssignmentModel>();
+		if(list.size() > 0){
+			for(int i=0; i < list.size(); i++){
+				CreditAssignment creditAssignment = (CreditAssignment)list.get(i);
+				CreditAssignmentModel caModel = CreditAssignmentModel.instance(creditAssignment);
+				User user = creditAssignment.getUser();
+				Borrow borrow = creditAssignment.getBorrow();
+				caModel.setSellUserName(user.getUserName());
+				caModel.setCaName(borrow.getName());
+				caModel.setCaScales(BigDecimalUtil.div(creditAssignment.getSellCopies(), creditAssignment.getCreditCopies(), 2));
+				modelList.add(caModel);
+			}
+		}
+		return modelList;
+	}
+	private QueryParam searchParam(QueryParam param, CreditAssignmentModel model) {
+		if(model != null){
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				param.addParam("user.userId", model.getUser().getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getSellUserName())){
+				param.addParam("user.userName",  Operators.LIKE, model.getSellUserName());
+			}
+			if (StringUtil.isNotBlank(model.getCaName())){
+				param.addParam("borrow.name",  Operators.LIKE, model.getCaName());
+			}
+			if (StringUtil.isNotBlank(model.getStatus()) && !CreditAssignment.CREDIT_ALL.equals(model.getStatus()) && !"0".equals(model.getStatus())){
+				param.addParam("status", model.getStatus());
+			}
+			if (model.getLevel() > 0 && model.getLevel() != CreditAssignment.CREDIT_LEVEL_ALL){
+				param.addParam("level", model.getLevel());
+			}
+			if (model.getCaType() > 0 && model.getCaType() != CreditAssignment.CREDIT_TYPE_ALL){
+				param.addParam("caType", model.getCaType());
+			}
+			if (model.getCaScales() == 100){
+				param.addParam("creditCopies",  Operators.PROPERTY_EQ, "sellCopies");
+			}
+			if (model.getBorrowType() > 0) {
+				param.addParam("borrow.type", model.getBorrowType());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			if (StringUtil.isNotBlank(model.getBuyEndBeginTime())) {
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("buyEndTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getBuyEndFinishTime())) {
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("buyEndTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+
+	
+	@Override
+	public double getCreditAssignmentSum(User user, String status) {
+		
+		return creditAssignmentDao.getCreditAssignmentSum(user, status);
+	}
+	
+	@Override
+	public double getCreditAssignmentSum(User user, String status, int type) {
+
+		return creditAssignmentDao.getCreditAssignmentSum(user, status, type);
+	}
+
+	@Override
+	public int getCreditAssignmentCount(User user, String status) {
+		
+		return creditAssignmentDao.getCreditAssignmentCount(user, status);
+	}
+	
+	@Override
+	public int getCreditAssignmentCount(User user, String status,
+			Date startTime, Date endTime) {
+		// TODO Auto-generated method stub
+		return creditAssignmentDao.getCreditAssignmentCount(user, status, startTime, endTime);
+	}
+
+	@Override
+	public int getCreditAssignmentCopiesCount(User user, String status) {
+
+		return creditAssignmentDao.getCreditAssignmentCopiesCount(user, status);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.credit.service.CreditAssignmentService#getDateShow(java.util.List, int, int)
+	 */
+	@Override
+	public PageDataList<CreditShowModel> getDateShow(List<String> status,
+			int page, int size,CreditAssignmentModel cmodel) {
+		PageDataList<CreditAssignmentModel> clist = creditAssignmentDao.getDateStatus(status,page,size,cmodel);
+		PageDataList<CreditShowModel> csmPL = new PageDataList<CreditShowModel>(clist.getPage(), new ArrayList<CreditShowModel>()) ;
+		List<CreditShowModel> list = new ArrayList<CreditShowModel>();
+		for(CreditAssignmentModel cam : clist.getList()){
+			CreditShowModel cm = new CreditShowModel() ;
+			cm.setCaid(cam.getId());
+			cm.setBorrowApr(cam.getBorrow().getApr());
+			cm.setBorrowName(cam.getBorrow().getName());
+			cm.setBorrowStyle(cam.getBorrow().getStyle());
+			cm.setBorrowType(cam.getBorrow().getType());
+			cm.setCopiesPrice(BigDecimalUtil.div(cam.getCreditPrice(), cam.getCreditCopies()));
+			cm.setCreditAccount(cam.getCreditPrice());
+			cm.setDis(cam.getCreditDis());
+			cm.setSellCopies(cam.getSellCopies());
+			cm.setCreditCopies(cam.getCreditCopies());
+			cm.setTimelimit(DateUtil.getSubDay(new Date(),cam.getBuyEndTime()) );
+			cm.setTotalCopies(cam.getCreditCopies());
+			cm.setLevel(cam.getBorrow().getStar());
+			cm.setStatus(cam.getStatus());
+			list.add(cm);
+		}
+		//冒泡排序，排列债权信息
+		 for (int i = 0; i < list.size(); i++){
+             for (int j = i; j < list.size(); j++){
+            	 CreditShowModel csm =list.get(i);
+            	 CreditShowModel csm2 = list.get(j);
+            	 if(csm.getSellCopies()!=csm.getCreditCopies() && csm2.getSellCopies()!=csm2.getCreditCopies() ){
+	            	 double result1 = (csm.getSellCopies())/(csm.getCreditCopies());
+	            	 double result2 = (csm2.getSellCopies())/(csm2.getCreditCopies());
+	            	 if(result1<result2){
+	            		list.set(i, csm2);
+	            		list.set(j, csm);
+	            	 }
+            	 }
+             }
+         }
+		 for(CreditShowModel cm :list){
+			 double result1 = (cm.getSellCopies())/(cm.getCreditCopies());
+			// System.out.println(cm.getBorrowName()+"    "+result1);
+			 csmPL.getList().add(cm);
+		 }
+		 
+		 
+		return csmPL ;
+		
+	}
+	
+	@Override
+	public double calcProfitAndLoss(User user, String status) {
+		return creditAssignmentDao.calcProfitAndLoss(user, status);
+	}
+	
+	@Override
+	public double calcCreditSellFee(User user, String status, Date startTime,
+			Date endTime) {
+		return creditAssignmentDao.calcCreditSellFee(user, status, startTime, endTime);
+	}
+	
+	@Override
+	public PageDataList<CreditInfoModel> getCreditInfo(long caId,int page,int size) {
+		CreditAssignment c = creditAssignmentDao.find(caId);
+		PageDataList<BorrowCollection> collectionlist = borrowCollectionDao.getList(c.getBorrow().getId(), page, size, c.getBorrow().getPeriod()) ;
+		PageDataList<CreditInfoModel> cimlist = new PageDataList<CreditInfoModel>(collectionlist.getPage(), new ArrayList<CreditInfoModel>());
+		for (BorrowCollection borrowCollection : collectionlist.getList()) {
+			if(borrowCollection.getTender()!=null){
+				CreditInfoModel cim = new CreditInfoModel() ;
+				cim.setUserName(borrowCollection.getUser().getUserName());
+				cim.setAccount(borrowCollectionDao.getCapitalTotal(borrowCollection.getUser(), c.getBorrow(),borrowCollection.getTender().getId()));
+				cim.setCopies((int)BigDecimalUtil.div(borrowCollection.getTender().getAccount(),100));
+				cimlist.getList().add(cim) ;
+			}else{
+				CollectionCredit cc = collectionCreditDao.getCollectinCreditByCid(borrowCollection.getId()) ;
+				CreditInfoModel cim = new CreditInfoModel() ;
+				cim.setUserName(borrowCollection.getUser().getUserName());
+				cim.setAccount(borrowCollectionDao.getCapitalTotalByCredit(cc.getCreditLog()));
+				cim.setCopies(cc.getCreditLog().getBuyCopies());
+				cimlist.getList().add(cim) ;
+			}
+		}
+		return cimlist;
+	}
+
+	@Override
+	public List<CreditAssignment> getCreditAssignmentByStautAndTimeOver(
+			String status) {
+		return creditAssignmentDao.getListByTimeOver(status);
+	}
+
+	@Override
+	public double calcCreditSoldAccount(User user, String status,
+			Date startTime, Date endTime) {
+		// TODO Auto-generated method stub
+		return creditAssignmentDao.calcCreditSoldAccount(user, status, startTime, endTime);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.credit.service.CreditAssignmentService#reOrder(com.ddtkj.p2psys.credit.domain.CreditAssignment, com.ddtkj.p2psys.credit.domain.CreditLog)
+	 */
+	@Override
+	public boolean reOrder(int caid, int clid) {
+		CreditAssignment ca = this.creditAssignmentDao.find(Long.parseLong(caid+"")) ;
+		if(ca!=null){
+			try{
+				if(Borrow.TYPE_MORTGAGE== ca.getBorrow().getType()){
+					// 满标后生息
+					if(ca.getCreditCopies() == ca.getSellCopies()){ // 已经满了，可以生成待收信息。所有人的利息计算都以 初审时间计算
+						// 验证
+						if(!CreditAssignment.CREDIT_CHECK2_SUCCESS.equals(ca.getStatus())){
+							throw new HandleException("没复审成功",1);
+						}
+						// 取得所有购买者
+						QueryParam param = QueryParam.getInstance() ;
+						param.addParam("creditAssignment", ca) ;
+						List<CreditLog> clList = this.creditLogDao.findByCriteria(param);
+						CreditWorker caworker = new CreditWorker(ca);
+//						// 资金比对
+ 		
+						caworker.handleCreditTenderAfterFullSuccess(clList);
+						caworker.handleCreditSellerAfterFullSuccess(clList);
+						System.out.println("本地逻辑完毕，第三方开始");
+						System.out.println("本地逻辑完毕，第三方结束");
+						// 发送通知
+						User user = ca.getUser();
+				        user.getUserId();
+						Global.setTransfer("creditAssignment", ca); 
+						Global.setTransfer("user", user);
+						AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccExecuter");
+						succExecuter.execute(0, user);
+						 //给购买者发送通知
+						for (CreditLog creditLog : clList) {
+							AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccBuyExecuter");
+				            Global.setTransfer("creditLog", creditLog);
+				            Global.setTransfer("user", creditLog.getBuyUser());
+				            succBuyExecuter.execute(0, creditLog.getBuyUser());
+						}
+					}else{
+						throw new BussinessException("债权还没有满",1);
+					}
+				}else{
+					CreditLog cl = this.creditLogDao.find(clid);
+					CreditWorker cworker=CreditHelper.getWorker(ca, cl);
+					cworker.handleCreditTenderSuccess(cl);
+					cworker.handleCreditSellerSuccess(cl);
+					// 发送通知
+					User sellUser = ca.getUser();
+					Global.setTransfer("creditAssignment", ca);
+					Global.setTransfer("user", sellUser);
+					AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccExecuter");
+					succExecuter.execute(0,ca.getUser());
+					// 给购买者发送通知
+					AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccBuyExecuter");
+		            Global.setTransfer("creditLog", cl);
+		            Global.setTransfer("user", cl.getBuyUser());
+		            succBuyExecuter.execute(0, cl.getBuyUser());
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+				throw new BussinessException("补单失败"+e.getLocalizedMessage(),1);
+			}
+		}else{
+			throw new BussinessException("没找到该债权",1);
+		}
+		return true ;
+	}
+	@Override
+	public List excelCreditList(CreditAssignmentModel model) {
+		
+		return creditAssignmentDao.excelCreditList(model);
+	}
+	// 99 20150527
+	@Override
+	public PageDataList<CreditAssignment> getCreditOutAssignmentListForSQL(CreditAssignmentModel model, int page,int size) {
+		
+		return creditAssignmentDao.getCreditOutAssignmentListForSQL(model,page,size);
+	}
+
+}

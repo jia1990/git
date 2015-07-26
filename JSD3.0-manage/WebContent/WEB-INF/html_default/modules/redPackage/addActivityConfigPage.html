@@ -1,0 +1,75 @@
+
+<script type="text/javascript">
+$(function(){
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/redPackage/addRpActivityConfig.html'); //表单提交  参数1：表单id 参数2：表单action地址
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">活动名称：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="activityName" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">活动标识：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="activityType" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">规则关键词：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="keyWord" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+			<label class="lab">奖励方式：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="awardType" value="rpMoney" checked="checked"/>红包
+				<input type="radio" name="awardType" value="petCard" />晋商贷体验卡
+				<input type="radio" name="awardType" value="score" />积分
+				
+		     </div>
+		</div>
+		<!-- 添加时间开始 -->
+		<div class="formitm" id="time">
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="startTime" id="startTime" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="endTime" id="endTime" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间结束 -->
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="op" />进行中
+				<input type="radio" name="status" value="cl" checked="checked"/>已停止
+		     </div>
+		</div>
+
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="remark"  maxlength="120"></textarea>	
+		     </div>
+		</div>
+		
+		
+		<input name="rpActivityAddToken" value="${rpActivityAddToken!}" type="hidden">
+		
+		     	
+	</form>
+</div>
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+

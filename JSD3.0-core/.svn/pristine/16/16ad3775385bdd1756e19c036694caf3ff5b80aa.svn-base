@@ -1,0 +1,45 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：活动红包的产生和消费控制  JSDP-203
+ * @作者：wangchangwei@ddtkj.com 
+ * @创建时间：2015年4月14日 
+ */
+public class RpActivityHelper {
+	
+
+	public static RpActivityWorker getWorker(RpActivity rpActivity,BorrowTender tender){
+		//执行端午节活动红包的产生
+		String rpActivityType = rpActivity.getActivityType();
+		if(StringUtil.isNotBlank(rpActivityType) && rpActivityType.equals(RpActivity.ACTIVITY_DRAGON)){
+			return new RpActivityRpMoneyDragonProduceWorker(rpActivity, tender);
+		}
+		if(StringUtil.isNotBlank(rpActivityType) && rpActivityType.equals(RpActivity.ACTIVITY_INDIANA_JONES)){
+			return new RpActivityRpMoneyIndianaJonesProduceWorker(rpActivity, tender);
+		}
+		if(StringUtil.isNotBlank(rpActivityType) && rpActivityType.equals(RpActivity.ACTIVITY_QUESTIONS)){
+			return new RpActivityRpMoneyQuestionsProduceWorker(rpActivity, tender);
+		}
+		throw new RuntimeException("没有此类型:" + rpActivityType);
+	}
+	
+	public static RpActivityWorker getWorker(BorrowTender tender,double consumeMoney,String awardType){
+		//JSDP-171 xingjia 20150714 start
+		if(StringUtil.isNotBlank(awardType) && awardType.equals(RpActivity.AWARD_TYPE_PET)){
+			return new PetCardConsumeWorker(tender, consumeMoney);
+		}
+		if(StringUtil.isNotBlank(awardType) && awardType.equals(RpActivity.ACTIVITY_INDIANA_JONES)){
+			return new RpActivityRpMoneyIndianaJonesConsumeWorker(tender, consumeMoney);
+		}
+		//JSDP-171 xingjia 20150714 end
+		throw new RuntimeException("没有此类型:" + awardType);
+	}
+
+}

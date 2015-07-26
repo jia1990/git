@@ -1,0 +1,63 @@
+package com.ddtkj.p2psys.authorize.service.impl;
+
+import java.util.UUID;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.authorize.dao.ClientUserDao;
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.domain.ClientUser;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.authorize.service.ClientUserService;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * 授权应用service层
+ * @author sxy
+ * @version 3.0
+ * @date 2015年3月18日
+ *
+ */
+@Service("clientUserService")
+public class ClientUserServiceImpl implements ClientUserService{
+	@Resource
+	public ClientUserDao clientUserDao;
+	@Resource
+	public ClientUserService clientUserService;
+
+	@Override
+	public ClientUser insertUserInfo(ClientUser clientUser) {
+		return clientUserDao.save(clientUser);
+	}
+
+	@Override
+	public ClientUserModel selectByUserAndClient(long userId, String clientId) {
+		
+		return clientUserDao.selectByUserAndClient(userId, clientId);
+	}
+	
+	@Override
+	public ClientUserModel updateOauthUserInfo(User user, Client client) {
+		
+		ClientUserModel cum = clientUserDao.selectByUserAndClient(user.getUserId(), client.getClientId());
+		if(null == cum){
+			cum = new ClientUserModel();
+			String openId = UUID.randomUUID().toString(); 
+			openId = openId.replaceAll("-", "");
+			cum.setOpenId(openId);
+			cum.setServerUserId(user.getUserId());
+			cum.setUserName(user.getUserName());
+			cum.setPhone(user.getMobilePhone());
+			// 添加授权记录
+			clientUserDao.insertUserInfo(cum, client);
+			// 查询授权记录
+			cum = clientUserDao.selectByUserAndClient(user.getUserId(), client.getClientId());
+		}
+		
+		return cum;
+	}
+
+	
+}

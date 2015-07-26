@@ -1,0 +1,153 @@
+<script type="text/javascript">
+$(function() {
+    $("select[name='type']").change(function(){
+    	if($(this).val()==3){
+    		$("input[name='awardValue']").parent(".ipt").parent(".formitm").show();
+    		$("input[name='vipValidMonth']").parent(".ipt").parent(".formitm").show();
+    		$("select[name='vipLevel']").parent(".ipt").parent(".formitm").show();
+    	}else{
+    		$("input[name='awardValue']").parent(".ipt").parent(".formitm").show();
+    		$("input[name='vipValidMonth']").parent(".ipt").parent(".formitm").hide();
+    		$("select[name='vipLevel']").parent(".ipt").parent(".formitm").hide();
+    	};
+    }) 
+});
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/score/modifyAwardObject.html',"添加成功！","添加失败！");
+	});
+</script>
+<div class="popForm sForm">
+    <form id="form"  method="post" enctype="multipart/form-data">	
+		<div class="formitm">
+		     <label class="lab">奖品名称：</label>
+		     <div class="ipt">
+				<input type="text" name="name" value="${awardObject.name!}" class="w300 easyui-validatebox" data-options="required: true" />
+				<b>*</b>
+			</div>
+		</div>
+	
+		<div class="formitm" id="time" >
+		     <label class="lab">奖品级别：</label>
+		     <div class="ipt">
+		     	<input type="text" name="level" value="${awardObject.level!}" class="w300 easyui-validatebox" data-options="required: true" onKeyUp="value=value.replace(/[^0-9.]/g,'')" maxlength="3" />&nbsp;&nbsp;等奖&nbsp;&nbsp;
+				<b>*(1到100以内的整数)</b>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">奖品状态：</label>
+		     <div class="ipt">
+				<input type="radio" id="status" name="status" value="11" size="15" <#if awardObject.status=="11">checked="checked"</#if> />&nbsp;&nbsp;启用&nbsp;&nbsp;
+				<input type="radio" id="status" name="status" value="22" size="15" <#if awardObject.status=="22">checked="checked"</#if> />&nbsp;&nbsp;关闭
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">中奖率：</label>
+		     <div class="ipt">
+				<input type="text" name="awardrate" value="${((awardObject.rate)/100000000)?string('0.########')}" class="w300 easyui-validatebox" data-options="required: true" onKeyUp="value=value.replace(/[^0-9.]/g,'')" maxlength="10" />
+				<b>*(0到1之间的小数，目前系统支持的最小概率为0.00000001)</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">奖品数量：</label>
+		     <div class="ipt">
+				<input type="radio" id="awardLimit" name="awardLimit" value="0" size="15" <#if awardObject.awardLimit==0>checked="checked"</#if> />&nbsp;&nbsp;无限制&nbsp;&nbsp;
+				<input type="radio" id="awardLimit" name="awardLimit" value="1" size="15" <#if awardObject.awardLimit==1>checked="checked"</#if> />&nbsp;&nbsp;有限制
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">奖品总量：</label>
+		     <div class="ipt">
+				<input type="text" name="total" value="${awardObject.total!}" class="w300 easyui-validatebox" onKeyUp="value=value.replace(/[^0-9.]/g,'')" maxlength="10"/>
+				<b>(1到1000000000的整数，奖品数量选择限制时，必须填写)</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">倍率：</label>
+		     <div class="ipt">
+				<input type="text" name="ratio" value="${awardObject.ratio!}" class="w300 easyui-validatebox" onKeyUp="value=value.replace(/[^0-9.]/g,'')" maxlength="8"/>
+				<b>(0.00001到10000的数字，抽奖规则为按倍率抽奖制时，必须填写)</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">奖品类型：</label>
+		     <div class="ipt">
+				<select name=type>
+					<option value="1" <#if awardObject.type==1>selected="selected"</#if>>现金</option>
+	            	<option value="2" <#if awardObject.type==2>selected="selected"</#if>>积分</option>
+		            <option value="3" <#if awardObject.type==3>selected="selected"</#if>>VIP</option>
+		            <option value="4" <#if awardObject.type==4>selected="selected"</#if>>实物奖励</option>
+		            <option value="5" <#if awardObject.type==5>selected="selected"</#if>>静态红包</option>
+		            <option value="6" <#if awardObject.type==6>selected="selected"</#if>>购物卡</option>
+		            <option value="7" <#if awardObject.type==7>selected="selected"</#if>>投资劵</option>
+	            </select>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">奖品面值：</label>
+		     <div class="ipt">
+				<input type="text" name="awardValue" value="${awardObject.awardValue!}" class="w300 easyui-validatebox" onKeyUp="value=value.replace(/[^0-9.]/g,'')" maxlength="12" />
+				<b>*(填写奖品所对应的面值)</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">VIP等级：</label>
+		     <div class="ipt">
+				<select name=vipLevel>
+					<option value="N1" <#if awardObject.vipLevel=='N1'>selected="selected"</#if>>请选择</option>
+	            	<option value="V1" <#if awardObject.vipLevel=='V1'>selected="selected"</#if>>铜牌会员</option>
+		            <option value="V2" <#if awardObject.vipLevel=='V2'>selected="selected"</#if>>银牌会员</option>
+		            <option value="V3" <#if awardObject.vipLevel=='V3'>selected="selected"</#if>>金牌会员</option>
+		            <option value="V4" <#if awardObject.vipLevel=='V4'>selected="selected"</#if>>钻石会员</option>
+	            </select>
+				<b>*(奖品类型为VIP时所必填)</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">有效期(月)：</label>
+		     <div class="ipt">
+				<input type="text" name="vipValidMonth" value="${awardObject.vipValidMonth!}" class="w300 easyui-validatebox" onKeyUp="value=value.replace(/[^0-9.]/g,'')" maxlength="5" />
+				<b>*(奖品类型为VIP时所必填)</b>
+			 </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">奖品描述：</label>
+		     <div class="ipt">
+				<input type="text" name="description" value="${awardObject.description!}" class="w300 easyui-validatebox" maxlength="15" data-options="required: true" />
+				<b>*</b>
+			</div>
+		</div>
+		<!-- 考虑到前台js的复杂性后期改成滚动图片动态  -->
+		<!-- <div class="formitm">
+		     <label class="lab">奖品图片：</label>
+		     <div class="ipt">
+	            <input type="file" name="file" title="点击上传图片" />
+	           	<b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*(奖品图片用于前台展示，不上传图片采用默认图片用于前台展示)</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <div class="ipt">
+		     	<#if awardObject.picUrl??&&awardObject.picUrl!=""><img src="${awardObject.picUrl!}" style="height:80px;width:80px;"></#if>	
+		     </div>
+		</div> -->
+		
+		<input type="hidden" name="id" value="${awardObject.id!}" id="id">
+		<input type="hidden" name="ruleId" value="${ruleId!}" id="ruleId" >
+		<input type="hidden" name="actionType" value="modify" id="actionType" >
+	    <input type="hidden" name="picUrl" value="${awardObject.picUrl!}" id="picUrl" />
+	    <input type="hidden" name="modifyObjectToken" value="${modifyObjectToken!}" />
+	    
+	</form>
+</div>
+<!-- 编辑器 -->
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>

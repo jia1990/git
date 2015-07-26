@@ -1,0 +1,43 @@
+package com.ddtkj.p2psys.goods.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+/**
+ * 
+ * @描述：商品的model
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年1月29日
+ */
+public class GoodsPicModel extends DdtkjGoodsPic{
+
+	private static final long serialVersionUID = -2769771667654271479L;
+	/**
+	 * 将domain转为model
+	 * @param ddtkjGoodsPic
+	 * @return
+	 */
+ 	public static GoodsPicModel instance(DdtkjGoodsPic ddtkjGoodsPic) {
+ 		GoodsPicModel model = new GoodsPicModel();
+        BeanUtils.copyProperties(ddtkjGoodsPic, model);
+        return model;
+    }
+
+    public DdtkjGoodsPic prototype() {
+    	DdtkjGoodsPic item = new DdtkjGoodsPic();
+        BeanUtils.copyProperties(this, item);
+        return item;
+    }
+    
+	private DdtkjGoods goods;
+	
+	public DdtkjGoods getGoods() {
+		return goods;
+	}
+
+	public void setGoods(DdtkjGoods goods) {
+		this.goods = goods;
+	}
+
+}

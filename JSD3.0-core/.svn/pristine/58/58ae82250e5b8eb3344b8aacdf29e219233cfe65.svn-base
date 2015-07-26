@@ -1,0 +1,113 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record.trade;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountTradeDao;
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountTradeDetailDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountTransferTrade;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountTransferTradeDetail;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransferDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月9日 
+ */
+public class AccountTransferTradeRecord extends AbstractYmdEvent<AccountTransferTrade>{
+
+	
+	AccountTradeDao accountTradeDao;
+	
+	AccountTradeDetailDao accountTradeDetailDao;
+	
+	List<YmdTransferDetails> list;
+	/**
+	 * 
+	 * @param y 转账交易model
+	 * @param list  交易明细记录list
+	 * @param money  交易总额
+	 * @param fee  交易手续费总额
+	 * @param tradeStatus 交易返回状态
+	 * @param tradeIsFree   交易是否免费
+	 * @param addIp 添加IP
+	 */
+	public AccountTransferTradeRecord(YmdTransfer y,List<YmdTransferDetails> list,double money,double fee,String tradeStatus,String tradeIsFree,String addIp) {
+		this.list=list;
+		init();
+		getT();
+		t.setTradeAmount(money);
+		t.setTradePayment(fee);
+		t.setTradeIsfree(tradeIsFree);
+		t.setTradeNo(y.getTradeNo());
+		t.setTradeTime(new Date());
+		t.setTradeStatus(tradeStatus);
+		t.setAddTime(new Date());
+		t.setAddIp(addIp);
+	}
+
+	@Override
+	public void addRecord() {
+		AccountTransferTrade trade=accountTradeDao.getTransferTradeByTradeno(t.getTradeNo());
+		if(StringUtil.isBlank(trade)){
+			accountTradeDao.save(t);
+			for(YmdTransferDetails y:list){
+				AccountTransferTradeDetail a=new AccountTransferTradeDetail();
+				a.setAmount(NumberUtil.getDouble2(y.getAmount()));
+				a.setOutName(y.getOutName());
+				a.setInName(y.getInName());
+				a.setOrderNo(y.getOutTradeNo());
+				a.setRemark(y.getRemark());
+				a.setSendCleartextInfo(y.SumitSignInfoJsonStr());
+				a.setTradeNo(t.getTradeNo());
+				a.setAddTime(new Date());
+				a.setAddIp(t.getAddIp());
+				AccountTransferTradeDetail ad=accountTradeDetailDao.getTransferTradeByOrderTradeNo(y.getOutTradeNo());
+				if(StringUtil.isBlank(ad)){
+				   accountTradeDetailDao.save(a);
+				}
+			}
+		}else{
+			accountTradeDao.update(t);
+		}
+	}
+
+	@Override
+	public void init() {
+          accountTradeDao=(AccountTradeDao) BeanUtil.getBean("accountTradeDao");
+          accountTradeDetailDao=(AccountTradeDetailDao) BeanUtil.getBean("accountTradeDetailDao");
+	}
+
+	public AccountTradeDao getAccountTradeDao() {
+		return accountTradeDao;
+	}
+
+	public void setAccountTradeDao(AccountTradeDao accountTradeDao) {
+		this.accountTradeDao = accountTradeDao;
+	}
+
+	public List<YmdTransferDetails> getList() {
+		return list;
+	}
+
+	public void setList(List<YmdTransferDetails> list) {
+		this.list = list;
+	}
+
+	public AccountTradeDetailDao getAccountTradeDetailDao() {
+		return accountTradeDetailDao;
+	}
+
+	public void setAccountTradeDetailDao(AccountTradeDetailDao accountTradeDetailDao) {
+		this.accountTradeDetailDao = accountTradeDetailDao;
+	}
+	
+	
+	
+     
+}

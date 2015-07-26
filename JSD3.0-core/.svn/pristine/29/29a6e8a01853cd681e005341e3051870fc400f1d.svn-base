@@ -1,0 +1,80 @@
+package com.ddtkj.p2psys.core.util;
+
+import java.util.Date;
+
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述：债权计算操作类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月14日 
+ */
+public class CreditCalculatorWorker {
+	
+	/*********************** 还款方式****************************************/	
+	/** 还款方式 :等额本息（按月分期还款） */
+	public static final int STYLE_INSTALLMENT_REPAYMENT = 1;
+	/** 还款方式 :利随本清（一次性还款） */
+	public static final int STYLE_ONETIME_REPAYMENT = 2;
+	/** 还款方式 :每月还息到期还本 */
+	public static final int STYLE_MONTHLY_INTEREST = 3;
+	
+	private double residueAccount ;  //剩余本金
+	private double apr ; 	//年利率
+	private double discount ; // 折让费率
+	private int day ;  // 应计息天数
+	private int isRepayMent ;  //  本期 是否已还款 1 已还 2 未还
+	private int period ;
+	private int type ;
+	private double thisInterest ;
+	private Date repayMentTime ;
+	private double copies ;
+	private int borrowTimeType ;
+	
+	public CreditCalculatorWorker(double residueAccount, double apr,double discount, int day, int isRepayMent, int period, int type,double thisInterest,Date repayMentTime,double copies,int borrowTimeType) {
+		super();
+		this.residueAccount = residueAccount;
+		this.apr = apr;
+		this.discount = discount;
+		this.day = day;
+		this.isRepayMent = isRepayMent;
+		this.period = period;
+		this.type = type;
+		this.thisInterest = thisInterest ;
+		this.repayMentTime = repayMentTime ;
+		this.copies = copies ;
+		this.borrowTimeType = borrowTimeType ;
+	}
+	public CreditCalculatorUtil getCalculator(){
+		if(borrowTimeType!=Borrow.BORROW_TIME_TYPE_ISDAY){
+			if(STYLE_INSTALLMENT_REPAYMENT == type){
+				repayMentTime = DateUtil.valueOf(DateUtil.dateStr(repayMentTime, "yyyy-MM-dd" ));
+				int totalday = (int)DateUtil.getSubDay(DateUtil.rollMon(repayMentTime,-1), repayMentTime);
+				return new InterestCreditCalculator(residueAccount, apr, discount, day, isRepayMent, thisInterest,totalday,copies) ;
+			}
+			if(STYLE_ONETIME_REPAYMENT == type){
+				// 获取总时间
+				repayMentTime = DateUtil.valueOf(DateUtil.dateStr(repayMentTime, "yyyy-MM-dd" ));
+				// 根据还款日期 的前  period个月
+				int totalday = (int)DateUtil.getSubDay(DateUtil.rollMon(repayMentTime,0-period), repayMentTime);
+				return new  OneTimeCreditCalculator(residueAccount, apr, discount, day, isRepayMent, period,totalday,copies);
+			}
+			if(STYLE_MONTHLY_INTEREST == type){
+				repayMentTime = DateUtil.valueOf(DateUtil.dateStr(repayMentTime, "yyyy-MM-dd" ));
+				int totalday = (int)DateUtil.getSubDay(DateUtil.rollMon(repayMentTime,-1), repayMentTime);
+				return new MonthlyCreditCalculator(residueAccount, apr, discount, day, isRepayMent,totalday,copies) ;
+			}
+		}else{
+			if(STYLE_ONETIME_REPAYMENT == type){
+				// 获取总时间
+				repayMentTime = DateUtil.valueOf(DateUtil.dateStr(repayMentTime, "yyyy-MM-dd" ));
+				// 根据还款日期 的前  period个月
+				int totalday = (int)DateUtil.getSubDay(DateUtil.rollDay(repayMentTime,0-period), repayMentTime);
+				return new  OneTimeCreditCalculator(residueAccount, apr, discount, day, isRepayMent, period,totalday,copies);
+			}
+		}
+		return null ;
+	}
+	
+}

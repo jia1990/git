@@ -1,0 +1,299 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html"> 
+<head>
+<meta name="robots" content="" />
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="css/contact.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/alerts.js"></script>
+<script src="${webroot}${theme_dir}/media/js/DatePicker/WdatePicker.js"></script>
+<title>晋商贷-我的交易-自动投标</title>
+</head>
+<body>
+
+<style>
+.c_data_display dd.record_dd1{width: 120px;}
+.c_data_display dd.record_dd5{width: 100px;}
+.c_data_display dd {width: 80px;}
+
+.y_deal_bid{width: 770px;border: 1px solid #e0e0e0;margin-top: 20px;padding-left: 21px;}
+.y_deal_states{font-size: 14px;color: #000000;line-height: 26px;height: 26px;margin:17px 0 15px;}
+.y_deal_states span{color:#0697da;}
+.y_deal_states em{display: inline-block;width: 102px;height: 26px;border-radius: 13px;background: #0697da;color: #fff;margin-left:12px;font-size: 14px;font-style: normal;line-height: 26px;text-align: center;cursor: pointer;}
+.y_labelerrors{font-size: 14px;color: #e86969;}
+.y_deal_title2{font-size: 14px;color: #000000;font-weight: bold;line-height: 52px;}
+.y_deal_title2 span{color: #666666;font-weight: normal;}
+.y_deal_statesul{overflow: hidden;margin-bottom: 8px;}
+.y_deal_statesul li{width: 215px;height: 194px;margin-right: 17px;padding-left: 19px;border: 1px solid #cdcdcd;background: url(${webroot}${theme_dir}/images/bid/bid4.png) no-repeat 190px 160px;float: left;cursor:pointer;}
+.y_deal_statesul li.y_bid_click{background: url(${webroot}${theme_dir}/images/bid/bid5.png) no-repeat 190px 160px;border: 1px solid #0697da;}
+.y_deal_statesul li:hover{border: 1px solid #0697da; }
+.y_deal_statesul li img{margin-left: 5px;margin-top: 10px;margin-bottom: 18px;}
+.y_deal_statesul li p{line-height: 24px;color: #555555;font-size:14px;}
+.y_deal_statesul li p span{color: #0697da;}
+.y_inputuls{overflow: hidden;}
+.y_inputuls li{line-height: 50px;color: #555555;font-size: 14px;border-bottom: 1px solid #e0e0e0;}
+.y_deal_bid input{outline: none;border: 1px solid #dfdfdf;height: 24px;}
+.y_deal_bid input.width54{width: 54px;}
+.y_deal_bid input.width90{width: 90px;}
+.y_deal_bid input.bid_checkbox{margin-left: 10px;position: relative;top:2px;height: 15px;}
+.showHideBid {position: relative;width: 100%;height: 74px;display: none;}
+.showHideBid input,.showHideBid span{width: 86px;height: 32px;color: #fff;text-align: center;line-height: 32px;cursor: pointer;border-radius: 2px;position: absolute;top:6px;right: 128px;background: #0697da;font-size: 14px;border: 0;}
+.y_deal_bid select{outline:none;}
+.showHideBid input.resetsBid{background: #a4a4a4;right:14px;width: 100px;}
+.bid_ul_title{height: 40px;background: #e7e7e7;overflow: hidden;width: 746px;}
+.bid_ul_con{width: 746px;border-bottom: 1px solid #cfcfcf;height: 86px;}
+.bid_ul_con td{border-left: 1px solid #cfcfcf;float: left;text-align: center;color: #555555;font-size: 12px;padding:5px 0;border-bottom: 1px solid #ddd;word-wrap:break-word;vertical-align:middle;min-height:50px;}
+.bid_ul_con td a{color: #555555;font-size: 12px;}
+.bid_ul_title th{height: 40px;border-left: 1px solid #cfcfcf;float: left;line-height: 40px;text-align: center;color: #555555;font-size: 12px;border-bottom: 1px solid #cfcfcf;border-top: 1px solid #cfcfcf;}
+.liwidth110{width: 110px;}
+.liwidth85{width: 85px;}
+.liwidth108{width: 108px;border-right: 1px solid #cfcfcf;}
+.y_bid_explain{border-top: 1px solid #e5e5e5;overflow: hidden;padding: 15px 0 43px;}
+.y_bid_explain li{padding-left: 48px;line-height: 30px;color: #555555;font-size: 14px;}
+.y_bid_explain li span{color: #0697da;}
+
+/*2014.12.30新增*/
+.y_earnings_box2{width: 770px;margin: 20px auto;}
+.record_conss1 {width: 750px;margin: 0 auto;}
+.record_conss1 li dd {float: left;width: 80px;}
+.record_conss li dd.record_dds6 {width: 60px;}
+.y_earnings_box2 li {width:auto;}
+.c_recharge ul li {font-size: 14px;color: #333;float: left;padding: 0 10px;margin-right: 10px;cursor: pointer;height: 30px;}
+.c_recharge ul .c_recharge_this {height: 22px;border: 1px solid #0697da;color: #0697da;}
+.c_recharge b {font-family: Simsun;font-size: 12px;color: #0697da;cursor: pointer;}
+.c_recharge_limit{height:30px;}
+.c_recharge_limit input {float: left;}
+.c_recharge_limit i {float: left;padding: 0 6px 0 4px;}
+.c_earnings_box li{width:220px;}
+.record_dds6{position:relative;}
+.record_dds6 i {margin:8px 0 0 14px;display: block;width: 35px;height: 20px;background: url(${webroot}${theme_dir}/images/b_money/detail.png) no-repeat -1px;}
+.c_remark_info {display: none;position: absolute;background: #fffbe2;padding: 8px 18px;width: 150px;left: -160px;
+top: 44px;border: 1px solid #E2E1DD;border-radius: 6px;-webkit-border-radius: 6px;-o-border-radius: 6px;-moz-border-radius: 6px;z-index: 4;}
+.c_recharge_arrow {display: block;width: 26px;height: 10px;position: absolute;background: url(${webroot}${theme_dir}/images/b_money/top_arrow.png) no-repeat;top: -10px;right: 13px;}
+
+/*2014.12.30新增*/
+.c_tender li{float: left;width: 156px;height: 50px;line-height: 50px;text-align: center;border-bottom: 1px solid #ddd;border-right: 1px solid #ddd;cursor: default;font-size: 14px;}
+.c_tender a{display:block;width:100%;height:100%;}
+.c_tender .c_tender_this{border-top: 3px solid #0697DA;border-bottom: none;height: 48px;}
+
+.c_recharge{width:716px;}
+.c_recharge_detail dl dd{font-size:12px;width:90px;}
+</style>
+
+	<#include "../../include/headerMemberCenter.html">
+	<!--  -->
+	<div class="c_deal" style="min-height: 700px">
+		<div class="c_deal_content">
+		<#assign mid="m_invest">
+		<#include "../trade_menu.html"></div>
+		
+			<div class="c_deal_record" style="border:1px solid #E0E0E0;position: relative;top: -50px;">
+				<ul class="c_tender">
+					<li><a href="${webroot}/member/autoInvest/detail.html">自动投标设置</a></li>
+					<li class="c_tender_this"><a href="javascript:void(0);">自动投标记录明细</a></li>
+					<div class="c_clear"></div>
+				</ul>
+				<div class="c_recharge_detail">
+						<div class="y_earnings_box2">
+							<div class="c_recharge">
+								<ul class="c_date_range">
+									<label>日期范围</label>
+									<li data-val="99" >全部</li>
+									<li class="c_recharge_this" data-val="7" >最近7天</li>
+									<li data-val="1" >1个月</li>
+									<li data-val="2" >2个月</li>
+									<li data-val="3" >3个月</li>
+									<span>具体日期<b>&gt;&gt;</b></span>
+									<div class="c_clear"></div>
+								</ul>
+								
+								<ul class="c_recharge_limit" style="display:none;">
+									<label>起止日期</label>
+									<input type="text" class="dateInput" name="startTime" id="startTime" value="${startTime?default('')}"/>
+									<i>-</i>
+									<input type="text" class="dateInput" name="endTime" id="endTime" value="${endTime?default('')}"/>
+									<a class="c_recharge_sear" id="searchBtn" >搜索</a>
+									<span><b>&lt;&lt;</b>具体日期</span>
+									<div class="c_clear"></div>
+								</ul>
+								
+								<ul class="c_recharge_type" id="c_autoInvest_status" style="margin-top:10px;">
+									<label>交易结果</label>
+									<li class="c_recharge_this" data-val="99" >全部</li>
+									<li data-val="11" >投标成功</li>
+									<li data-val="22" >投标失败</li>
+									<div class="c_clear"></div>
+								</ul>
+							</div>
+							
+							<div class="c_data_display">
+														
+							</div>
+							<div id="kkpager" style="height:60px;"></div>
+						</div>
+					</div>
+			</div>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+
+
+<script>
+$(document).ready(function() { 
+	$(".y_deal_statesul li").find("input").prop("checked",true);
+}); 
+
+function check(){
+	if(!($(".y_deal_statesul li").hasClass("y_bid_click"))){
+		alerts("提示",$(".bigboxp").html(),"300","200");
+		$(".y_alertsBoxCon span").click(function(){
+		 	$(".alertsBox").hide();
+			$(".alertsbg").hide(); 
+		})
+		return false;
+	}
+	if(parseInt($(".textnull").val())<500||($(".textnull").val()=="")){
+		alerts("提示",$(".bigboxaccount").html(),"300","200");
+		$(".y_alertsBoxCon span").click(function(){
+		 	$(".alertsBox").hide();
+			$(".alertsbg").hide(); 
+		})
+		return false;
+	}
+	return true;
+}	
+
+// 选择投资产品 start
+$(function(){
+	$(".y_deal_statesul li").toggle(
+  function () {
+	  var that=$(this);
+	  if(!$(this).hasClass("y_bid_click")){
+		  $(this).addClass("y_bid_click"); 
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(1);
+	  }else{
+		  $(this).removeClass("y_bid_click");
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(0);
+	  }
+  },
+  function () {
+	  if(!$(this).hasClass("y_bid_click")){
+		  $(this).addClass("y_bid_click"); 
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(1);
+	  }else{
+		  $(this).removeClass("y_bid_click");
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(0);
+	  }
+    }
+);
+	// 选择投资产品  end
+	
+	// 开启状态  start
+	$(".showsdisplay").css("display","block");
+	$(".disabled").attr("disabled","true");
+	$(".disabled select").attr("disabled","true");
+	$(".y_deal_states em").click(function(){
+		location.href="/member/autoInvest/modifyStatus.html?status=11";
+		$(".y_deal_states span").html("开启状态");
+		$(this).hide();
+		$(".showHideBid").show();
+		$(".disabled").removeAttr("disabled");
+	})
+	// 开启状态  end
+
+	  $(".textnull").keyup(function(){
+		if(parseInt($(".textnull").val())<500||($(".textnull").val()=="")){
+			$(this).parent("li").find(".y_labelerrors").html("每次投标不小于500元");
+		}else{
+			$(this).parent("li").find(".y_labelerrors").html("");
+		}
+	  })
+	
+	// 关闭状态  start
+	$(".resetsBid").click(function(){
+		$(".showHideBid").hide();
+		location.href="/member/autoInvest/modifyStatus.html?status=22";
+		$(".y_deal_states span").html("关闭状态");
+		$(".y_deal_states em").show();
+		$(".disabled").attr("disabled","true");
+		$(".textnull").val("");
+		$(".radio_hidden").slideUp();
+		$(".dayradio_hidden").slideUp();
+		$(".choose_hidden1").slideUp();
+		$(".choose_hidden2").slideUp();
+	})
+	// 关闭状态  end
+
+	// 月标投资期限 start
+	$(".radios2").focus(function(){
+		$(".radio_hidden").slideDown();
+	})
+	$(".radios1").focus(function(){
+		$(".radio_hidden").slideUp();
+	})
+	// 月标投资期限 end
+	
+	// 天标投资期限 start
+	$(".dayradios2").focus(function(){
+		$(".dayradio_hidden1").slideDown();
+	})
+	$(".dayradios1").focus(function(){
+		$(".dayradio_hidden1").slideUp();
+	})
+	// 天标投资期限 end
+	
+	// 还款方式 start
+    $(".choose2").focus(function(){
+		$(".choose_hidden1").slideDown();
+	})
+	$(".choose1").focus(function(){
+		$(".choose_hidden1").slideUp();
+	})
+	// 还款方式 end
+	
+	// 年化利率 start
+	$(".aprchoose2").focus(function(){
+		$(".choose_hidden2").slideDown();
+	})
+	$(".aprchoose1").focus(function(){
+		$(".choose_hidden2").slideUp();
+	})
+	//  年化利率  end
+	})
+	
+	
+
+	//2014.12.30新增
+	$(".record_dds6 i").hover(function(){
+		$(".c_remark_info").hide();
+		$(this).next().show();
+	})
+	$(".c_remark_info").mouseleave(function(){
+		$(".c_remark_info").hide();
+	})
+	$(".c_deal_record").css({minHeight:620+"px"});
+	$(".c_aside_nav").height($(".c_deal_record").height()-24);
+})
+</script>
+	<#include "../../include/footer.html">
+</body>
+
+<script>seajs.use('member/autoInvestDetail');</script>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/media/js/date.js"></script>
+<script>
+	$(function(){
+		$($(".c_aside_nav dd")[4]).addClass("c_invest_this");
+		
+	})
+</script>
+</html>

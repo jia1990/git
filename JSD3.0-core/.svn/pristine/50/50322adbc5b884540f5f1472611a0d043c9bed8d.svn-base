@@ -1,0 +1,198 @@
+package com.ddtkj.p2psys.tpp.ymd.version2.model;
+
+import java.io.UnsupportedEncodingException;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.log4j.Logger;
+
+import com.alibaba.fastjson.JSONObject;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdModel;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * 汇潮交易接口工具类
+ * JSDP-213
+ * @author wcw
+ *
+ */
+public class YmdTransferDetails extends YmdModel{
+
+	 private static Logger logger = Logger.getLogger(YmdTransferDetails.class); 
+    
+	 /**
+	  * 商戶流水号
+	  */
+	 private String outTradeNo;
+	/**
+	 * 付款人昵称
+	 */
+	private String outName;
+	
+	/**
+	 * 收款人昵称
+	 */
+	private String inName;
+	/**
+	 * 金额
+	 */
+	private String amount;
+	/**
+	 * 备注
+	 */
+	private String remark;
+	/**
+	 * 签名信息
+	 */
+	private String secureCode;
+	
+	
+	/**
+	 * 商户交易号
+	 */
+	private String tradeNo;
+	
+	
+	
+	/**
+	 * @return the tradeNo
+	 */
+	public String getTradeNo() {
+		return tradeNo;
+	}
+
+	/**
+	 * @param tradeNo the tradeNo to set
+	 */
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+
+	private String[] paramNames=new String[]{"outTradeNo","outName","inName","amount","remark","secureCode"};
+
+	@Override
+	public void createSign() {
+		StringBuffer str=new StringBuffer();
+		if(StringUtil.isNotBlank(this.getNumberId())){
+			str.append(this.getNumberId());
+		}
+		if(StringUtil.isNotBlank(this.getTradeNo())){
+			str.append(this.getTradeNo());
+		}
+		if(StringUtil.isNotBlank(this.getOutTradeNo())){
+			str.append(this.getOutTradeNo());
+		}
+		if(StringUtil.isNotBlank(this.getOutName())){
+			str.append(this.getOutName());
+		}
+		if(StringUtil.isNotBlank(this.getInName())){
+			str.append(this.getInName());
+		}
+		if(StringUtil.isNotBlank(this.getAmount())){
+			str.append(this.getAmount());
+		}
+		if(StringUtil.isNotBlank(this.getRemark())){
+			str.append(this.getRemark());
+		}
+		if(StringUtil.isNotBlank(this.getMerchantKey())){
+			str.append(this.getMerchantKey());
+		}
+		String signInfo=str.toString();
+        logger.info("需要加密字符串======="+signInfo);
+        try {
+            signInfo = DigestUtils.md5Hex(signInfo.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            logger.info("签名异常信息====" + e.getMessage());
+        } 
+        logger.info("加密后字符串======="+signInfo);
+        this.setSecureCode(signInfo);
+
+	}
+
+	/**
+     * 获取开户提交json格式签名明文
+     * @return
+     */
+   public String  SumitSignInfoJsonStr(){
+	   JSONObject jsonObject=new JSONObject();
+       if(StringUtil.isNotBlank(this.getNumberId())){
+    	   jsonObject.put("number_id", this.getNumberId());
+		}
+		if(StringUtil.isNotBlank(this.getOutTradeNo())){
+			 jsonObject.put("out_trade_no", this.getOutTradeNo());
+		}
+		if(StringUtil.isNotBlank(this.getOutName())){
+			 jsonObject.put("out_name", this.getOutName());
+		}
+		if(StringUtil.isNotBlank(this.getInName())){
+			 jsonObject.put("in_name", this.getInName());
+		}
+		if(StringUtil.isNotBlank(this.getAmount())){
+			 jsonObject.put("amount", this.getAmount());
+		}
+		if(StringUtil.isNotBlank(this.getRemark())){
+			 jsonObject.put("remark", this.getRemark());
+		}
+		if(StringUtil.isNotBlank(this.getMerchantKey())){
+			 jsonObject.put("merchantKey", this.getMerchantKey());
+		}
+       return  jsonObject.toJSONString();
+   }
+	
+	
+	public YmdTransferDetails() {
+		super();
+	}
+	
+	public String getOutTradeNo() {
+		return outTradeNo;
+	}
+
+	public void setOutTradeNo(String outTradeNo) {
+		this.outTradeNo = outTradeNo;
+	}
+
+	public String getAmount() {
+		return amount;
+	}
+
+	public void setAmount(String amount) {
+		this.amount = amount;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public String getOutName() {
+		return outName;
+	}
+	public void setOutName(String outName) {
+		this.outName = outName;
+	}
+	public String getInName() {
+		return inName;
+	}
+	public void setInName(String inName) {
+		this.inName = inName;
+	}
+	public String getSecureCode() {
+		this.createSign();
+		return secureCode;
+	}
+	public void setSecureCode(String secureCode) {
+		this.secureCode = secureCode;
+	}
+
+	public String[] getParamNames() {
+		return paramNames;
+	}
+
+	public void setParamNames(String[] paramNames) {
+		this.paramNames = paramNames;
+	}
+	
+}

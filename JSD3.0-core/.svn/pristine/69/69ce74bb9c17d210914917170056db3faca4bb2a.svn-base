@@ -1,0 +1,58 @@
+package com.ddtkj.p2psys.credit.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.credit.domain.CollectionCredit;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+
+/**
+ * @描述：
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月18日 
+ */
+public interface CollectionCreditDao extends BaseDao<CollectionCredit>{
+	
+	List<CollectionCredit> findByOldCredit(CreditLog  cl) ;
+	/**
+	 * 债权转让查询某状态下某债权的待收记录
+	 * @param status
+	 * @param credit_assignment_id
+	 * @param buy_credit_assignment_id
+	 * @return
+	 */
+	 public List<CollectionCredit> findCollectionByCredit(long status,long ahead_time);
+	// JSDP-221  wcw 2015-07-14 start
+	 List<CollectionCredit> findCollectionByCredit(long creditLogId);
+	// JSDP-221  wcw 2015-07-14 end
+	/**
+	 * 债权转让统计某状态下某债权的待收总额、待收利息、待收本金
+	 * @param status
+	 * @param credit_assignment_id
+	 * @param buy_credit_assignment_id
+	 * @return
+	 */
+	Object[] getTotalCollectionByCredit(long status,long credit_assignment_id,long buy_credit_assignment_id);
+    /**
+     * 债权转让未满债权剩余金额生成新待收数量
+     * @param ptype
+     * @param credit_assignment_id
+     * @param buy_credit_assignment_id
+     * @return
+     */
+	int getCountByCollectionCredit(long ptype,long credit_assignment_id,long buy_credit_assignment_id);
+	/**
+	 * 债权转让未满债权剩余金额生成新待收债权记录
+	 * @param ptype
+	 * @param credit_assignment_id
+	 * @param buy_credit_assignment_id
+	 * @return
+	 */
+	CollectionCredit getCollectionCredit(long ptype,long credit_assignment_id,long buy_credit_assignment_id);
+	
+	CollectionCredit getCollectinCreditByCid(long cid) ;
+	
+}

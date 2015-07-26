@@ -1,0 +1,142 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/system/operator/operatorEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址		
+</script>
+<style>
+#touxiang{
+	border-top-left-radius:5px;
+	border-top-right-radius:5px;
+	border-bottom-right-radius:5px;
+	border-bottom-left-radius:5px;
+	height:150px;
+	width:150px;
+	border:1px #DFDFDF solid;
+}
+
+
+</style>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">姓名：</label>
+		     <div class="ipt">
+		     	<input type="text" name="name" value="${operator.name!''}" class="w400 easyui-validatebox" data-options="required: true,validType:'chinese'" maxlength="5"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">用户名：</label>
+		     <div class="ipt">
+		     	<input type="text" name="userName" value="${operator.userName!''}" readonly="readonly"  class="w400 easyui-validatebox" data-options="required: true,validType:'name'" maxlength="16" onkeyup="value=value.replace(/[^\w]/g,'')"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">部门：</label>
+		     <div class="ipt">
+		     	<input type="text" name="department" value="${operator.department!''}" class="w400 easyui-validatebox"  maxlength="11" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>	
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">工号：</label>
+		     <div class="ipt">
+		     	<input type="text" name="no" value="${operator.no!''}" class="w400 easyui-validatebox"  maxlength="60" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>		
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">电话：</label>
+		     <div class="ipt">
+		     	<input type="text" name="phone" value="${operator.phone!''}"  maxlength="15" class="w400 easyui-validatebox" data-options="required: true,validType:'tel'" />
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">手机：</label>
+		     <div class="ipt">
+		     	<input type="text" name="mobile" value="${operator.mobile!''}"  maxlength="15" class="w400 easyui-validatebox" data-options="required: true,validType:'mobile'"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">qq：</label>
+		     <div class="ipt">
+		     	<input type="text" name="qq" value="${operator.qq!''}"  maxlength="15" class="w400 easyui-validatebox" data-options="required: true,validType: 'qq'"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">邮箱：</label>
+		     <div class="ipt">
+		     	<input type="text" name="email" value="${operator.email!''}"  maxlength="35" class="w400 easyui-validatebox" data-options="required: true,validType: 'email'"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">用户角色：</label>
+		     <div class="ipt">
+		     	 <#if roleList??>
+		     	 	<!-- 下拉框 -->
+		     	 	<select name="roleId">
+					<#list roleList as item>
+						<option value="${item.id}" 
+							<#if operatorRoleList??>  
+								<#list operatorRoleList as lItem>
+								<#if lItem.role.id! == item.id! >selected="selected"</#if>>
+								</#list>
+							</#if>
+						${item.name!}
+						</option>
+					</#list>
+					</select>
+		     	 	<!-- 单选框 -->
+					 <!-- <#list roleList as item>
+						<input type="radio" name="roleId" value="${item.id!}"   
+							<#if operatorRoleList??>  
+								<#list operatorRoleList as lItem> 
+								  <#if lItem.role.id! == item.id! > checked="checked" </#if> 
+								</#list>
+							</#if> 
+						style="margin-top:-2px;" />&nbsp;&nbsp;
+			            <font>${item.name!}</font>&nbsp;&nbsp;&nbsp;&nbsp;
+					</#list> -->
+			   </#if>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">备注：</label>
+		     <div class="ipt">
+		     	<textarea name="remark" class="w400 easyui-validatebox" data-options="required: false"  maxlength="120">${operator.remark!''}</textarea>
+		     </div>
+		</div>
+						
+		<input name="id" value="${operator.id}" type="hidden"/>
+		<input type="hidden" name="addUser" value="${operator.addManager!''}"/>
+		<input type="hidden" name="addTime" value="${operator.addTime?string('yyyy-MM-dd HH:mm:ss')!}"/>
+		<input type="hidden" name="status" value="${operator.status!0}"/>
+		<!-- 2015年3月21日  sxy start -->
+		<input type="hidden" name="isLocked" value="${isLocked!}"/>
+		<#if operator.lockTime ??>
+			<input type="hidden" name="lockTime" value="${operator.lockTime?string('yyyy-MM-dd HH:mm:ss')!}"/>
+		<#else>
+		
+		</#if>
+		<input type="hidden" name="lockRemark" value="${operator.lockRemark!}"/>
+		<!-- 2015年3月21日  sxy end -->
+		<div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file" id="uploadify" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">预览：</label>
+		     <div class="ipt">
+		     	<#if operator.path??>
+		     		<img src="${operator.path!}" title="${operator.name!}" alt="${operator.name!}" id="touxiang"/>		
+		     	<#else>
+		     		无
+		     	</#if>
+		     </div>
+		</div>
+		<input name="operatorEditToken" value="${operatorEditToken!}" type="hidden">
+	</form>
+</div>

@@ -1,0 +1,199 @@
+package com.ddtkj.p2psys.goods.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+
+/**
+ * 
+ * @描述：商品订单
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年1月29日
+ */
+@Entity
+@Table(name = "t_jsd_goods_order")
+public class GoodsOrder implements Serializable{
+	private static final long serialVersionUID = 1695040552102306426L;
+	
+	public static final String ORDER_SUC = "cd";//订单已完成(用于status字段)
+	public static final String VERIFY_ORDER_PASS = "ck";//订单审核通过(已发标)
+	public static final String WAIT_VERIFY_ORDER = "dw";//订单未审核
+	public static final String REVOKE_VERIFY_ORDER = "dd";//订单被撤销
+	
+	public static final String ONE_PAY = "11";//首付全部的金额
+	public static final String STAGE_PAY = "12";//首付+分期 
+	public static final String ZERO_PAY = "13";//零首付
+	
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;//主键
+	
+	private String orderNo;//订单号
+	
+	@OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.REFRESH)
+	@JoinColumn(name = "goods_id")
+	private DdtkjGoods goods;//商品
+	
+	@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.REFRESH)
+	@JoinColumn(name = "user_id")
+	private User user;//用户借款人
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REFRESH)
+	@JoinColumn(name = "address_id")
+	private UserLogisticsAddress address;//借款人的收货地址
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REFRESH)
+	@JoinColumn(name = "borrow_id")
+	private Borrow borrow;//借款人发的标
+	
+	private String status;//订单审核 cd已完成 ck审核通过  dw待审核 dd撤销
+	private double onePay;//首付金额
+	private double stagePay;//分期付款金额
+	private String payWay;//购买方式 11：首付全部的金额 12：首付+分期 13:零首付
+	private String remark;//审核时的备注
+	//JSDBET-827 wcw 2015-3-17 start
+	private double useOnePayRecharge; //使用首付充值
+	private double useOnePayEnter;   //使用首付入账
+	
+	private double useFeeRecharge; //使用手续费充值
+	private double useFeeEnter; //使用手续费入账
+	//JSDBET-827 wcw 2015-3-17 end
+	private Date addTime;
+	private String addUser;
+	private Date updateTime;
+	private String updateUser;
+	
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	
+	public String getOrderNo() {
+		return orderNo;
+	}
+	public void setOrderNo(String orderNo) {
+		this.orderNo = orderNo;
+	}
+	public DdtkjGoods getGoods() {
+		return goods;
+	}
+	public void setGoods(DdtkjGoods goods) {
+		this.goods = goods;
+	}
+	public UserLogisticsAddress getAddress() {
+		return address;
+	}
+	public void setAddress(UserLogisticsAddress address) {
+		this.address = address;
+	}
+	public Borrow getBorrow() {
+		return borrow;
+	}
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddUser() {
+		return addUser;
+	}
+	public void setAddUser(String addUser) {
+		this.addUser = addUser;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getUpdateUser() {
+		return updateUser;
+	}
+	public void setUpdateUser(String updateUser) {
+		this.updateUser = updateUser;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public double getOnePay() {
+		return onePay;
+	}
+	public void setOnePay(double onePay) {
+		this.onePay = onePay;
+	}
+	public double getStagePay() {
+		return stagePay;
+	}
+	public void setStagePay(double stagePay) {
+		this.stagePay = stagePay;
+	}
+	public String getPayWay() {
+		return payWay;
+	}
+	public void setPayWay(String payWay) {
+		this.payWay = payWay;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	//JSDBET-827 wcw 2015-3-17 start
+	public double getUseOnePayRecharge() {
+		return useOnePayRecharge;
+	}
+	public void setUseOnePayRecharge(double useOnePayRecharge) {
+		this.useOnePayRecharge = useOnePayRecharge;
+	}
+	public double getUseOnePayEnter() {
+		return useOnePayEnter;
+	}
+	public void setUseOnePayEnter(double useOnePayEnter) {
+		this.useOnePayEnter = useOnePayEnter;
+	}
+	public double getUseFeeRecharge() {
+		return useFeeRecharge;
+	}
+	public void setUseFeeRecharge(double useFeeRecharge) {
+		this.useFeeRecharge = useFeeRecharge;
+	}
+	public double getUseFeeEnter() {
+		return useFeeEnter;
+	}
+	public void setUseFeeEnter(double useFeeEnter) {
+		this.useFeeEnter = useFeeEnter;
+	}
+	//JSDBET-827 wcw 2015-3-17 end
+}

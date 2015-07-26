@@ -1,0 +1,104 @@
+
+package com.ddtkj.p2psys.autotender.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoTenderModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+
+/**
+ * @描述:自动投标记录查询service
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-12   
+ */
+public interface BorrowAutoTenderService {
+	
+	/**
+	 * 自动投标记录查询, 分页
+	 * @param  borrowAutoTender
+	 * @return PageDataList<BorrowAutoTender> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<BorrowAutoTender> getAutoTenderList(BorrowAutoTender autoTender, int pageNumber, int pageSize);
+	
+	/**
+	 * 新增自动投标的记录
+	 * @param autoTender
+	 * @return
+	 */
+	void addAutoTender(BorrowAutoTender autoTender);
+	
+	/**
+	 * 根据borrowId查询自动投标记录
+	 * @param borrowId
+	 * @return List<AutoTender>
+	 */
+	List<BorrowAutoTender> getListByBorrowId(long borrowId);
+	
+	/**
+	 * 自动投标记录列表(用于前台显示, 有分页)
+	 * @param map
+	 * @param startPage
+	 * @return PageDataList<BorrowAutoTender>
+	 */
+	PageDataList<BorrowAutoTender> getAutoTenderList(Map<String, Object> map, int startPage);
+	
+	/**
+	 * 自动投标记录列表(用于前台显示, 有分页)
+	 * @param map
+	 * @param startPage
+	 * @return PageDataList<BorrowAutoTender>
+	 */
+	PageDataList<BorrowAutoTenderModel> list(BorrowAutoTenderModel model);
+	
+	/**
+	 * 自动投标核心方法
+	 * @param borrow
+	 * @param autoset
+	 * @throws Exception
+	 */	
+	void autoDealTender(BorrowModel model) throws Exception;
+
+	/**
+	 * 批量插入自动投标记录
+	 * @param list
+	 * @return 
+	 */
+	void addbatchAutoTender(List<BorrowAutoTender> list);
+	
+	/**
+	 * 根据autoId查询自动投标记录
+	 * @param  autoId
+	 * @return BorrowAutoTender 
+	 * @throws Exception   
+	 */ 
+	BorrowAutoTender findByAutoId(long autoId);
+	
+	public double getAutoTenderSum(BorrowAutoTenderModel model);
+	
+	/**
+	 * 自动投标对定时标的处理
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	void doAutoTenderFixedProcess();
+	
+	/**
+	 * 根据借款标ID，自动投标对定时标的处理
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	public String doAutoTenderFixedByBorrowId(long borrowId);
+	
+	/* 
+	 * 自动投标记录导出SQL
+	 * JSDP-116 sxy 2015-06-18 start
+	 */
+	public List<BorrowAutoTender> excelBorrowAutoTenderDatalist(BorrowAutoTenderModel model);
+
+}

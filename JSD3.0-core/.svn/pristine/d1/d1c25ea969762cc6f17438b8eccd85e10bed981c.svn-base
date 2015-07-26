@@ -1,0 +1,66 @@
+package com.ddtkj.p2psys.award.dao.jdbc;
+
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.award.dao.TakeWayDao;
+import com.ddtkj.p2psys.award.domain.TakeWay;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+/**
+ * @描述：活动配置的实体类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2014年12月12日
+ */
+@Repository("takeWayDao")
+public class TakeWayDaoImpl extends BaseDaoImpl<TakeWay> implements TakeWayDao{
+
+	/**
+	 * 查询活动参与方式
+	 */
+	@Override
+	public PageDataList<TakeWay> takeWayPageList(QueryParam param) {
+	
+		return this.findAllPageList(param);
+	}
+
+	/**
+	 * 更新活动参与方式
+	 */
+	@Override
+	public TakeWay updateTakeWay(TakeWay takeWay) {
+		
+		return this.update(takeWay);
+	}
+
+	/**
+	 * 根据id查找活动参与方式
+	 */
+	@Override
+	public TakeWay findTakeById(int actId) {
+		
+		return this.find(actId);
+	}
+
+	/**
+	 * 添加活动参与方式
+	 */
+	@Override
+	public void addTakeWay(TakeWay takeWay) {
+		
+		this.save(takeWay);
+	}
+
+	/**
+	 * 查找所有活动参与方式
+	 */
+	@Override
+	public List<TakeWay> findAllTakeWayList() {
+		
+		return this.findAll();
+	}
+
+
+}

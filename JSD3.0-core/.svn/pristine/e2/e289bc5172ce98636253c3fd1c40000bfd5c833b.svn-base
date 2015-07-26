@@ -1,0 +1,1516 @@
+package com.rongdu.p2psys.borrow.dao.jdbc;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.dao.VerifyLogDao;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+@Repository("borrowDao")
+public class BorrowDaoImpl extends BaseDaoImpl<Borrow> implements BorrowDao {
+
+	@Override
+	public void modifyBorrowAndRepay(Borrow borrow) {
+		StringBuffer sql = new StringBuffer(
+				"UPDATE rd_borrow SET repayment_account = CAST(repayment_account AS DECIMAL(20,2))+ :repayment_account,");
+		sql.append(" repayment_yes_account=CAST(repayment_yes_account AS DECIMAL(20,2))+ :repayment_yes_account ,");
+		sql.append(" repayment_yes_interest=CAST(repayment_yes_interest AS DECIMAL(20,2))+ :repayment_yes_interest,");
+		sql.append(" status = :status WHERE id = :id ");
+		Query query = em.createNativeQuery(sql.toString());
+		query.setParameter("repayment_account", borrow.getRepaymentAccount());
+		query.setParameter("repayment_yes_account", borrow.getRepaymentYesAccount());
+		query.setParameter("repayment_yes_interest", borrow.getRepaymentYesInterest());
+		query.setParameter("status", borrow.getStatus());
+		query.setParameter("id", borrow.getId());
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("撤回标失败！", 1);
+		}
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public List<BorrowModel> getIndexList(BorrowModel model) {
+		List<Borrow> list;
+		if (model.getType() != Borrow.TYPE_FLOW && model.getType() != 0) { // 非流转标的借款需要判断是否超过有效时间
+			List params = new ArrayList();
+			params.add(model.getType());
+			params.add(" and borrow.type=?) order by add_time desc");
+			list = getInviteList(model, params).getList();
+		} else { //流转标的借款不需要判断是否超过有效时间
+			QueryParam param = QueryParam.getInstance();
+			if (model.getType() != 0 && model.getType() != 100) {
+				param.addParam("type", model.getType());
+			}
+			/*if (model.getType() == Constant.TYPE_FLOW) {// 招标的借款
+				param.addParam("status", 1).addParam("account", Operators.PROPERTY_NOTEQ, "accountYes");
+			} else {
+				SearchFilter orFilter1 = new SearchFilter("status", Operators.EQ, 3);
+				SearchFilter orFilter2 = new SearchFilter("status", Operators.EQ, 6);
+				SearchFilter orFilter3 = new SearchFilter("status", Operators.EQ, 7);
+				SearchFilter orFilter4 = new SearchFilter("status", Operators.EQ, 8);
+				param.addOrFilter(orFilter1, orFilter2, orFilter3, orFilter4);
+			}*/
+			param.addParam("status", 1);
+			param.addParam("scales", Operators.NOTEQ, 100);
+			param.addOrder(OrderType.DESC, "addTime");
+			list = super.findByCriteria(param, 0, model.getSize());
+		}
+		List<BorrowModel> modelList = new ArrayList<BorrowModel>();
+		VerifyLogDao verifyLogDao = (VerifyLogDao) BeanUtil.getBean("verifyLogDao");
+		for (int i = 0; i < list.size(); i++) {
+			Borrow borrow = list.get(i);
+			BorrowModel model_ = BorrowModel.instance(borrow);
+			VerifyLog log = verifyLogDao.findByType(borrow.getId(), "borrow", 1);
+			if (log != null) {
+				model_.setStartTime(DateUtil.dateStr2(log.getTime()));
+			}
+			modelList.add(model_);
+		}
+		return modelList;
+	}
+
+	public int unfinshJinBorrowCount(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addOrFilter("status", 0, 1);
+		param.addParam("type", Borrow.TYPE_PROPERTY);
+		return super.countByCriteria(param);
+	}
+
+	public double getRepayTotalWithJin(long userId) {
+		String jpql = "SELECT SUM(repaymentAccount) FROM BorrowRepayment WHERE status = 0 AND user.userId = :userId AND borrow.type = "
+				+ Borrow.TYPE_PROPERTY;
+		Query query = em.createQuery(jpql);
+		query.setParameter("userId", userId);
+		Object obj = query.getSingleResult();
+		if (obj == null) {
+			obj = 0;
+		}
+		return Double.parseDouble(obj.toString());
+	}
+
+	public void update(double account, double scales, int status, long id) {
+		String jpql = "UPDATE Borrow SET tenderTimes = tenderTimes + 1, accountYes = round(accountYes + :account, 2), scales = :scales WHERE id = :id AND status = :status AND ROUND(accountYes + :account) <= account";
+		Query query = em.createQuery(jpql);
+		query.setParameter("account", account);
+		query.setParameter("scales", scales);
+		query.setParameter("status", status);
+		query.setParameter("id", id);
+		int count = query.executeUpdate();
+		if (count < 1) {
+			throw new BorrowException("投标失败！此标可能已满！", 1);
+		}
+		super.refresh(find(id));
+	}
+
+	@Override
+	public void updateFlowTotalYesCount(Borrow borrow) {
+		// StringBuffer jpql = new
+		// StringBuffer("UPDATE Borrow SET flowTotalYesCount = :flowTotalYesCount where id = :id AND type = ");
+		// jpql.append(Constant.TYPE_FLOW);
+		// if(borrow.getFlowTime()>0){
+		// jpql.append(" and :flowTotalYesCount <= (flowTime*flowCount)");
+		// }
+		// Query query = em.createQuery(jpql.toString());
+		// query.setParameter("flowTotalYesCount",
+		// borrow.getFlowTotalYesCount());
+		// query.setParameter("id", borrow.getId());
+		// int count = query.executeUpdate();
+		// if (count != 1) {
+		// throw new BorrowException("投标失败！超过流转标可流转次数，还剩"
+		// + ((borrow.getFlowTime() * borrow.getFlowCount()) -
+		// borrow.getFlowTotalYesCount()) + "份可以投标！", 1);
+		// }
+	}
+
+	@Override
+	public void updateStatus(long id, int status, int preStatus) {
+		String sql = "UPDATE Borrow SET status = :status WHERE id = :id AND status = :preStatus";
+		Query query = em.createQuery(sql);
+		query.setParameter("status", status);
+		query.setParameter("id", id);
+		query.setParameter("preStatus", preStatus);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("标审核，更改标状态失败！", 1);
+		}
+		refresh(super.find(id));
+	}
+	@Override
+	public void updateStatus(long id, int status) {
+		String sql = "UPDATE Borrow SET status = :status WHERE id = :id";
+		Query query = em.createQuery(sql);
+		query.setParameter("status", status);
+		query.setParameter("id", id);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更改标状态失败！", 1);
+		}
+		refresh(super.find(id));
+	}
+	@Override
+    public void updatefixedTime(long id, Date time) {
+        String sql = "UPDATE Borrow SET fixedTime = :fixedTime WHERE id = :id";
+        Query query = em.createQuery(sql);
+        query.setParameter("fixedTime", time);
+        query.setParameter("id", id);
+        int result = query.executeUpdate();
+        if (result != 1) {
+            throw new BussinessException("更改标定时失败！", 1);
+        }
+        refresh(super.find(id));
+    }
+	@Override
+    public void updateRegisterTime(long id, Date time) {
+        String sql = "UPDATE Borrow SET registerTime = :registerTime WHERE id = :id";
+        Query query = em.createQuery(sql);
+        query.setParameter("registerTime", time);
+        query.setParameter("id", id);
+        int result = query.executeUpdate();
+        if (result != 1) {
+            throw new BussinessException("更改标登记失败！", 1);
+        }
+        refresh(super.find(id));
+    }
+
+	@Override
+	public Borrow getBorrowByName(String name) {
+		List<Borrow> list = super.findByProperty("name", name);
+		if (list != null && list.size() > 0) {
+			return list.get(0);
+		}
+		return null;
+	}
+
+	@Override
+	public int trialCount(int status) {
+		QueryParam param = QueryParam.getInstance().addParam("status", status);
+		return countByCriteria(param);
+	}
+
+	@Override
+	public int fullCount(int status) {
+
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", 1);
+		param.addParam("account", Operators.PROPERTY_EQ, "accountYes");
+		param.addParam("type", Operators.NOTEQ, Borrow.TYPE_FLOW);
+
+		return super.countByCriteria(param);
+	}
+
+	@Override
+	public Object[] countByFinish() {
+		String jpql = "select count(id),sum(account) from Borrow where status in (6,7,8)";
+		Query query = em.createQuery(jpql);
+		Object[] object = (Object[]) query.getSingleResult();
+		return object;
+	}
+
+	@SuppressWarnings("unchecked")
+    @Override
+	public List<BorrowModel> spreadBorrowList(BorrowModel model) {
+		StringBuffer buffer = new StringBuffer(
+				"select borrow.* from rd_borrow borrow,t_jsd_user user,rd_verify_log log where borrow.user_id=user.user_id and borrow.id=log.fid and log.type='borrow' and "
+						+ "date_add(log.time, INTERVAL borrow.valid_time day) < now() and borrow.status = 1 and borrow.account>borrow.account_yes and borrow.type !=110");
+		getString(buffer, model);
+		if (model.getPage() == 1) {
+			buffer.append(" limit " + model.getSize());
+		} else {
+			buffer.append(" limit " + (model.getSize() * model.getPage() - model.getSize()) + "," + model.getSize());
+		}
+		Query query = em.createNativeQuery(buffer.toString(), Borrow.class);
+		List<Borrow> list = (List<Borrow>) query.getResultList();
+		List<BorrowModel> modelList = new ArrayList<BorrowModel>();
+		for (int i = 0; i < list.size(); i++) {
+			BorrowModel bm = BorrowModel.instance(list.get(i));
+			bm.setUserName(list.get(i).getUser().getUserName());
+			
+			DecimalFormat df = new DecimalFormat("#0.00");
+			bm.setAccountStr(df.format(list.get(i).getAccount()));//借款金额（用于显示和导出）
+            bm.setAprStr(df.format(list.get(i).getApr())+"%");//年利率
+            bm.setAccountYesStr(df.format(list.get(i).getAccountYes()));//实还总金额（）
+            bm.setScalesStr(df.format(list.get(i).getScales())+"%");//完成比例
+			
+			modelList.add(bm);
+		}
+		return modelList;
+	}
+
+	@Override
+	public int spreadBorrowCount(BorrowModel model) {
+		StringBuffer buffer = new StringBuffer(
+				"select count(1) from rd_borrow borrow,t_jsd_user user,rd_verify_log log where borrow.user_id=user.user_id and borrow.id=log.fid and log.type='borrow' and "
+						+ "date_add(log.time, INTERVAL borrow.valid_time day) < now() and borrow.status = 1 and borrow.account>borrow.account_yes and borrow.type !=110");
+		getString(buffer, model);
+		Query query = em.createNativeQuery(buffer.toString());
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return Integer.parseInt(obj.toString());
+		}
+		return 0;
+	}
+
+	private StringBuffer getString(StringBuffer buffer, BorrowModel model) {
+		if (StringUtil.isNotBlank(model.getName())) {
+			buffer.append(" and borrow.name like '%" + model.getName() + "%'");
+		}
+		if (StringUtil.isNotBlank(model.getUserName())) {
+			buffer.append(" and user.user_name like '%" + model.getUserName() + "%'");
+		}
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			String start = model.getStartTime();
+			buffer.append(" and borrow.add_time >='" + start + "'");
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			String end = model.getEndTime();
+			buffer.append(" and borrow.add_time <= '" + end + "'");
+		}
+		if (model.getType() != 100 && model.getType() != 0) {
+			buffer.append(" and borrow.type=" + model.getType());
+		}
+		return buffer;
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public PageDataList<Borrow> getInviteList(BorrowModel model, List params) {
+  		PageDataList<Borrow> pageDataList = new PageDataList<Borrow>();
+		StringBuffer sb = new StringBuffer("select borrow.* from rd_borrow borrow,rd_verify_log log "
+				+ "where (borrow.id=log.fid and log.type='borrow' "
+				+ "and date_add(log.time, INTERVAL borrow.valid_time day) > now() "
+				+ "and borrow.status = 1 and borrow.scales!=100");
+		sb.append(params.get(params.size() - 1));
+		Query query = em.createNativeQuery(sb.toString(), Borrow.class);
+		for (int i = 0; i < params.size() - 1; i++) {
+			query.setParameter(i + 1, params.get(i));
+		}
+		Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+		query.setFirstResult((model.getPage() - 1) * model.getSize());
+		query.setMaxResults(model.getSize());
+		List<Borrow> list = query.getResultList();
+		pageDataList.setList(list);
+		pageDataList.setPage(page);
+		return pageDataList;
+	}
+
+	@Override
+	public Borrow findNotFlow(long borrowId) {
+		String sql = "select borrow.* from rd_borrow borrow,rd_verify_log log "
+				+ "where (borrow.id=log.fid and log.type='borrow' and log.verify_type=1 "
+				+ "and date_add(log.time, INTERVAL borrow.valid_time day) > now() "
+				+ "or borrow.type =110) and borrow.id=?";
+		Query query = em.createNativeQuery(sql, Borrow.class);
+		query.setParameter(1, borrowId);
+		return (Borrow) query.getSingleResult();
+	}
+	
+	/**
+	 * 根据合同号查询标信息(子合同号)
+	 */
+	@Override
+	public Borrow findLoanByDealNo(String dealNo) {
+		String sql = "SELECT r1.* FROM rd_borrow r1 WHERE r1.deal_no = ? AND r1.status IN (0,1,3,6,7,8)";
+		Query query = em.createNativeQuery(sql, Borrow.class);
+		query.setParameter(1, dealNo);
+		return (Borrow) query.getSingleResult();
+	}
+	
+
+	
+	@Override
+	public void modifyBidNo(long borrowId,String bidNo){
+		String sql = "UPDATE Borrow SET bid_no = :bidNo WHERE id = :borrowId ";
+		Query query = em.createQuery(sql);
+		query.setParameter("borrowId", borrowId);
+		query.setParameter("bidNo", bidNo);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更新标号失败", 1);
+		}
+		refresh(super.find(borrowId));
+	}
+	@Override
+    public void modifyGuaranteeNo(long borrowId, String guaranteeNo){
+	    String sql = "UPDATE Borrow SET guarantee_no = :guaranteeNo WHERE id = :borrowId ";
+        Query query = em.createQuery(sql);
+        query.setParameter("borrowId", borrowId);
+        query.setParameter("guaranteeNo", guaranteeNo);
+        int result = query.executeUpdate();
+        if (result != 1) {
+            throw new BussinessException("更新担保号失败", 1);
+        }
+        refresh(super.find(borrowId));
+	}
+    @Override
+    public int findByStatusAndUserId(long userId, int status1, int status2) {
+       if(status2 != 0){
+           StringBuffer sql = new StringBuffer("SELECT COUNT(DISTINCT p1.id) FROM rd_borrow p1 WHERE p1.user_id = :userId AND "
+           		+ "(( p1.status in(6,7) and p1.type in (103,105)) or (p1.status in (1,7) and p1.type in (113,115)) )");
+           Query query = em.createNativeQuery(sql.toString());
+           query.setParameter("userId", userId);
+           Object count = query.getSingleResult();
+           if(count != null){
+               return Integer.parseInt(count.toString());
+           }
+       }else if(status1 == 1){
+           StringBuffer sql = new StringBuffer("SELECT COUNT(DISTINCT p1.id) as num FROM rd_borrow p1,t_jsd_user p2,rd_verify_log p3 WHERE");
+           sql.append(" p1.user_id = p2.user_id AND p1.user_id = :userId AND( p1.id=p3.fid AND p3.type='borrow'");
+           sql.append(" AND p3.result = 1 AND p3.verify_type = 1 AND DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()");
+           sql.append(" AND p1.status = :status AND p1.account_yes <= account)");
+           Query query = em.createNativeQuery(sql.toString());
+           query.setParameter("userId", userId);
+           query.setParameter("status", status1);
+           Object count = query.getSingleResult();
+           if(count != null){
+               return Integer.parseInt(count.toString());
+           }
+       }
+       return 0;
+    }
+
+    @Override
+    public double findAccountTotalByStatus(long userId, int status1, int status2) {
+        if(status2 != 0){
+            StringBuffer sql = new StringBuffer("SELECT SUM(p1.repayment_account - p1.repayment_yes_account) FROM rd_borrow p1 WHERE p1.user_id = :userId AND "
+            		+ "(( p1.status in(6,7) and p1.type in (103,105)) or (p1.status in (1,7) and p1.type in (113,115)) )");
+            Query query = em.createNativeQuery(sql.toString());
+            query.setParameter("userId", userId);
+            Object count = query.getSingleResult();
+            if(count != null){
+                return Double.parseDouble(count.toString());
+            }
+            
+        }else if(status1 == 1){// 正在借款金额
+            StringBuffer sql = new StringBuffer("SELECT SUM(p1.account) FROM rd_borrow p1,t_jsd_user p2,rd_verify_log p3 WHERE");
+            sql.append(" p1.user_id = p2.user_id AND p1.user_id = :userId AND ( p1.id=p3.fid AND p3.type='borrow'");
+            sql.append(" AND p3.result = 1 AND p3.verify_type = 1 AND DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()");
+            sql.append(" AND p1.status = :status AND p1.account_yes <= account OR p1.type =110 AND p1.status = :status)");
+            Query query = em.createNativeQuery(sql.toString());
+            query.setParameter("userId", userId);
+            query.setParameter("status", status1);
+            Object count = query.getSingleResult();
+            if(count != null){
+                return Double.parseDouble(count.toString());
+            }
+        }
+        return 0;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public List<Borrow> getMemberInvestList(User user){
+        StringBuffer sql = new StringBuffer("SELECT p1.* FROM rd_borrow p1,t_jsd_user p2,rd_verify_log p3 WHERE");
+        sql.append(" p1.user_id = p2.user_id AND p1.is_test=0 AND p1.user_id <> :userId AND");
+        sql.append(" ( p1.id=p3.fid AND p3.type='borrow'  AND p3.verify_type = 1 AND p3.result = 1 AND DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()"); 
+        sql.append(" AND p1.status = 1  AND p1.account_yes <= p1.account OR p1.type =110 AND p1.status = 1 AND p1.scales!=100");
+        sql.append(" OR p1.status IN (3,6,7,8) ) GROUP BY p1.id ORDER BY p1.status ASC , p1.id DESC LIMIT 4");
+        Query query = em.createNativeQuery(sql.toString(), Borrow.class);
+        query.setParameter("userId", user.getUserId());
+        List<Borrow> list = (List<Borrow>) query.getResultList();
+        return list;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public PageDataList<Borrow> getList(BorrowModel model) {
+        QueryParam param = QueryParam.getInstance();
+        StringBuffer selectSql = new StringBuffer("SELECT p1.* ,");
+        selectSql.append(" (CASE WHEN (p1.fixed_time - NOW()) < 0 THEN NULL ELSE p1.fixed_time END) AS fixed_time1, ");
+        selectSql.append("  (CASE WHEN p1.scales = 100 THEN -200 ELSE p1.scales END) AS test  ");
+        selectSql.append("  FROM rd_borrow p1,t_jsd_user p2,rd_verify_log p3 WHERE p1.user_id = p2.user_id AND p1.is_test=0  ");
+        StringBuffer sql = new StringBuffer();
+        if (model != null) {
+            long userId = 0;
+            if (model.getUser() != null && model.getUser().getUserId() > 0) {
+                sql.append(" AND p1.user_id = :userId");
+                userId = model.getUser().getUserId();
+            }
+            int status = -2;
+            /**
+             * -2:全部状态   1投标中  6还款中   8投标结束  
+             * */
+            if (model.getStatus() != 99) {
+                switch (model.getStatus()) {
+                    case -2://-2代表投资列表筛选条件是：状态（全部），在搜索全部的状态时候，尤其是状态等于1的时候，需要特殊处理，将过期的标剔除
+                        sql.append(" AND (p1.id=p3.fid AND p3.type='borrow' AND p3.result = 1 AND p3.verify_type = 1 AND DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()");
+                        sql.append(" AND p1.status = 1  AND p1.account_yes <= p1.account");
+                        sql.append(" OR p1.type =110 AND p1.status = 1 AND p1.scales!=100 AND  DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()");
+                        //fgq  自动投标标的状态   3.31  start
+                        sql.append(" OR p1.status IN (3,6,7,8) AND  DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()  OR p1.scales =100 AND p1.status =1 AND  DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW() ");
+                        //fgq  自动投标标的状态   3.31  end
+                        sql.append(" OR p1.scales < 100 AND (p1.status = 5 OR p1.status=59)  AND DATE_ADD(p1.add_time, INTERVAL p1.valid_time DAY) >= NOW())");
+                        break;
+                    case -3://-3 不显示 撤标
+                        sql.append(" AND (p1.id=p3.fid AND p3.type='borrow' AND p3.result = 1 AND p3.verify_type = 1 AND DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()");
+                        sql.append(" AND p1.status = 1  AND p1.account_yes <= p1.account");
+                        sql.append(" OR p1.type =110 AND p1.status = 1 AND p1.scales!=100 AND  DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()");
+                        //fgq  自动投标标的状态   3.31  start
+                        sql.append(" OR p1.status IN (3,6,7,8) AND  DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()  OR p1.scales =100 AND p1.status =1 AND  DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW() ");
+                        //fgq  自动投标标的状态   3.31  end
+                        sql.append(" AND DATE_ADD(p1.add_time, INTERVAL p1.valid_time DAY) >= NOW())");
+                        break;
+                    case 1:
+                        String scalesSql = "";
+                       /*if (model.getScales() == 100) {
+                            scalesSql = " AND p1.account_yes = account AND p1.scales = 100";
+                        } else {
+                            scalesSql = " AND p1.account_yes <= account";
+                        }*/
+                        scalesSql = " AND p1.account_yes <= account AND p1.scales < 100";
+                        sql.append(" AND( p1.id=p3.fid AND p3.type='borrow' AND p3.result = 1 AND p3.verify_type = 1 AND DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW()");
+                        sql.append(" AND p1.status = 1" + scalesSql);
+                        sql.append(" OR p1.type =110 AND p1.status = 1 "+scalesSql+")");
+                        break;
+                    case 6:
+                        sql.append(" AND ((p1.status in (3,6,7) AND p1.type not in(115,115)) OR (p1.status = 1 AND p1.type in (115,113) AND p1.scales=100))");
+                        break;
+                    case 8:
+                        sql.append("  AND DATE_ADD(p3.time, INTERVAL p1.valid_time DAY) >= NOW() AND (p1.status in (1,8) AND p1.scales = 100 OR(p1.status in (5,49) AND p1.scales < 100)");
+                        sql.append("  OR p1.scales < 100 AND (p1.status = 5 OR p1.status=59)  AND DATE_ADD(p1.add_time, INTERVAL p1.valid_time DAY) >= NOW())");
+                        break;
+                    case 19:
+                        sql.append(" AND p1.status = 1 AND p1.account_yes = account");
+                        break;
+                    case 49:
+                        sql.append(" AND p1.status in (4,49)");
+                        break;
+                    case 59:
+                        sql.append(" AND p1.status in (-2,5,59)");
+                        break;
+                    default:
+                        status = model.getStatus();
+                        sql.append(" AND p1.status = :status");
+                        break;
+                }
+            }
+            /*if (model.getScales() == 99) {
+                sql.append(" AND p1.account_yes > account");
+//              param.addParam("type", Operators.NOTEQ, 110); 删除对流转标的限制
+            }*/
+            String borrowName = "";
+            if (StringUtil.isNotBlank(model.getName()) && !"undefined".equals(model.getName()) && model.getName().length() > 0) {
+                borrowName = model.getName();
+                sql.append(" AND p1.name LIKE :borrowName");
+            }
+            String userName = "";
+            if (StringUtil.isNotBlank(model.getUserName())) {
+                userName = model.getUserName();
+                sql.append(" AND p2.user_name LIKE :userName");
+            }
+            if(model.getStyle()!=-1 && model.getStyle()!=0){
+            	sql.append(" AND p1.style = :styleVar") ;
+            }
+            Date d = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+            Date startTime = null;
+            Date endTime = null;
+            if (model.getTime() == 7) {
+                sql.append(" AND p1.add_time >= :startTime");
+                sql.append(" AND p1.add_time <= :endTime");
+                startTime = DateUtil.rollDay(d, -7);
+                endTime = d;
+            } else if (model.getTime()>0 && model.getTime()<4){
+                sql.append(" AND p1.add_time >= :startTime");
+                sql.append(" AND p1.add_time <= :endTime");
+                startTime = DateUtil.rollMon(d, -model.getTime());
+                endTime = d;
+            }
+            if (StringUtil.isNotBlank(model.getStartTime())) {
+                //startTime = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+            	startTime = DateUtil.valueOf(model.getStartTime());
+                sql.append(" AND p1.add_time > :startTime");
+            }
+            if (StringUtil.isNotBlank(model.getEndTime())) {
+                //endTime = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+                endTime = DateUtil.valueOf(model.getEndTime());
+                sql.append(" AND p1.add_time < :endTime");
+            }
+            int type = 0;
+            if (model.getType() != 100 && model.getType() != 0) {
+                type = model.getType();
+                if(type!=999){//999是投资列表页所有标的标志状态值
+                	 sql.append(" AND p1.type = :type");
+                }
+               
+            }
+            this.searchParamForHome(model);
+            sql.append(this.searchParamForHome(model));
+            param.addPage(model.getPage(), model.getSize());
+            PageDataList<Borrow> pageDataList = new PageDataList<Borrow>();
+            selectSql.append(sql);
+            Query query = em.createNativeQuery(selectSql.toString(), Borrow.class);
+            if (userId > 0) {
+                query.setParameter("userId", userId);
+            }
+            if (status > -2) {
+                query.setParameter("status", status);
+            }
+            if (startTime != null) {
+                query.setParameter("startTime", startTime);
+            }
+            if (endTime != null) {
+                query.setParameter("endTime", endTime);
+            }
+            if(borrowName.length() > 0){
+                query.setParameter("borrowName", "%"+borrowName+"%");
+            }
+            if(userName.length() > 0){
+                query.setParameter("userName", "%"+userName+"%");
+            }
+            if(type > 0 &&type!=999){//999是投资列表页所有标的标志状态值
+                query.setParameter("type", type);
+            }
+            if(model.getStyle()!=-1 && model.getStyle()!=0){
+            	query.setParameter("styleVar",model.getStyle()) ;
+            }
+            Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+            query.setFirstResult((model.getPage() - 1) * model.getSize());
+            query.setMaxResults(model.getSize());
+            List<Borrow> list = query.getResultList();
+            pageDataList.setList(list);
+            pageDataList.setPage(page);
+            return pageDataList;
+        }
+        return null;
+    }
+    
+    private String searchParam(BorrowModel model) {
+        // 利率
+        StringBuffer sql = new StringBuffer("");
+        if (model.getAprSearch() != -1) {
+            switch (model.getAprSearch()) {
+                case 1:
+                    sql.append(" AND p1.apr <= 6");
+                    break;
+                case 2:
+                    sql.append(" AND p1.apr > 6 AND p1.apr <= 12");
+                    break;
+                case 3:
+                    sql.append(" AND p1.apr > 12 AND p1.apr <= 18");
+                    break;
+                case 4:
+                    sql.append(" AND p1.apr > 18 AND p1.apr <= 20");
+                    break;
+                case 5:
+                    sql.append(" AND p1.apr > 20");
+                    break;
+                default:
+                    break;
+            }
+        }
+        // 期限
+        if (model.getTimeSearch()!= -1) {
+            switch (model.getTimeSearch()) {
+                case 2:
+                    sql.append(" AND ((p1.borrow_time_type=1  AND  p1.time_limit <=30 AND p1.time_limit >0) OR (p1.borrow_time_type=0  AND  p1.time_limit =1))");
+                    break;
+                case 3:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND p1.time_limit <=90 AND p1.time_limit >30)  OR (p1.borrow_time_type=0  AND  p1.time_limit <=3 AND p1.time_limit >1))");
+                    break;
+                case 4:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND p1.time_limit <=180 AND p1.time_limit >90)  OR (p1.borrow_time_type=0  AND  p1.time_limit <=6 AND p1.time_limit >3))");
+                    break;
+                case 5:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND p1.time_limit <=360 AND p1.time_limit >180)  OR (p1.borrow_time_type=0  AND  p1.time_limit <=12 AND p1.time_limit >6))");
+                    break;
+                case 6:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND  p1.time_limit >360)  OR (p1.borrow_time_type=0  AND  p1.time_limit >12))");
+                    break;
+                default:
+                    break;
+            }
+        }
+         
+        sql.append(" GROUP BY p1.id ORDER BY p1.status ASC,p1.scales ASC , (p1.account - p1.account_yes)  DESC, p1.add_time  DESC  , p1.id DESC");
+        // 排序 1金额 2利率 3进度 4信用
+        return sql.toString();
+    }
+    
+    private String searchParamForHome(BorrowModel model) {
+        // 利率
+        StringBuffer sql = new StringBuffer("");
+        if (model.getAprSearch() != -1) {
+            switch (model.getAprSearch()) {
+                case 1:
+                    sql.append(" AND p1.apr <= 6");
+                    break;
+                case 2:
+                    sql.append(" AND p1.apr > 6 AND p1.apr <= 12");
+                    break;
+                case 3:
+                    sql.append(" AND p1.apr > 12 AND p1.apr <= 15");
+                    break;
+                case 4:
+                    sql.append(" AND p1.apr > 15");
+                    break;
+                /*case 3:
+                	sql.append(" AND p1.apr > 12 AND p1.apr <= 18");
+                	break;
+                case 4:
+                	sql.append(" AND p1.apr > 18 AND p1.apr <= 20");
+                	break;
+                case 5:
+                	sql.append(" AND p1.apr > 20");
+                	break;*/
+                default:
+                    break;
+            }
+        }
+        // 期限
+        if (model.getTimeSearch()!= -1) {
+            switch (model.getTimeSearch()) {
+                case 2:
+                    sql.append(" AND ((p1.borrow_time_type=1  AND  p1.time_limit <=30 AND p1.time_limit >0) OR (p1.borrow_time_type=0  AND  p1.time_limit =1))");
+                    break;
+                case 3:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND p1.time_limit <=90 AND p1.time_limit >30)  OR (p1.borrow_time_type=0  AND  p1.time_limit <=3 AND p1.time_limit >1))");
+                    break;
+                case 4:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND p1.time_limit <=180 AND p1.time_limit >90)  OR (p1.borrow_time_type=0  AND  p1.time_limit <=6 AND p1.time_limit >3))");
+                    break;
+                case 5:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND p1.time_limit <=360 AND p1.time_limit >180)  OR (p1.borrow_time_type=0  AND  p1.time_limit <=12 AND p1.time_limit >6))");
+                    break;
+                case 6:
+                    sql.append(" AND ((p1.borrow_time_type=1 AND  p1.time_limit >360)  OR (p1.borrow_time_type=0  AND  p1.time_limit >12))");
+                    break;
+                default:
+                    break;
+            }
+        }
+         
+        sql.append(" GROUP BY p1.id ORDER BY fixed_time1  DESC,test DESC,p1.status ASC,(p1.account - p1.account_yes) DESC,p1.add_time DESC,  p1.id DESC ");
+        // 排序 1金额 2利率 3进度 4信用
+        return sql.toString();
+    }
+
+    @Override
+    public double getBorrowAccountByDate(String date) {
+        String dateFormat = "%Y-%m-%d";
+        if (date.length() == 7) {
+            dateFormat = "%Y-%m";
+        }
+        String sql = "select sum(account) from rd_borrow where date_format(add_time,'"+dateFormat+"') = ?";
+        Query query = em.createNativeQuery(sql).setParameter(1, date);
+        Object obj = query.getSingleResult();
+        double count = 0;
+        if (obj != null) {
+            count = ((BigDecimal) obj).doubleValue();
+        }
+        return count;
+    }
+    
+    @Override
+    public Borrow getBorrowByBidNo(String bidNo){
+        List<Borrow> list = super.findByProperty("bidNo", bidNo);
+        if (list != null && list.size() > 0) {
+            return list.get(0);
+        }
+        return null;
+    }
+
+    /**
+     * 成功发标统计
+     */
+    @Override
+    public int count() {
+        String sql = "SELECT COUNT(p1.id) FROM rd_borrow p1 WHERE (p1.type <> 110 AND p1.status IN (1,3,6,7,8))";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+    }
+    
+    /**
+     * 正在担保的项目个数
+     */
+    @Override
+    public int getGuaranteeingCount(long userId) {
+        String sql = "SELECT count(t.id) FROM rd_borrow t WHERE t.vouch_id=:vouch_id AND t.status IN ('1','3','6','7') AND t.guarantee_rate > 0";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("vouch_id", userId);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+    }
+    
+    /**
+     * 正在担保的项目总金额
+     */
+    @Override
+    public double getGuaranteeingAccount(long userId) {
+        String sql = "SELECT SUM(t.account) FROM rd_borrow t WHERE t.vouch_id=:vouch_id AND t.status IN ('1','3','6','7') AND t.guarantee_rate > 0";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("vouch_id", userId);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Double.parseDouble(count.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public int getNeedGuaranteeRegisteCount(long userId) {
+        String sql = "SELECT count(t.id) FROM rd_borrow t WHERE t.vouch_id=:vouch_id AND t.status ='11' AND (t.guarantee_no is null OR LENGTH(t.guarantee_no) = 0)  AND t.guarantee_rate > 0";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("vouch_id", userId);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public double getNeedGuaranteeRegisteAccount(long userId) {
+        String sql = "SELECT SUM(t.account) FROM rd_borrow t WHERE t.vouch_id=:vouch_id AND t.status ='11' AND (t.guarantee_no is null OR LENGTH(t.guarantee_no) = 0) AND t.guarantee_rate > 0";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("vouch_id", userId);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Double.parseDouble(count.toString());
+        }
+        return 0;
+    }
+    
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<Borrow> getNeedGuaranteeRegisteList(long userId) {
+        String sql = "SELECT t.* FROM rd_borrow t WHERE t.vouch_id=:vouch_id AND t.status ='11' AND (t.guarantee_no is null OR LENGTH(t.guarantee_no) = 0) AND t.guarantee_rate > 0";
+        Query query = em.createNativeQuery(sql, Borrow.class);
+        query.setParameter("vouch_id", userId);
+        List<Borrow> list = query.getResultList();
+        return list;
+    }
+    
+    @Override
+    public int getAllOverduedCount() {
+        String sql = "SELECT COUNT(DISTINCT b.id) FROM rd_borrow b, rd_borrow_repayment r WHERE b.id = r.borrow_id AND b.status = 8 AND b.is_test = 0 AND r.repayment_time < r.repayment_yes_time";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public int getAllOverdueingCount() {
+        String sql = "SELECT COUNT(DISTINCT b.id) FROM rd_borrow b, rd_borrow_repayment r WHERE b.id = r.borrow_id AND b.status in(6, 7) AND b.is_test = 0 AND r.status = 0 AND r.repayment_time < NOW()";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public double getAllOverdueingMomeny() {
+        String sql = "SELECT SUM(b.account) FROM rd_borrow b WHERE b.status in(6, 7) AND b.is_test = 0 AND b.id IN(SELECT DISTINCT r.borrow_id FROM rd_borrow_repayment r WHERE r.status = 0 AND r.repayment_time < NOW())";
+        Query query = em.createNativeQuery(sql);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public double getAllMomeny() {
+        String sql = "SELECT SUM(b.account) FROM rd_borrow b WHERE b.is_test = 0";
+        Query query = em.createNativeQuery(sql);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public double getAllOverduedMomeny() {
+        String sql = "SELECT SUM(b.account) FROM rd_borrow b WHERE b.status =8 AND b.is_test = 0 AND b.id IN(SELECT DISTINCT r.borrow_id FROM rd_borrow_repayment r WHERE r.repayment_time < r.repayment_yes_time)";
+        Query query = em.createNativeQuery(sql);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public double getMomenyByStatus(int status) {
+        String sql = "SELECT SUM(b.account) FROM rd_borrow b WHERE b.status = :status AND b.is_test = 0";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("status", status);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public double getMomenyByStatusType(int status, int type) {
+    	String sql = "SELECT SUM(b.account) FROM rd_borrow b WHERE b.status = :status AND b.is_test = 0 AND b.type = :type";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("status", status);
+        query.setParameter("type", type);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+    
+    @Override
+    public double getVerifyFullMomeny() {
+        String sql = "SELECT SUM(b.account) FROM rd_borrow b WHERE b.status = 1 AND b.scales = 100 AND b.is_test = 0";
+        Query query = em.createNativeQuery(sql);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+
+	@Override
+	public List<Borrow> findLoanListByDealParent(String dealParent, int borrowType) {
+		// TODO Auto-generated method stub
+		//StringBuffer sql = new StringBuffer("SELECT r1.* FROM rd_borrow r1 WHERE r1.deal_parent = :dealParent AND r1.type = :type AND r1.status IN (-1,0,1,3,6,7,8,49,59) ORDER BY id ASC");
+		StringBuffer sql = new StringBuffer("SELECT r1.* FROM rd_borrow r1 WHERE r1.deal_parent = :dealParent AND r1.type = :type  ORDER BY id ASC");
+        //sql.append(" p1.user_id = p2.user_id AND p1.is_test=0 AND p1.user_id <> :userId AND");
+        Query query = em.createNativeQuery(sql.toString(), Borrow.class);
+        query.setParameter("dealParent", dealParent);
+        query.setParameter("type", borrowType);
+        List<Borrow> list = (List<Borrow>) query.getResultList();
+        return list;
+	}
+	
+	@Override
+	public List<Borrow> findLoanListByDealParent(String dealParent) {
+		// TODO Auto-generated method stub
+		//StringBuffer sql = new StringBuffer("SELECT r1.* FROM rd_borrow r1 WHERE r1.deal_parent = :dealParent AND r1.status IN (-1,0,1,3,6,7,8,49,59) ORDER BY id ASC");
+		StringBuffer sql = new StringBuffer("SELECT r1.* FROM rd_borrow r1 WHERE r1.deal_parent = :dealParent  ORDER BY id ASC");
+		//sql.append(" p1.user_id = p2.user_id AND p1.is_test=0 AND p1.user_id <> :userId AND");
+		Query query = em.createNativeQuery(sql.toString(), Borrow.class);
+		query.setParameter("dealParent", dealParent);
+		List<Borrow> list = (List<Borrow>) query.getResultList();
+		return list;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<Borrow> getBorrowByFixedTime() {
+		String sql = "SELECT b.* FROM rd_borrow b WHERE b.fixed_time <= :curr_time AND (b.status = 0 or b.status = 1)";
+        Query query = em.createNativeQuery(sql, Borrow.class);
+        query.setParameter("curr_time", new Date());
+        List<Borrow> list = query.getResultList();
+        return list;
+	}
+
+	@Override
+	public PageDataList<Borrow> getListOfBorrow(BorrowModel model) {
+
+        QueryParam param = QueryParam.getInstance();
+        StringBuffer selectSql = new StringBuffer("SELECT p1.* FROM rd_borrow p1,t_jsd_user p2,rd_verify_log p3 WHERE p1.user_id = p2.user_id AND p1.is_test=0 ");
+        StringBuffer sql = new StringBuffer();
+        if (model != null) {
+            long userId = 0;
+            if (model.getUser() != null && model.getUser().getUserId() > 0) {
+                sql.append(" AND p1.user_id = :userId");
+                userId = model.getUser().getUserId();
+            }
+            int status = -2;
+            /**
+             * -2:全部状态   1投标中  6还款中   8投标结束  
+             * */
+            if (model.getStatus() != 99) {
+                switch (model.getStatus()) {
+                    case -2://-2代表投资列表筛选条件是：状态（全部），在搜索全部的状态时候，尤其是状态等于1的时候，需要特殊处理，将过期的标剔除
+                        sql.append(" AND (p1.id=p3.fid AND p3.type='borrow' AND p3.result = 1 AND p3.verify_type = 1 ");
+                        sql.append(" AND p1.status = 1  AND p1.account_yes <= p1.account ");
+                        sql.append(" OR p1.type =110 AND p1.status = 1 AND p1.scales!=100 ");
+                        sql.append(" OR p1.status IN (3,6,7,8)  OR p1.scales =100 AND p1.status =1 ");
+                        sql.append(" OR p1.scales < 100 AND (p1.status = 5 OR p1.status=59))");
+                        break;
+                    case 1:
+                        String scalesSql = "";
+                       /*if (model.getScales() == 100) {
+                            scalesSql = " AND p1.account_yes = account AND p1.scales = 100";
+                        } else {
+                            scalesSql = " AND p1.account_yes <= account";
+                        }*/
+                        scalesSql = " AND p1.account_yes <= account AND p1.scales < 100 ";
+                        sql.append(" AND( p1.id=p3.fid AND p3.type='borrow' AND p3.result = 1 AND p3.verify_type = 1 ");
+                        sql.append(" AND p1.status = 1  " + scalesSql);
+                        sql.append(" OR p1.type =110 AND p1.status = 1 "+scalesSql+")");
+                        break;
+                    case 6:
+                        sql.append(" AND p1.status in (3,6,7) ");
+                        break;
+                    case 8:
+                        sql.append("  AND (p1.status in (8) AND p1.scales = 100 OR(p1.status in (5,49) AND p1.scales < 100)  ");
+                        sql.append("  OR p1.scales < 100 AND (p1.status = 5 OR p1.status=59))  ");
+                        break;
+                    case 19:
+                        sql.append("  AND p1.status = 1 AND p1.account_yes = account ");
+                        break;
+                    case 49:
+                        sql.append(" AND p1.status in (4,49) ");
+                        break;
+                    case 59:
+                        sql.append(" AND p1.status in (-2,5,59) ");
+                        break;
+                    default:
+                        status = model.getStatus();
+                        sql.append(" AND p1.status = :status ");
+                        break;
+                }
+            }
+            /*if (model.getScales() == 99) {
+                sql.append(" AND p1.account_yes > account");
+//              param.addParam("type", Operators.NOTEQ, 110); 删除对流转标的限制
+            }*/
+            String borrowName = "";
+            if (StringUtil.isNotBlank(model.getName()) && !"undefined".equals(model.getName()) && model.getName().length() > 0) {
+                borrowName = model.getName();
+                sql.append(" AND p1.name LIKE :borrowName");
+            }
+            String userName = "";
+            if (StringUtil.isNotBlank(model.getUserName())) {
+                userName = model.getUserName();
+                sql.append(" AND p2.user_name LIKE :userName");
+            }
+            if(model.getStyle()!=-1 && model.getStyle()!=0){
+            	sql.append(" AND p1.style = :styleVar") ;
+            }
+            Date d = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+            Date startTime = null;
+            Date endTime = null;
+            if (model.getTime() == 7) {
+                sql.append(" AND p1.add_time >= :startTime");
+                sql.append(" AND p1.add_time <= :endTime");
+                startTime = DateUtil.rollDay(d, -7);
+                endTime = d;
+            } else if (model.getTime()>0 && model.getTime()<4){
+                sql.append(" AND p1.add_time >= :startTime");
+                sql.append(" AND p1.add_time <= :endTime");
+                startTime = DateUtil.rollMon(d, -model.getTime());
+                endTime = d;
+            }
+            if (StringUtil.isNotBlank(model.getStartTime())) {
+                //startTime = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+            	startTime = DateUtil.valueOf(model.getStartTime());
+                sql.append(" AND p1.add_time > :startTime");
+            }
+            if (StringUtil.isNotBlank(model.getEndTime())) {
+                //endTime = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+                endTime = DateUtil.valueOf(model.getEndTime());
+                sql.append(" AND p1.add_time < :endTime");
+            }
+            int type = 0;
+            if (model.getType() != 100 && model.getType() != 0) {
+                type = model.getType();
+                if(type!=999){//999是投资列表页所有标的标志状态值
+                	 sql.append(" AND p1.type = :type");
+                }
+               
+            }
+            sql.append(this.searchParam(model));
+            param.addPage(model.getPage(), model.getSize());
+            PageDataList<Borrow> pageDataList = new PageDataList<Borrow>();
+            selectSql.append(sql);
+            Query query = em.createNativeQuery(selectSql.toString(), Borrow.class);
+            if (userId > 0) {
+                query.setParameter("userId", userId);
+            }
+            if (status > -2) {
+                query.setParameter("status", status);
+            }
+            if (startTime != null) {
+                query.setParameter("startTime", startTime);
+            }
+            if (endTime != null) {
+                query.setParameter("endTime", endTime);
+            }
+            if(borrowName.length() > 0){
+                query.setParameter("borrowName", "%"+borrowName+"%");
+            }
+            if(userName.length() > 0){
+                query.setParameter("userName", "%"+userName+"%");
+            }
+            if(type > 0 &&type!=999){//999是投资列表页所有标的标志状态值
+                query.setParameter("type", type);
+            }
+            if(model.getStyle()!=-1 && model.getStyle()!=0){
+            	query.setParameter("styleVar",model.getStyle()) ;
+            }
+            Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+            query.setFirstResult((model.getPage() - 1) * model.getSize());
+            query.setMaxResults(model.getSize());
+            List<Borrow> list = query.getResultList();
+            pageDataList.setList(list);
+            pageDataList.setPage(page);
+            return pageDataList;
+        }
+        return null;
+    
+	}
+
+	@Override
+	public String borrowTotal(BorrowModel model) {
+		StringBuffer sql = new StringBuffer("SELECT SUM(b.account) FROM rd_borrow b,t_jsd_user u,t_jsd_user_cache uc WHERE u.user_id=b.user_id AND uc.user_id=b.user_id ");
+		if(0 != model.getType()){
+			sql.append(" and b.type = :type ");
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and u.user_name = :userName ");
+		}
+		if(StringUtil.isNotBlank(model.getName())){
+			sql.append(" and b.name like '%"+model.getName()+"%' ");
+		}
+		if(99 != model.getStatus()){
+			sql.append(" and b.status = :status ");
+		}
+		if(StringUtil.isNotBlank(model.getDealNo())){
+			sql.append(" and b.deal_no = :dealNo ");
+		}
+		if(StringUtil.isNotBlank(model.getVouchFirmName())){
+			sql.append(" and uc.company_name like '%"+model.getVouchFirmName()+"%' ");
+			sql.append(" and uc.user_type = 12 ");
+		}
+		//JSDBET-950 xingjia 20150514 start
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" and b.add_time >= :startTime ");
+		}
+
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" and b.add_time <= :endTime ");
+		}
+		//JSDBET-950 xingjia 20150514 end
+		Query query = em.createNativeQuery(sql.toString());
+		if(0 != model.getType()){
+			query.setParameter("type", model.getType());
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			query.setParameter("userName", model.getUserName());
+		}
+		if(99 != model.getStatus()){
+			query.setParameter("status", model.getStatus());
+		}
+		if(StringUtil.isNotBlank(model.getDealNo())){
+			query.setParameter("dealNo", model.getDealNo());
+		}
+
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		
+		Object obj = query.getSingleResult();
+		if(null != obj){
+			return obj.toString();
+		}
+		return null;
+	}
+
+	@Override
+	public Borrow getBorrowByStatusAndId(long borrowId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("id", borrowId);
+		param.addParam("status", 0);
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public int borrowFulRecheckUserCount() {
+		StringBuffer sql = new StringBuffer("SELECT COUNT(a.user_id) FROM (SELECT user_id FROM rd_borrow WHERE STATUS IN(3,6,7,8) GROUP BY user_id) AS a;");
+		Query query = em.createNativeQuery(sql.toString());
+		int count = ((BigInteger) query.getSingleResult()).intValue();
+		return count;
+	}
+	
+
+	@Override
+	public List<Borrow> excelNewBorrowList(BorrowModel model) {
+		//JSDP-116 sxy 2015-05-15 start
+		StringBuffer  sql = new StringBuffer();
+		sql.append(" SELECT t1.id,t2.user_name,t1.name,t1.deal_parent,t1.deal_no,  "
+				+ " CASE  t1.type "
+				+ " WHEN  103 THEN '车贷宝' "
+				+ " WHEN  113 THEN '能源宝' "
+				+ " WHEN  105 THEN '分期宝' "
+				+ " WHEN  115 THEN '网商贷' "
+				+ " ELSE '其他' END AS borrowtype, "
+				+ " t1.account,"
+				//+ " t1.apr,"
+				
+				+ " CASE  t1.apr "
+				+ " WHEN  t1.apr THEN CONCAT(t1.apr, '%') "
+				+ " ELSE CONCAT(t1.apr, '%') END AS apr, "
+				
+				
+				//+ "t1.time_limit,"
+				
+				+ " CASE  t1.borrow_time_type "
+				+ " WHEN  0 THEN CONCAT(t1.time_limit, '月') "
+				+ " WHEN  1 THEN CONCAT(t1.time_limit, '天') "
+				+ " ELSE '其他' END AS timelimit, "
+				
+				+ "t1.add_time "
+				
+				+ " FROM rd_borrow t1,t_jsd_user t2 WHERE t1.user_id = t2.user_id AND t1.status = 0 ");
+		
+		// 借款人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and t2.user_name like '%"+model.getUserName()+"%' ");
+		}
+		// 标名
+		if(StringUtil.isNotBlank(model.getBorrowName())){
+			sql.append(" and t1.name like '%"+model.getBorrowName()+"%' ");
+		}
+		// 标类型
+		if(0 < model.getType()){
+			sql.append(" and t1.type = "+model.getType()+" ");
+		}
+		// 时间-开始
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" and t1.add_time >= '"+model.getStartTime()+"' ");
+		}
+		// 时间-结束
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" and t1.add_time <= '"+model.getEndTime()+"' ");
+		}
+		sql.append(" order by t1.id desc "); 
+		//--------------------------------------
+		Query query = em.createNativeQuery(sql.toString());
+		//--------------------------------------
+		/*// 借款人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			query.setParameter("userName", model.getUserName());
+		}
+		// 标名
+		if(StringUtil.isNotBlank(model.getBorrowName())){
+			query.setParameter("borrowName", model.getBorrowName());
+		}
+		// 标类型
+		if(0 < model.getType()){
+			query.setParameter("borrowType", model.getType());
+		}
+		// 时间-开始
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			query.setParameter("startTime", model.getStartTime());
+		}
+		// 时间-结束
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			query.setParameter("endTime", model.getEndTime());
+		}*/
+		
+		List scoreList = query.getResultList();
+		//JSDP-116 sxy 2015-05-15 start
+		return scoreList;
+	}
+	
+	@Override
+	public List<Borrow> excelTenderPlanBorrowList(BorrowModel model) {
+		//JSDP-116 sxy 2015-05-18 start
+		StringBuffer  sql = new StringBuffer();
+		/*sql.append(" SELECT t1.id, t2.email, t1.name, "
+				
+				+ " CASE  t1.type "
+				+ " WHEN  103 THEN '车贷宝' "
+				+ " WHEN  113 THEN '能源宝' "
+				+ " WHEN  105 THEN '分期宝' "
+				+ " WHEN  115 THEN '网商贷' "
+				+ " ELSE '其他' END AS borrowtype, "
+				+ " t1.account, moneyCount1.summoney, t1.apr, t1.time_limit, t1.add_time, t1.scales "
+				
+				+ " FROM rd_borrow t1 "
+				+ " LEFT JOIN t_jsd_user t2 ON t1.user_id = t2.user_id "
+				+ " LEFT JOIN t_jsd_borrow_tender t3 ON t2.user_id = t3.user_id "
+				
+				+ " LEFT JOIN (SELECT SUM(t4.money) summoney,t4.borrow_id borrowId  "
+				+ " FROM t_jsd_borrow_tender t4,rd_borrow t5 WHERE t4.borrow_id = t5.id "
+				+ " GROUP BY t5.id ) AS moneyCount1 ON moneyCount1.borrowId = t1.id "
+				
+				+ " WHERE 1 = 1 "
+				+ " AND t1.status IN (1) AND t1.is_test=0 ");
+		*/
+		//---------------------------------------------------------------------------------------------
+		sql.append(" SELECT p1.id, p2.user_name, p1.name, "
+				//+ "p1.type, "
+				
+				+ " CASE  p1.type "
+				+ " WHEN  103 THEN '车贷宝' "
+				+ " WHEN  113 THEN '能源宝' "
+				+ " WHEN  105 THEN '分期宝' "
+				+ " WHEN  115 THEN '网商贷' "
+				+ " ELSE '其他' END AS borrowtype, "
+				
+				+ " p1.account as acc, p1.account, "
+				//+ "p1.apr, "
+				+ " CASE  p1.apr "
+				+ " WHEN  p1.apr THEN CONCAT(p1.apr, '%') "
+				+ " ELSE  CONCAT(p1.apr, '%') END AS apr, "
+				
+				//+ "p1.time_limit,"
+								
+				+ " CASE  p1.borrow_time_type "
+				+ " WHEN  0 THEN CONCAT(p1.time_limit, '月') "
+				+ " WHEN  1 THEN CONCAT(p1.time_limit, '天') "
+				+ " ELSE '其他' END AS timelimit, "
+				
+				+ " p1.add_time, "
+				//+ " p1.scales, "
+				
+				+ " CASE  p1.scales "
+				+ " WHEN  p1.scales THEN CONCAT(p1.scales, '%') "
+				+ " ELSE  CONCAT(p1.scales, '%') END AS scales, "
+				
+				+ " (CASE WHEN (p1.fixed_time - NOW()) < 0 THEN NULL ELSE p1.fixed_time END) AS fixed_time1, (CASE WHEN p1.scales = 100 THEN - 200 ELSE p1.scales END) AS test "
+				+ " FROM rd_borrow p1, t_jsd_user p2, rd_verify_log p3 "
+		+ " WHERE p1.user_id = p2.user_id "
+		+ " AND p1.is_test = 0 "
+		+ " AND (p1.id = p3.fid AND p3.type = 'borrow' AND p3.result = 1 AND p3.verify_type = 1 AND DATE_ADD( p3.time, INTERVAL p1.valid_time DAY ) >= NOW() "
+		+ " AND p1.status = 1 "
+		+ " AND p1.account_yes <= account "
+		+ " AND p1.scales < 100 "
+		+ " OR p1.type = 110 "
+		+ " AND p1.status = 1 "
+		+ " AND p1.account_yes <= account "
+		+ " AND p1.scales < 100) ");
+		
+		
+		
+		// 借款人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and p2.user_name like '%"+model.getUserName()+"%' ");
+		}
+		// 标名
+		if(StringUtil.isNotBlank(model.getBorrowName())){
+			System.out.println(model.getBorrowName());
+			sql.append(" and p1.name like '%"+model.getBorrowName()+"%' ");
+		}
+		// 标类型1
+		if(0 < model.getType()){
+			sql.append(" and p1.type = "+model.getType()+" ");
+		}
+		// 时间-开始
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" and p1.add_time >= '"+model.getStartTime()+"' ");
+		}
+		// 时间-结束
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" and p1.add_time <= '"+model.getEndTime()+"' ");
+		}
+		
+		sql.append(" GROUP BY p1.id   ");
+		sql.append(" ORDER BY fixed_time1 DESC, ");
+		sql.append(" test DESC,  ");
+		sql.append(" p1.status ASC,  ");
+		sql.append(" (p1.account - p1.account_yes) DESC, ");
+		sql.append(" p1.add_time DESC, ");
+		sql.append(" p1.id DESC ");
+		
+		//sql.append(" order by p1.id desc "); // 此处有误
+		//--------------------------------------
+		Query query = em.createNativeQuery(sql.toString());
+		//--------------------------------------
+		/*// 借款人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			query.setParameter("userName", model.getUserName());
+		}
+		// 标名
+		if(StringUtil.isNotBlank(model.getBorrowName())){
+			query.setParameter("borrowName", model.getBorrowName());
+		}
+		// 标类型
+		if(0 < model.getType()){
+			query.setParameter("borrowType", model.getType());
+		}
+		// 时间-开始
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			query.setParameter("startTime", model.getStartTime());
+		}
+		// 时间-结束
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			query.setParameter("endTime", model.getEndTime());
+		}*/
+		
+		List scoreList = query.getResultList();
+		//JSDP-116 sxy 2015-05-15 start
+		return scoreList;
+	}
+	
+	//JSDP-116 fengguoqin 2015-05-19 start
+		@Override
+		public List<BorrowModel> excelListFlowBorrow(BorrowModel model) {
+			StringBuffer sql = new StringBuffer();
+			sql.append(" SELECT borrow.id,u.user_name,borrow.name,");
+			sql.append("  CASE borrow.type WHEN 103 THEN '车贷宝'  WHEN 105 THEN '分期宝'  WHEN 113 THEN '能源宝'  WHEN 115 THEN '微企贷' ELSE '待定' END AS borrowType,");
+			sql.append("  borrow.account,");
+			sql.append("  CONCAT(TRUNCATE(borrow.apr,0),'%'),");
+			sql.append("  CASE borrow.borrow_time_type WHEN 0  THEN CONCAT(borrow.time_limit,'月')  WHEN 1  THEN CONCAT(borrow.time_limit,'天') END AS borrowLimit,");
+			sql.append("  DATE_FORMAT(borrow.add_time, '%Y-%m-%d %T') borrowAddTime,CONCAT(borrow.scales,'%') borrowScales ");
+			sql.append("  FROM rd_borrow borrow,t_jsd_user u,rd_verify_log verlog ");
+			sql.append("  WHERE borrow.user_id=u.user_id AND borrow.id=verlog.fid AND verlog.type='borrow'");
+			sql.append( "  AND DATE_ADD(verlog.time, INTERVAL borrow.valid_time DAY) < NOW() AND borrow.status = 1 AND borrow.account>borrow.account_yes AND borrow.type !=110");
+			if(!StringUtil.isBlank(model.getType()) && 0!=model.getType()){
+				sql.append("  AND borrow.type ="+model.getType()+"  ");
+			}
+			if(!StringUtil.isBlank(model.getUserName())){
+				sql.append("  AND u.user_name like '%"+model.getUserName()+"%'  ");
+			}
+			if(!StringUtil.isBlank(model.getName())){
+				sql.append("  AND borrow.name like '%"+model.getName()+"%'  ");
+			}
+			if(!StringUtil.isBlank(model.getStartTime())){
+				sql.append("  AND borrow.add_time >= '"+model.getStartTime()+"'  ");
+			}
+			if(!StringUtil.isBlank(model.getEndTime())){
+				sql.append("  AND borrow.add_time <= '"+model.getEndTime()+"'  ");
+			}
+			sql.append("  ORDER BY borrow.add_time DESC");
+			
+		      Query query = em.createNativeQuery(sql.toString());
+		     
+				List borrowList = query.getResultList();
+				return borrowList;
+		}
+
+		@Override
+		public List<BorrowModel> excelListFullBorrow(BorrowModel model) {
+			StringBuffer sql = new StringBuffer();
+			sql.append(" SELECT borrow.id,u.user_name,borrow.name,");
+			sql.append(" CASE borrow.type WHEN 103 THEN '车贷宝'  WHEN 105 THEN '分期宝' WHEN 113 THEN '能源宝'  WHEN 115 THEN '微企贷' ELSE '待定' END AS borrowType,");
+			sql.append(" borrow.account,borrow.account_yes,borrow.scales,CONCAT(TRUNCATE(borrow.apr, 0), '%') borrowApr,");
+			sql.append(" CASE borrow.borrow_time_type WHEN 0 THEN CONCAT(borrow.time_limit, '月') WHEN 1 THEN CONCAT(borrow.time_limit, '天') END AS borrowLimit, ");
+			sql.append(" DATE_FORMAT(borrow.add_time, '%Y-%m-%d %T') borrowAddTime,");
+			sql.append(" CASE  borrow.status+ borrow.type WHEN 106 THEN '满标待审'  WHEN 104  THEN '满标待审' WHEN 116 THEN '还款中' WHEN 114 THEN '还款中'  ELSE '未知' END AS borrowStatus ");
+			sql.append(" FROM  rd_borrow borrow,t_jsd_user u ");
+			sql.append(" WHERE borrow.user_id = u.user_id AND borrow.account_yes = borrow.account AND borrow.scales = 100.00 AND borrow.status = 1 ");
+			if(!StringUtil.isBlank(model.getType()) && 100!=model.getType()){
+				sql.append("  AND borrow.type ="+model.getType()+"  ");
+			}
+			if(!StringUtil.isBlank(model.getUserName())){
+				sql.append("  AND u.user_name like '%"+model.getUserName()+"%'  ");
+			}
+			if(!StringUtil.isBlank(model.getName())){
+				sql.append("  AND borrow.name like '%"+model.getName()+"%'  ");
+			}
+			if(!StringUtil.isBlank(model.getStartTime())){
+				sql.append("  AND borrow.add_time >= '"+model.getStartTime()+"'  ");
+			}
+			if(!StringUtil.isBlank(model.getEndTime())){
+				sql.append("  AND borrow.add_time < '"+model.getEndTime()+"'  ");
+			}
+			sql.append("  ORDER BY borrow.add_time DESC");
+			
+		      Query query = em.createNativeQuery(sql.toString());
+		     
+				List borrowList = query.getResultList();
+				return borrowList;
+		}
+
+		@Override
+		public List<BorrowModel> excelListBorrow(BorrowModel model) {
+			StringBuffer sql = new StringBuffer();
+			sql.append("  SELECT borrow.id, u.user_name,uc.company_name, borrow.deal_no, borrow.name,");
+			sql.append("  CASE borrow.type  WHEN 103 THEN '车贷宝'  WHEN 105 THEN '分期宝' WHEN 113  THEN '能源宝'  WHEN 115 THEN '微企贷'  ELSE '待定' END AS borrowType,");
+			sql.append("  borrow.repayment_account,borrow.repayment_yes_account,borrow.repayment_account - borrow.repayment_yes_account  waitRepayment,");
+			sql.append("  borrow.account_yes,TRUNCATE(borrow.scales, '%') borrowScales,borrow.tender_times,borrow.lowest_account,borrow.most_account,  borrow.valid_time, ");
+			sql.append("  CONCAT(TRUNCATE(borrow.apr, 0), '%') borrowApr,");
+			sql.append("  CASE borrow.borrow_time_type  WHEN 0 THEN CONCAT(borrow.time_limit, '月') WHEN 1  THEN CONCAT(borrow.time_limit, '天') END AS borrowLimit,");
+			sql.append("  DATE_FORMAT(borrow.add_time, '%Y-%m-%d %T') borrowAddTime,");
+			sql.append("  CASE borrow.status WHEN -1 THEN '用户撤回'  WHEN 0 THEN '待登记' WHEN 9 THEN '待确认' WHEN 11  THEN '待初审'  ");
+			sql.append("  WHEN 1  THEN '初审通过' WHEN 2 THEN '初审未通过'  WHEN 3 THEN '复审通过'  WHEN 49 THEN '复审未通过' WHEN 4  THEN '复审未通过' WHEN -2     ");
+			sql.append("  THEN '管理员撤回处理中'  WHEN 59 THEN '管理员撤回' WHEN 5 THEN '管理员撤回'  WHEN 6 THEN '还款中'  WHEN 7 THEN '部分还款' WHEN 8 THEN '还款成功' ELSE '未知' END AS borrowStatus ,");
+			sql.append("  CASE  borrow.style  WHEN 1 THEN '等额本息' WHEN 2 THEN '一次性还'  WHEN 3 THEN '每月付息' ELSE borrow.style  END AS borrowStyle ");
+			sql.append("  FROM  t_jsd_user u ,rd_borrow borrow ");
+			sql.append("  LEFT JOIN  `t_jsd_user_cache` uc   ON borrow.vouch_id = uc .user_id ");
+			sql.append( "  WHERE u.user_id = borrow.user_id");
+			if(!StringUtil.isBlank(model.getType()) && 0!=model.getType()){
+				sql.append("  AND borrow.type ="+model.getType()+"  ");
+			}
+			if(!StringUtil.isBlank(model.getUserName())){
+				sql.append("  AND u.user_name like '%"+model.getUserName()+"%'  ");
+			}
+			if(!StringUtil.isBlank(model.getName())){
+				sql.append("  AND borrow.name like '%"+model.getName()+"%'  ");
+			}
+			if(!StringUtil.isBlank(model.getStatus()) && 99!=model.getStatus()){
+				sql.append("  AND borrow.status  = '"+model.getStatus()+"'  ");
+			}
+			if(!StringUtil.isBlank(model.getDealNo())){
+				sql.append("  AND borrow.deal_no like '%"+model.getDealNo()+"%'  ");
+			}
+			if(!StringUtil.isBlank(model.getVouchFirmId()) && 0!=model.getVouchFirmId()){
+				sql.append("  AND uc.user_id = '"+model.getVouchFirmId()+"'  ");
+			}
+			if(!StringUtil.isBlank(model.getStartTime())){
+				sql.append("  AND borrow.add_time >= '"+model.getStartTime()+"'  ");
+			}
+			if(!StringUtil.isBlank(model.getEndTime())){
+				sql.append("  AND borrow.add_time < '"+model.getEndTime()+"'  ");
+			}
+			sql.append("  ORDER BY borrow.add_time DESC");
+			
+		      Query query = em.createNativeQuery(sql.toString());
+		     
+				List borrowList = query.getResultList();
+				return borrowList;
+				//JSDP-116 fengguoqin 2015-05-19 start
+		}
+		@Override
+		public List<Borrow> getListBorrow(BorrowModel model) {
+			StringBuffer sql = new StringBuffer();
+			sql.append("select * from rd_borrow where 1=1 ");
+			if(0!=model.getType()){
+				sql.append("  AND type ="+model.getType()+"  ");
+			}
+			if(model.getTimeLimit()!=0){
+				sql.append("  AND time_limit >= "+model.getTimeLimit()+"");
+			}
+			sql.append("  AND borrow_time_type = "+model.getBorrowTimeType()+"");
+			if(!StringUtil.isBlank(model.getStatus()) && 99!=model.getStatus()){
+				sql.append("  AND account>account_yes");
+			}
+		    Query query = em.createNativeQuery(sql.toString(),Borrow.class);
+			List<Borrow> borrowList = query.getResultList();
+			return borrowList;
+		}
+	
+}

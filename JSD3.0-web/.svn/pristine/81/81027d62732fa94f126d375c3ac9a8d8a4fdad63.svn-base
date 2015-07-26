@@ -1,0 +1,296 @@
+
+package com.rongdu.p2psys.web.user;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.springframework.beans.BeanUtils;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.account.domain.AccountExtra;
+import com.ddtkj.p2psys.account.service.AccountExtraService;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpWeixinData;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.ddtkj.p2psys.redpacket.model.RpUserLogModel;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpUseLogService;
+import com.ddtkj.p2psys.redpacket.service.RpWeixinDataService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.ddtkj.p2psys.user.service.UserInvitedSummaryService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.JsonParse;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck.FriendFirstInvest;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：投资人奖励
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2014年12月18日
+ */
+public class UserAwardAction extends BaseAction implements
+		ModelDriven<RpProduceModel> {
+
+	private RpProduceModel model = new RpProduceModel();
+
+	private User user;
+	private Map<String, Object> data;
+
+	@Resource
+	private RpProduceService rpProduceService;
+	@Resource
+	private RpUseLogService rpUseLogService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserInvitedSummaryService userInvitedSummaryService;
+	@Resource
+	private RpWeixinDataService rpWeixinDataService;
+	@Resource
+	private AccountExtraService accountExtraService;
+
+	private  RedPacketProduceRuleCheck ruleCheck=(RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+	
+	
+
+	/**
+	 * @author 李建云 投资人 静态红包动态红包我的奖励页面
+	 * */
+	@Action("/member/award/award")
+	public String userInvestAward() {
+
+		return "award";
+	}
+
+	/**
+	 * @author 李建云 静态红包奖励页面
+	 * */
+	@Action("/member/award/redPacketAward")
+	public String userRedPacketAward() {
+
+		return "redPacketAward";
+	}
+
+	/**
+	 * @author 李建云 动态红包奖励页面
+	 * */
+	@Action("/member/award/moneyBag")
+	public String userMoneyBag() {
+
+		return "moneyBag";
+	}
+
+	/**
+	 * @author 李建云
+	 * 
+	 *         静态红包奖励列表查询
+	 * */
+	@Action("/member/award/sRedPackAward")
+	public String sRedPackAwardList() throws Exception {
+		user = getSessionUser();
+		model.setUser(user);
+		PageDataList<RpProduceModel> pageDataList = rpProduceService
+				.getPageDataList(model);
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * @author 李建云
+	 * 
+	 *         动态红包未使用 奖励列表查询
+	 * */
+	@Action("/member/award/dRedPackAwardUnUsedList")
+	public String dRedPackAwardUnUsedList() throws Exception {
+		user = getSessionUser();
+		
+		model.setUser(user);
+		PageDataList<RpProduceModel> pageDataList = rpProduceService
+				.getPageDataList(model);
+
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * @author 李建云 动态红包已使用 奖励列表查询
+	 * */
+	@Action("/member/award/dRedPackAwardUsedList")
+	public String dRedPackAwardUsedList() throws Exception {
+		user = getSessionUser();
+		RpUserLogModel rpUserLogModel = new RpUserLogModel();
+		rpUserLogModel.setPage(this.paramInt("page"));
+		PageDataList<RpUserLogModel> usedRpList = rpUseLogService
+				.getPageDataList(rpUserLogModel, user.getUserId());
+
+		data = new HashMap<String, Object>();
+		data.put("data", usedRpList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * @author 李建云
+	 * 
+	 *         静态，动态红包数量
+	 * */
+	@Action("/member/award/redPackNum")
+	public String redPackNum() throws Exception {
+		user = getSessionUser();
+		//JSDP-228 fengguoqin  2015.07.23  start
+		AccountExtra accountExtra= accountExtraService.getAccountExtraByUserId(user.getUserId());
+		if(accountExtra==null){//如果不存在则去静态红包产生和消费表中查询金额
+			double staticRpSum =  rpProduceService.sRedPackSumMoney(user.getUserId());//未使用和未过期的静态红包总额，之前的使用和未使用都在同一张表中，状态改变
+			double  staticRpSumUsed =  rpUseLogService.getAllUsedRpTotal(user.getUserId(),1);//用户消费的静态红包总额
+			double freezeSrpSum = rpProduceService.gerRpSumWithStatus(user.getUserId(),1,5);//查询用户冻结总额
+			accountExtra = new AccountExtra();
+			accountExtra.setRpStaticTotal(BigDecimalUtil.add(staticRpSum,-staticRpSumUsed));
+			accountExtra.setFreezeRpStatic(freezeSrpSum);
+			accountExtra.setUser(getSessionUser());
+			accountExtraService.addAccountExtra(accountExtra);
+		}
+		// 静态红包剩余总额数量
+		double sRedPack = accountExtra.getRpStaticTotal();
+		//JSDP-228 fengguoqin  2015.07.23  end
+		// 动态红包产生总额
+		double dGenerateRedPack = rpProduceService
+				.dRedPackGenerateSumMoney(user.getUserId());
+		// 动态红包消费总额
+		double dUserRedPack = rpUseLogService.getAllUseDynamicTotal(user
+				.getUserId());
+		// 动态红包剩余总额
+		double remainUserRedPack = BigDecimalUtil.sub(dGenerateRedPack,
+				dUserRedPack);
+		//JSDP-128  fengguoqin 5.22 start
+		data = new HashMap<String, Object>();
+		data.put("sRedPack", sRedPack);
+		data.put("dUserRedPack", dUserRedPack);
+		data.put("remainUserRedPack", remainUserRedPack);
+		//JSDP-128  fengguoqin 5.22 end
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * @author 李建云 获得用户 已奖励邀请
+	 * */
+	@Action("/member/invite/awardedInviteList")
+	public void awardedInviteList() throws Exception {
+		// 20150706  JSDP-212  sxy  start
+		User user = this.getSessionUser();
+		PageDataList<RpProduceModel> pageDataList = new PageDataList<RpProduceModel>();
+		pageDataList = rpProduceService.getAwardedInvitePageDataList(model,
+				user.getUserId());
+		 double thresholdMoney = 0.0;
+			if(ruleCheck != null){
+				FriendFirstInvest friendFirstInvest = ruleCheck.getStatic_rp().getRecommend().getFriend_invest().getFirst_invest();	
+				int status = friendFirstInvest.getStatus();
+				if(status ==1){
+					thresholdMoney = friendFirstInvest.getThreshold_money();
+				}	
+			}
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		data.put("thresholdMoney", thresholdMoney);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * @author 李建云 已奖励邀请与未奖励邀请个数
+	 * 
+	 * */
+	@Action("/member/invite/awardInvitedSum")
+	public void awardInvitedSum() throws Exception {
+		User user = this.getSessionUser();
+
+		UserModel userModel = new UserModel();
+		// 已奖励邀请个数
+		int awardInvitedSum = rpProduceService.getInviteAwardSum(model, user.getUserId());
+		// 未奖励邀请个数
+		int unAwardInvitedSum = userService.getUnInviteAwardSum(userModel, user.getUserId());
+		// 邀请人获得红包奖励
+		double awardInvitedRPSum = rpProduceService.awardInvitedRPSum(user.getUserId());
+
+		data = new HashMap<String, Object>();
+		data.put("awardInvitedSum", awardInvitedSum);
+		data.put("unAwardInvitedSum", unAwardInvitedSum);
+		data.put("awardInvitedRPSum", awardInvitedRPSum);
+
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	@Override
+	public RpProduceModel getModel() {
+		return model;
+	}
+
+	public void setModel(RpProduceModel model) {
+		this.model = model;
+	}
+	
+	/**
+	 * 微信送红包接口
+	 * @throws Exception   
+	 */ 
+	@Action("/award/weiXinReward")
+	public void weiXinReward() throws Exception {
+		String jsonData = request.getParameter("jsonData");
+		String sn = null;
+		String size = null;
+		String items = null;
+		Map<String, Object> backMap = new HashMap<String, Object>();
+		if(null != jsonData && !jsonData.equals("")) {
+			sn = JsonParse.getValueStrByKey(jsonData, "sn");
+			size = JsonParse.getValueStrByKey(jsonData, "size");
+			items = JsonParse.getValueStrByKey(jsonData, "items");
+			RpWeixinData data = new RpWeixinData();
+			data.setSn(sn);
+			data.setSize(StringUtil.toInt(size));
+			data.setItems(items);
+			data.setStatus(RpWeixinData.STATUS_NO);
+			data = rpWeixinDataService.save(data);
+			backMap.put("status", 1);
+		}else{
+			backMap.put("status", 0);
+		}
+		printJson(JSON.toJSONString(backMap));  
+		backMap = null;
+	}
+	
+}

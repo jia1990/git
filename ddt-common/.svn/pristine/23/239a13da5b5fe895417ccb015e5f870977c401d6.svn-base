@@ -1,0 +1,178 @@
+package com.rongdu.common.util;
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.HttpURLConnection;
+import java.net.ProtocolException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+
+/**
+ * 工具类-Http请求
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年1月28日
+ */
+public class HttpUtil {
+	
+	private static Logger logger = Logger.getLogger(HttpUtil.class);
+
+	/**
+	 * 发起http请求，获取响应结果
+	 * 
+	 * @param pageURL
+	 * @return
+	 */
+	public static String getHttpResponse(String pageURL) {
+		String pageContent = "";
+		BufferedReader in = null;
+		InputStreamReader isr = null;
+		InputStream is = null;
+		HttpURLConnection huc = null;
+		try {
+			URL url = new URL(pageURL);
+			huc = (HttpURLConnection) url.openConnection();
+			is = huc.getInputStream();
+			isr = new InputStreamReader(is);
+			in = new BufferedReader(isr);
+			String line = null;
+			while (((line = in.readLine()) != null)) {
+				if (line.length() == 0)
+					continue;
+				pageContent += line;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (is != null)
+					is.close();
+				if (isr != null)
+					isr.close();
+				if (in != null)
+					in.close();
+				if (huc != null)
+					huc.disconnect();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return pageContent;
+	}
+	
+	/**
+     * 发送post请求
+     * @param url  请求地址
+     * @param params  请求参数
+     * @return 请求结果
+     * @throws IOException
+     */
+	public static String getHttpResponse(String urlStr,String params,String author) throws ProtocolException{
+		long time = System.currentTimeMillis();
+		
+		String urlPath = urlStr;
+		logger.info(urlPath+"?"+params);
+		StringBuffer sb = new StringBuffer();
+		try {
+			byte[] postData = params.getBytes("UTF-8");
+			URL url = new URL(urlPath);
+			HttpURLConnection connection;
+			connection = (HttpURLConnection) url.openConnection();
+			connection.setConnectTimeout(3000);
+			connection.setReadTimeout(3000);
+			connection.setUseCaches(false);
+			connection.setDoOutput(true);
+			connection.setRequestMethod("POST");
+			connection.setRequestProperty("Connection", "Keep-Alive");
+			connection.setRequestProperty("Charset", "UTF-8");
+			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connection.setRequestProperty("Content-Length", String.valueOf(postData.length));
+			connection.setRequestProperty("Authorization", author);
+			DataOutputStream outStream = new DataOutputStream(connection.getOutputStream());
+			outStream.write(postData);
+			outStream.flush();
+			InputStream inputStream = connection.getInputStream();
+
+			Reader reader = new InputStreamReader(inputStream, "UTF-8");
+			BufferedReader bufferedReader = new BufferedReader(reader);
+			String str = null;
+			while ((str = bufferedReader.readLine()) != null) {
+				sb.append(str);
+			}
+			reader.close();
+			connection.disconnect();
+			logger.info("结果:" + sb.toString());
+		} catch (IOException e) {
+			logger.info("method访问异常"+e.getMessage());
+		}
+		logger.info(System.currentTimeMillis()-time);
+		return sb.toString();
+	}
+	
+	/**
+     * 发送get请求
+     * @param url  请求地址
+     * @param params 请求参数     
+     * @return 请求结果
+     * @throws IOException
+     */
+    public static String sendGet(String url, String params) {
+        StringBuffer result = new StringBuffer(); //用来接受返回值
+        URL httpUrl = null; //HTTP URL类 用这个类来创建连接
+        URLConnection connection = null; //创建的http连接
+        BufferedReader bufferedReader = null; //接受连接受的参数
+        if(StringUtil.isBlank(url)){
+        	logger.info("---------url is null");
+        }
+        try {
+	        //如果存在参数，我们才需要拼接参数 类似于 localhost/index.html?a=a&b=b
+        	url = url + "?" + params;
+            logger.info("send get url:"+url);
+	        //创建URL
+	        httpUrl = new URL(url);
+	        //建立连接
+	        connection = httpUrl.openConnection();
+	        connection.setRequestProperty("accept", "*/*");
+	        connection.setRequestProperty("connection", "keep-alive");
+	        connection.setRequestProperty("user-agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0");
+	        // 建立实际的连接
+            connection.connect();
+            // 获取所有响应头字段
+            Map<String, List<String>> map = connection.getHeaderFields();
+            // 遍历所有的响应头字段
+            for (String key : map.keySet()) {
+            	 logger.info(key + "--->" + map.get(key));
+            }
+	        //接受连接返回参数
+	        bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+	        String line;
+	        while ((line = bufferedReader.readLine()) != null) {
+	            result.append(line);
+	        }
+	        bufferedReader.close();
+        } catch (Exception e) {
+			logger.info("发送get请求异常："+e.getMessage());
+		}
+        // 使用finally块来关闭输入流
+        finally {
+            try {
+                if (bufferedReader != null) {
+                	bufferedReader.close();
+                }
+            } catch (Exception e2) {
+               logger.info("关闭输入流异常:"+e2.getMessage());
+            }
+        }
+        return result.toString();
+    }
+
+}

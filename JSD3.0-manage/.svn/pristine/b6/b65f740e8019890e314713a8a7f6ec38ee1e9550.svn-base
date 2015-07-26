@@ -1,0 +1,1124 @@
+package com.ddtkj.manage.action.account;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.ddtkj.p2psys.fillorder.service.FillOrderLogService;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.model.AccountBankModel;
+import com.rongdu.p2psys.account.service.AccountBankService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：后台提现模块
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月18日 
+ */
+public class ManageDrawAction extends BaseAction implements ModelDriven<AccountDrawModel>{
+    private AccountDrawModel model=new AccountDrawModel();
+    
+    private Map<String, Object> map = new HashMap<String, Object>();
+    @Resource 
+    AccountDrawCashService accountDrawService;
+    @Resource 
+    AccountBankService accountBankService; 
+    //JSDBET-802 wcw 2015-3-12 start
+    @Resource 
+    AccountService accountService;
+    //JSDBET-802 wcw 2015-3-12 end
+    @Resource
+    UserService userService;
+    @Resource
+	private FillOrderLogService fillOrderLogService;
+    
+    private Map<String, Object> data = new HashMap<String, Object>();
+    
+    /**
+     * 进入提现查询页面
+     * @return
+     */
+    @Action("/modules/account/draw/accountDraw/drawManage")
+    public String drawManage()throws Exception{
+    	return "drawManage";
+    }
+    
+    /**
+     * 进入提现查询页面
+     * @return
+     */
+    @Action("/modules/account/draw/accountDraw/drawBankManage")
+    public String drawBankManage()throws Exception{
+    	return "drawBankManage";
+    }
+    /**
+     * 提现列表
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/drawList")
+    public String drawList() throws Exception{
+    	if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+    	String drawTotal = null;
+    	PageDataList<AccountDrawModel> pageDataList = new PageDataList<AccountDrawModel>();
+    	if(StringUtil.isNotBlank(model.getUserName())|| StringUtil.isNotBlank(model.getDrawHandleStatus())
+    			// JSDP-208 sxy 20150703 start
+    			||StringUtil.isNotBlank(model.getUserType())||StringUtil.isNotBlank(model.getDrawWay())|| StringUtil.isNotBlank(model.getStartTime())){
+    		
+    		pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+    		
+    		data.put("total", pageDataList.getPage().getTotal());
+    		data.put("rows", pageDataList.getList());
+    		//根据查询条件获取汇总信息
+    		drawTotal = accountDrawService.drawTotal(model);
+    	}
+    	List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+    	if(null != drawTotal){
+    		String[] drawTotals = drawTotal.split(",");
+    		Map<String,String> footerMap = new HashMap<String,String>();
+    		/* JSDBET-841 xingjia 20150323 start**/
+    		footerMap.put("bankNo", "汇总信息：");
+    		footerMap.put("drawAmountStr", "提现总额和："+drawTotals[0]);
+    		footerMap.put("drawInAccountAmountStr", "到账金额和："+drawTotals[1]);
+    		footerMap.put("drawFeeStr", "手续费和："+drawTotals[2]);
+    		/* JSDBET-841 xingjia 20150323 start**/
+    		
+    		footerList.add(footerMap);
+    	}
+    	
+		data.put("footer", footerList);
+		printJson(getStringOfJpaObj(data));
+        return null;
+    }
+    /**
+     * 提现银行卡列表
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/drawBankList")
+    public String drawBankList() throws Exception{
+    	if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+    	AccountBankModel bankModel = new AccountBankModel();
+    	PageDataList list = accountBankService.accountBankList(bankModel,model.getPage(), model.getRows());
+    	
+    	PageDataList<AccountDrawModel> pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+    	data.put("total", pageDataList.getPage().getTotal());
+    	data.put("rows", pageDataList.getList());
+    	printJson(getStringOfJpaObj(list));
+    	return null;
+    }
+    /**
+     * 进入提现初审页面
+     * @return
+     */
+    @Action("/modules/account/draw/accountDraw/firstTrialDrawPage")
+    public String firstTrialDrawPage()throws Exception{
+    	return "firstTrialDrawPage";
+    }
+    /**
+     * 等待提现初审列表
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/firstTrialDrawList")
+    public String firstTrialDrawList() throws Exception{
+    	if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+    	String drawTotal = null;
+    	model.setDrawHandleStatus(AccountDraw.DRAW_CASH_APPLY);
+    	PageDataList<AccountDrawModel> pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+    	data.put("total", pageDataList.getPage().getTotal());
+		data.put("rows", pageDataList.getList());
+		
+		//根据查询条件获取汇总信息
+		drawTotal = accountDrawService.drawTotal(model);
+		
+		List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+    	if(null != drawTotal){
+    		String[] drawTotals = drawTotal.split(",");
+    		Map<String,String> footerMap = new HashMap<String,String>();
+    		footerMap.put("bankNo", "汇总信息：");
+    		footerMap.put("drawAmountStr", "提现总额和："+drawTotals[0]);
+    		footerMap.put("drawInAccountAmountStr", "到账金额和："+drawTotals[1]);
+    		footerMap.put("drawFeeStr", "手续费和："+drawTotals[2]);
+    		
+    		footerList.add(footerMap);
+    	}
+    	
+		data.put("footer", footerList);
+		
+		printJson(getStringOfJpaObj(data));
+        return null;
+    }
+    /**
+     * 通过id进入提现初审审核页面
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/firstTrailDrawView")
+    public String firstTrailDrawView()throws Exception{
+    	//initRSAME();
+    	saveToken("firstTrailDrawToken");
+    	int id=paramInt("id");
+    	AccountDraw draw=accountDrawService.getDrawById(id);
+    	if(null != draw.getUser()){
+			request.setAttribute("userId", draw.getUser().getUserId());
+		}
+		
+    	
+    	// 投资人充值扣手续费
+    	double feeRechargeTender = BigDecimalUtil.mul(draw.getUseRecharge(), 0.005);
+    	
+    	// 借款人充值扣手续费
+    	double feeRechargeBorrow = BigDecimalUtil.mul(draw.getBorrowerUseRecharge(), 0.005);
+    	
+    
+    	request.setAttribute("feeRechargeTender", feeRechargeTender);
+    	request.setAttribute("feeRechargeBorrow", feeRechargeBorrow);
+    	request.setAttribute("draw", draw);
+    	request.setAttribute("type", draw.getUser().getUserCache().getUserType());
+    	
+    	
+    	return "firstTrailDrawView";
+    }
+    /**
+     * 查询用户的提现记录
+     * @throws IOException 
+     */
+    @Action("/modules/account/draw/accountDraw/drawCashHistory")
+    public void drawCashHistory() throws IOException{
+    	long userId = paramLong("userId");
+    	PageDataList<AccountDrawModel> drawPageList = accountDrawService.drawHistoryPageList(userId, model);
+    	//汇总信息--汇总成功提现总额 ，成功提现手续费  成功提现笔数
+    	String drawTotal = accountDrawService.drawStatusTotal(userId, model);
+    	List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+    	if(null != drawTotal){
+    		String[] drawTotals = drawTotal.split(",");
+    		Map<String,String> footerMap = new HashMap<String,String>();
+    		footerMap.put("bankNo", "提现笔数");
+    		footerMap.put("bankBranchName", drawTotals[2]);
+    		footerMap.put("bankName", "提现总金额");
+    		footerMap.put("drawAmountStr", drawTotals[0]);
+    		footerMap.put("drawInAccountAmountStr", "总手续费");
+    		footerMap.put("drawFeeStr", drawTotals[1]);
+    		
+    		footerList.add(footerMap);
+    		data.put("footer", footerList);
+    	}
+    	data.put("total", drawPageList.getPage().getTotal());
+		data.put("rows", drawPageList.getList());
+		printJson(getStringOfJpaObj(data));
+    }
+    
+    
+    
+    /**
+     * 根据银行卡id查看信息
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/drawBankView")
+    public String drawBankView()throws Exception{
+    	int id=paramInt("id");
+    	AccountDraw draw=accountDrawService.getDrawById(id);
+    	request.setAttribute("draw", draw);
+    	return "drawBankView";
+    }
+    /**
+     * 正式进行提现初审审核
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/firstTrailDraw")
+    public void firstTrailDraw()throws Exception{
+    	checkToken("firstTrailDrawToken");
+    	Operator operator=getOperator();
+    	Map<String, Object> map=new HashMap<String, Object>();
+		model.setFirstTrialOperId((int)operator.getId());
+		double drawFeeShow = paramDouble("drawFeeShow");
+		
+		model.setDrawFee(drawFeeShow);
+		map.put("drawFee", drawFeeShow);
+		map.put("model", model);
+		AccountDraw draw=accountDrawService.getDrawById(model.getId());
+		if(AccountDraw.DRAW_CASH_CHECK1_SUCCESS.equals(model.getDrawHandleStatus())){
+			//初审成功
+			//JSDBET-802 wcw 2015-3-12 start
+			if(draw!=null){
+				//本地账户余额与一麻袋账户余额对账
+				accountService.accountCompare(draw.getUser().getUserId());
+			}
+			//JSDBET-802 wcw 2015-3-12 end
+			
+			map.put("upBeforeStatus", AccountDraw.DRAW_CASH_APPLY);
+			map.put("upAfterStatus", AccountDraw.DRAW_CASH_CHECK1_SUCCESS);
+	    	accountDrawService.firstTrialSuccessCash(map);
+	    	data.put("msg", "审核通过");
+    	}else{
+    		//初审失败
+    		map.put("upBeforeStatus", AccountDraw.DRAW_CASH_APPLY);
+    		map.put("upAfterStatus", AccountDraw.DRAW_CASH_CHECK1_FAIL);
+    		map.put("drawExecuter", "drawFirstTrialFail");
+    		
+    		//JSDP-117 wcw 2015-05-15 start
+    		//生成提现静态红包审核失败订单号
+    		draw.setDrawVerifyFailRpTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+    		accountDrawService.updateDrawCash(draw);
+    		//JSDP-117 wcw 2015-05-15 end
+    		
+    		accountDrawService.doFailDrawCash(map);
+    		data.put("msg", "审核不通过");
+    	}
+		data.put("result", true);
+    	printJson(getStringOfJpaObj(data));
+    }
+   /* *//**
+     * 提现记录本地与第三方对账view
+     * @return
+     * @throws Exception
+     *//*
+    @Action("/modules/account/draw/accountDraw/drawYmdCompare")
+    public String drawYmdCompare()throws Exception{
+    	int id=paramInt("id");
+    	Map<String, Object> map=accountDrawService.drawCompare(id);
+    	if(map.size()>0){
+    		AccountDraw draw=(AccountDraw) map.get("draw");
+    		draw=(draw==null?new AccountDraw():draw);
+    		YmdQueryReturn ymdQueryReturn=(YmdQueryReturn) map.get("ymdQueryReturn");
+    		ymdQueryReturn=(ymdQueryReturn==null?new YmdQueryReturn():ymdQueryReturn);
+    		request.setAttribute("draw", draw);
+    		request.setAttribute("YmdQueryReturn", ymdQueryReturn);
+    		List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+    		if(list.size()>0){
+    			YmdQueryReturnDetails ymdQueryReturnDetails=list.get(0);
+    			request.setAttribute("ymdQueryReturnDetails", ymdQueryReturnDetails);
+    		}
+    	}
+    	saveToken("drawSupplementSingle");
+    	return "drawYmdCompare"; 
+    }
+    *//**
+     * 提现补单（第三方处理成功，本地处理失败）
+     * @return
+     * @throws Exception
+     *//*
+    @Action("/modules/account/draw/accountDraw/drawSupplementSingle")
+    public void drawSupplementSingle()throws Exception{
+    	String tradeStatus=paramString("tradeStatus");
+    	String resultCode=paramString("resultCode");
+    	String ymdAmount=paramString("ymdAmount");
+    	String ymdFee=paramString("ymdFee");
+    	String ymdOutTradeNo=paramString("ymdOutTradeNo");
+    	checkToken("drawSupplementSingle");
+    	if(model.getDrawTradeNo().equals(ymdOutTradeNo)){
+    		//本地与第三方订单号一致
+			if("00".equals(resultCode)&&"00".equals(tradeStatus)&&"43".equals(model.getDrawHandleStatus())){
+				//本地提现状态为等待银行转账，第三方为处理成功，处理转账
+				YmdCash ymdCash=new YmdCash();
+				ymdCash.setErrCode(tradeStatus);
+				ymdCash.setOutTradeNo(ymdOutTradeNo);
+				ymdCash.setAmount(ymdAmount);
+				ymdCash.setFee(ymdFee);
+				accountDrawService.drawCashBankSucCallBack(ymdCash);
+				data.put("result", true);
+				data.put("msg", "补单成功");
+			}else{
+				data.put("result", false);
+				data.put("msg", "该提现记录不符合补单要求");
+			}
+		}
+    	printJson(getStringOfJpaObj(data));
+    }*/
+//    /**
+//	 * 用户提现初审失败
+//	 * */
+//	@Action(value = "/modules/account/draw/accountDraw/firstTrailFailDraw")
+//	public void firstTrailFailDraw() throws Exception {
+//		Operator operator=getOperator();
+//		Map<String, Object> map=new HashMap<String, Object>();
+//		model.setFirstTrialOperId((int)operator.getId());
+//		map.put("model", model);
+//		map.put("upBeforeStatus", AccountDraw.DRAW_CASH_APPLY);
+//		map.put("upAfterStatus", AccountDraw.DRAW_CASH_CHECK1_FAIL);
+//		map.put("drawExecuter", "drawFirstTrialFail");
+//		accountDrawService.doFailDrawCash(map);
+//		data.put("msg", "审核不通过");
+//    	printJson(getStringOfJpaObj(data));
+//	}
+	
+	
+	
+	/**
+	 * 用户提现复审失败
+	 * *//*
+	@Action(value = "/modules/account/draw/accountDraw/recheckFailDraw")
+	public void recheckFailDraw() throws Exception {
+		Operator operator=getOperator();
+		Map<String, Object> map=new HashMap<String, Object>();
+		model.setRecheckOperId((int)operator.getId());
+		map.put("model", model);
+		map.put("upBeforeStatus", AccountDraw.DRAW_CASH_CHECK1_SUCCESS);
+		map.put("upAfterStatus", AccountDraw.DRAW_CASH_CHECK2_FAIL);
+		map.put("drawExecuter", "drawRecheckFail");
+		accountDrawService.doFailDrawCash(map);
+		data.put("msg", "审核不通过");
+    	printJson(getStringOfJpaObj(data));
+	}*/
+    
+    /**
+     * 进入复审页面
+     * @return
+     */
+    @Action("/modules/account/draw/accountDraw/recheckDrawPage")
+    public String recheckDrawPage()throws Exception{
+    	return "recheckDrawPage";
+    }
+    /**
+     * 提现等待复审列表
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/recheckDrawList")
+    public String recheckList() throws Exception{
+    	if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+    	model.setDrawHandleStatus(AccountDraw.DRAW_CASH_CHECK1_SUCCESS);
+    	PageDataList<AccountDrawModel> pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+    	data.put("total", pageDataList.getPage().getTotal());
+		data.put("rows", pageDataList.getList());
+		String drawTotal = null;
+		// 根据查询条件获取汇总信息
+		drawTotal = accountDrawService.drawTotal(model);
+
+		List<Map<String, String>> footerList = new ArrayList<Map<String, String>>();
+		if (null != drawTotal) {
+			String[] drawTotals = drawTotal.split(",");
+			Map<String, String> footerMap = new HashMap<String, String>();
+			footerMap.put("bankNo", "汇总信息：");
+			footerMap.put("drawAmountStr", "提现总额和：" + drawTotals[0]);
+			footerMap.put("drawInAccountAmountStr", "到账金额和：" + drawTotals[1]);
+			footerMap.put("drawFeeStr", "手续费和：" + drawTotals[2]);
+
+			footerList.add(footerMap);
+		}
+
+		data.put("footer", footerList);
+
+		printJson(getStringOfJpaObj(data));
+        return null;
+    }
+    
+    /**
+     * 通过id进入提现复审核页面
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/recheckDrawView")
+    public String recheckDrawView()throws Exception{
+    	//initRSAME();
+    	this.saveToken("recheckDrawToken");
+    	int id=paramInt("id");
+    	AccountDraw draw=accountDrawService.getDrawById(id);
+    	request.setAttribute("draw", draw);
+    	return "recheckDrawView";
+    }
+    /**
+     * 正式进行提现复审审核
+     * @return
+     * @throws Exception
+     */
+    @Action("/modules/account/draw/accountDraw/recheckDraw")
+    public String recheckDraw()throws Exception{
+    	this.checkToken("recheckDrawToken");
+    	Operator operator=getOperator();
+    	//复审业务逻辑
+    	Map<String, Object> map=new HashMap<String, Object>();
+		model.setRecheckOperId((int)operator.getId());
+		map.put("model", model);
+		AccountDraw draw=accountDrawService.getDrawById(model.getId());
+		if(AccountDraw.DRAW_CASH_CHECK2_SUCCESS.equals(model.getDrawHandleStatus())){
+			//复审成功
+			
+			//JSDBET-802 wcw 2015-3-12 start
+			if(draw!=null){
+				//本地账户余额与一麻袋账户余额对账
+				accountService.accountCompare(draw.getUser().getUserId());
+			}
+			//JSDBET-802 wcw 2015-3-12 end
+			
+			map.put("upBeforeStatus", AccountDraw.DRAW_CASH_CHECK1_SUCCESS);
+			map.put("upAfterStatus", AccountDraw.DRAW_CASH_CHECK2_SUCCESS);
+	    	YmdCash ymdCash=new YmdCash();
+	    	//提现复审成功业务处理
+	    	Map<String, Object> map_=accountDrawService.recheckSuccessCash(map);
+			ymdCash = (YmdCash) (map_.get("ymdCash")==null?new YmdCash():map_.get("ymdCash"));
+			data.put("msg", ymdCash.getErrMsg(ymdCash.getErrCode(), "一麻袋请求失败！"));
+			//汇潮提现及时返回状态回调业务逻辑处理
+		}else{
+            //复审失败
+			map.put("upBeforeStatus", AccountDraw.DRAW_CASH_CHECK1_SUCCESS);
+			map.put("upAfterStatus", AccountDraw.DRAW_CASH_CHECK2_FAIL);
+			map.put("drawExecuter", "drawRecheckFail");
+			
+			//JSDP-117 wcw 2015-05-15 start
+    		//生成提现静态红包审核失败订单号
+    		draw.setDrawVerifyFailRpTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+    		accountDrawService.updateDrawCash(draw);
+    		//JSDP-117 wcw 2015-05-15 end
+			
+			accountDrawService.doFailDrawCash(map);
+			data.put("msg", "审核不通过");
+		}
+		data.put("result", true);
+    	printJson(getStringOfJpaObj(data));
+    	return null;
+    }
+	public AccountDrawModel getModel() {
+		return model;
+	}
+
+	public void setModel(AccountDrawModel model) {
+		this.model = model;
+	}
+	
+
+	/**
+	 * 导出报表——提现查询
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action(value="/modules/account/draw/accountDraw/accountDrawCashExcel")
+	public void accountDrawExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		String userName = paramString("userName");	 
+		String status = paramString("status");
+		String startTime = paramString("startTime");
+		model.setUserName(userName);
+		model.setDrawHandleStatus(status);
+		model.setStartTime(startTime);
+//		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setRows(99999999);
+//		PageDataList<AccountDrawModel> pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+//		List<AccountDrawModel> list = pageDataList.getList();
+//		List<AccountDrawModel> newList = new ArrayList<AccountDrawModel>();
+//		for(int i=0;i<list.size();i++){
+//			AccountDrawModel accountDraw = list.get(i);
+//			if(accountDraw.getDrawHandleStatus().equals("00")){
+//				accountDraw.setDrawHandleStatus("申请提现");
+//			}else if(accountDraw.getDrawHandleStatus().equals("11")){
+//				accountDraw.setDrawHandleStatus("初审成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("10")){
+//				accountDraw.setDrawHandleStatus("初审失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("21")){
+//				accountDraw.setDrawHandleStatus("复审成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("20")){
+//				accountDraw.setDrawHandleStatus("复审失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("99")){
+//				accountDraw.setDrawHandleStatus("取消提现");
+//			}else if(accountDraw.getDrawHandleStatus().equals("30")){
+//				accountDraw.setDrawHandleStatus("提现成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("42")){
+//				accountDraw.setDrawHandleStatus("等待银行转账");
+//			}else if(accountDraw.getDrawHandleStatus().equals("41")){
+//				accountDraw.setDrawHandleStatus("汇潮请求失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("88")){
+//				accountDraw.setDrawHandleStatus("银行处理失败");
+//			}
+//			newList.add(accountDraw);
+//		}
+		//JSDP-116 xingjia 2015-05-15 start 
+		List newList = accountDrawService.excelListDraw(model);
+		String title = "提现记录Excel表";
+
+		String[] hearders = new String[] { "编号","用户名", "真实姓名", "银行卡尾号", "支行", "开户省", "开户市","所属银行","提现总额","到账金额","手续费","提现方式","提现时间","状态" };// 表头数组
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]","object[11]","object[12]","object[13]" };// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountDrawModel> tdList = new ArrayList<AccountDrawModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				AccountDrawModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-15 start
+	}
+	
+	/**
+	 * 导出报表——提现初审
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action(value="/modules/account/draw/cashDraw/cashOneDrawExcel")
+	public void cashOneDrawExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+//		if(model.getPage()==0){
+//    		model.setPage(1);
+//    	}
+    	model.setDrawHandleStatus(AccountDraw.DRAW_CASH_APPLY);
+		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setRows(99999999);
+//		PageDataList<AccountDrawModel> pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+//		List<AccountDrawModel> list = pageDataList.getList();
+//		List<AccountDrawModel> newList = new ArrayList<AccountDrawModel>();
+//		for(int i=0;i<list.size();i++){
+//			AccountDrawModel accountDraw = list.get(i);
+//			if(accountDraw.getDrawHandleStatus().equals("00")){
+//				accountDraw.setDrawHandleStatus("申请提现");
+//			}else if(accountDraw.getDrawHandleStatus().equals("11")){
+//				accountDraw.setDrawHandleStatus("初审成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("10")){
+//				accountDraw.setDrawHandleStatus("初审失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("21")){
+//				accountDraw.setDrawHandleStatus("复审成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("20")){
+//				accountDraw.setDrawHandleStatus("复审失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("99")){
+//				accountDraw.setDrawHandleStatus("取消提现");
+//			}else if(accountDraw.getDrawHandleStatus().equals("30")){
+//				accountDraw.setDrawHandleStatus("提现成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("42")){
+//				accountDraw.setDrawHandleStatus("等待银行转账");
+//			}else if(accountDraw.getDrawHandleStatus().equals("41")){
+//				accountDraw.setDrawHandleStatus("汇潮请求失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("88")){
+//				accountDraw.setDrawHandleStatus("银行处理失败");
+//			}
+//			newList.add(accountDraw);
+//		}
+    	//JSDP-116 xingjia 2015-05-15 start
+    	List newList = accountDrawService.excelListDraw(model);
+		String title = "提现初审Excel表";
+
+		String[] hearders = new String[] { "编号","用户名", "真实姓名", "银行卡尾号", "支行", "开户省", "开户市","所属银行","提现总额","到账金额","手续费","提现方式","提现时间","状态" };// 表头数组
+		String[] fields = new String[] { "id","userName","realName","bankNo","bankBranchName","bankProvinceName","bankCityName","bankName","drawAmount","drawInAccountAmount","drawFee","drawWay","addTime","drawHandleStatus" };// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountDrawModel> tdList = new ArrayList<AccountDrawModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				AccountDrawModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-15 start
+		
+	}
+	
+	/**
+	 * 导出报表——提现复审
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action(value="/modules/account/draw/cashDraw/cashTwoDrawExcel")
+	public void cashTwoDrawExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+//		if(model.getPage()==0){
+//    		model.setPage(1);
+//    	}
+		model.setDrawHandleStatus(AccountDraw.DRAW_CASH_CHECK1_SUCCESS);
+		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setRows(99999999);
+//		PageDataList<AccountDrawModel> pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+//		List<AccountDrawModel> list = pageDataList.getList();
+//		List<AccountDrawModel> newList = new ArrayList<AccountDrawModel>();
+//		for(int i=0;i<list.size();i++){
+//			AccountDrawModel accountDraw = list.get(i);
+//			if(accountDraw.getDrawHandleStatus().equals("00")){
+//				accountDraw.setDrawHandleStatus("申请提现");
+//			}else if(accountDraw.getDrawHandleStatus().equals("11")){
+//				accountDraw.setDrawHandleStatus("初审成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("10")){
+//				accountDraw.setDrawHandleStatus("初审失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("21")){
+//				accountDraw.setDrawHandleStatus("复审成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("20")){
+//				accountDraw.setDrawHandleStatus("复审失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("99")){
+//				accountDraw.setDrawHandleStatus("取消提现");
+//			}else if(accountDraw.getDrawHandleStatus().equals("30")){
+//				accountDraw.setDrawHandleStatus("提现成功");
+//			}else if(accountDraw.getDrawHandleStatus().equals("42")){
+//				accountDraw.setDrawHandleStatus("等待银行转账");
+//			}else if(accountDraw.getDrawHandleStatus().equals("41")){
+//				accountDraw.setDrawHandleStatus("汇潮请求失败");
+//			}else if(accountDraw.getDrawHandleStatus().equals("88")){
+//				accountDraw.setDrawHandleStatus("银行处理失败");
+//			}
+//			newList.add(accountDraw);
+//		}
+		
+		//JSDP-116 xingjia 2015-05-15 start
+    	List newList = accountDrawService.excelListDraw(model);
+		String title = "提现复审Excel表";
+
+		String[] hearders = new String[] { "编号","用户名", "真实姓名", "银行卡尾号", "支行", "开户省", "开户市","所属银行","提现总额","到账金额","手续费","提现方式","提现时间","状态" };// 表头数组
+		String[] fields = new String[] { "id","userName","realName","bankNo","bankBranchName","bankProvinceName","bankCityName","bankName","drawAmount","drawInAccountAmount","drawFee","drawWay","addTime","drawHandleStatus" };// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountDrawModel> tdList = new ArrayList<AccountDrawModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				AccountDrawModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-15 start
+	}
+	
+	
+	@Action("/modules/account/draw/accountDraw/personCashExcel")
+	public void personCashExcel()throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		long userId = paramLong("userId");
+		User user = userService.find(userId);
+		String status = paramString("status");
+		String startTime = paramString("startTime");
+		model.setDrawHandleStatus(status);
+		model.setStartTime(startTime);
+		// 第一页开始
+		model.setPage(1);
+		// 最多出99999999条记录
+		model.setRows(99999999);
+    	PageDataList<AccountDrawModel> drawPageList = accountDrawService.drawHistoryPageList(userId, model);
+		List<AccountDrawModel> list = drawPageList.getList();
+		List<AccountDrawModel> newList = new ArrayList<AccountDrawModel>();
+		for(int i=0;i<list.size();i++){
+			AccountDrawModel accountDraw = list.get(i);
+			if(accountDraw.getDrawHandleStatus().equals("00")){
+				accountDraw.setDrawHandleStatus("申请提现");
+			}else if(accountDraw.getDrawHandleStatus().equals("11")){
+				accountDraw.setDrawHandleStatus("初审成功");
+			}else if(accountDraw.getDrawHandleStatus().equals("10")){
+				accountDraw.setDrawHandleStatus("初审失败");
+			}else if(accountDraw.getDrawHandleStatus().equals("21")){
+				accountDraw.setDrawHandleStatus("复审成功");
+			}else if(accountDraw.getDrawHandleStatus().equals("20")){
+				accountDraw.setDrawHandleStatus("复审失败");
+			}else if(accountDraw.getDrawHandleStatus().equals("99")){
+				accountDraw.setDrawHandleStatus("取消提现");
+			}else if(accountDraw.getDrawHandleStatus().equals("30")){
+				accountDraw.setDrawHandleStatus("提现成功");
+			}else if(accountDraw.getDrawHandleStatus().equals("42")){
+				accountDraw.setDrawHandleStatus("等待银行转账");
+			}else if(accountDraw.getDrawHandleStatus().equals("41")){
+				accountDraw.setDrawHandleStatus("汇潮请求失败");
+			}else if(accountDraw.getDrawHandleStatus().equals("88")){
+				accountDraw.setDrawHandleStatus("银行处理失败");
+			}
+			newList.add(accountDraw);
+		}
+		String title = "提现记录Excel表";
+		if(null != user){
+			title = user.getUserName()+"提现记录Excel表";
+		}
+		String[] hearders = new String[] { "编号","用户名", "真实姓名", "银行卡尾号", "支行", "开户省", "开户市","所属银行","提现总额","到账金额","手续费","提现时间","状态" };// 表头数组
+		String[] fields = new String[] { "id","userName","realName","bankNo","bankBranchName","bankProvinceName","bankCityName","bankName","drawAmount","drawInAccountAmount","drawFee","addTime","drawHandleStatus" };// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<AccountDrawModel> tdList = new ArrayList<AccountDrawModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				AccountDrawModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+	}
+	
+	/**
+	 * 提现查询与第三方比对页面
+	 * @return
+	 */
+	@Action("/modules/account/draw/accountDraw/cashCompareManage")
+	public String cashCompareManage()throws Exception{
+		int id=paramInt("id");
+    	Map<String, Object> map=accountDrawService.drawCompare(id);
+    	if(map.size()>0){
+    		AccountDraw draw=(AccountDraw) map.get("draw");
+    		draw=(draw==null?new AccountDraw():draw);
+    		YmdQueryReturn ymdQueryReturn=(YmdQueryReturn) map.get("ymdQueryReturn");
+    		ymdQueryReturn=(ymdQueryReturn==null?new YmdQueryReturn():ymdQueryReturn);
+    		request.setAttribute("draw", draw);
+    		request.setAttribute("ymdQueryReturn", ymdQueryReturn);
+    		List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+    		if(list.size()>0){
+    			YmdQueryReturnDetails ymdQueryReturnDetails=list.get(0);
+    			request.setAttribute("ymdQueryReturnDetails", ymdQueryReturnDetails);
+    		}
+    		// BUG JSDP32 2015年4月17日   孙晓勇  start
+    		// 补单记录
+			FillOrderLog fillOrderLog = fillOrderLogService.findByType(String.valueOf(draw.getId()), FillOrderLog.ORDER_RECHARGE);
+
+			if (fillOrderLog != null) {
+				request.setAttribute("fillOrderLog", fillOrderLog);
+			}
+			// BUG JSDP32 2015年4月17日   孙晓勇  end
+    	}
+    	saveToken("drawSupplementSingle");
+		return "cashCompareManage";
+	}
+
+	/**
+	 * 比对异常时进行补单的操作
+	 */
+	@Action("/modules/account/draw/accountDraw/repairCash")
+	public void repairCash()throws Exception{
+		String tradeStatus=paramString("tradeStatus");
+    	String resultCode=paramString("resultCode");
+    	String ymdAmount=paramString("ymdAmount");
+    	String ymdOutTradeNo=paramString("ymdOutTradeNo");
+    	String drawHandleStatus=paramString("drawHandleStatus");
+    	String drawTradeNo=paramString("drawTradeNo");
+    	
+		// 补单备注（暂无,若需要，则页面传参即可）
+		String fillOrderRemark = paramString("fillOrderRemark");
+		String remark = null;
+		if (StringUtil.isNotBlank(fillOrderRemark) || !"".equals(fillOrderRemark)) {
+			remark = fillOrderRemark;
+		} else {
+			remark = null;
+		}
+    	
+    	checkToken("drawSupplementSingle");
+    	if(drawTradeNo.equals(ymdOutTradeNo)){
+    		YmdCash ymdCash=new YmdCash();
+			ymdCash.setErrCode(tradeStatus);
+			ymdCash.setOutTradeNo(ymdOutTradeNo);
+			ymdCash.setAmount(ymdAmount);
+    		//本地与第三方订单号一致
+			if("00".equals(resultCode) && "00".equals(tradeStatus) && "42".equals(drawHandleStatus)){
+				//本地提现状态为等待银行转账，第三方为处理成功，处理转账
+				//返回状态为成功   一麻袋交易状态为成功  且本地还在处理中才符合补单要求
+				
+				// BUG JSDP32 2015年4月17日   孙晓勇  start
+				AccountDraw accountDraw = accountDrawService.getDrawByOutTradeNo(drawTradeNo);
+				FillOrderLog fillOrderLog = new FillOrderLog();
+				// 提现编号
+				fillOrderLog.setFid(String.valueOf(accountDraw.getId()));
+				// 订单类型：提现
+				fillOrderLog.setType(FillOrderLog.ORDER_DRAW);
+				// 1：成功
+				fillOrderLog.setResult(1);
+				// 补单人
+				fillOrderLog.setOptUser((int)getOperator().getId());
+				// 补单时间
+				fillOrderLog.setOptTime(new Date());
+				// 补单备注
+				fillOrderLog.setRemark(remark);
+				// 补单IP
+				fillOrderLog.setIp(Global.getIP());
+				
+				accountDrawService.drawCashBankSucCallBack(ymdCash,AccountDraw.DRAW_CASH_REPAIR_SUCCESS,fillOrderLog);
+				
+				data.put("result", true);
+				data.put("msg", "补单成功");
+			}else if("00".equals(resultCode)&&"88".equals(tradeStatus)&&"42".equals(drawHandleStatus)){
+				
+				// BUG JSDP32 2015年4月17日   孙晓勇  start
+				AccountDraw accountDraw = accountDrawService.getDrawByOutTradeNo(drawTradeNo);
+				FillOrderLog fillOrderLog = new FillOrderLog();
+				// 提现编号
+				fillOrderLog.setFid(String.valueOf(accountDraw.getId()));
+				// 订单类型：提现
+				fillOrderLog.setType(FillOrderLog.ORDER_DRAW);
+				// 1：成功
+				fillOrderLog.setResult(1);
+				// 补单人
+				fillOrderLog.setOptUser((int)getOperator().getId());
+				// 补单时间
+				fillOrderLog.setOptTime(new Date());
+				// 补单备注
+				fillOrderLog.setRemark(remark);
+				// 补单IP
+				fillOrderLog.setIp(Global.getIP());
+				
+				accountDrawService.drawCashBankFailCallBack(ymdCash,fillOrderLog);
+				
+				data.put("result", true);
+				data.put("msg", "补单成功");
+			}else{
+				data.put("result", false);
+				data.put("msg", "该提现记录不符合补单要求");
+			}
+		}
+    	printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 查看提现详情页面
+	 * @return
+	 */
+	@Action("/modules/account/draw/accountDraw/accountCashDetailPage")
+	public String cashDetailPage(){
+		Integer id = paramInt("id");
+		request.setAttribute("id", id);
+		return "accountCashDetailPage";
+	}
+	/**
+	 * 查看提现详情list
+	 * @throws IOException 
+	 */
+	@Action("/modules/account/draw/accountDraw/accountCashList")
+	public void cashDetailList() throws IOException{
+		
+		if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+		PageDataList<AccountDrawModel> pageDataList=accountDrawService.accountDrawCashPageDataList(model.getPage(), model);
+		data.put("total", pageDataList.getPage().getTotal());
+		data.put("rows", pageDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 明细——提现金额明细页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月5日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/drawMoneyStatisticsListPage")
+	public String drawStatisticsListPage() throws Exception {
+	
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			request.setAttribute("startTime", startTime);
+			request.setAttribute("endTime", endTime);
+		}
+		
+		request.setAttribute("timeType", timeType);
+	
+		return "drawMoneyStatisticsListPage";
+	}
+	
+	
+	
+	/**
+	 * 明细——提现金额明细列表
+	 * 
+	 * @author sxy   2015年5月5日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/dataStatistics/drawMoneyStatisticsList")
+	public void drawStatisticsList() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			//model.setStartTime(fmt.parse(startTime));
+			//model.setEndTime(fmt.parse(endTime));
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+			
+		}
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		map.put("model", model);
+	
+		model.setUserType("10");
+		// 原Model查询
+		//PageDataList<AccountDrawModel> pagaDataList = accountDrawService.drawMoneyStatisticsList(model, pageNumber, pageSize);
+		// 新SQL查询  99 孙晓勇  2015年5月27日 
+		PageDataList<AccountDraw> pagaDataList = accountDrawService.drawMoneyStatisticsListForSQL(model, pageNumber, pageSize);
+		
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	
+	/**
+	 * 提现统计导出报表
+	 * 
+	 * @throws Exception
+	 */
+	/*@Action("/modules/dataStatistics/exportExcelDrawStatistics")
+	public void exportExcelDrawStatistics() throws Exception {
+		
+		// 原导出
+		response.setContentType("application/msexcel;charset=UTF-8");
+		long userId = paramLong("userId");
+		User user = userService.find(userId);
+		String status = paramString("status");
+		String startTime = paramString("startTime");
+		model.setDrawHandleStatus(status);
+		model.setStartTime(startTime);
+		// 第一页开始
+		model.setPage(1);
+		// 最多出99999999条记录
+		model.setRows(99999999);
+    	PageDataList<AccountDrawModel> drawPageList = accountDrawService.drawMoneyStatisticsList(model, 1, 99999999);
+		List<AccountDrawModel> list = drawPageList.getList();
+		List<AccountDrawModel> newList = new ArrayList<AccountDrawModel>();
+		for(int i=0;i<list.size();i++){
+			AccountDrawModel accountDraw = list.get(i);
+			if(accountDraw.getDrawHandleStatus().equals("00")){
+				accountDraw.setDrawHandleStatus("申请提现");
+			}else if(accountDraw.getDrawHandleStatus().equals("11")){
+				accountDraw.setDrawHandleStatus("初审成功");
+			}else if(accountDraw.getDrawHandleStatus().equals("10")){
+				accountDraw.setDrawHandleStatus("初审失败");
+			}else if(accountDraw.getDrawHandleStatus().equals("21")){
+				accountDraw.setDrawHandleStatus("复审成功");
+			}else if(accountDraw.getDrawHandleStatus().equals("20")){
+				accountDraw.setDrawHandleStatus("复审失败");
+			}else if(accountDraw.getDrawHandleStatus().equals("99")){
+				accountDraw.setDrawHandleStatus("取消提现");
+			}else if(accountDraw.getDrawHandleStatus().equals("30")){
+				accountDraw.setDrawHandleStatus("提现成功");
+			}else if(accountDraw.getDrawHandleStatus().equals("42")){
+				accountDraw.setDrawHandleStatus("等待银行转账");
+			}else if(accountDraw.getDrawHandleStatus().equals("41")){
+				accountDraw.setDrawHandleStatus("汇潮请求失败");
+			}else if(accountDraw.getDrawHandleStatus().equals("88")){
+				accountDraw.setDrawHandleStatus("银行处理失败");
+			}
+			newList.add(accountDraw);
+		}
+		String title = "提现记录Excel表";
+		if(null != user){
+			title = user.getUserName()+"提现记录Excel表";
+		}
+		String[] hearders = new String[] { "编号","用户名", "真实姓名", "银行卡尾号", "支行", "开户省", "开户市","所属银行","提现总额","到账金额","手续费","提现时间","状态" };// 表头数组
+		String[] fields = new String[] { "id","userName","realName","bankNo","bankBranchName","bankProvinceName","bankCityName","bankName","drawAmount","drawInAccountAmount","drawFee","addTime","drawHandleStatus" };// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<AccountDrawModel> tdList = new ArrayList<AccountDrawModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				AccountDrawModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+	}	*/
+	
+	
+       
+}

@@ -1,0 +1,70 @@
+package com.rongdu.p2psys.region.dao.jdbc;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+
+@Repository("regionDao")
+public class RegionDaoImpl extends BaseDaoImpl<Region> implements RegionDao {
+
+	@Override
+	public List<Region> getRegionList(long pId) {
+		String sql = " SELECT * FROM t_jsd_dict_region WHERE parent_id = :parent_id ORDER BY id ASC ";
+		Query query = em.createNativeQuery(sql, Region.class);
+		query.setParameter("parent_id", pId);
+		List<Region> list = query.getResultList();
+		return list;
+	}
+	
+	@Override
+	public List<Object[]> getProvincialEnrollment(){
+		String sql = " SELECT NAME,COUNT(*) AS SUM FROM t_jsd_dict_region AS r,t_jsd_user_cache c WHERE r.id = c.province GROUP BY r.name ";
+		Query query = em.createNativeQuery(sql);
+		List<Object[]> list = query.getResultList();;
+		return list;
+	}
+
+	@Override
+	public Region findById(long id) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("id", id);
+		return super.findByCriteriaForUnique(param);
+	}
+
+	// JSDP - BUG111  20150511 SXY
+	@Override
+	public Region findByCode(String code) {
+		/*QueryParam param = QueryParam.getInstance();
+		param.addParam("code", code);
+		return super.findByCriteriaForUnique(param);
+		*/
+		String sql = "SELECT t1.* FROM t_jsd_dict_region t1 WHERE t1.code = ? ";
+		Query query = em.createNativeQuery(sql, Region.class);
+		query.setParameter(1, code);
+		Object object;
+		try {
+			object = query.getSingleResult();
+		} catch (Exception e) {
+			return null;
+		}
+		if(object!=null){
+			return (Region)object;
+		}
+		return null;
+		
+		
+		
+	}
+	// JSDP - BUG111  20150511 SXY
+	
+
+}

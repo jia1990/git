@@ -1,0 +1,171 @@
+package com.ddtkj.p2psys.webpetcard.service;
+
+
+import java.util.List;
+
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.model.PetCardModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：储值卡service层
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月2日 
+ * @JIRA JSDP-171
+ */
+public interface PetCardService {
+	
+	/**
+	 * 查询体验卡列表
+	 * 
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<PetCardModel> petCardList(int pageNumber, int pageSize, PetCardModel model);
+	/**
+	 * 查询体验卡列表并更新导出状态值
+	 * 
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	boolean updateSelectPetCardList(PetCardModel model);
+	
+	/**
+	 * 根据卡号查询实体
+	 * @param cardNo
+	 * @param pwd
+	 * @return
+	 */
+	PetCard getPetCardByIdOrPwd(String cardNo,String pwd);
+	
+
+	/**
+	 * SQL查询体验卡列表
+	 * 
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<PetCard> petCardListForSQL(int pageNumber, int pageSize, PetCardModel model);
+	
+	/**
+	 * 添加体验卡
+	 */
+	Boolean petCardAdd(PetCard PetCard);
+	
+	/**
+	 * 返回id最大值
+	 * 
+	 * @return long
+	 */
+	long findMaxId();
+	
+	/**
+     * 根据ID查询体验卡信息
+     * @param id
+     * @return PetCard
+     */
+	PetCard getPetCardById(long id);
+	
+	/**
+	 * 更新体验卡信息
+	 * 
+	 * @param petCard
+	 */
+	public void update(PetCard petCard);
+	
+	/**
+	 * 更新体验卡导出状态
+	 * 
+	 * @param id
+	 */
+	public void updateExcelStatus(long id, String isExport);
+	
+	/**
+	 * 导出体验卡数据
+	 * 
+	 * @param model
+	 * @return
+	 */
+	public List<PetCard> excelPetCardList(PetCardModel model);
+	
+	/**
+	 * 根据卡号查询信息
+	 * 
+	 * @param cardNo
+	 * @return PetCard
+	 */
+	public PetCard getPetCardByCardNo(String cardNo);
+	
+	
+	/**
+	 * 更新导出状态
+	 * 
+	 * @param list
+	 * @return
+	 */
+	public boolean update(List<PetCard> list);
+
+	//JSDP-171 xingjia 20150609 start
+	/**
+	 * 根据userId查产生体验卡的金额
+	 * @param userId
+	 * @return
+	 */
+	public double getSumPetCardProduce(long userId);
+	//JSDP-171 xingjia 20150609 end
+	
+	/**
+	 * 根据状态类型和金额获取体验卡
+	 * @param  status 状态
+	 * @param  type   类型，yt为云购体验卡
+	 * @param  money  金额
+	 * @return List<PetCard> 
+	 * @throws Exception   
+	 */ 
+	List<PetCard> getYgCardByStatusAndType(String status, String type, double money);
+	
+	/**
+	 * 获取云购体验卡列表
+	 * @param  model
+	 * @return PageDataList<PetCardModel> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<PetCardModel> petCardList(PetCardModel model) throws Exception;
+	
+	/**
+	 * 根据状态和类型获得对应卡的金额
+	 * @param  userId
+	 * @param  type
+	 * @param  status
+	 * @throws Exception   
+	 */ 
+	double getPetCardSumByStatusAndType(long userId, String type, String status);
+	/**
+	 * 根据状态和类型获得金额分组及个数
+	 * @param  userId
+	 * @param  type
+	 * @param  status
+	 * @throws Exception   
+	 */ 
+	List<Object[]> getPetCardPackSumByStatusAndType(long userId, String type, String status);
+	/**
+	 * 根据model更改是否已查看
+	 * @param model
+	 * @return
+	 */
+	boolean updateIsCheck(PetCardModel model);
+	
+	/**
+     * 根据查询条件体验卡数据汇总
+     * // JSDP-201 sxy 20150630 start
+     * @param model
+     * @return
+     */
+    String petCardDataTotal(PetCardModel model);
+}

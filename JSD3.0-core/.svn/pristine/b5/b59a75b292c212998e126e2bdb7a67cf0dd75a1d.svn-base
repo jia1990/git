@@ -1,0 +1,135 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：代偿规则
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年2月6日 
+ */
+public class CompensatoryRuleCheck extends RuleCheck {
+
+	private static final long serialVersionUID = -7946867743243759599L;
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+    private int status;//该规则是否启用
+	private  int compensatory_type;  //代偿方式： 1：本金  2：本息
+	private  UserLevelCompensatory N1;
+	private  UserLevelCompensatory V1;
+	private  UserLevelCompensatory V2;
+	private  UserLevelCompensatory V3;
+	private  UserLevelCompensatory V4;
+	public static class UserLevelCompensatory implements java.io.Serializable{
+		private static final long serialVersionUID = 7335525954814526910L;
+		private double compensatory_rate; //vip用户代偿还款本金比例
+		public double getCompensatory_rate() {
+			return compensatory_rate;
+		}
+		public void setCompensatory_rate(double compensatory_rate) {
+			this.compensatory_rate = compensatory_rate;
+		}
+	}
+	/**
+	 * 获取代偿费率（本金全保）
+	 * @param member_level
+	 * @return
+	 */
+	public  double rate(String member_level){
+		if("N1".equals(member_level)){
+			return N1.compensatory_rate;
+		}else if("V1".equals(member_level)){
+			return V1.compensatory_rate;
+		}else if("V2".equals(member_level)){
+			return V2.compensatory_rate;
+		}else if("V3".equals(member_level)){
+			return V3.compensatory_rate;
+		}else if("V4".equals(member_level)){
+			return V4.compensatory_rate;
+		}
+		return 0;
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = RedPacketProduceRuleCheck.class
+				.getResourceAsStream("代偿规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll("\\s* ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(json);
+		Object jsonObj = JSON
+				.parseObject(json, CompensatoryRuleCheck.class);
+		CompensatoryRuleCheck test = (CompensatoryRuleCheck) jsonObj;
+	}
+	public int getStatus() {
+		return status;
+	}
+	public void setStatus(int status) {
+		this.status = status;
+	}
+	public int getCompensatory_type() {
+		return compensatory_type;
+	}
+	public void setCompensatory_type(int compensatory_type) {
+		this.compensatory_type = compensatory_type;
+	}
+
+	public UserLevelCompensatory getN1() {
+		return N1;
+	}
+
+	public void setN1(UserLevelCompensatory n1) {
+		N1 = n1;
+	}
+
+	public UserLevelCompensatory getV1() {
+		return V1;
+	}
+
+	public void setV1(UserLevelCompensatory v1) {
+		V1 = v1;
+	}
+
+	public UserLevelCompensatory getV2() {
+		return V2;
+	}
+
+	public void setV2(UserLevelCompensatory v2) {
+		V2 = v2;
+	}
+
+	public UserLevelCompensatory getV3() {
+		return V3;
+	}
+
+	public void setV3(UserLevelCompensatory v3) {
+		V3 = v3;
+	}
+
+	public UserLevelCompensatory getV4() {
+		return V4;
+	}
+
+	public void setV4(UserLevelCompensatory v4) {
+		V4 = v4;
+	}
+
+}

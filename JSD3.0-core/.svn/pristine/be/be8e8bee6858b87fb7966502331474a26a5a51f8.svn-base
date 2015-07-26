@@ -1,0 +1,29 @@
+package com.rongdu.p2psys.core.util.referrer;
+
+import com.rongdu.common.util.code.BASE64Encoder;
+import com.ddtkj.p2psys.user.domain.User;
+
+
+public class ReferrerUtils {
+	public static ReferrerUtils getInstance() {
+		ReferrerUtils referrer = new ReferrerUtils();
+		return referrer;
+	}
+	public String getdecodeIdStr(User user) {
+		String chars = "0123456789qwertyuiopasdfghjklmnbvcxz-=~!@#$%^*+-._/*<>|";
+		int length = chars.length();
+		StringBuffer url = new StringBuffer();
+		StringBuffer rancode = new StringBuffer();
+		String timeStr = System.currentTimeMillis() / 1000 + "";
+		url.append(user.getUserId()).append(",").append(timeStr).append(",");
+		for (int i = 0; i < 10; i++) {
+			int num = (int) (Math.random() * (length - 2)) + 1;
+			rancode.append(chars.charAt(num));
+		}
+		url.append(rancode);
+		String idurl = url.toString();
+		BASE64Encoder encoder = new BASE64Encoder();
+		String s = encoder.encode(idurl.getBytes());
+		return s;
+	}
+}

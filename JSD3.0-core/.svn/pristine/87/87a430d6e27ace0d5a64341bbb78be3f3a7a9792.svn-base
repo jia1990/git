@@ -1,0 +1,67 @@
+package com.rongdu.p2psys.core.notice.sms;
+
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.rongdu.p2psys.core.domain.Notice;
+import com.rongdu.p2psys.core.service.NoticeService;
+
+public class SmsNoticeJobQueue<T> {
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Queue<T> smsQueue = new ConcurrentLinkedQueue();
+	private SmsLoanTask smsTask;
+
+	public SmsNoticeJobQueue(SmsLoanTask task) {
+		super();
+		this.smsTask = task;
+	}
+
+	public synchronized void offer(T model) {
+		if (!smsQueue.contains(model)) {
+			smsQueue.offer(model);
+			smsTask.execute();
+		}
+	}
+
+	public synchronized void offer(List<T> ts) {
+		for (int i = 0; i < ts.size(); i++) {
+			T t = ts.get(i);
+			if (!smsQueue.contains(t)) {
+				smsQueue.offer(t);
+			}
+		}
+		smsTask.execute();
+	}
+
+	public synchronized T poll() {
+		return smsQueue.poll();
+	}
+
+	public synchronized T peek() {
+		return smsQueue.peek();
+	}
+
+	public synchronized void remove(T model) {
+		smsQueue.remove(model);
+	}
+
+	public int size() {
+		return smsQueue.size();
+	}
+
+	public static SmsNoticeJobQueue<Notice> SMSNOTICE = null;
+
+	public static void init(NoticeService noticeService) {
+		SMSNOTICE = new SmsNoticeJobQueue<Notice>(new SmsNoticeTask(noticeService));
+	}
+
+	public static void stop() {
+		SMSNOTICE.smsTask.stop();
+	}
+
+	public void doAutoQueue() {
+	}
+
+}

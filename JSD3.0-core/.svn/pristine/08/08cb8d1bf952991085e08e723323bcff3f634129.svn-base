@@ -1,0 +1,52 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.service;
+
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.ddtkj.p2psys.redpacket.model.RpUserLogModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2014年12月31日 
+ */
+public interface RpUseLogService {
+	
+	/**
+	 * @author 李建云
+	 * 根据用户查询  已使用钱袋子总额
+	 * @param userid
+	 * @return
+	 */
+	public double getAllUseDynamicTotal(long userid) ;
+	
+	/**
+	 * @author 李建云
+	 * 
+	 * 动态红包消费记录
+	 * 
+	 * @param userAwardModel
+	 * @return
+	 */
+	PageDataList<RpUserLogModel> getPageDataList(RpUserLogModel rpUserLogModel,long userId);
+	//JSDP-167 xingjia 2015-05-28 start
+	/**
+	 * 查询单个用户的红包消费记录
+	 * @param rpProduceModel
+	 * @return
+	 */
+	PageDataList<RpUserLogModel> getPageDataList(RpProduceModel rpProduceModel);
+	//JSDP-167 xingjia 2015-05-28 end
+    //JSDP-228  fengguoqin 2015.07.28 start
+	/**
+	 * @author 冯国琴
+	 * 根据用户、类型  查询用户使用红包总额(静态、动态)
+	 * @param userid  用户id
+	 * @param type  红包类型
+	 * @return
+	 */
+	public double getAllUsedRpTotal(long userId,int type) ;
+	  //JSDP-228  fengguoqin 2015.07.28 end
+}

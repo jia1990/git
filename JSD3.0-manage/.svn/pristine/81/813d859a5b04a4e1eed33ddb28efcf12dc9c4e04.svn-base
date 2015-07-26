@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>待收记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+    var winWidth =  800;
+    var winHeight = 280;
+  //JSDP-85 gjh 2015-5-6 start
+   var viewBorrowTitle = "查看借款信息";
+    var viewBorrowUrl = "/modules/loan/borrow/borrowViewPage.html"
+    var viewBorrowWinParmeters = "'{0}','" + viewBorrowTitle + "',800,500,'" + viewBorrowUrl + "'";
+    var viewContrastTitle = "对账信息查询";
+    var viewContrastUrl = "/modules/loan/collection/collectionContrastPage.html"
+    var viewContrastWinParmeters = "'{0}','" + viewContrastTitle + "',800,500,'" + viewContrastUrl + "'";
+
+    //JSDP-85 gjh 2015-5-6 end
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'collectionList.html',
+            fit : true,
+            fitColumns : false,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+			showFooter: true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 70, fixed:true,sortable:false },              
+              { field: 'investUserName', title: '投资人', width: 80, sortable:false },
+              { field: 'borrowId', title: '借款标编号', width: 80, sortable:false },
+              //{ field: 'borrowName', title: '标名', width: 150, sortable:false },
+              
+              { field: 'borrowNa', title: '标名', width: 150, sortable:false,
+  				formatter:function(value, row, index){
+  					if(row.typeName=='待收本息总金额'){
+  						return '';
+  					}else{
+  						
+	  					var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+	  					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+	  					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}" title="预览标">'+row.borrowName+'</a>', row.borrowId, '${theme_dir}/css/images/extjs_icons/link.png');
+  					}
+  					
+  				}
+  			  },
+              
+              //{ field: 'borrowTimeType', title: '借款类型', width: 150, sortable:false},
+              { field: 'timeLimit', title: '借款期限', width: 100, sortable:false,
+            	  formatter: function(value,row,index){
+            		  if(row.borrowTimeType == 0){
+            			  return value + "月";
+            		  }else if(row.borrowTimeType == 1){
+            			  return value + "天";
+            		  }
+                	  
+            	  }
+              },
+              //{ field: 'validTime', title: '有效期限', width: 80, sortable:false },
+              
+              { field: 'period', title: '本期期数', width: 100, sortable:false, 
+            	  	formatter: function(value,row,index){
+            	  		if(row.typeName=='待收本息总金额'){
+            	  			return '';
+            	  		}else{
+	  						return row.period+1;
+            	  		}
+				  	}
+              },
+              { field: 'typeName', title: '标类型', width: 80, sortable:false },
+              
+              { field: 'repaymentAccountStr', title: "<a title='元'>预收金额</a>", width: 80, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+             
+              { field: 'capitalStr', title: "<a title='元'>本金</a>", width: 80, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              { field: 'interestStr', title: "<a title='元'>利息</a>", width: 80, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              
+              { field: 'contractNo', title: '合同编号', width: 120, sortable:false },
+              { field: 'status', title: '状态', width: 100, sortable:false,
+            	  formatter: function(value,row,index){
+            		  
+            		  if(value == '0'){
+            			  return "未还款";
+            		  }else if(value == '1'){
+            			  return "已还款";
+            		  }else if(value == '2'){
+            			  return "债权转让";
+            		  }else{
+            			  return "";
+            		  }
+            	  } 
+              
+              },
+              { field: 'type', title: '类型', width: 100, sortable:false,
+            	  formatter: function(value,row,index){
+            		  
+            		  if(value == 0){
+            			  return "正常待收";
+            		  }else if(value ==2){
+            			  return "债权转让待收";
+            		  }else{
+            			  return "其他";
+            		  }
+            	  } 
+              
+              },
+              { field: 'repaymentTime', title: '预计收款时间', width: 150, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  	}  
+              },
+              { field: 'repayContrastResult', title: '对账结果', width: 100, sortable:false,formatter: function(value,row,index){
+					var str = "";
+					if(row.typeName=='待收本息总金额'){
+						str = "";
+					}else{
+						
+						if(value == "1" || value=="2"){
+							str = "掉单"
+						}else{
+							str = "正常"
+						}
+					}
+            	  	return str;
+  				  	}  
+              },
+              { field : 'action',
+                  title : '操作',
+                  width :80,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                	  if(row.typeName=='待收本息总金额'){
+    						return '';
+    					}else{
+    						
+	                  		 var str = '';
+	                  		 str += "<@secAuthorizeUrl value='/viewBorrowDetailBtn.html' >";
+	                         str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewBorrowWinParmeters + ');" src="{1}" title="查看借款信息"/>', row.borrowId, '${theme_dir}/css/images/extjs_icons/book_open.png');
+	                         str += "</@secAuthorizeUrl>";
+	                         str += '&nbsp;';
+	                         //JSDP-85 gjh 2015-5-4 start
+	                  		 str += "<@secAuthorizeUrl value='/collectionContrastBtn.html' >";
+	                         str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun(' + viewContrastWinParmeters + ');" src="{1}" title="还款对账"/>', row.id, '${theme_dir}/css/images/extjs_icons/zoom/zoom.png');
+	                         str += "</@secAuthorizeUrl>";
+	                         str += '&nbsp;';
+	                         //JSDP-85 gjh 2015-5-4 end
+	       	                 return str;
+    					}
+                  	}
+                     
+              }
+            
+              
+              ] ],
+              toolbar : '#toolbar'
+        });
+    });
+    //待收中的excel导出
+	function exportExcel(){
+		var url = "/modules/loan/collection/collectionExcel.html";
+		var borrowName = $("#borrowName").val();
+		 //JSDP-85 gjh 2015-5-6 start
+		var borrowId = $("#borrowId").val();
+		 //JSDP-85 gjh 2015-5-6 end
+		var investUserName = $("#investUserName").val();
+		var contractNo = $("#contractNo").val();
+		var status = $("#status").val();
+		var type = $("#type").val();
+		var startTime = $("#startTime1").val();
+		var endTime = $("#endTime1").val();
+		var registerStartTime = $("#startTime2").val();
+		var registerEndTime = $("#endTime2").val();
+		var sou = "?borrowName=" + borrowName  +"&borrowId=" + borrowId +"&type=" + type+"&status=" + status + "&investUserName=" + investUserName+ "&contractNo=" + contractNo + "&startTime=" + startTime + "&endTime=" + endTime + "&registerStartTime=" + registerStartTime + "&registerEndTime=" + registerEndTime;
+		window.location.href = url + sou;
+	}
+	function compareAccount(){
+		var url = "/modules/loan/collection/collectionContrastList.html";
+		var borrowName = $("#borrowName").val();
+		 //JSDP-85 gjh 2015-5-6 start
+		var borrowId = $("#borrowId").val();
+		 //JSDP-85 gjh 2015-5-6 end
+		var investUserName = $("#investUserName").val();
+		var contractNo = $("#contractNo").val();
+		var status = $("#status").val();
+		var type = $("#type").val();
+		var startTime = $("#startTime1").val();
+		var endTime = $("#endTime1").val();
+		var registerStartTime = $("#startTime2").val();
+		var registerEndTime = $("#endTime2").val();
+		var sou = "?borrowName=" + borrowName +"&borrowId=" + borrowId +"&type=" + type+"&status=" + status +"&investUserName=" + investUserName+ "&contractNo=" + contractNo + "&startTime=" + startTime + "&endTime=" + endTime + "&registerStartTime=" + registerStartTime + "&registerEndTime=" + registerEndTime;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询信息）</font></h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>标名：<input type="text" name="borrowName" autocomplete="off" id="borrowName"/></li>
+            		<li>标编号：<input type="text" name="borrowId" autocomplete="off" id="borrowId"/></li>
+            		<li>投资人：<input type="text" name="investUserName" autocomplete="off" id="investUserName"/></li>
+            		<li>状态：
+            			<select name="status" id="status">
+            				<option value="-99" >全部</option>
+            				<option value="99" >未还款</option>
+            				<option value="1" >已还款</option>
+            				<option value="2" >债权转让</option>
+            			</select>
+            		
+            		</li>
+            		<!-- fengguoqin@ddtkj.com   JSDP-205   2015.7.2  start -->
+            		<li>类型：
+            			<select name="type" id="type">
+            				<option value="22" >债权转让待收</option>
+            				<option value="11" >正常待收</option>
+            			</select>
+            		
+            		</li>
+            		<!-- fengguoqin@ddtkj.com   JSDP-205   2015.7.2  end -->
+            		<!-- <li>预计收款时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		-->
+            		<li>合同号：<input type="text" name="contractNo" autocomplete="off" id="contractNo"/></li>
+            		<li>预计收款时间：<input type="text" name="startTime" id="startTime1" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime1" class="searchTime"  style="width:140px;"/></li>
+            		<li>注册时间：<input type="text" name="registerStartTime" id="startTime2" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="registerEndTime" id="endTime2" class="searchTime"  style="width:140px;"/></li>
+            		<li>
+            		<a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');" ondragstart="return false">查询</a>
+            		<a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');" ondragstart="return false">清空</a>
+            		<a class="searchBtn" id="" onclick="$.fn.dataGridOptions.collectionContrastSearchFun('/modules/loan/collection/collectionContrastList.html','#borrowName','#borrowId','#investUserName','#contractNo','#startTime1','#endTime1','#startTime2','#endTime2','#status',this);" href="javascript:void(0);">对账</a>
+            		</li>
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+    <div id="toolbar" style="display: none;">
+		&nbsp;
+		<@secAuthorizeUrl value='/collection/collectionExcel.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn" ondragstart="return false">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date3.js"></script>
+</html>

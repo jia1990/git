@@ -1,0 +1,28 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/account/cash/accountcash/kfVerifyCashEdit.html');
+	});
+</script>
+<form id="form" method="post">
+<div class="borrowForm" style="border-top:none;">
+	<ul>
+		<li><span>用户名：</span>${user.userName}</li>
+		<li><span>真实姓名：</span>${user.realName}</li>
+		<li><span>银行账号：</span>${accountCash.bankNo}</li>
+		<li><span>提现银行：</span>${accountCash.bank}</li>
+		<li><span>提现支行：</span>${accountCash.branch!}</li>
+		<li><span>提现金额：</span>${accountCash.money}元</li>
+		<li><span>到账金额：</span>${accountCash.credited}元</li>
+		<li><span>费用：</span>${accountCash.fee}元</li>
+		<li><span>状态：</span><#if accountCash.status==0||accountCash.status=5||accountCash.status=7>审核中<#elseif accountCash.status==1>成功<#elseif accountCash.status==4>用户取消<#else>审核失败</#if></li>
+		<li><span>添加时间：</span>${accountCash.addTime?string("yyyy-MM-dd HH:mm:ss")}</li>
+		<li><span>IP：</span>${accountCash.addIp}</li>
+		<li><span>到账金额：</span><input type="text" name="money" class="borrowFormTxt" value="${accountCash.credited}" readonly="readonly"/></li>
+		<li><span>费率：</span><input type="text" name="fee" class="borrowFormTxt" value="${accountCash.fee}" /></li>
+		<li><span>是否通过：</span><input type="radio" name="status" class="easyui-validatebox" value="5" data-options="required: true"/>通过&nbsp;&nbsp;&nbsp;<input type="radio" name="status" class="easyui-validatebox" value="6" data-options="required: true"/>不通过</li>
+	</ul>
+	<div class="borrowFormMuti"><span>备注：</span><textarea name="remark" class="borrowFormTextarea"></textarea></div>
+</div>
+<input name="id" value="${accountCash.id}" type="hidden"/>
+<input name="verifyCashToken" value="${verifyCashToken}" type="hidden" />	
+</form>

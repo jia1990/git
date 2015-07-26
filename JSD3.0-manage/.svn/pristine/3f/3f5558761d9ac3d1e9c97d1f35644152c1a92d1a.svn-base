@@ -1,0 +1,984 @@
+package com.ddtkj.manage.action.webpetcard;
+
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+//import jxl.Cell;//import jxl.Sheet;
+//import jxl.Workbook;
+//import jxl.read.biff.BiffException;
+import org.apache.log4j.Logger;
+//import jxl.Cell;
+//import jxl.Sheet;
+//import jxl.Workbook;
+//import jxl.read.biff.BiffException;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.core.usercenter.HttpResult;
+import com.ddtkj.p2psys.core.usercenter.HttpUtils;
+import com.ddtkj.p2psys.core.usercenter.SignUtils;
+import com.ddtkj.p2psys.core.util.CardAESUtils;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.model.PetCardModel;
+import com.ddtkj.p2psys.webpetcard.service.PetCardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.common.util.RandomUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck.YungouNoticeUrl;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述：储值卡action
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:2015年6月2日 
+ * @JIRA JSDP-171
+ */
+public class ManagePetCardAction extends BaseAction<PetCardModel> implements ModelDriven<PetCardModel>{
+	// JSDP-171 sxy 2015-06-03 start
+
+	private static Logger logger = Logger.getLogger(ManagePetCardAction.class);
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	private Map<String,Object> data = new HashMap<String, Object>();
+	
+	Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+	
+	//@Resource
+	File file;
+	Format f = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	
+	@Resource
+	PetCardService petCardService;
+	
+	/**
+	 * 储值卡展示页面
+	 * @author sxy
+	 * @return
+	 */
+	@Action("/modules/petcard/petcard/petCardManagePage")
+	public String petCardManagePage() throws Exception {
+		return "petCardManagePage";
+	}
+	/**
+	 * 储值卡查询方法
+	 * @author sxy
+	 */
+	@Action("/modules/petcard/petcard/petCardManageList")
+	public void petCardManageList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		map.put("model", model);
+		
+		String batchNo = paramString("batchNo");
+		String cardNo = paramString("cardNo");
+		String userName = paramString("userName");
+		String status = paramString("status");
+		String type = paramString("type");
+		
+		// 批次号
+		if(StringUtil.isNotBlank(batchNo)){
+			model.setBatchNo(batchNo);
+		}
+		// 卡号
+		if(StringUtil.isNotBlank(cardNo)){
+			model.setCardNo(cardNo);
+		}
+		// 用户名
+		if(StringUtil.isNotBlank(userName)){
+			model.setUserName(userName);
+		}
+		// 状态
+		if(StringUtil.isNotBlank(status)){
+			model.setStatus(status);
+		}
+		// 类型
+		if(StringUtil.isNotBlank(type)){
+			model.setType(type);
+		}
+		
+		//PageDataList<PetCardModel> pagaDataList = petCardService.petCardList(pageNumber, pageSize, model);
+		PageDataList<PetCard> pagaDataList = petCardService.petCardListForSQL(pageNumber, pageSize, model);
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		// 根据查询条件获取汇总信息	     JSDP-201 sxy 20150630 start
+		String drawTotal = null;
+		drawTotal = petCardService.petCardDataTotal(model);
+		List<Map<String, String>> footerList = new ArrayList<Map<String, String>>();
+		if (null != drawTotal) {
+			String[] drawTotals = drawTotal.split(",");
+			Map<String, String> footerMap = new HashMap<String, String>();
+			footerMap.put("type", "汇总信息：");
+			footerMap.put("money", "总额：" + drawTotals[0]);
+			//footerMap.put("isValid", "XXXXX：" + drawTotals[1]);
+			//footerMap.put("validTime", "XXXXX：" + drawTotals[2]);
+			footerList.add(footerMap);
+		}
+		data.put("footer", footerList);
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	
+	/**
+	 * 添加页面
+	 * 
+	 * @author sxy
+	 * @return
+	 */
+	@Action("/modules/petcard/petcard/addPetCardPage")
+	public String addPetCardPage() throws Exception{
+		//saveToken("petCardAddToken");
+		return "addPetCardPage";
+	}
+	
+	/**
+	 * 体验卡信息添加
+	 * 
+	 * @author sxy
+	 * @throws Exception
+	 */
+	@Action("/modules/petcard/petcard/addPetCard")
+	public void addGoods() throws Exception{
+		
+		// 金额
+		String money = paramString("money");
+		// 类型
+		String type = paramString("type");
+		// 是否有效
+		String isValid = paramString("isValid");
+		// 有效时间
+		String validTime = paramString("validTime");
+		// 
+		if(isValid.equals("0") && "".equals(validTime)){
+			throw new BussinessException("请选择输入有效时间", 1);
+		}else if(isValid.equals("1")){
+			validTime = "0";	// 永久有效设为0天
+		}
+		
+		
+		
+		// 生成数量
+		int cardSum = paramInt("cardSize");
+		if(cardSum > 0){
+			// 加密/解密值（加密密钥和解密密钥）
+			String key = PetCard.JSD_PETCARD_KEY;
+			Boolean result = false;
+			// 生成批次号
+			String batchNo = TradeIDGenerator.createTradeBN("C0");
+			
+			for(int i=0;i<cardSum;i++){
+				PetCard petCard = new PetCard();
+				// 生成卡号(JCO+(时间戳+i))
+				String cardNo = "JC0" + (new Date().getTime() + i);
+				// 生成密码（随机6位，字母+数字）
+				String pwd = RandomUtil.getRandomString(6);
+				// 对密码进行加密
+				String encryptPwd = CardAESUtils.aesEncrypt(pwd, key);
+
+				// 批次号
+				petCard.setBatchNo(batchNo);
+				// 卡号
+				petCard.setCardNo(cardNo);
+				// 密码
+				petCard.setPaw(encryptPwd);
+				// 状态(默认：未激活)
+				petCard.setStatus("ua");
+				// 金额
+				petCard.setMoney(Double.valueOf(money));
+				// 类型
+				petCard.setType(type);
+				// 是否有效
+				petCard.setIsValid(Integer.parseInt(isValid));
+				// 有效时间
+				if(isValid.equals("0")){
+					petCard.setValidTime(Integer.parseInt(validTime));
+				}
+				// 添加时间
+				petCard.setAddTime(nowdate);
+				// 添加人
+				petCard.setAddUser(getOperatorUserName());
+				// 导出状态
+				petCard.setIsExport("0");
+				//checkToken("petCardAddToken");
+				// 添加
+				result = petCardService.petCardAdd(petCard);
+				
+			}
+			if (result) {
+				printResult(MessageUtil.getMessage("I10001"), true);
+				logger.info(nowdate+"—— 添加体验卡成功!");
+			} else {
+				printResult(MessageUtil.getMessage("I10004"), false);
+				logger.info(nowdate+"—— 添加体验卡失败!");
+			}
+		
+		}
+		
+	}
+	/**
+	 * 云购调用的方法（晋商贷储值卡如果中了则修改晋商贷这边的状态） JSDP-171 xingjia 200150610
+	 * @return
+	 * @throws IOException 
+	 */
+	@Action("/modules/petcard/petcard/petCardYunGouWinTime")
+	public void petCardYunGouWinTime() throws IOException{
+		logger.info("云购调用方法");
+		String cardNo = request.getParameter("cardNo");
+		String paw = request.getParameter("paw");
+		String winTime = request.getParameter("winqTime");//时间戳
+		String signKey = request.getParameter("sign");
+		logger.info("cardNo:"+cardNo+"====paw:"+paw+"=====sign:"+signKey);
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("cardNo", cardNo);
+		map.put("paw", paw);
+		map.put("winqTime", winTime);
+		map.put("sign", signKey);
+		String secretKey = null;
+		if(null != noticeYungouURL()){
+			secretKey = noticeYungouURL().getSignKey();
+		}		
+		Map<String, Object> checkMap = SignUtils.checkMap(map, secretKey);
+		if(null != checkMap){
+			PetCard petCard = petCardService.getPetCardByIdOrPwd(cardNo, paw);
+			if(null != petCard){
+				petCard.setWinTime(DateUtil.getDate(winTime));
+				try {
+					//查询到卡号并已修改
+					petCardService.update(petCard);
+					printResult("status=Y", true);
+				} catch (Exception e) {
+					//未修改成功，报错
+					printResult("status=N", false);
+					e.printStackTrace();
+				}
+			}else{
+				//存在此卡号或是此卡已被激活过，或是此卡不存在
+				printResult("noCard", false);
+			}
+		}else{
+			//错误的签名
+			printResult("errorSign", false);
+		}
+		
+	}
+
+
+	public static YungouNoticeUrl noticeYungouURL(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(null != check && null != check.getYungouNoticeUrl()){
+			YungouNoticeUrl yungouNoticeUrl = check.getYungouNoticeUrl();
+			return yungouNoticeUrl;
+		}
+		return null;
+	}
+
+	/**
+	 * 云购补单（修改中奖时间）JSDP-171 xingjia 200150610
+	 * @throws IOException 
+	 */
+	@Action("/modules/petcard/petcard/supplyWinTimePage")
+	public String supplyWinTimePage() throws IOException{
+		
+		String cardNo = paramString("tradeNo");
+		PetCard petCard = petCardService.getPetCardByIdOrPwd(cardNo, null);
+		String signKey = null;
+		String supplyWinTimeUrl = null;
+		YungouNoticeUrl yungouUrl = noticeYungouURL();
+		if(null != yungouUrl){
+			supplyWinTimeUrl = yungouUrl.getSupplyWinTimeUrl();
+			signKey = yungouUrl.getSignKey();
+		}
+		map.put("cardNo", cardNo);
+		map.put("paw", petCard.getPaw());
+		map.put("sign", signKey);
+		
+		HttpResult result = null;
+		if(StringUtil.isNotBlank(supplyWinTimeUrl)){
+			result =HttpUtils.sendGet(SignUtils.getUrl(supplyWinTimeUrl, map, signKey), null);
+		}
+		if(result != null){
+			String resultString = result.getContent();
+			JSONObject jso = JSON.parseObject(resultString) ;
+			logger.info(jso.getBooleanValue("status")+"==="+jso.getString("msg")+""+jso.getLongValue("winqtime"));
+			if(jso.getBooleanValue("status")){
+				long winqTime = jso.getLongValue("winqtime");
+				request.setAttribute("winqTime", DateUtil.dateStr4(new Date(winqTime*1000)));
+			}else{
+				request.setAttribute("winqTime", "");
+			}
+		}else{
+			request.setAttribute("winqTime", "");
+		}
+		request.setAttribute("petCard", petCard);
+//		request.setAttribute("winTime", "2015-06-10 20:00:00");
+		return "supplyWinTimePage";
+	}
+	
+	
+	/**
+	 * 补单根据云购传过来的时间修改数据 JSDP-171 xingjia 200150610
+	 * @throws IOException 
+	 */
+	@Action("/modules/petcard/petcard/supplyWinTime")
+	public void supplyWinTime() throws IOException{
+		data = new HashMap<String, Object>();
+		String cardNo = paramString("cardNo");
+		String winTimeStr = paramString("winqTime");
+		String isSupply = paramString("isSupply");
+		
+		if(StringUtil.isNotBlank(cardNo) && StringUtil.isNotBlank(winTimeStr) && "Y".equals(isSupply)){
+			PetCard petCard = petCardService.getPetCardByIdOrPwd(cardNo, null);
+			petCard.setWinTime(DateUtil.getDateByFullDateStr(winTimeStr));
+			try {
+				petCardService.update(petCard);
+				data.put("result", true);
+				data.put("msg", "更新成功");
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msd", "修改失败");
+			}
+		}else{
+			data.put("result", true);
+			data.put("msg", "修改失败");
+		}
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 修改体验卡信息页面
+	 * 
+	 * @author sxy
+	 * 
+	 */
+	@Action("/modules/petcard/petcard/editPetCardPage")
+	public String editPetCardPage(){
+		// 根据ID查询体验卡信息
+		PetCard petCard = petCardService.getPetCardById(model.getId());
+		request.setAttribute("petCard", petCard);
+		this.saveToken("petCardEditToken");
+		return "editPetCardPage";
+	}
+	
+	/**
+	 * 修改体验卡信息
+	 * 
+	 * @author sxy
+	 * @throws Exception
+	 */
+	@Action("/modules/petcard/petcard/editPetCard")
+	public void editPetCard() throws Exception{
+		
+		try {
+			long id = paramLong("id");
+			String status = paramString("status");
+			String money = paramString("money");
+			String type = paramString("type");
+			String isValid = paramString("isValid");
+			String validTime = paramString("validTime");
+			String remark = paramString("remark");
+			//JSDP-183 xingjia 20150619 start
+			if(isValid.equals("0") && "".equals(validTime)){
+				throw new BussinessException("请选择输入有效时间", 1);
+			}
+			
+			
+			if(isValid.equals("0") && "".equals(validTime)){
+				throw new BussinessException("请选择输入有效时间", 1);
+			}else if(isValid.equals("1")){
+				validTime = "0";	// 永久有效设为0天
+			}
+			//JSDP-183 xingjia 20150619 end
+			// 根据ID查询体验卡信息
+			PetCard petCard = petCardService.getPetCardById(id);
+			//批次号、卡号、密码、添加时间、添加人保持原值不变
+			//petCard.setBatchNo(model.getBatchNo());
+			if(petCard != null){
+				// 状态
+				if(StringUtil.isNotBlank(status)){
+					petCard.setStatus(status);
+				}
+				// 金额
+				if(StringUtil.isNotBlank(money)){
+					petCard.setMoney(Double.valueOf(money));
+				}
+				// 类型
+				if(StringUtil.isNotBlank(type)){
+					petCard.setType(type);
+				}
+		     	// 是否有效
+				if(StringUtil.isNotBlank(isValid)){
+					petCard.setIsValid(Integer.parseInt(isValid));
+				}
+				// 有效时间
+				if(StringUtil.isNotBlank(validTime)){
+					petCard.setValidTime(Integer.parseInt(validTime));
+				}
+				// 备注
+				if(StringUtil.isNotBlank(remark)){
+					petCard.setRemark(remark);
+				}
+				// 更新时间
+				petCard.setUpdateTime(nowdate);
+				// 修改人
+				petCard.setUpdateUser(getOperatorUserName());
+		     	checkToken("petCardEditToken");
+		     	petCardService.update(petCard);
+		     	printResult("修改体验卡成功！", true);
+			}else{
+				printResult("修改体验卡失败！", false);
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+     	
+	}
+	
+	/**
+	 * 查看体验卡页面
+	 * 
+	 * @author sxy
+	 * @return
+	 */
+	@Action("/modules/petcard/petcard/viewPetCardPage")
+	public String viewPetCardPage() throws Exception{
+		// 根据ID查询体验卡信息
+		PetCard petCard = petCardService.getPetCardById(model.getId());
+		request.setAttribute("petCard", petCard);
+		return "viewPetCardPage";
+	}
+	
+	
+	/**
+	 * 体验卡数据导出————查询数据
+	 * 
+	 * @author sxy
+	 * @throws Exception
+	 */
+	@Action("/modules/petcard/petcard/petCardExcelForSelectList")
+	public void petCardForSelectListExcel() throws Exception{
+		// 新导出
+		response.setContentType("application/msexcel;charset=UTF-8");
+		List<PetCard> newList = petCardService.excelPetCardList(model);
+		// 更新导出状态值
+		petCardService.updateSelectPetCardList(model);
+		//JSDP-171 xingjia 20150609 start 第二次修改
+		String title = "晋商贷体验卡的Excel表";
+		String[] hearders = new String[] { "用户ID", "批次号", "卡号","密码", "金额",
+				 "类型", "状态","是否有效", "有效时间", "添加时间","中奖时间", "激活时间",  "添加人", "备注" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]", "object[13]" };	// 对象属性数组
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		//JSDP-171 xingjia 20150609 end 第二次修改
+		String infile = contextPath + "/data/export/" + downloadFile;
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+
+	}
+	
+	
+	/**
+	 * 体验卡数据导出————查询选中数据
+	 * 
+	 * @author sxy
+	 * @throws Exception
+	 */
+	/*@Action("/modules/petcard/petcard/petCardExcelForSelectList")
+	public void petCardForSelectCheckExcel() throws Exception{
+		// 新导出
+		response.setContentType("application/msexcel;charset=UTF-8");
+		List<PetCard> newList = petCardService.excelPetCardList(model);
+		String title = "晋商贷体验卡的Excel表";
+		String[] hearders = new String[] { "用户ID", "批次号", "卡号", "状态", "金额",
+				"消费用户名", "类型", "是否有效", "有效时间", "中奖时间", "激活时间", "添加时间", "添加人", "备注" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]", "object[13]" };	// 对象属性数组
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		
+	}*/
+	// JSDP-171 sxy 2015-06-03 end
+	
+	/**
+	 * 添加Excel导入页面
+	 * 
+	 * @author sxy
+	 * @return
+	 */
+	@Action("/modules/petcard/petcard/importPetCardExcelPage")
+	public String importPetCardExcelPage() throws Exception{
+		return "importPetCardExcelPage";
+	}
+	
+	
+	/**
+	 * 体验卡数据导入
+	 * 
+	 * @author sxy
+	 * @throws Exception
+	 */
+	@Action("/modules/petcard/petcard/petCardExcelForImport")
+	public void petCardExcelForImport() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		boolean result = false;
+		// 上传excel文件且后缀为.xls或.xlsx
+		String picPath = xlsUploadFile();
+		// 接收文件路径（确保接收到完整的路径）
+		String fileName = ServletActionContext.getServletContext().getRealPath("") + picPath;
+		// 调整路径
+		fileName = fileName.replaceAll("\\\\", "/");
+		// 判断文件是否为空
+		if(StringUtil.isNotBlank(fileName)){
+			
+// 			方法一：JXL导入(仅支持.xls格式)
+//			result = readExcelOfJXL(fileName);
+//			if(result == true){
+//				printResult("导入体验卡成功", true);
+//			}else{
+//				printResult("导入体验卡失败", false);
+//			}
+			
+            // 方法二：POI导入
+			File f = new File(fileName);
+			FileInputStream fis = new FileInputStream(f);
+			// 可处理2003及2007
+			Workbook wb = WorkbookFactory.create(fis);
+            result = readExcelOfPOI(wb);
+            if(result == true){
+				printResult("导入体验卡成功", true);
+			}else{
+				printResult("导入体验卡失败", false);
+			}
+			
+		}else{
+			throw new BussinessException("请选择要导入的文件", 1);
+		}
+		
+		
+		
+	}
+	// JSDP-171 sxy 2015-06-03 end
+	
+	public boolean readExcelOfPOI(Workbook wb) throws Exception {
+		boolean result = false;
+		try {
+			for (int k = 0; k < wb.getNumberOfSheets(); k++) {
+				// sheet
+				Sheet sheet = wb.getSheetAt(k);
+				int rows = sheet.getPhysicalNumberOfRows();
+				for (int r = 3; r < rows; r++) {
+					
+					PetCard petCard = new PetCard();
+					// 定义 row
+					Row row = sheet.getRow(r);
+					if (row != null) {
+						
+						//getCellFormatValue(row.getCell((short) r)).trim();
+						
+						//cell.setCellType(HSSFCell.CELL_TYPE_STRING);
+						try {
+							// id(导入数据时不需要导入id)
+							String batchNo      = String.valueOf(row.getCell(1)); 							// 批次号
+							String cardNo       = String.valueOf(row.getCell(2)); 							// 卡号
+							String paw          = String.valueOf(row.getCell(3)); 							// 密码
+							double money        = Double.valueOf(String.valueOf(row.getCell(4))); 			// 金额(面值)
+							String type         = String.valueOf(row.getCell(5)); 							// 类型
+							String status       = String.valueOf(row.getCell(6)); 							// 状态
+							String isValid      = String.valueOf(row.getCell(7)); 							// 是否有效
+							//String validTimeStr = row.getCell(8).getStringCellValue();
+							String validTimeStr = getCellFormatValue(row.getCell(8));
+							//double validTimeStr = row.getCell(8).getNumericCellValue();
+							int    validTime    = Integer.parseInt(subZeroAndDot(String.valueOf(validTimeStr)));		// 有效时间
+							Date   addTime      = (Date) f.parseObject(String.valueOf(row.getCell(9))); 	// 添加时间
+							//Date   winTime  	= (Date) f.parseObject(String.valueOf(row.getCell(10))); 	// 中奖时间
+							//Date   activateTime = (Date) f.parseObject(String.valueOf(row.getCell(11))); 	// 激活时间
+							String addUser      = String.valueOf(row.getCell(12)); 							// 添加人
+							String remark       = String.valueOf(row.getCell(13)); 							// 备注
+
+							// 开始赋值
+							// petCard.setId(id); 															// id(导入数据时不需要导入id)
+							petCard.setBatchNo(batchNo); 													// 批次号
+							petCard.setCardNo(cardNo); 														// 卡号
+							petCard.setPaw(paw); 															// 密码
+							petCard.setMoney(money); 														// 金额(面值)
+
+							if ("晋商贷体验卡".equals(type) || "pt".equals(type)) { 							// 类型
+								petCard.setType("pt");
+							} else if ("云购体验卡".equals(type) || "yt".equals(type)
+									|| "1".equals(type)) {
+								petCard.setType("yt");
+							}
+
+							if ("未激活".equals(status) || "da".equals(status)) { 							// 状态
+								petCard.setStatus("da");
+							} else if ("已激活".equals(status) || "ua".equals(status)) {
+								petCard.setStatus("ua");
+							} else if ("已失效".equals(status) || "dd".equals(status)) {
+								petCard.setStatus("dd");
+							}
+
+							if ("永久有效".equals(isValid) || "1".equals(isValid)) { 							// 是否有效
+								petCard.setIsValid(1);
+							} else if ("短期有效".equals(isValid)
+									|| "0".equals(isValid)) {
+								petCard.setIsValid(0);
+							}
+
+							petCard.setValidTime(validTime); 						// 有效时间
+							petCard.setAddTime(addTime); 							// 添加时间
+							petCard.setWinTime(null); 								// 中奖时间(默认为null)
+							petCard.setActivateTime(null); 							// 激活时间(默认为null)
+
+							if (StringUtil.isNotBlank(addUser)) { 					// 添加人
+								petCard.setAddUser(addUser);
+							} else {
+								petCard.setAddUser(null);
+							}
+
+							if (StringUtil.isNotBlank(remark)) { 					// 备注
+								petCard.setRemark(remark);
+							} else {
+								petCard.setRemark(null);
+							}
+							
+							petCard.setIsExport("0");								// 是否导出，默认为未导出
+							
+						} catch (Exception e) {
+							e.printStackTrace();
+							throw new BussinessException("导入文件异常，请核对文件数据", 1);
+						}
+
+					}
+					// 插入数据
+					result = petCardService.petCardAdd(petCard);
+					
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new BussinessException("导入文件异常，请核对文件数据", 1);
+		}
+		return result;
+	}
+
+	
+	/**
+	 * 获取单元格数据内容为字符串类型的数据
+	 * 
+	 * @param cell
+	 *            Excel单元格
+	 * @return String 单元格数据内容
+	 */
+	private static String getCellFormatValue(Cell cell) {
+		String strCell = "";
+		switch (cell.getCellType()) {
+		case Cell.CELL_TYPE_STRING:
+			strCell = cell.getStringCellValue();
+			break;
+		case Cell.CELL_TYPE_NUMERIC:
+			strCell = String.valueOf(cell.getNumericCellValue());
+			break;
+		case Cell.CELL_TYPE_BOOLEAN:
+			strCell = String.valueOf(cell.getBooleanCellValue());
+			break;
+		case Cell.CELL_TYPE_BLANK:
+			strCell = "";
+			break;
+		default:
+			strCell = "";
+			break;
+		}
+		if (strCell.equals("") || strCell == null) {
+			return "";
+		}
+		if (cell == null) {
+			return "";
+		}
+		return strCell;
+	}
+	
+	
+	/** 
+     * 使用java正则表达式去掉多余的.与0 
+     * @param s 
+     * @return  
+     */  
+    public static String subZeroAndDot(String s){  
+        if(s.indexOf(".") > 0){  
+            s = s.replaceAll("0+?$", "");//去掉多余的0  
+            s = s.replaceAll("[.]$", "");//如最后一位是.则去掉  
+        }  
+        return s;  
+    }  
+	
+	
+	/**
+     * 读取Excel数据内容——POI
+     * 
+     * @author sxy
+     * @param InputStream
+     * @return Map 包含单元格数据内容的Map对象
+     */
+	/*public boolean readExcelOfPOI(String fileName) throws Exception {
+		InputStream is = new FileInputStream(fileName);
+		POIFSFileSystem fs;
+		HSSFWorkbook wb = null;
+		HSSFSheet sheet;
+		HSSFRow row;
+		boolean result = false;
+		try {
+			fs = new POIFSFileSystem(is);
+			wb = new HSSFWorkbook(fs);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		sheet = wb.getSheetAt(0);
+		// 得到总行数
+		int rowNum = sheet.getLastRowNum();
+		row = sheet.getRow(0);
+		// 得到总列数
+		// int colNum = row.getPhysicalNumberOfCells();
+		// 正文内容应该从第 i 行开始——根据文件的类型查看从第几行开始读取
+		for (int i = 3; i <= rowNum; i++) {
+			row = sheet.getRow(i);
+			PetCard petCard = new PetCard();
+			try {
+				
+				System.out.println("开始第" + i + "数据的导入");
+				// 如果第一列出现id，则可以不使用 row.getCell(0) 赋值
+				System.out.println(row.getCell(0));
+				System.out.println(row.getCell(1));
+				System.out.println(row.getCell(2));
+				System.out.println(row.getCell(3));
+				
+				//long   id        	= Long.valueOf(String.valueOf(row.getCell(0)));			// id(导入数据时不需要导入id)
+				String batchNo   	= String.valueOf(row.getCell(0));						// 批次号
+				String cardNo    	= String.valueOf(row.getCell(0));						// 卡号
+				String paw       	= String.valueOf(row.getCell(0));						// 密码
+				double money     	= Double.valueOf(String.valueOf(row.getCell(0)));		// 金额(面值)
+				String type      	= String.valueOf(row.getCell(0));						// 类型
+				String status    	= String.valueOf(row.getCell(0));						// 状态
+				String isValid   	= String.valueOf(row.getCell(0));						// 是否有效
+				int    validTime 	= Integer.valueOf(String.valueOf(row.getCell(0)));		// 有效时间
+				Date   addTime   	= (Date)f.parseObject(String.valueOf(row.getCell(0)));	// 添加时间
+				Date   winTime      = (Date)f.parseObject(String.valueOf(row.getCell(0)));	// 中奖时间
+				Date   activateTime = (Date)f.parseObject(String.valueOf(row.getCell(0)));	// 激活时间
+				String addUser      = String.valueOf(row.getCell(0));						// 添加人
+				String remark       = String.valueOf(row.getCell(0));						// 备注
+				
+				// 开始赋值
+				//petCard.setId(id); 															// id(导入数据时不需要导入id)
+				petCard.setBatchNo(batchNo); 													// 批次号
+				petCard.setCardNo(cardNo); 														// 卡号
+				petCard.setPaw(paw); 															// 密码
+				petCard.setMoney(money); 														// 金额(面值)
+				
+				if ("晋商贷体验卡".equals(type) || "pt".equals(type)) { 							// 类型
+					petCard.setType("pt");
+				} else if ("云购体验卡".equals(type) || "yt".equals(type) || "1".equals(type)) {
+					petCard.setType("yt");
+				}
+				
+				if ("未激活".equals(status) || "da".equals(status)) { 							// 状态
+					petCard.setStatus("da");
+				} else if ("已激活".equals(status) || "ua".equals(status)) {
+					petCard.setStatus("ua");
+				} else if ("已失效".equals(status) || "dd".equals(status)) {
+					petCard.setStatus("dd");
+				}
+
+				if ("永久有效".equals(isValid) || "1".equals(isValid)) { 							// 是否有效
+					petCard.setIsValid(1);
+				} else if ("短期有效".equals(isValid) || "0".equals(isValid)) {
+					petCard.setIsValid(0);
+				}
+				
+				petCard.setValidTime(validTime); 												// 有效时间
+				petCard.setAddTime(addTime); 													// 添加时间
+				petCard.setWinTime(winTime); 													// 中奖时间
+				petCard.setActivateTime(activateTime);											// 激活时间
+
+				if (StringUtil.isNotBlank(addUser)) { 											// 添加人
+					petCard.setAddUser(addUser);
+				} else {
+					petCard.setAddUser(null);
+				}
+
+				if (StringUtil.isNotBlank(remark)) { 											// 备注
+					petCard.setRemark(remark);
+				} else {
+					petCard.setRemark(null);
+				}
+				
+			}catch(Exception e){
+				throw new BussinessException("导入文件中数据不符，请核对文件数据", 1);
+			}
+
+			// 插入数据
+			result = petCardService.petCardAdd(petCard);
+		}
+		return result;
+	}*/
+
+    
+    
+    /** 
+	   * 从excel文件中读取所有的内容——JXL导入
+	   * 
+	   * @author sxy
+	   * @param file  excel文件 
+	   * @return excel文件的內容 
+	   */  
+	  /*public boolean readExcelOfJXL(String fileName) throws Exception {  
+	      boolean result = false;
+	      Workbook wb = null;  
+	      
+	      try {  
+	          // 构造Workbook（工作薄）对象  
+	          wb = Workbook.getWorkbook(new File(fileName));  
+	      } catch (BiffException e) {  
+	          e.printStackTrace();  
+	      } catch (IOException e) {  
+	          e.printStackTrace();  
+	      }  
+
+	      if (wb == null)
+	          return false;  
+	      // 获得了Workbook对象之后，就可以通过它得到Sheet（工作表）对象了  
+	      Sheet[] sheet = wb.getSheets();  
+	      if (sheet != null && sheet.length > 0) {  
+	          // 对每个工作表进行循环  
+	          for (int i = 0; i < sheet.length; i++) {  
+	              // 得到当前工作表的行数  
+	              int rowNum = sheet[i].getRows();
+	              // 云购导出数据前3行数据不需导入，所以j=3。从第j行开始读取
+	              for (int j = 3; j < rowNum; j++) {  
+	                  // 得到当前行的所有单元格  
+	                  Cell[] cells = sheet[i].getRow(j);  
+	                  //System.out.println("cell=="+cells.length);
+	                  if (cells != null && cells.length > 0) {  
+	                      // 插入数据（要确定每一列的值）
+	                	  PetCard petCard = new PetCard();
+	                	  try {
+	                		  //petCard.setId(Long.valueOf((String)cells[0].getContents()));			// id(导入数据时不需要导入id)
+	                		  petCard.setBatchNo((String)cells[1].getContents());						// 批次号
+							  petCard.setCardNo((String)cells[2].getContents());						// 卡号
+							  petCard.setPaw((String)cells[3].getContents());							// 密码
+							  petCard.setMoney(Double.valueOf((String)cells[4].getContents()));			// 金额(面值)
+							  if("晋商贷体验卡".equals((String)cells[5].getContents()) 
+									  || "pt".equals((String)cells[5].getContents())){					// 类型
+								  petCard.setType("pt");
+							  }else if("云购体验卡".equals((String)cells[5].getContents()) 
+									  || "yt".equals((String)cells[5].getContents())
+									  || "1".equals((String)cells[5].getContents())){
+								  petCard.setType("yt");
+							  }
+							  if("未激活".equals((String)cells[6].getContents()) 
+									  || "da".equals((String)cells[6].getContents())){					// 状态
+								  petCard.setStatus("da");
+							  }else if("已激活".equals((String)cells[6].getContents()) 
+									  || "ua".equals((String)cells[6].getContents())){
+								  petCard.setStatus("ua");
+							  }else if("已失效".equals((String)cells[6].getContents()) 
+									  || "dd".equals((String)cells[6].getContents())){
+								  petCard.setStatus("dd");
+							  }
+							  
+							  //petCard.setUserId(Integer.parseInt((String)cells[4].getContents()));	// 用户ID
+							  //petCard.setUserName((String)cells[4].getContents());					// 用户名
+							 
+							  if("永久有效".equals((String)cells[7].getContents()) 
+									  || "1".equals((String)cells[7].getContents())){					// 是否有效
+								  petCard.setIsValid(1);
+							  }else if("短期有效".equals((String)cells[7].getContents()) 
+									  || "0".equals((String)cells[7].getContents())){
+								  petCard.setIsValid(0);
+							  }
+							  petCard.setValidTime(Integer.parseInt((String)cells[8].getContents()));	// 有效时间
+					          
+							  petCard.setAddTime((Date)f.parseObject(cells[9].getContents()));			// 添加时间
+							  
+							  if(StringUtil.isNotBlank((String)cells[10].getContents())){
+								  petCard.setWinTime((Date)f.parseObject(cells[10].getContents()));		// 中奖时间
+							  }else{
+								  petCard.setWinTime(null);
+							  }
+							  
+							  if(StringUtil.isNotBlank((String)cells[11].getContents())){
+								  petCard.setActivateTime((Date)f.parseObject(cells[11].getContents()));// 激活时间
+							  }else{
+								  petCard.setActivateTime(null);
+							  }
+							  
+							  if(StringUtil.isNotBlank((String)cells[12].getContents())){				// 添加人
+								  petCard.setAddUser((String)cells[12].getContents());					
+							  }else{
+								  petCard.setAddUser(null);
+							  }
+							  
+							  if(StringUtil.isNotBlank((String)cells[13].getContents())){				// 备注
+								  petCard.setRemark((String)cells[13].getContents());					
+							  }else{
+								  petCard.setRemark(null);
+							  }
+							  
+							  
+						} catch (Exception e) {
+							throw new BussinessException("导入文件中数据不符，请核对文件数据", 1);
+						}
+							  // 默认未导出
+							  petCard.setIsExport("0");
+							 
+	                	  // 插入数据
+	                	  result = petCardService.petCardAdd(petCard);
+	      			
+	                  }  
+	              }  
+	          }  
+	      }  
+	      // 最后关闭资源，释放内存  
+	      wb.close();  
+	      return result;
+	  }  */
+
+}

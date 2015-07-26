@@ -1,0 +1,123 @@
+<#macro trunct name>
+	<#assign length=name?length>
+	<#if length&gt;15>
+		${name[0..15]}
+	<#else>
+		${name}
+	</#if>
+</#macro>
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>车贷宝-晋商贷</title>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="车贷宝是晋商贷为投资者细心划分的个人借贷项目，每一个借款人都需以车抵押，才能向投资者进行借款、融资。由于车贷宝中每个项目的借贷方特点和借贷金额的大小等因素，导致这类项目必须要满标复审通过才计息。"/>
+<meta name="keywords"content="车贷宝"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+</head>
+
+ <!-- <#assign web_title="车贷宝-晋商贷">
+		<#assign web_description="车贷宝是晋商贷为投资者细心划分的个人借贷项目，每一个借款人都需以车抵押，才能向投资者进行借款、融资。由于车贷宝中每个项目的借贷方特点和借贷金额的大小等因素，导致这类项目必须要满标复审通过才计息。">
+		<#assign meta_keywords="车贷宝"> -->
+<#include "../include/resource1.html">
+<body>
+<style>
+	.y_arrowsOut{width:1000px;margin:0 auto;position:relative;top:50px;}
+</style>
+<#assign nid="invest">
+<#include "../include/header.html">
+	<!--S-我要投资列表-->
+   <div class="c_sub_nav">
+		<dl>
+		    <dd><a href="/invest/index.html" hidefocus>全部</a></dd>
+			<dd><a href="/invest/goEnergy.html" hidefocus>能源宝</a></dd>
+			<dd><a href="/invest/goCar.html" class="c_contact_us"  hidefocus>车贷宝</a></dd>
+		<!--<dd><a href="store.html" hidefocus>铺宝宝</a></dd>  -->
+		<dd><a href="/invest/netLoan.html" hidefocus>微企贷</a></dd>
+			<dd><a href="/invest/stages.html" hidefocus>分期宝</a></dd>
+			<dd><a href="/credit/index/detail.html" hidefocus>债权转让</a></dd>
+			<div class="c_clear"></div>
+		</dl>
+	</div>
+	<div class="y_RinseChoose">
+		<input type="hidden" id="typeVal" value="103"/><!--代表车宝宝 --> 
+		<div class="y_RinseChoose_con">
+			<label>项目状态：</label>
+			<ul id="status">
+				<li class="y_RinseChoose_conClick" data-val="-2">全部</li>
+				<li data-val="1">投标中</li>
+				<li data-val="6">还款中</li>
+				<li data-val="8">投标结束</li>
+			</ul>
+		</div>
+		<div class="y_RinseChoose_con">
+			<label>项目期限：</label>
+			<ul id="timeSearch">
+				<li class="y_RinseChoose_conClick"  data-val="-1">不限</li>
+				<li data-val="2">0-1个月 </li>
+				<li data-val="3">1-3个月 </li>
+				<li data-val="4">3-6个月 </li>
+				<li data-val="5">6-12个月 </li>
+				<li data-val="6">12个月以上 </li>
+			</ul>
+		</div>
+		<div class="y_RinseChoose_con">
+			<label>还款方式：</label>
+			<ul id="style">
+				<li class="y_RinseChoose_conClick" data-val="-1">全部</li>
+				<li data-val="1">等额本息</li>
+				<li data-val="3">每月付息</li>
+				<li data-val="2">一次性还</li>
+			</ul>
+		</div>
+		<div class="y_RinseChoose_con">
+			<label>项目收益：</label>
+			<ul id="aprSearch">
+				<li class="y_RinseChoose_conClick" data-val="-1">全部</li>
+				<li data-val="1">0-6%</li>
+				<li data-val="2">6-12%</li>
+				<li data-val="3">12-15%</li>
+				<li data-val="4">15%以上</li>
+			</ul>
+		</div>
+		<div class="y_arrowsOut">
+			<div class="y_arrows" style="left:800px;">
+				更多筛选条件
+				<div class="y_sign"></div>
+			</div>
+		</div>
+	</div>
+	<ul class="y_money_uls">
+		<li>今日成交额<span class="specialFamily">${tadayTotal}</span>  元</li>
+		<li>为投资人赚取利息<span class="specialFamily">${tenderInv}</span>  元</li>
+		<li>累计帮助企业和个人融资<span class="specialFamily">${borrowTotalM}</span>  元</li>
+		<img src="${webroot}${theme_dir}/images/account/calculator.png" class="y_calculatorbutton">
+	</ul>
+	<div class="y_par_out" style="margin:0 auto;">
+		<dl class="y_parlex_project y_parlex_projects" style="position: relative;">
+		<div style="height:300px;"></div>
+		</dl>
+		<div id="kkpager"></div>
+	</div>
+		<!-- 计算器  start-->
+
+</div>
+    <!--E-我要投资列表-->
+<script>
+	seajs.use("${webroot}${theme_dir}/media/js/invest/investList");
+</script>
+<script>
+	 $(function(){	
+		$(".nav dd a").removeClass("c_nav_this");
+		$(".nav dd a").eq(0).addClass("c_nav_this"); 
+	})
+</script>
+<!-- JSDP-19  gjh 2015-4-13 start -->
+<#include "../include/homeFooter.html">
+<!-- JSDP-19  gjh 2015-4-13 end -->
+</body>
+</html>

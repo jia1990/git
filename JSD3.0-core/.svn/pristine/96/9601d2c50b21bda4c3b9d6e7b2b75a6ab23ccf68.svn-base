@@ -1,0 +1,263 @@
+
+package com.ddtkj.p2psys.score.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+/**
+ * @描述: 奖品规则表
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+@Entity
+@Table(name ="t_jsd_score_award")
+public class ScoreAward implements Serializable {
+
+	private static final long serialVersionUID = 3730897572019078295L;
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	
+	private String name;						//奖品名
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "rule_id")
+	private ScoreRuleAward rule;				
+	
+	private int level;							//奖品级别
+	private int rate;							//奖品中奖率
+	private long pointLimit;					//抽奖点数限制
+	private long bestow;						//领用数量
+	private long total;							//奖品数量
+	private int awardLimit;						//奖品限制 (0:奖品总量没有限制, 1:奖品总量限制)
+	private String description;					//奖品描述
+	private int type;							//奖品类型(1现金, 2积分, 3VIP, 4实物, 5红包, 6购物卡)
+	private double ratio;						//倍率
+	private int awardValue;						//奖品属性值
+	private String picUrl;						//图片
+	private String awardRule;					//奖品规则描述
+	private Date addTime;						//添加时间
+	private String addIp;						//添加IP
+	private Date updateTime;					//更新时间
+	private String updateIp;					//更新IP
+	
+	private String vipLevel;					//vip等级
+	private int vipValidMonth;					//vip有效期(月)
+	private String status;						//状态(11启用, 22关闭, 33删除)
+	//private int effectiveTime;				//有效时间(暂只适用于购物卡)
+	
+	private String goodsType;					//实物奖品类型 （01苹果手机，02苹果手表）
+		
+	public ScoreAward() {
+		super();
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public ScoreRuleAward getRule() {
+		return rule;
+	}
+
+	public void setRule(ScoreRuleAward rule) {
+		this.rule = rule;
+	}
+
+	public int getLevel() {
+		return level;
+	}
+
+	public void setLevel(int level) {
+		this.level = level;
+	}
+
+	public int getRate() {
+		return rate;
+	}
+
+	public void setRate(int rate) {
+		this.rate = rate;
+	}
+	
+	public long getPointLimit() {
+		return pointLimit;
+	}
+
+	public void setPointLimit(long pointLimit) {
+		this.pointLimit = pointLimit;
+	}
+
+	public long getBestow() {
+		return bestow;
+	}
+
+	public void setBestow(long bestow) {
+		this.bestow = bestow;
+	}
+
+	public long getTotal() {
+		return total;
+	}
+
+	public void setTotal(long total) {
+		this.total = total;
+	}
+
+	public int getAwardLimit() {
+		return awardLimit;
+	}
+
+	public void setAwardLimit(int awardLimit) {
+		this.awardLimit = awardLimit;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public int getType() {
+		return type;
+	}
+
+	public void setType(int type) {
+		this.type = type;
+	}
+
+	public double getRatio() {
+		return ratio;
+	}
+
+	public void setRatio(double ratio) {
+		this.ratio = ratio;
+	}
+
+	public int getAwardValue() {
+		return awardValue;
+	}
+
+	public void setAwardValue(int awardValue) {
+		this.awardValue = awardValue;
+	}
+
+	public String getPicUrl() {
+		return picUrl;
+	}
+
+	public void setPicUrl(String picUrl) {
+		this.picUrl = picUrl;
+	}
+
+	public String getAwardRule() {
+		return awardRule;
+	}
+
+	public void setAwardRule(String awardRule) {
+		this.awardRule = awardRule;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public String getUpdateIp() {
+		return updateIp;
+	}
+
+	public void setUpdateIp(String updateIp) {
+		this.updateIp = updateIp;
+	}
+
+	public String getVipLevel() {
+		return vipLevel;
+	}
+
+	public void setVipLevel(String vipLevel) {
+		this.vipLevel = vipLevel;
+	}
+
+	public int getVipValidMonth() {
+		return vipValidMonth;
+	}
+
+	public void setVipValidMonth(int vipValidMonth) {
+		this.vipValidMonth = vipValidMonth;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	/**
+	 * @return the goodsType
+	 */
+	public String getGoodsType() {
+		return goodsType;
+	}
+
+	/**
+	 * @param goodsType the goodsType to set
+	 */
+	public void setGoodsType(String goodsType) {
+		this.goodsType = goodsType;
+	}
+
+	/*public int getEffectiveTime() {
+		return effectiveTime;
+	}
+
+	public void setEffectiveTime(int effectiveTime) {
+		this.effectiveTime = effectiveTime;
+	}*/
+	
+}

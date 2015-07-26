@@ -1,0 +1,89 @@
+package com.rongdu.p2psys.score.service;
+
+import java.util.Collection;
+import java.util.List;
+
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.score.model.ScoreLogModel;
+
+public interface ScoreLogService {
+
+	
+	/**
+	 *@author 李建云 
+	 * 
+	 * */
+	public PageDataList<ScoreLogModel> getWebScoreLogPage(ScoreLogModel model);
+	/**
+	 * 会员操作记录查询 
+	 * @param page
+	 * @param param 查询条件分装类
+	 * @return page
+	 */
+	public PageDataList<ScoreLogModel> getScoreLogPage(ScoreLogModel model);
+	
+	/**
+	 * 查询积分记录信息
+	 * @param user_id
+	 * @param typeNid积分类型表主键ID
+	 * @return
+	 */
+	public List<ScoreLog> getScoreLogList(long userId , String typeNid);
+	/**
+	 * 添加用户积分日志
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 * @param sl  积分实体
+	 * @return
+	 */
+	public ScoreLog save(ScoreLog sl);
+	
+	/**
+	 * 获得用户积分信息列表
+	 * 
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<ScoreLogModel> getUserScoreLogPage(int pageNumber, int pageSize, ScoreLogModel model);
+	
+	/**
+	 * @author 冯国琴
+	 * 查询用户最近一次签到时间
+	 * @return  
+	 */
+	 List<ScoreLog>  getLastTimeSign(long userId);
+	 /**
+	  * 用户积分列表
+	  * @param userId
+	  * @return
+	  */
+	 List<ScoreLog> getScoreList(long userId,String scoreType);
+	 /**
+	  * 查询用户重复的积分记录
+	  * @param model
+	  * @return
+	  */
+	 PageDataList<ScoreLogModel> findRepeatScorePage(ScoreLogModel model);
+	 
+	 /**
+	  * 根据id和积分类型查询积分记录
+	  * @param id
+	  * @param scoreType
+	  * @return
+	  */
+	 public ScoreLog findScoreLogById(long id);
+	 /**
+	  * 更新积分日志
+	  * @param logUList
+	  * @param score
+	  * @param logList
+	  * @return
+	  */
+	 public ScoreLog updateScoreLog(Collection<ScoreLog> logUList,Score score,Collection<ScoreLog> logList);
+	
+}

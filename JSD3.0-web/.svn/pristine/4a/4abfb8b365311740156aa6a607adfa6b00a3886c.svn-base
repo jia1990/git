@@ -1,0 +1,88 @@
+package com.ddtkj.mobile;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.security.MessageDigest;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.apache.struts2.ServletActionContext;
+import com.opensymphony.xwork2.ActionInvocation;
+import com.opensymphony.xwork2.interceptor.AbstractInterceptor;
+import com.rongdu.common.util.code.MD5;
+
+public class MobileIntercepter extends AbstractInterceptor {
+
+	@Override
+	public String intercept(ActionInvocation invocation) throws Exception {
+		
+		HttpServletRequest request = ServletActionContext.getRequest();
+		String paramAppkey = request.getParameter("appkey");
+		
+		//暂不验证签名,保证网页可以调试
+		if (!Constants.APPKEY_MAP.containsKey(paramAppkey)) {
+			String json = "{\"res_code\":\"0\",\"res_msg\":\"appkey不正确 !\"}";
+			printJson(json);
+			return null;
+		}
+
+		//校验签名与时间戳
+		String signa = request.getParameter("signa");
+		String ts = request.getParameter("ts");
+		String serverSigna = this.getMD5Str(Constants.APPKEY_MAP.get(paramAppkey) + ts);
+		serverSigna = this.getMD5Str(serverSigna + paramAppkey).toUpperCase();
+		if (serverSigna.equals(signa) == false) {
+			String json = "{\"res_code\":\"0\",\"res_msg\":\"签名错误 !\"}";
+			printJson(json);
+			return null;
+		}
+		
+		//校验token
+		String oauth_token = request.getParameter("oauth_token");
+		String uid = request.getParameter("uid");
+		if((null!=oauth_token && !"".equals(oauth_token)) || (null!=uid && !"".equals(uid))){
+			if(!MD5.encode(uid + request.getSession(true).getId()).equals(oauth_token)){
+				String json = "{\"res_code\":\"0\",\"res_msg\":\"登录超时,请退出后重新登录 !\"}";
+				printJson(json);
+				return null;
+			}
+		}		
+		
+		return invocation.invoke();
+	}
+
+	protected void printJson(String json) throws IOException {
+		HttpServletResponse response = ServletActionContext.getResponse();
+		response.setContentType("application/json;charset=UTF-8");
+		PrintWriter out = response.getWriter();
+		out.print(json);
+		out.flush();
+		out.close();
+	}
+	
+	protected String getMD5Str(String str) {
+		MessageDigest messageDigest = null;
+
+		try {
+			messageDigest = MessageDigest.getInstance("MD5");
+
+			messageDigest.reset();
+
+			messageDigest.update(str.getBytes("UTF-8"));
+		} catch (Exception e) {
+			return "md5 加密异常";
+		}
+
+		byte[] byteArray = messageDigest.digest();
+
+		StringBuffer md5StrBuff = new StringBuffer();
+
+		for (int i = 0; i < byteArray.length; i++) {
+			if (Integer.toHexString(0xFF & byteArray[i]).length() == 1)
+				md5StrBuff.append("0").append(
+						Integer.toHexString(0xFF & byteArray[i]));
+			else
+				md5StrBuff.append(Integer.toHexString(0xFF & byteArray[i]));
+		}
+
+		return md5StrBuff.toString();
+	}
+}

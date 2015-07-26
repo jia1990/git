@@ -1,0 +1,875 @@
+package com.ddtkj.manage.quartz.timer;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+import org.apache.log4j.Logger;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.ddtkj.common.http.HttpClientUtils;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoTenderService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.credit.domain.CollectionCredit;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.service.CollectionCreditService;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.member.service.MemberVipService;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpWeixinLogService;
+import com.ddtkj.p2psys.returnmoney.service.ReturnMoneyService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Log;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.DataShowRuleCheck;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.service.LogService;
+import com.rongdu.p2psys.core.service.RuleService;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+@Component
+@Lazy(value=false)
+public class QuartzJob {
+	private static Logger logger = Logger.getLogger(QuartzJob.class);
+	@Resource
+    private AccountRechargeService accountRechargeService;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	@Resource
+	private RuleService ruleService;
+	@Resource
+	private YmdService ymdService;
+	@Resource
+	private ReturnMoneyService returnMoneyService;
+	@Resource
+	private RpProduceService rpProduceService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private MemberVipService memberVipService;
+	@Resource
+	private BorrowAutoTenderService borrowAutoTenderService;
+	@Resource
+	private RegionService regionService;
+	
+	@Resource
+	private BorrowCollectionService collectionService;
+	@Resource
+	private CreditAssignmentService creditAssignmentService;
+	@Resource
+	private CreditLogService creditLogService ;
+	@Resource 
+	private CollectionCreditService collectionCreditService;
+	
+	@Resource
+	private LogService logService;
+	
+	@Resource
+	private AutoBorrowService autoBorrowService;
+	
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private RpWeixinLogService rpWeixinLogService;
+	@Resource
+	private RpActivityProduceService rpActivityProduceService;
+	
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private BorrowDao borrowDao;
+	
+	@Resource
+	private AccountService accountService;
+	
+	public UserIdentifyService getUserIdentifyService() {
+		return userIdentifyService;
+	}
+	public void setUserIdentifyService(UserIdentifyService userIdentifyService) {
+		this.userIdentifyService = userIdentifyService;
+	}
+	
+	/**
+	 * 修改提现状态(xinggenwang@ddtkj.com)
+	     使用数据库任务(Mysql任务_定时修改提现状态 )代替
+	@Scheduled(cron = "0 0 1 * * ?")//每天凌晨1点整
+	public void setAccountCash() {
+	    //accountCashService.setAccountCash();
+	}
+	
+	 */
+	
+	/**
+	 * 修改充值状态(xinggenwang@ddtkj.com)
+	 *  使用数据库任务(Mysql任务_定时修改充值状态)代替
+
+	@Scheduled(cron = "0 0 1 * * ?")//每天凌晨1点整
+    public void setAccountRecharge() {
+	
+	  // accountRechargeService.setAccountRecharge();
+    }
+   */
+	
+	/**
+     * 还款提醒
+     */
+    @Scheduled(cron = "0 0 7 * * ?")//每天凌晨7点整
+    public void doRepaymentNotice() {
+        borrowRepaymentService.doRepaymentNotice();
+    }
+    
+    /**
+     * VIP到期提醒
+     * @return void 
+     * @throws Exception   
+     */ 
+    @Scheduled(cron = "0 0 3 * * ?")//每天凌晨3点整
+    public void doVIPExpireNotice() {
+    	memberVipService.doVIPExpireNotice();
+    }
+    
+    
+    /**
+     * 针对定时标的自动投标处理
+     * @return void 
+     * @throws Exception   
+     */ 
+   //@Scheduled(cron = "0 0 0/1 * * ?")//每隔1小时扫描
+   //@Scheduled(cron = "0 29 11 * * ?")
+    /*public void doAutoTenderFixedProcess() {
+    	borrowAutoTenderService.doAutoTenderFixedProcess();
+    }*/
+    
+    /**
+     * 提现银行转账是否成功状态改变
+     * @return void 
+     * @throws Exception   
+     */ 
+    //JSDBET-795 wcw 2015-3-11 start
+    //@Scheduled(cron = "0 0/1 * * * ?") //因测试新增
+  //JSDBET-795 wcw 2015-3-11 end
+    @Scheduled(cron = "0 0/30 * * * ?")//每天凌晨2点整
+    public void doDrawStatus() {
+		List<AccountDraw> list=accountDrawCashService.drawListByTradeNo(AccountDraw.DRAW_CASH_REQUEST_YMD_SUCCESS);
+		for(AccountDraw draw:list){
+			try {
+				YmdQuery ymdQuery=new YmdQuery();
+				ymdQuery.setOutTradeNo(draw.getDrawTradeNo());
+				YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+				ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+				List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+				if(queryDetaillist.size()>1){
+					continue;
+				}else{
+					ymdQueryReturn.setTradeStatus(queryDetaillist.get(0).getTradeStatus());
+				}
+				if("00".equals(ymdQueryReturn.getResultCode())&&"00".equals(ymdQueryReturn.getTradeStatus())){
+					logger.info("订单号为"+draw.getDrawTradeNo()+"的提现记录第三方返回交易状态为："+ymdQueryReturn.getErrMsg(ymdQueryReturn.getTradeStatus(), "一麻袋请求失败"));
+				    /*AccountDrawModel model=new AccountDrawModel();
+					BeanUtils.copyProperties(draw, model);
+					model.setDrawHandleStatus(AccountDraw.DRAW_CASH_SUCCESS);*/
+					YmdCash ymdCash=new YmdCash();
+					ymdCash.setErrCode(ymdQueryReturn.getTradeStatus());
+					ymdCash.setOutTradeNo(queryDetaillist.get(0).getOutTradeNo());
+					ymdCash.setAmount(queryDetaillist.get(0).getAmount());
+					ymdCash.setFee(queryDetaillist.get(0).getFee());
+					//JSDP - BUG32  sxy
+					accountDrawCashService.drawCashBankSucCallBack(ymdCash,AccountDraw.DRAW_CASH_SUCCESS,null);
+					//JSDP - BUG32  sxy
+				}else{
+					logger.info("订单号为"+draw.getDrawTradeNo()+"的提现记录第三方返回交易状态为："+ymdQueryReturn.getErrMsg(ymdQueryReturn.getTradeStatus(), "一麻袋请求失败"));
+				    continue;
+				}
+				//JSDBET-812 gjh 2015-3-16 start
+			} catch (HandleException e) {
+				e.saveExceptionLog(e);
+				//JSDBET-812 gjh 2015-3-16 end
+			} catch (Exception e) {
+				logger.info("提现记录Id为"+draw.getId()+"的提现银行转账成功处理异常信息===="+e.getMessage());
+				continue;
+			}
+		}
+    }
+    /**
+     * 即投即生息自动还款
+     * @return void 
+     * @throws Exception   
+     */ 
+    //@Scheduled(cron = "* * * * * ?")
+    @Scheduled(cron = "0 0/10 * * * ?")  //每隔1小时扫一次
+    public void doAutoRepay(){
+    	//查询出待还款列表
+    	//List<BorrowRepayment> list=borrowRepaymentService.getRepayListByStatus(0);
+    	List<BorrowCollection> list=collectionService.getCollectionListByStatus(0);
+    	if(list.size()>0){
+	    	for(BorrowCollection c:list){
+	    		try {
+	    			//自动还款校验
+					ymdService.instantLiveYmdBorrowRepay(c, (byte)0);
+					
+					//String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+					//DisruptorUtils.doInstantLiveBorrowRepay(c,resultFlag);
+					autoBorrowService.autoInstantLiveBorrowRepay(c);
+	
+					//JSDBET-812 gjh 2015-3-16 start
+				} catch (HandleException e) {
+					e.saveExceptionLog(e);
+					continue;
+					//JSDBET-812 gjh 2015-3-16 end
+				} catch (Exception e) {
+					e.printStackTrace();
+					logger.info("汇潮转账（即时即生息还款）异常信息=="+e.getMessage());
+					Log log = new Log();
+					log.setMethod("即投即生息还款计划rd_borrow_collection表ID"+c.getId());
+					log.setException(e.getMessage());
+					log.setParams("即投即生息还款计划rd_borrow_collection表ID"+c.getId());
+					log.setType(Log.TYPE_EXCEPTION);
+					logService.addLog(log);
+					continue;
+				}
+	    	}
+    	}
+    }
+    
+    /**
+     * 即投即生息标还款前未满债权待收处理
+     * @return void 
+     * @throws Exception   
+     */ 
+    @Scheduled(cron = "0 0 0/1 * * ?")  //每隔1小时扫一次
+    public void doAutoCredit(){
+    	//查询出待还款列表
+    	//List<BorrowCollection> list=collectionService.getCollectionListByStatus(0);
+    	long ahead_time=Global.getInt("credit_collect_ahead_repay_time");
+    	List<CollectionCredit> list=collectionCreditService.collectionCredit(0, ahead_time);
+    	if(list.size()>0){
+    		for(CollectionCredit c:list){
+    			try {
+    				BorrowCollection bcc=c.getBorrowCollection();
+    				if(bcc!=null){
+    					int borrowType=bcc.getBorrow().getType();
+    				    if(borrowType==Borrow.TYPE_MORTGAGE_ENERGY||borrowType==Borrow.TYPE_NETWORK)	{
+    				    	collectionCreditService.collectionCredit(c);
+    				    }
+    				}
+    				//JSDBET-812 gjh 2015-3-16 start
+    			//} catch (HandleException e) {
+    				//throw e;
+    				//JSDBET-812 gjh 2015-3-16 end
+				} catch (Exception e) {
+					logger.info("汇潮转账（即时即生息还款）异常信息=="+e.getMessage());
+					Log log = new Log();
+					log.setMethod("即投即生息未满债权待收处理t_jsd_collection_credit表ID"+c.getId());
+					log.setException(e.getMessage());
+					log.setParams("即投即生息未满债权待收处理t_jsd_collection_credit表ID"+c.getId());
+					log.setType(Log.TYPE_EXCEPTION);
+					logService.addLog(log);
+					continue;
+				}
+    		}
+    	}
+    }
+    /**
+     * 平台数据扫描
+     * @return void 
+     * @throws Exception   
+     */ 
+    @Scheduled(cron = "0 0 0/1 * * ?")//每一个小时
+    //@Scheduled(cron = "0 * * * * ?")//每天凌晨23:45
+    public void doShowData(){
+    	
+    	Date startDate = new Date();
+    	//startDate.setMonth(startDate.getMonth() - 1);
+    	startDate.setDate(startDate.getDate() - 1);
+    	Date endDate = new Date();
+    	//endDate.setDate(1);
+    	//获取新数据
+    	logger.info("==============平台数据获取开始=============");
+    	double awardSum = returnMoneyService.getContinueInvestAwardCount(null,null);//总奖励数
+    	
+    	double sRedPackSum =  rpProduceService.sRedPackSumMoneyAll(null,null);//静态红包总和
+    	double dRedPackSum =  rpProduceService.dRedPackGenerateSumMoneyAll(null,null);//动态红包总和
+    	
+    	double interestSum = borrowRepaymentService.getCompensatedInterestSum(null,null);//已还利息总额
+    	double capitalSum = borrowRepaymentService.getCompensatedCapitalSum(null,null);//已还本金总额
+    	
+    	//double ultimoTenderAccount = borrowTenderService.tenderTodayAccount();//今日交易总额
+    	double newTenderAccount = borrowTenderService.tenderTodayAccount();//交易总额
+    	double investAccountMax = borrowTenderService.investAccountMax();//个人投资总额（累计）
+    	int investNumberMax = borrowTenderService.investNumberMax();//最高个人投资笔数
+    	int investNumberSum = borrowTenderService.investNumberSum();//投资笔数总数
+    	int ultimoTenderSum = borrowTenderService.ultimoTenderSum();//上月成功投资人数
+    	
+    	int tenderCount = userService.countUserByType(10);//统计投资用户人数
+    	//int tenderUltimoCount = userService.countUltimoTender();//上月注册人数
+    	
+    	int financingCompany = borrowService.borrowFulRecheckUserCount();//完成借款人数
+    	
+    	/*xingjia 2015-05-09*/
+    	Map<String,Object> oldContent = HttpClientUtils.doGet("https://old.jinshangdai.com/yesterdayTender.html");
+    	//Map<String,Object> oldContent = HttpClientUtils.doGet("http://192.168.13.52:8080/yesterdayTender.html");
+    	String oldTenderData =  (String) oldContent.get("content");
+    	Map<String,Object>  tenderDatas = (Map<String, Object>) JSONArray.parse(oldTenderData);
+
+    	double oldTenderPerson = Double.parseDouble(tenderDatas.get("yesterdayTenderCount").toString()) ;
+    	double oldTenderMoney = Double.parseDouble(tenderDatas.get("yesterdayTenderSum").toString());
+    	double oldCapital = Double.parseDouble(tenderDatas.get("capital").toString());//旧站已还款本金
+    	double oldInterest = Double.parseDouble(tenderDatas.get("interest").toString());//旧站已还款利息
+    	double oldInterestAward = Double.parseDouble(tenderDatas.get("interestAward").toString());//旧站已获取奖励与利息
+    	double oldPersonCount = Double.parseDouble(tenderDatas.get("personCount").toString());//旧站最高投资笔数
+    	int oldPersonSum = (int)Double.parseDouble(tenderDatas.get("personSum").toString());//旧站最高投资金额
+    	double oldTenderSum = Double.parseDouble(tenderDatas.get("tenderSum").toString());//旧站交易金额
+    	int oldTenderConunt = Integer.parseInt(tenderDatas.get("tenderCount").toString());//旧站投资总额
+    	
+    	Map<String,Double> yesterDayTenderMoneySum = borrowTenderService.getTenderMoneySum();
+    	double yesterDayTenderMoney = yesterDayTenderMoneySum.get("numMoney")+oldTenderMoney;//昨日成交金额
+    	double yesterDayTenderPerson = yesterDayTenderMoneySum.get("num")+oldTenderPerson;//昨日成交笔数
+		double tenderAccount = oldTenderSum + newTenderAccount;//交易总额为新旧站交易总额相加
+    	/*xingjia 2015-05-09*/
+    	
+    	//List<Object[]> investList = borrowTenderService.investTop10In();//上月投资金额top10
+    	
+    	
+    	//获取缓存中的规则
+    	DataShowRuleCheck showRuleCheck = (DataShowRuleCheck) GlobalCache.getRuleCheck("dataShow");
+    	logger.info("修改平台数据前数据："+JSON.toJSON(showRuleCheck).toString());
+    	
+    	showRuleCheck.getUser_invest_total().setValue(tenderAccount);//更新用户交易总额
+    	//用户赚取总收益金额更新
+    	showRuleCheck.getUser_income().setValue(oldInterestAward + awardSum + sRedPackSum + dRedPackSum + interestSum);
+    	//已还款本金数据更新
+    	showRuleCheck.getPay_user_capital().setValue(oldCapital + capitalSum);
+    	//已付利息数据更新
+    	showRuleCheck.getPay_user_interest().setValue(oldInterest + interestSum);
+    	//个人最高交易额数据更新
+    	showRuleCheck.getPerson_highest_invest().setValue(investAccountMax > oldPersonCount ? investAccountMax : oldPersonCount);
+    	//个人最高投资笔数数据更新
+		showRuleCheck.getPerson_highest_invest_times().setValue(investNumberMax > oldPersonSum ? investNumberMax : oldPersonSum);
+    	//总注册人数据更新
+    	showRuleCheck.getJsd_invest_distribute().getTotal().setValue(tenderCount);
+    	//晋商贷平均交易额数据更新
+    	showRuleCheck.getJsd_avg_invest().setValue(
+    			showRuleCheck.getUser_invest_total().getValue()/showRuleCheck.getJsd_invest_distribute().getTotal().getValue());
+    	//jsd总成交笔数数据更新
+    	if(investNumberSum > showRuleCheck.getJsd_invest_sum().getValue()){
+    		showRuleCheck.getJsd_invest_sum().setValue(investNumberSum);
+    	}
+    	
+    	/*xingjia 2015-05-09*/
+    	//总共注册人数数据更新
+    	showRuleCheck.getUltimo_data().getTender_count().setValue(tenderCount);
+    	//昨日成功投资人数数据更新
+    	showRuleCheck.getUltimo_data().getInvest_people_num().setValue(yesterDayTenderPerson);
+    	//昨日投资总金额数据更新
+    	showRuleCheck.getUltimo_data().getInvest_money_sum().setValue(yesterDayTenderMoney);
+    	/*xingjia 2015-05-09*/
+    	
+    	//完成借款人数更新
+    	showRuleCheck.getJsd_invest_distribute().getFinancing_company().setValue(financingCompany + oldTenderConunt);
+    	/*if(financingCompany > showRuleCheck.getJsd_invest_distribute().getFinancing_company().getValue()){
+    		showRuleCheck.getJsd_invest_distribute().getFinancing_company().setValue(financingCompany);
+    	}*/
+    	
+    	//更改缓存中的规则
+    	logger.info("修改平台数据后数据："+JSON.toJSON(showRuleCheck).toString());
+    	Rule showRule = ruleService.findByNid("dataShow");
+    	showRule.setRuleCheck(JSON.toJSON(showRuleCheck).toString());
+    	GlobalCache.modifyRuleCheck("dataShow", showRule);
+    	
+    	//更新规则到数据库
+    	/*Rule showDataRule = ruleService.findByNid("dataShow");
+    	showDataRule.setRuleCheck(JSON.toJSON(showRuleCheck).toString());*/
+    	ruleService.updateRule(showRule, 1);
+    	
+    }
+    /**
+     * 平台数据扫描
+     * @return void 
+     * @throws Exception   
+     */ 
+    @Scheduled(cron = "0 20 0 1  * ?")//每月一号0:20
+    public void doShowDataDay(){
+    	
+    	Date startDate = new Date();
+    	startDate.setMonth(startDate.getMonth() - 1);
+    	startDate.setDate(1);
+    	Date endDate = new Date();
+    	endDate.setDate(1);
+    	//获取新数据
+    	/*double awardSum = returnMoneyService.getContinueInvestAwardCount(DateUtil.dateStr2(startDate),DateUtil.dateStr2(endDate));//总奖励数
+    	
+    	double sRedPackSum =  rpProduceService.sRedPackSumMoneyAll(DateUtil.dateStr2(startDate),DateUtil.dateStr2(endDate));//上月静态红包总和
+    	double dRedPackSum =  rpProduceService.dRedPackGenerateSumMoneyAll(DateUtil.dateStr2(startDate),DateUtil.dateStr2(endDate));//上月动态红包总和
+    	
+    	double interestSum = borrowRepaymentService.getCompensatedInterestSum(DateUtil.dateStr2(startDate),DateUtil.dateStr2(endDate));//已还利息总额
+    	double capitalSum = borrowRepaymentService.getCompensatedCapitalSum(DateUtil.dateStr2(startDate),DateUtil.dateStr2(endDate));//已还本金总额
+    	*/
+    	double ultimoTenderAccount = borrowTenderService.ultimoTenderAccount();//上月交易总额
+    	/*double investAccountMax = borrowTenderService.investAccountMax();//个人投资总额（累计）
+    	int investNumberMax = borrowTenderService.investNumberMax();//最高个人投资笔数
+    	int investNumberSum = borrowTenderService.investNumberSum();//投资笔数总数
+    	int tenderCount = userService.countUserByType(10);//统计投资用户人数
+    	*/
+    	int ultimoTenderSum = borrowTenderService.ultimoTenderSum();//上月成功投资人数
+    	int tenderUltimoCount = userService.countUltimoTender();//总共注册人数
+    	
+    	
+    	
+    	//List<Object[]> investList = borrowTenderService.investTop10In();//上月投资金额top10
+    	
+    	
+    	//获取缓存中的规则
+    	/*Map<String, Object> showDataMap = ShowDataCache.getplatformDataMap();
+    	DataShowRuleCheck showRuleCheck = (DataShowRuleCheck) showDataMap.get("showData");*/
+    	DataShowRuleCheck showRuleCheck = (DataShowRuleCheck) GlobalCache.getRuleCheck("dataShow");
+    	
+    	/*数据处理
+    	if(investList.size() >=10){//top10交易排名
+    		for(int i = 0; i < 10 ; i++){
+    			showRuleCheck.getMonth_top().getList()[i].setTop("第" + i + "名");
+    			showRuleCheck.getMonth_top().getList()[i].setName((String)investList.get(i)[0]);
+    			showRuleCheck.getMonth_top().getList()[i].setMoney((Double)investList.get(i)[1]);
+    		}
+    	}*/
+    	
+    	
+    	
+    	double[] investTotalVal = new double[12];//累计交易金额数据处理
+    	for(int i = 0 ; i < 11 ; i++){
+    		investTotalVal[i] = showRuleCheck.getInvest_total().getValue()[i + 1];
+    	}
+    	investTotalVal[11] = showRuleCheck.getInvest_total().getValue()[11] + ultimoTenderAccount;
+    	showRuleCheck.getInvest_total().setValue(investTotalVal);
+    	/*showRuleCheck.getUser_invest_total().setValue(investTotalVal[9]);//更新用户交易总额
+    	//用户赚取总收益金额更新
+    	showRuleCheck.getUser_income().setValue(showRuleCheck.getUser_income().getValue() + awardSum + sRedPackSum + dRedPackSum + interestSum);
+    	//已还款本金数据更新
+    	showRuleCheck.getPay_user_capital().setValue(showRuleCheck.getPay_user_capital().getValue() + capitalSum);
+    	//已付利息数据更新
+    	showRuleCheck.getPay_user_interest().setValue(showRuleCheck.getPay_user_interest().getValue() + interestSum);
+    	//个人最高交易额数据更新
+    	if(investAccountMax > showRuleCheck.getPerson_highest_invest().getValue()){
+    		showRuleCheck.getPerson_highest_invest().setValue(investAccountMax);
+    	}
+    	//个人最高投资笔数数据更新
+    	if(investNumberMax > showRuleCheck.getPerson_highest_invest_times().getValue()){
+    		showRuleCheck.getPerson_highest_invest_times().setValue(investNumberMax);
+    	}
+    	
+    	//总注册人数据更新
+    	showRuleCheck.getJsd_invest_distribute().getTotal().setValue(
+    			showRuleCheck.getJsd_invest_distribute().getTotal()
+    			.getValue() + tenderUltimoCount);
+    	//晋商贷平均交易额数据更新
+    	showRuleCheck.getJsd_avg_invest().setValue(
+    			investTotalVal[9]/showRuleCheck.getJsd_invest_distribute().getTotal().getValue());
+    	//jsd总成交笔数数据更新
+    	if(investNumberSum > showRuleCheck.getJsd_invest_sum().getValue()){
+    		showRuleCheck.getJsd_invest_sum().setValue(investNumberSum);
+    	}*/
+    	
+
+    	/*//上月注册人数数据更新
+    	showRuleCheck.getUltimo_data().getTender_count().setValue(tenderUltimoCount);
+    	//上月成功投资人数数据更新
+    	showRuleCheck.getUltimo_data().getInvest_people_num().setValue(ultimoTenderSum);
+    	String ultimoTenderAccountStr = (int)ultimoTenderAccount + "";
+    	double ultimoTenderAccountDouble = Double.parseDouble(ultimoTenderAccountStr.substring(0, ultimoTenderAccountStr.length()-4) + "." + ultimoTenderAccountStr.substring(ultimoTenderAccountStr.length()-4, ultimoTenderAccountStr.length()));
+    	//上月投资总金额数据更新
+    	showRuleCheck.getUltimo_data().getInvest_money_sum().setValue(ultimoTenderAccountDouble);*/
+    	
+    	
+    	//更改缓存中的规则
+    	/*showDataMap.put("showData", showRuleCheck);
+    	ShowDataCache.modifyPlatformDataMap(showDataMap);*/
+    	
+    	Rule showRule = ruleService.findByNid("dataShow");
+    	showRule.setRuleCheck(JSON.toJSON(showRuleCheck).toString());
+    	GlobalCache.modifyRuleCheck("dataShow", showRule);
+    	
+    	//更新规则到数据库
+    	/*Rule showDataRule = ruleService.findByNid("dataShow");
+    	showDataRule.setRuleCheck(JSON.toJSON(showRuleCheck).toString());*/
+    	ruleService.updateRule(showRule, 1);
+    	
+    }
+    /**
+     * 平台数据Top10交易排名扫描
+     * @return void 
+     * @throws Exception   
+     */ 
+    @Scheduled(cron = "0 5 1 * * ?")//每天凌晨1:05
+    public void doShowDataTop10(){
+    	
+    	List<Object[]> investList = borrowTenderService.investTop10In();//上月投资金额top10
+    	List<Object[]> personMap =  regionService.getProvincialEnrollment();//各省注册人数
+    	
+    	//获取缓存中的规则
+    	/*Map<String, Object> showDataMap = ShowDataCache.getplatformDataMap();
+    	DataShowRuleCheck showRuleCheck = (DataShowRuleCheck) showDataMap.get("showData");*/
+    	DataShowRuleCheck showRuleCheck = (DataShowRuleCheck) GlobalCache.getRuleCheck("dataShow");
+    	
+    	/*数据处理*/
+    	if(investList.size() >=10){//top10交易排名
+    		for(int i = 0; i < 10 ; i++){
+    			showRuleCheck.getMonth_top().getList()[i].setTop("第" + (i+1) + "名");
+    			String userName = (String)investList.get(i)[0];
+    			User user = userService.getUserByUserName(userName);
+    			showRuleCheck.getMonth_top().getList()[i].setName(user.getNickname());
+    			showRuleCheck.getMonth_top().getList()[i].setMoney(((BigDecimal)investList.get(i)[1]).doubleValue());
+    		}
+    	}
+    	
+    	
+    	for(int i = 0 ; i < personMap.size(); i++){//处理各省注册人数数据
+    		String name = (String) personMap.get(i)[0];
+    		double sum = ((BigInteger)personMap.get(i)[1]).doubleValue();
+    		for(int j = 0 ; j < showRuleCheck.getPerson_map().getList().length; j++){
+    			String oldName = showRuleCheck.getPerson_map().getList()[j].getName();
+    			if(name.contains(oldName)){
+    				showRuleCheck.getPerson_map().getList()[j].setValue(sum);
+    				break;
+    			}
+    			/*if(name.contains("黑龙江") || name.contains("内蒙古")){
+    				showRuleCheck.getPerson_map().getList()[j].setName(name.substring(0, 3));
+    			}else{
+    				showRuleCheck.getPerson_map().getList()[j].setName(name.substring(0, 2));
+    			}*/
+    			
+    		}
+    	}
+    	
+    	//更改缓存中的规则
+    	/*showDataMap.put("showData", showRuleCheck);
+    	ShowDataCache.modifyPlatformDataMap(showDataMap);*/
+    	Rule showRule = ruleService.findByNid("dataShow");
+    	showRule.setRuleCheck(JSON.toJSON(showRuleCheck).toString());
+    	GlobalCache.modifyRuleCheck("dataShow", showRule);
+    	
+    	//更新规则到数据库
+    	/*Rule showDataRule = ruleService.findByNid("dataShow");
+    	showDataRule.setRuleCheck(JSON.toJSON(showRuleCheck).toString());*/
+    	ruleService.updateRule(showRule, 1);
+    }
+   // @Scheduled(cron = "*/10 * * * * ?")
+    @Scheduled(cron = "0 0 2 * * ?")//每天凌晨1:05     新增当天债权价值、价格
+    public void doCreditAssignment(){
+    	//查询出初审通过的标所发布的债权列表【即投即生息】
+    	List<CreditAssignment> list=creditAssignmentService.getCreditAssignmentByStatus(CreditAssignment.CREDIT_CHECK1_SUCCESS);
+    	for(CreditAssignment c:list){
+    	    try {
+    	    	//更新当天的债权价值
+				creditAssignmentService.creditAssignment(c);
+			} catch (Exception e) {
+				continue;
+			}
+    	}
+    }
+  /*  @Scheduled(cron = "0 30 1 *  * ?")*///每天凌晨1:30     债权到期撤回
+    public void doReCall(){
+    	// 查出所有审核通过，并在今天过期的债权
+    	List<CreditAssignment> list=creditAssignmentService.getCreditAssignmentByStautAndTimeOver(CreditAssignment.CREDIT_CHECK1_SUCCESS);
+    	for(CreditAssignment c:list){
+    	    try {
+    	    	//更新当天的债权价值
+    	    	creditLogService.creditReCall(c);
+    	    	//JSDBET-812 gjh 2015-3-16 start
+			} catch (HandleException e) {
+				//throw e;
+				e.saveExceptionLog(e);
+				//JSDBET-812 gjh 2015-3-16 end
+			} catch (Exception e) {
+				continue;
+			}
+    	}
+    }
+    @Scheduled(cron = "0 5 1 * * ?")//每天凌晨1:05     逾期利息处理
+    public void doOverdue(){
+    	//逾期待还列表查询
+    	List<BorrowRepayment> list=borrowRepaymentService.getRepayListByStatus(0,0);
+    	for(BorrowRepayment r:list){
+    		try {
+				borrowRepaymentService.doOverdue(r);
+				//JSDBET-812 gjh 2015-3-16 start
+			//} catch (HandleException e) {
+				//throw e;
+				//JSDBET-812 gjh 2015-3-16 end
+			} catch (Exception e) {
+				continue;
+			}
+    	}
+    }
+   // @Scheduled(cron = "0/1 * * * * ?")
+   /* public void doTender(){
+		Borrow borrow=borrowDao.findObjByProperty("id", 606);
+		User user1=userDao.findObjByProperty("userId", 1144);
+		User user2=userDao.findObjByProperty("userId", 706);
+		User user3=userDao.findObjByProperty("userId", 1163);
+		List<User> list=new ArrayList<User>();
+		list.add(user2);
+		list.add(user1);
+		list.add(user3);
+		BorrowModel bm=new BorrowModel();
+		bm.setMoney(100);
+		bm.setAccount(100);
+		for(User u:list){
+			try {
+				BorrowTender tender=new BorrowTender();
+				tender.setTenderType((byte)0);
+				tender.setAddIp("233.244.43.234");
+				//投标前校验
+				tender=borrowTenderService.validTender(u, borrow, tender, bm);
+				//accountService.accountCompare(u.getUserId());
+				System.out.println("昵称为===="+u.getUserName());
+				DisruptorUtils.tender("aa", u, borrow, bm, tender);
+				//borrowTenderService.addTender(u, borrow, tender, bm);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				continue;
+			}
+		}
+		list=null;
+    }*/
+        
+    /**
+     * 微信奖励接收和保存
+     * @return void 
+     * @throws Exception   
+     */ 
+    @Scheduled(cron = "0/30 * 02-04 * * ?")	//每天凌晨2点到4点 每隔10秒
+    public void doSaveWeiXinReward() {
+    	rpWeixinLogService.doSaveWeiXinReward();
+    }
+
+    /**
+     * 微信奖励接收和保存
+     * @return void 
+     * @throws Exception   
+     */ 
+    //@Scheduled(cron = "0 0/30 * * * ?")	//每隔30分扫描一次
+    public void doHandelWeixinLog() {
+    	rpWeixinLogService.doHandelWeixinLog();
+    }
+
+    /**
+     * 定时刷新tender表
+     */
+    //JSDP-184 xingjia 20150618 start
+   // @Scheduled(cron = " 0 0/10 * * * ? ")//16点每分钟执行一次
+   /* public void rpActivityProduce() throws ScriptException{
+    	
+    	RedPacketProduceRuleCheck redPacketRule = (RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+    	Map<String,Object> activityRp = redPacketRule.activityRp();
+    	Date startTime =  (Date) activityRp.get("activityRp_start_time");
+		Date endTime =  (Date) activityRp.get("activityRp_end_time");
+		String borrowFormula = (String) activityRp.get("activityRp_borrow");
+		
+		String[] bf = borrowFormula.split(",");
+		logger.info(bf[0]+"===="+bf[1]+"==="+bf[2]);
+		
+		//查询符合标的投标记录
+		List list = borrowTenderService.borrowTenderRpActivity(startTime, endTime, Integer.parseInt(bf[0]), Integer.parseInt(bf[2]));
+		for(int i=0;i<list.size();i++){
+			try {
+				Integer borrowId = (Integer) list.get(i);
+				rpActivityProduceService.rpActivityProduceAndAccount(borrowId,activityRp);
+			} catch (NumberFormatException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				continue;
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				continue;
+			}	
+		}
+    	
+    	
+    }*/
+  //JSDP-184 xingjia 20150618 start
+    
+    
+    
+   // @Scheduled(cron = "0/30 * * * * ?")	//注册送红包修复数据使用   勿开启
+    public void doModifyRegisterRp() {
+    	RpProduceModel rpm=new RpProduceModel();
+    	rpm.setStartTime("2015-06-15 00:00:00");
+    	rpm.setEndTime("2015-06-15 14:11:00");
+    	rpm.setRpStaticStatus(RpProduce.RP_STATIC_RP_NO_USE);
+    	rpm.setRpStaticRes("static_rp_identify");
+    	rpm.setRpType(1);
+    	List<RpProduce> list=rpProduceService.getRpList(rpm);
+    	int i=0;
+    	for(RpProduce rp:list){
+    		try {
+				if(rp.getRpStaticMoney()==5){
+					rpProduceService.modifyRp(rp, rp.getRpStaticMoney(), 50);
+					i++;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				continue;
+			}
+    	}
+    	logger.info("注册送静态红包修改个数："+i);
+    }
+   // @Scheduled(cron = " 0 * 18 * * ? ")//18点每分钟执行一次
+//    public void rpActivityProduce() throws ScriptException{
+//    	RedPacketProduceRuleCheck redPacketRule = (RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+//    	Map<String,Object> activityRp = redPacketRule.activityRp();
+//    	if(!activityRp.isEmpty()){
+//    		
+//    		String awardFormula = (String) activityRp.get("activityRp_award_formula");
+//    		Date startTime =  (Date) activityRp.get("activityRp_start_time");
+//    		Date endTime =  (Date) activityRp.get("activityRp_end_time");
+//    		String borrowFormula = (String) activityRp.get("activityRp_borrow");
+//    		
+//    		ScriptEngine se = new ScriptEngineManager().getEngineByName("JavaScript");
+//    		String[] af = awardFormula.split(",");
+//    		
+//    		String[] bf = borrowFormula.split(",");
+//    		logger.info(bf[0]+"===="+bf[1]+"==="+bf[2]);
+//    		
+//    		//查询符合标的投标记录
+//    		List list = borrowTenderService.borrowTenderRpActivity(startTime, endTime, Integer.parseInt(bf[0]), Integer.parseInt(bf[2]));
+//    		for(int i=0;i<list.size();i++){
+//    			long borrowId = Long.parseLong(list.get(i)+"");
+//    			Borrow borrow = borrowService.find(borrowId);
+//    			
+//    			double awardAmountI = 0;//取整的金额
+//    			double awardAmountD = 0;//获得奖励的金额
+//    			
+//    			//判断标在活动期间内，单个用户的最多投标记录，保存红包产生记录（土豪）
+//    			if(endTime.after(Calendar.getInstance().getTime())){
+//    				
+//    				//查询土豪的旧记录并修改
+//    				RpActivityProduce rp = rpActivityProduceService.findMostTender(borrowId, RpActivityProduce.RP_AWARD_MOST_TENDER);
+//    				if(null!= rp){
+//    					rp.setAwardType(RpActivityProduce.RP_AWARD_OLD_MOST_TENDER);
+//    					rpActivityProduceService.updateMostTender(rp);
+//    				}
+////    				boolean isProduceMt = rpActivityProduceService.findReapetData(borrowId, RpActivityProduce.RP_AWARD_MOST_TENDER);
+////    				if(!isProduceMt){
+//    					Map<String,Object> activityMap = borrowTenderService.findMostMoneyByBorrowId(Long.parseLong(list.get(i)+""));
+//    					if(!activityMap.isEmpty()){
+//    						
+//    						String userName = (String) activityMap.get("userName");
+//    						User user = userService.getUserByUserName(userName);
+//    						String str = activityMap.get("tenderMoney")+ af[0].trim();
+//    						awardAmountI = Math.floor((Double) se.eval(str));
+//    						String str2 = awardAmountI + af[1].trim();
+//    						awardAmountD = (Double) se.eval(str2);
+//    						
+//    						if(null != activityMap && activityMap.size() != 0){
+//    							RpActivityProduce rpActivityPro = new RpActivityProduce();
+//    							rpActivityPro.setActivityType(RpActivityProduce.RP_RPODUCE_DRAGON);
+//    							rpActivityPro.setActivityAward(awardAmountD);
+//    							rpActivityPro.setAddTime(Calendar.getInstance().getTime());
+//    							rpActivityPro.setAwardType(RpActivityProduce.RP_AWARD_MOST_TENDER);
+//    							rpActivityPro.setAwardUser(user);
+//    							rpActivityPro.setBorrowId(borrowId);
+//    							rpActivityPro.setTenderMoney(Double.parseDouble(activityMap.get("tenderMoney")+""));
+//    							rpActivityPro.setRemark(RpActivityProduce.RP_RPODUCE_DRAGON+":"+user.getUserId()+"金额"+activityMap.get("tenderMoney"));
+//    							rpActivityProduceService.save(rpActivityPro);
+//    						}
+//    					}
+//    				}
+////    			}	
+//    			
+//    			
+//    			
+//    			
+//    			
+//    			//判断标在活动期间内是否已满，满的话获取终结者
+//    			if(borrow.getAccount() == borrow.getAccountYes() && endTime.after(Calendar.getInstance().getTime())){
+//    				
+//    				//判断此记录是否已存入数据库(终结者)
+//    				boolean isProduceTt = rpActivityProduceService.findReapetData(borrowId, RpActivityProduce.RP_AWARD_TERMINATOR_TENDER);
+//    				if(!isProduceTt){
+//    					List<BorrowTender> tenderList = borrowTenderService.getTenderByBorrowIdAndAddTime(borrowId,startTime,endTime);
+//    					if(tenderList.size()!= 0){
+//    						BorrowTender tender = tenderList.get(0);
+//    						
+//    						String str = tender.getAccount()+ af[0].trim();
+//    						awardAmountI = Math.floor((Double) se.eval(str));
+//    						String str2 = awardAmountI + af[1].trim();
+//    						awardAmountD = (Double) se.eval(str2);
+//    						
+//    						RpActivityProduce rpActivityPro = new RpActivityProduce();
+//    						rpActivityPro.setActivityType(RpActivityProduce.RP_RPODUCE_DRAGON);
+//    						rpActivityPro.setActivityAward(awardAmountD);
+//    						rpActivityPro.setAddTime(Calendar.getInstance().getTime());
+//    						rpActivityPro.setAwardType(RpActivityProduce.RP_AWARD_TERMINATOR_TENDER);
+//    						rpActivityPro.setAwardUser(tender.getUser());
+//    						rpActivityPro.setBorrowId(borrowId);
+//    						rpActivityPro.setTenderMoney(tender.getAccount());
+//    						rpActivityPro.setRemark(RpActivityProduce.RP_RPODUCE_DRAGON+":"+tender.getUser().getUserId()+"金额"+tender.getAccount());
+//    						rpActivityProduceService.save(rpActivityPro);
+//    						
+//    						
+//    						//处理本地资金，转账第三方
+//    						
+//    					}
+//    				}
+//    				
+//    			}
+//    			
+//    			
+//    		}
+//    	}
+//    }
+
+}

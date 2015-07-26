@@ -1,0 +1,215 @@
+package com.ddtkj.p2psys.credit.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：债权转让记录
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月9日 
+ */
+@Entity
+@Table(name="t_jsd_buy_credit")
+public class CreditLog implements Serializable{
+	
+	private static final long serialVersionUID = -8949972621196937626L;
+	
+	public static final String CRELOG_STATUS_NO="00" ; 
+	public static final String CRELOG_STATUS_YEW="01" ; 
+	public static final String CRELOG_STATUS_RE="02" ;
+	public static final String CRELOG_STATUS_ALL="99" ;
+	
+	public static final int CRELOG_BUYFEE_STATUS_CHARGE = 1; //已收取
+	public static final int CRELOG_BUYFEE_STATUS_FREEZE = 2; //冻结中 	
+	public static final int CRELOG_BUYFEE_STATUS_BACK = 3; //已退回
+
+	public static final int CRELOG_SELLFEE_STATUS_CHARGE = 1; //已收取
+	public static final int CRELOG_SELLFEE_STATUS_FREEZE = 2; //冻结中 	
+	public static final int CRELOG_SELLFEE_STATUS_BACK = 3; //已退回
+	
+	public static final int CRELOG_ISSELL_YES = 1; //售出
+	public static final int CRELOG_ISSELL_NO = 2; //未出售
+
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ; // 标识ID
+	@ManyToOne
+	@JoinColumn(name="ca_id")
+	private CreditAssignment creditAssignment ; // 债权转让ID
+	@ManyToOne
+	@JoinColumn(name="buy_ca_id")
+	private CreditLog creditlog ;
+	
+	private String status ;  //	00未成交，01已成交，02撤回
+	@ManyToOne
+	@JoinColumn(name="buy_user_id")
+	private User buyUser;  //	购买用户
+	private Date buyTime ;  // 	购买时间
+	private int buyCopies ; //	购买份数
+	private double buyValue ; //	购买后应有的价值
+	private double buyAccount ;//	购买花费的金额
+	private	double buyFee ;  //	购买手续费
+	private int buyFeeStatus; //	 购买用费率状态
+	private	double sellFee ; //	出售手续费
+	private int sellFeeStatus ; //	出售手续费状态
+	private int isSell ;  // 是否再售出  1 售出 2 未出售
+	private Date addTime ; //	记录添加时间
+	private String addIp ; //	记录添加IP
+	private double useRecharge; //购买债权使用充值
+	private double useAward;   //购买债权使用奖励
+	private double useInterest;//购买债权使用利息
+	private double useReturnedMoney;//购买债权使用回款
+	private int buyType ;
+	private String orderNo;//订单号
+	private String feeOrderNo;//手续费订单号
+	
+	public String getOrderNo() {
+		return orderNo;
+	}
+	public void setOrderNo(String orderNo) {
+		this.orderNo = orderNo;
+	}
+	public String getFeeOrderNo() {
+		return feeOrderNo;
+	}
+	public void setFeeOrderNo(String feeOrderNo) {
+		this.feeOrderNo = feeOrderNo;
+	}
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public CreditAssignment getCreditAssignment() {
+		return creditAssignment;
+	}
+	public void setCreditAssignment(CreditAssignment creditAssignment) {
+		this.creditAssignment = creditAssignment;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public User getBuyUser() {
+		return buyUser;
+	}
+	public void setBuyUser(User buyUser) {
+		this.buyUser = buyUser;
+	}
+	public Date getBuyTime() {
+		return buyTime;
+	}
+	public void setBuyTime(Date buyTime) {
+		this.buyTime = buyTime;
+	}
+	public int getBuyCopies() {
+		return buyCopies;
+	}
+	public void setBuyCopies(int buyCopies) {
+		this.buyCopies = buyCopies;
+	}
+	public double getBuyValue() {
+		return buyValue;
+	}
+	public void setBuyValue(double buyValue) {
+		this.buyValue = buyValue;
+	}
+	public double getBuyAccount() {
+		return buyAccount;
+	}
+	public void setBuyAccount(double buyAccount) {
+		this.buyAccount = buyAccount;
+	}
+	public double getBuyFee() {
+		return buyFee;
+	}
+	public void setBuyFee(double buyFee) {
+		this.buyFee = buyFee;
+	}
+	public int getBuyFeeStatus() {
+		return buyFeeStatus;
+	}
+	public void setBuyFeeStatus(int buyFeeStatus) {
+		this.buyFeeStatus = buyFeeStatus;
+	}
+	public double getSellFee() {
+		return sellFee;
+	}
+	public void setSellFee(double sellFee) {
+		this.sellFee = sellFee;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public int getSellFeeStatus() {
+		return sellFeeStatus;
+	}
+	public void setSellFeeStatus(int sellFeeStatus) {
+		this.sellFeeStatus = sellFeeStatus;
+	}
+	public double getUseRecharge() {
+		return useRecharge;
+	}
+	public void setUseRecharge(double useRecharge) {
+		this.useRecharge = useRecharge;
+	}
+	public double getUseAward() {
+		return useAward;
+	}
+	public void setUseAward(double useAward) {
+		this.useAward = useAward;
+	}
+	public double getUseInterest() {
+		return useInterest;
+	}
+	public void setUseInterest(double useInterest) {
+		this.useInterest = useInterest;
+	}
+	public double getUseReturnedMoney() {
+		return useReturnedMoney;
+	}
+	public void setUseReturnedMoney(double useReturnedMoney) {
+		this.useReturnedMoney = useReturnedMoney;
+	}
+	public int getIsSell() {
+		return isSell;
+	}
+	public void setIsSell(int isSell) {
+		this.isSell = isSell;
+	}
+	public CreditLog getCreditlog() {
+		return creditlog;
+	}
+	public void setCreditlog(CreditLog creditlog) {
+		this.creditlog = creditlog;
+	}
+	public int getBuyType() {
+		return buyType;
+	}
+	public void setBuyType(int buyType) {
+		this.buyType = buyType;
+	}
+}

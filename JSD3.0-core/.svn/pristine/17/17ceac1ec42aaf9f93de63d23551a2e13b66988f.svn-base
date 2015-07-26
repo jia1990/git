@@ -1,0 +1,67 @@
+package com.rongdu.p2psys.core.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.core.cache.MemcacheException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.dao.SystemConfigDao;
+import com.rongdu.p2psys.core.domain.SystemConfig;
+import com.rongdu.p2psys.core.model.SystemConfigModel;
+import com.rongdu.p2psys.core.service.SystemConfigService;
+
+@Service("systemConfigService")
+public class SystemConfigServiceImpl implements SystemConfigService {
+
+	private Logger logger = Logger.getLogger(SystemConfigServiceImpl.class);
+	@Resource
+	private SystemConfigDao systemConfigDao;
+
+	@Override
+	public SystemConfigModel getSystemInfo() {
+		SystemConfigModel info = new SystemConfigModel();
+		List<SystemConfig> list = systemConfigDao.findAll();
+		for (int i = 0; i < list.size(); i++) {
+			SystemConfig sys = (SystemConfig) list.get(i);
+			logger.debug(sys.getId() + " " + sys.getValue());
+			info.addConfig(sys);
+		}
+		return info;
+	}
+
+	@Override
+	public PageDataList<SystemConfigModel> list(SystemConfigModel model) {
+		return systemConfigDao.list(model);
+	}
+
+	@Override
+	public SystemConfig find(long id) {
+		return systemConfigDao.find(id);
+	}
+
+	@Override
+	public void add(SystemConfig sconfig) {
+		SystemConfig sysConfig = systemConfigDao.save(sconfig);
+		if(null != sysConfig){
+			if(!GlobalCache.modifySysConfig(sconfig)){	
+				throw  new MemcacheException("更新缓存异常");
+			}
+		}
+	}
+
+	@Override
+	public void update(SystemConfig sconfig) {
+		SystemConfig sysConfig = systemConfigDao.update(sconfig);
+		if(null != sysConfig){
+			if(!GlobalCache.modifySysConfig(sconfig)){	
+				throw  new MemcacheException("更新缓存异常");
+			}
+		}
+	}
+
+}

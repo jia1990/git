@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>日志模板</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  700;
+	var winHeight = 550;
+	var addTitle = "添加记录";
+	var addUrl =  "/modules/system/logTemplate/logTemplateAddPage.html";
+	var editTitle = "编辑记录";
+	var editUrl =  "/modules/system/logTemplate/logTemplateEditPage.html";
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'logTemplateList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field : 'id', title: '编号', width: 50, sortable : true,fixed:true},
+			{ field : 'type', title : '信息类型', width : 80, sortable : false,fixed:true,
+				formatter:function(value, row, index){
+					if(value == 1){
+						return "资金日志";
+					}else if(value == 2){
+						return "合计日志";
+					}else if(value == 3){
+						return "会员日志";
+					}else if(value == 5){
+						return "积分日志";
+					}
+					return "";
+				}
+			},
+			{ field: 'logType', title: '日志类型', sortable:false,width:100
+// 				,
+// 				editor : {type : 'validatebox',
+// 					options : {
+// 						'required' : true
+// 					}
+// 				}	
+			},
+			{ field: 'value', title: '模板信息',width:180},
+			
+			{ field: 'nid', title: '模板类型', width: 180,fixed:true,}, 
+			{ field: 'remark', title: '模板备注',width:100},
+			{	field : 'action',
+				title : '操作',
+				width :50,
+				fixed:true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if ($.canEdit) {
+						str += "<@secAuthorizeUrl value='/logTemplateEditBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onDblClickRow : function(rowIndex, rowData){
+				if(editIndex == undefined){
+					$(this).datagrid('beginEdit', rowIndex);
+					editIndex = rowIndex;
+				}else{
+					$(this).datagrid('endEdit', rowIndex);
+				}
+			},
+			onAfterEdit : function(rowIndex, rowData, changes){
+				
+			}
+		});
+	});
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>日志类型：<input type="text" name="logType" autocomplete="off"/></li>
+            		<li>信息类型：
+					<select name="type" class="type">
+						<option value="0" selected="selected">请选择</option>
+						<option value="1">资金日志</option>
+						<option value="2">合计日志</option>
+						<option value="3">会员日志</option>
+						<option value="5">积分日志</option>
+					</select></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<@secAuthorizeUrl value='/logTemplateAddBtn.html'>
+	<div id="toolbar" style="display: none;">		
+		<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>
+	</div>
+	</@secAuthorizeUrl>
+</body>
+</html>

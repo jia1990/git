@@ -1,0 +1,282 @@
+package com.rongdu.p2psys.borrow.model.interest;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+
+/**
+ * 每月还息到期还本利息计算函数
+ * 
+ * @author：fuxingxing
+ * @version 1.0
+ * @since 2014年7月15日
+ */
+public class MonthlyInterestCalculator implements InterestCalculator {
+	
+	/** 借款金额 */
+	private double account;
+	/** 年利率 */
+	private double yearApr;
+	/** 利息管理费 */
+	private double manageFee;
+	/** 期数 */
+	private int periods;
+	/** 标记是否为满标复审 */
+	private boolean flag;
+	/** 还款金额 */
+	private double repayAccount;
+	/** 开始计息日 */
+	private Date interestTime;
+	/** 还款日 */
+	private Date repayTime;
+	/** 还款计划 */
+	private List<EachPlan> eachPlan;
+	/**总利息*/
+	private double repayInterest ;
+	/**
+	 * 初始化每月还息到期还本构造函数
+	 * 
+	 * @param account 借款金额
+	 * @param yearApr 年利率
+	 * @param interestTime 开始计息日
+	 * @param periods 期数
+	 * @param flag ？？？
+	 * @param manageFee 利率管理费
+	 */
+	public MonthlyInterestCalculator(double account, double yearApr, Date interestTime, int periods, boolean flag,
+			double manageFee) {
+		this.account = account;
+		this.yearApr = yearApr;
+		this.periods = periods;
+		this.manageFee = manageFee;
+		this.interestTime = interestTime;
+		this.flag = flag;
+		eachPlan = new ArrayList<EachPlan>();
+	}
+
+	@Override
+	public List<EachPlan> calculator() {
+		/*
+		 * 如果是发标或复审或投标或网贷计算器则total = account; 否则total = BigDecimalUtil.mul(account, periods);
+		 */
+		double total;
+		if (flag) {
+			total = account;
+		} else {
+			total = BigDecimalUtil.mul(account, periods);
+		}
+		double needRepay = total;
+		double eInterest = 0;
+		double netInterest = 0;
+		double eCapital = 0;
+		double eTotal = 0;
+		double sum = 0;
+		Date eInterestTime = null;
+		Date eRepayTime = null;
+		EachPlan e = null;
+		for (int i = 0; i < periods; i++) {
+			e = new EachPlan();
+			// 计算每月需要支付的利息
+			//eInterest = BigDecimalUtil.round(needRepay * yearApr / 12);
+			//JSDBET-801 wcw 2015-3-11 start
+			eInterest = BigDecimalUtil.decimal(BigDecimalUtil.div(BigDecimalUtil.mul(needRepay, yearApr), 12),2);
+			//JSDBET-801 wcw 2015-3-11 end
+			// 计算本金
+			eCapital = 0;
+			// 每期还款即是本期的还款总额
+			if (i == periods - 1) { // 判断是否是最后一期
+				eCapital = account;
+				// 最后一期利息计算(总利息-最后一期以为的利息之和)
+				//eInterest = BigDecimalUtil.round((needRepay * yearApr / 12) * periods - eInterest * (periods - 1));
+				//总利息
+				double totalInterest=BigDecimalUtil.div(BigDecimalUtil.mul(BigDecimalUtil.mul(needRepay, yearApr), periods), 12);
+				//最后一期利息
+				double lastInterest=BigDecimalUtil.decimal(BigDecimalUtil.mul(eInterest, BigDecimalUtil.sub(periods, 1)),2);
+				//JSDBET-801 wcw 2015-3-11 start
+				eInterest=BigDecimalUtil.decimal(BigDecimalUtil.sub(totalInterest,lastInterest), 2);
+				//JSDBET-801 wcw 2015-3-11 end
+			}
+			//netInterest = BigDecimalUtil.round(BigDecimalUtil.mul(eInterest, BigDecimalUtil.sub(1, manageFee)));
+			//JSDBET-801 wcw 2015-3-11 start
+			netInterest = BigDecimalUtil.mul(eInterest, BigDecimalUtil.sub(1, manageFee));
+			//eTotal = BigDecimalUtil.round(BigDecimalUtil.add(eCapital, eInterest));
+			eTotal = BigDecimalUtil.decimal(BigDecimalUtil.add(eCapital, eInterest),2);
+			//JSDBET-801 wcw 2015-3-11 end
+			// 本期开始计息日
+			eInterestTime = DateUtil.rollDay(interestTime, 1);
+			// 本期还款日
+			eRepayTime = this.calculatorRepaytime(eInterestTime,i+1);
+			e.setCapital(eCapital);
+			e.setInterest(eInterest);
+			e.setNetInterest(BigDecimalUtil.decimal(netInterest,2));
+			e.setTotal(eTotal);
+			//double netTotal = BigDecimalUtil.round(BigDecimalUtil.add(eCapital, netInterest));
+			//JSDBET-801 wcw 2015-3-11 start
+			double netTotal = BigDecimalUtil.decimal(BigDecimalUtil.add(eCapital, netInterest),2);
+			//JSDBET-801 wcw 2015-3-11 end
+			e.setNetTotal(netTotal);
+			e.setInterestTime(eInterestTime);
+			e.setRepayTime(eRepayTime);
+			//e.setNeedRepay((total+eInterest*periods)- eInterest*(i+1));
+			e.setNeedRepay(BigDecimalUtil.sub(BigDecimalUtil.add(total, BigDecimalUtil.mul(eInterest, periods)),BigDecimalUtil.mul(eInterest, BigDecimalUtil.add(i,1))));
+			repayTime = eRepayTime;
+			eachPlan.add(e);
+			//sum = BigDecimalUtil.round(BigDecimalUtil.add(eInterest, sum));
+			//JSDBET-801 wcw 2015-3-11 start
+			sum = BigDecimalUtil.decimal(BigDecimalUtil.add(eInterest, sum), 2);
+			//JSDBET-801 wcw 2015-3-11 end
+		}
+		this.setRepayInterest(sum) ;
+		///this.repayAccount = BigDecimalUtil.round(BigDecimalUtil.add(account, sum));
+		//JSDBET-801 wcw 2015-3-11 start
+		this.repayAccount = BigDecimalUtil.decimal(BigDecimalUtil.add(account, sum),2);
+		//JSDBET-801 wcw 2015-3-11 end
+		e = eachPlan.get(periods - 1);
+		e.setNeedRepay(0);
+		e.setCapital(account);
+		return eachPlan;
+	}
+	@Override
+	public List<EachPlan> calculator(int days) {
+		throw new BorrowException("每月还息到期还本不支持按天还款!", 1);
+	}
+
+	@Override
+	public List<EachPlan> getEachPlan() {
+		return eachPlan;
+	}
+
+	@Override
+	public double repayTotal() {
+		return this.repayAccount;
+	}
+
+	@Override
+	public Date repayTime() {
+		return repayTime;
+	}
+
+	@Override
+	public int repayPeriods() {
+		return periods;
+	}
+
+	@Override
+	public Date calculatorRepaytime(Date date,int i) {
+		return DateUtil.rollMon(date,i);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.rongdu.p2psys.borrow.model.interest.InterestCalculator#calculatorRepaytime(java.util.Date)
+	 */
+	@Override
+	public Date calculatorRepaytime(Date date) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public double getAccount() {
+		return account;
+	}
+
+	public void setAccount(double account) {
+		this.account = account;
+	}
+
+	public double getYearApr() {
+		return yearApr;
+	}
+
+	public void setYearApr(double yearApr) {
+		this.yearApr = yearApr;
+	}
+
+	public double getManageFee() {
+		return manageFee;
+	}
+
+	public void setManageFee(double manageFee) {
+		this.manageFee = manageFee;
+	}
+
+	public int getPeriods() {
+		return periods;
+	}
+
+	public void setPeriods(int periods) {
+		this.periods = periods;
+	}
+
+	public boolean isFlag() {
+		return flag;
+	}
+
+	public void setFlag(boolean flag) {
+		this.flag = flag;
+	}
+
+	public double getRepayAccount() {
+		return repayAccount;
+	}
+
+	public void setRepayAccount(double repayAccount) {
+		this.repayAccount = repayAccount;
+	}
+
+	public Date getInterestTime() {
+		return interestTime;
+	}
+
+	public void setInterestTime(Date interestTime) {
+		this.interestTime = interestTime;
+	}
+
+	public Date getRepayTime() {
+		return repayTime;
+	}
+
+	public void setRepayTime(Date repayTime) {
+		this.repayTime = repayTime;
+	}
+
+	public void setEachPlan(List<EachPlan> eachPlan) {
+		this.eachPlan = eachPlan;
+	}
+
+	public double getRepayInterest() {
+		return repayInterest;
+	}
+
+	public void setRepayInterest(double repayInterest) {
+		this.repayInterest = repayInterest;
+	}
+	public static void main(String[] args) {
+		MonthlyInterestCalculator a=new MonthlyInterestCalculator(30000.0, 21.9/100, new Date(),3,true, 0);
+	    a.calculator();
+	    List<EachPlan> eachPlanList = a.getEachPlan();
+	    for (EachPlan mi : eachPlanList) {
+	    	double repaymentAccount = BigDecimalUtil.add(mi.getCapital(), mi.getInterest());
+	    	System.out.println(repaymentAccount+"-------"+mi.getInterest()+"-------"+mi.getCapital()+"----"+mi.getTotal());
+	    }
+	    System.out.println("----1---");
+		MonthlyInterestCalculator ab=new MonthlyInterestCalculator(400.0, 20.6/100, new Date(), 5,true, 0);
+	    ab.calculator();
+	    List<EachPlan> aList = ab.getEachPlan();
+	    for (EachPlan mi : aList) {
+	    	double repaymentAccount = BigDecimalUtil.add(mi.getCapital(), mi.getInterest());
+	    	System.out.println(repaymentAccount+"-------"+mi.getInterest()+"-------"+mi.getCapital());
+	    }
+	    System.out.println("-----2--");
+		MonthlyInterestCalculator av=new MonthlyInterestCalculator(800.0, 20.6/100, new Date(), 5,true, 0);
+	    av.calculator();
+	    List<EachPlan> asList = av.getEachPlan();
+	    for (EachPlan mi : asList) {
+	    	double repaymentAccount = BigDecimalUtil.add(mi.getCapital(), mi.getInterest());
+	    	System.out.println(repaymentAccount+"-------"+mi.getInterest()+"-------"+mi.getCapital());
+	    }
+	}
+}

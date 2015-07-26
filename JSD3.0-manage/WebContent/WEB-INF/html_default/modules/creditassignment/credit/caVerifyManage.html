@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>债权转让初审</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+var winWidth = 750;
+var winHeight = 500;
+
+var editCreditTitle = "编辑债权";
+var editCreditUrl= "/modules/creditassignment/credit/caVerifyViewPage.html";
+var editCreditParmeters = "'{0}','"+ editCreditTitle+"',"+ winWidth+","+ winHeight+",'"+ editCreditUrl+"'";
+
+var showCollectionTitle = "转让的待收信息";
+var showCollectionUrl= "/modules/creditassignment/credit/viewCollectionPage.html";
+var showCollectionParmeters = "'{0}','" + showCollectionTitle + "',650,500,'"+ showCollectionUrl + "'";
+
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'caVerifyList.html',
+            fit : true,
+            fitColumns : false,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'desc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [                    
+                    
+			  { field: 'id', title: '编号', width: 60,fixed:true, sortable:false },
+              { field: 'caName', title: '债权名', width: 120, fixed:true, sortable:false , formatter: function(value,row,index){
+          	 		var viewUrl = "${weburl}/credit/index/creditDetail.html?borrowPreview=1"
+   					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+   					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}">'+hideTitleName(value,15)+'</a>', row.id, '${theme_dir}/css/images/extjs_icons/link.png');
+      					
+              }},
+        	  { field: 'sellUserName', title: '出售债权用户', width: 100,fixed:true, sortable:false },
+        	  { field: 'caType', title: '债权转让类型', width: 100, fixed:true, sortable:false, formatter: function(value,row,index){
+            	   if(value==1){
+            		   return "投资转出";
+            	   }else if(value==2){
+            		   return "购买的债权转出";
+            	   }else{
+            		   return "未指定的债权转让类型";
+            	   }
+              }}, 
+              { field: 'creditValue', title: '债权预期价值', width: 100, fixed:true, sortable:false },
+              { field: 'creditPrice', title: '债权发布价格', width: 100,fixed:true, sortable:false }, 
+              { field: 'creditDis', title: '债权转让费率', width: 90, fixed:true, sortable:false },
+              { field: 'creditCopies', title: '债权转让份数', width: 90, fixed:true, sortable:false },
+              { field: 'soldAccount', title: '已售金额', width: 80,fixed:true, sortable:false  , formatter: function(value,row,index){
+          	  		return parseFloat(value).toFixed(2)+"";
+           	  }}, 
+              { field: 'sellCopies', title: '已售份数', width: 80,fixed:true, sortable:false }, 
+              { field: 'status', title: '债权状态', width: 80,fixed:true, sortable:false , formatter: function(value,row,index){
+            	  	return getCaStatus(row.status);  
+              }}, 
+              { field: 'buyEndTime', title: '债权转让截止时间', width: 120, fixed:true, sortable:false, formatter: function(value,row,index){
+            	  	return getLocalTime(value,4);  
+              }}, 
+              { field: 'isBreach', title: '是否违约提前转出', width: 140,fixed:true, sortable:false, formatter: function(value,row,index){
+             	 if(value==1){
+               		return "是,违约金"+row.breachAccount;
+               	 }else{
+               		return "否"; 
+               	 }  
+              }}, 
+              { field: 'addTime', title: '添加时间', width: 100,fixed:true, sortable:false, formatter: function(value,row,index){
+            	  return getLocalTime(value,4);  
+              }}, 
+              { field: 'addIp', title: '添加IP', width: 120,fixed:true, sortable:false },
+              { field : 'action',
+                  title : '操作',
+                  width :90,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                      var str = '';
+	                   	  
+                      	  str += "<@secAuthorizeUrl value='/caVerifyViewBtn.html'>";
+	  	                  str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editCreditParmeters+');" src="{1}" title="编辑债权"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+	                      str += "</@secAuthorizeUrl>";
+  	                return str;
+                  }
+              }	
+             ]],
+             toolbar : '#toolbar'
+        }); 
+    });
+    
+    function exportExcel(){
+		var url = "/modules/creditassignment/credit/exportCaVerifyList.html";
+		var userName = $("#userName").val();
+		var caType = $("#caType").val();
+		var caName = $("#caName").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?sellUserName=" + userName + "&caName=" + caName + "&caType=" + caType + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>用户名：<input type="text" name="sellUserName" id="userName" autocomplete="off"/></li>
+            		<li>债权名：<input type="text" name="caName" id="caName" autocomplete="off"/></li>
+		            <li>债权类型：
+		                <select name="caType" id="caType" class="caType" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="1">投资转出</option>
+		                  <option value="2">购买转出</option>
+		                </select>
+		            </li>  		    
+		            <li>债权转让时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>        
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>          	
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+   </div>
+        <@secAuthorizeUrl value='/exportCaVerify.html'>
+        <div id="toolbar" style="display: none;">		
+			<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>	
+			<span> </span>   <!-- TODO : ajax参数化请求数据求和-->
+		</div>
+	    </@secAuthorizeUrl>
+
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

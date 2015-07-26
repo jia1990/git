@@ -1,0 +1,55 @@
+package com.rongdu.p2psys.cooperation.dao.impl;
+
+import java.util.Date;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.cooperation.dao.CooperationLoginDao;
+import com.rongdu.p2psys.cooperation.domain.CooperationLogin;
+
+
+@Repository("cooperationLoginDao")
+public class CooperationLoginDaoImpl extends BaseDaoImpl<CooperationLogin> implements CooperationLoginDao {
+
+	/**
+	 * 根据openId和type查询联合登录信息
+	 * 
+	 * @param openId
+	 * @param type 合作登录类型
+	 * @return
+	 */
+	public CooperationLogin getCooperationLogin(String openId, int type){
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("openId", openId);
+		param.addParam("type", type);
+		return super.findByCriteriaForUnique(param);
+	}
+	
+	/**
+	 * 新增联合登录信息
+	 * 
+	 * @param cooperation
+	 */
+	public void addCooperationLogin(CooperationLogin cooperation) {
+		cooperation.setAddTime(new Date());
+		super.save(cooperation);
+	}
+	//JSDP-31  fengguoqin 5.21 start
+	@Override
+	public void updateCooperationLogin(CooperationLogin cooperation) {
+		String sql= "  UPDATE CooperationLogin SET user_id = :userId  WHERE open_id = :openId  AND type = :type ";
+		Query query = em.createQuery(sql);
+		query.setParameter("userId", cooperation.getUserId());
+		query.setParameter("openId", cooperation.getOpenId());
+		query.setParameter("type", cooperation.getType());
+		int result = query.executeUpdate();
+		
+	}
+	//JSDP-31  fengguoqin 5.21 end
+
+}

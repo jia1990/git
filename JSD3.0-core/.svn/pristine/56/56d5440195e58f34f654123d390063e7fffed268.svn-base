@@ -1,0 +1,77 @@
+package com.ddtkj.p2psys.analysis.dao.impl;
+
+import java.util.Calendar;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.analysis.dao.AnalysisDao;
+import com.ddtkj.p2psys.analysis.dao.UserSourceDao;
+import com.ddtkj.p2psys.analysis.domain.Analysis;
+import com.ddtkj.p2psys.analysis.domain.UserSource;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+/**
+ * @描述：用户来源收集dao层实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+@Repository("analysisDao")
+public class AnalysisDaoImpl extends BaseDaoImpl<Analysis> implements AnalysisDao{
+
+	String currDate = DateUtil.currYearMonth(Calendar.getInstance().getTime(), 1);
+	@Override
+	public int saveAnalysis(Analysis analysis) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("insert  into t_jsd_url_collection"+currDate+" (id,session_id,hit_time,visit_ip,visit_url) "
+				+ "values (null,?,?,?,?)");
+		Query query = em.createNativeQuery(sql.toString());
+		if(StringUtil.isNotBlank(analysis.getSessionId())){
+			query.setParameter(1, analysis.getSessionId());
+		}else{
+			query.setParameter(1, null);
+		}
+
+		if(null != analysis.getHitTime()){
+			query.setParameter(2, analysis.getHitTime());
+		}else{
+			query.setParameter(2, null);
+		}
+		if(StringUtil.isNotBlank(analysis.getVisitIp())){
+			query.setParameter(3, analysis.getVisitIp());
+		}else{
+			query.setParameter(3, null);
+		}
+		if(StringUtil.isNotBlank(analysis.getVisitUrl())){
+			query.setParameter(4, analysis.getVisitUrl());
+		}else{
+			query.setParameter(4, null);
+		}
+		
+		int result = query.executeUpdate();
+		return result;
+	}
+
+	@Override
+	public Analysis findAnalysisSource(String sessionId,String sucUrl) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("select * from t_jsd_url_collection"+currDate+" where session_id=:sessionId ");
+		if(StringUtil.isNotBlank(sucUrl)){
+			sql.append("and visit_url like '%"+sucUrl+"%'");
+		}
+		sql.append(" order by hit_time asc ");
+		Query query = em.createNativeQuery(sql.toString(),Analysis.class);
+		query.setParameter("sessionId", sessionId);
+		List<Analysis> anaList = query.getResultList();
+		if(0 != anaList.size()){
+			return anaList.get(0);
+		}
+		return null;
+	}
+
+	
+
+}

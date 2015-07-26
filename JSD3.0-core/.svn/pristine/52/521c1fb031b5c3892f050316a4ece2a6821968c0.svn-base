@@ -1,0 +1,132 @@
+package com.rongdu.p2psys.core.sms.sendMsg;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.struts2.ServletActionContext;
+
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.RandomUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.ddtkj.p2psys.user.domain.User;
+
+public class ErrorLogMsg extends BaseMsg {
+
+	/** 序列化 */
+	private static final long serialVersionUID = 5750101385895758527L;
+	/** 发送通知service */
+	protected NoticeService noticeService;
+	
+	protected User user ;
+	
+	protected String email;
+	
+	protected String mobile;
+	
+	/** 模块编码 */
+	protected String noticeTypeNid;
+
+	@Override
+	public void doEvent() {
+		// 邮件、短信、站内信
+		sendMsg();
+	}
+
+	/**
+	 * 构造方法
+	 */
+	public ErrorLogMsg() {
+		super();
+		noticeService = (NoticeService) BeanUtil.getBean("noticeService");
+	}
+
+	/**
+	 * 构造方法
+	 * 
+	 * @param nid 模块ID
+	 */
+	public ErrorLogMsg(String nid,User user) {
+		this();
+		this.setNoticeTypeNid(nid);
+		this.setUser(user);
+	}
+	/**
+	 * 构造方法
+	 * 
+	 * @param nid 模块ID
+	 */
+	public ErrorLogMsg(String nid,String email,String mobile) {
+		this();
+		this.setNoticeTypeNid(nid);
+		this.setEmail(email);
+		this.setMobile(mobile);
+	}
+
+	@Override
+	public void sendMsg() {
+		if (!"".equals(noticeTypeNid)) {
+			if(user != null){
+				Map<String, Object> map = Global.getTransfer();
+				map.put("host", Global.getValue("weburl"));
+				map.put("webname", Global.getValue("webname"));
+				map.put("vtime",  Global.getValue("verify_code_time")) ;
+				map.put("noticeTime", DateUtil.dateStr(new Date(), "MM月dd日 HH时mm分ss秒"));
+				map.put("mobile", mobile);//将手机号存入map
+				map.put("email", email);//将邮箱号存入map
+				noticeService.sendNotice(noticeTypeNid, map);
+				map.remove("email");
+				Global.removeTransfer();
+			}else if(StringUtil.isNotBlank(email) || StringUtil.isNotBlank(mobile)){//不写入用户表
+				Map<String, Object> map = Global.getTransfer();
+				map.put("host", Global.getValue("weburl"));
+				map.put("webname", Global.getValue("webname"));
+				map.put("vtime",  Global.getValue("verify_code_time")) ;
+				map.put("noticeTime", DateUtil.dateStr(new Date(), "MM月dd日 HH时mm分ss秒"));
+				map.put("email",email);
+				map.put("mobile",mobile);
+				noticeService.sendNotice(noticeTypeNid, map);
+				map.remove("email");
+				Global.removeTransfer();
+			}
+		}
+	}
+
+	public String getNoticeTypeNid() {
+		return noticeTypeNid;
+	}
+
+	public void setNoticeTypeNid(String noticeTypeNid) {
+		this.noticeTypeNid = noticeTypeNid;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getMobile() {
+		return mobile;
+	}
+
+	public void setMobile(String mobile) {
+		this.mobile = mobile;
+	}
+
+}

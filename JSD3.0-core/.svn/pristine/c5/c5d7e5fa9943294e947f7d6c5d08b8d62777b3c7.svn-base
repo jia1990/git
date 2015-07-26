@@ -1,0 +1,141 @@
+package com.rongdu.p2psys.core.model;
+
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+
+import com.rongdu.common.util.Page;
+import com.rongdu.p2psys.core.domain.Article;
+
+/**
+ * 文章Model
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年4月1日
+ */
+public class ArticleModel extends Article {
+
+	/**
+	 * 序列号
+	 */
+	private static final long serialVersionUID = 1L;
+
+	/** 当前页码 */
+	private int page;
+	/** 上一篇ID */
+	private long prevId;
+	/** 下一篇ID*/
+	private long nextId;
+	
+	/** 每页数据条数 */
+    private int size = Page.ROWS;
+    
+	/** 栏目标识 */
+	private String nid;
+
+	/** 名称 */
+	private String name;
+
+	/** 栏目ID */
+	private String siteId;
+
+	/**作者 */
+	private String author;
+	public String getAuthor() {
+		return author;
+	}
+
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+
+	/**
+	 * 
+	 * @param article
+	 * @return
+	 */
+	public static ArticleModel instance(Article article) {
+		ArticleModel articleModel = new ArticleModel();
+		BeanUtils.copyProperties(article, articleModel);
+		return articleModel;
+	}
+
+	public Article prototype() {
+		Article article = new Article();
+		BeanUtils.copyProperties(this, article);
+		return article;
+	}
+	// JSDP-131 SXY start
+	// 2015年5月19日 18:57:00  sxy
+	/**
+     * 后台图片上传
+     */
+    private List<String> files;
+	
+	
+
+	public List<String> getFiles() {
+		return files;
+	}
+
+	public void setFiles(List<String> files) {
+		this.files = files;
+	}
+	// JSDP-131 SXY start
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public String getNid() {
+		return nid;
+	}
+
+	public void setNid(String nid) {
+		this.nid = nid;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getSiteId() {
+		return siteId;
+	}
+
+	public void setSiteId(String siteId) {
+		this.siteId = siteId;
+	}
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public long getPrevId() {
+        return prevId;
+    }
+
+    public void setPrevId(long prevId) {
+        this.prevId = prevId;
+    }
+
+    public long getNextId() {
+        return nextId;
+    }
+
+    public void setNextId(long nextId) {
+        this.nextId = nextId;
+    }
+}

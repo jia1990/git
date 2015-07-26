@@ -1,0 +1,155 @@
+package com.ddtkj.p2psys.statistics.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.statistics.dao.StatisticsDataDao;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.statistics.model.StatisticsDataModel;
+import com.ddtkj.p2psys.statistics.service.StatisticsDataService;
+import com.ddtkj.p2psys.user.domain.User;
+
+
+/**
+ * 数据统计
+ * 
+ * @author sxy
+ * @version 3.0
+ * @since 2015-04-22
+ * 
+ * JSDPBUG-99 20150505  sxy
+ * 
+ */
+@Service("statisticsDataService")
+public class StatisticsDataServiceImpl implements StatisticsDataService{
+
+	
+	@Resource
+	private  StatisticsDataDao statisticsDataDao;
+	
+	/**
+	 * 根据标识和时间类型查询统计记录
+	 * 
+	 * @param sign
+	 * @param timeType
+	 * @return
+	 */
+	public StatisticsData getStatisticsDataCount(String sign, String timeType){
+		return statisticsDataDao.getStatisticsDataCount(sign, timeType);
+	}
+
+	@Override
+	public void callProcedureStatistics() {
+		statisticsDataDao.callProcedureStatistics();
+	}
+
+	@Override
+	public int countUserByTypeAndTime(StatisticsDataModel model) {
+		return statisticsDataDao.countUserByTypeAndTime(model);
+	}
+
+	@Override
+	public int countTenderUserByTime(String timeType, String startTime,
+			String endTime) {
+		return statisticsDataDao.countTenderUserByTime(timeType, startTime, endTime);
+	}
+
+	@Override
+	public int countIdentifiedUserByTime(StatisticsDataModel model) {
+		return statisticsDataDao.countIdentifiedUserByTime(model);
+	}
+
+	@Override
+	public int countRechargeUserByTime(String timeType, String startTime,
+			String endTime) {
+		return statisticsDataDao.countRechargeUserByTime(timeType, startTime, endTime);
+	}
+
+	@Override
+	public double countRechargeMoneyByTime(StatisticsDataModel model) {
+		return statisticsDataDao.countRechargeMoneyByTime(model);
+	}
+
+	@Override
+	public double creaditOutMoneyByTime(String timeType, String startTime,
+			String endTime) {
+		return statisticsDataDao.creaditOutMoneyByTime(timeType, startTime, endTime);
+	}
+
+	@Override
+	public double creaditInMoneyByTime(String timeType, String startTime,
+			String endTime) {
+		return statisticsDataDao.creaditInMoneyByTime(timeType, startTime, endTime);
+	}
+
+	@Override
+	public double countDrawMoneyByTime(String timeType, String startTime,
+			String endTime) {
+		return statisticsDataDao.countDrawMoneyByTime(timeType, startTime, endTime);
+	}
+
+	@Override
+	public double countTenderMoneyByTime(StatisticsDataModel model) {
+		return statisticsDataDao.countTenderMoneyByTime(model);
+	};
+	
+
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<User> excelStatisticsRegisterUserList(StatisticsDataModel model) {
+		return statisticsDataDao.excelStatisticsRegisterUserList(model);
+	}
+	// JSDP-99 sxy 2015-05-25 start
+
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<AccountRecharge> excelStatisticsRechargeMoneyList(
+			StatisticsDataModel model) {
+		return statisticsDataDao.excelStatisticsRechargeMoneyList(model);
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<User> excelStatisticsIdentifiedList(StatisticsDataModel model) {
+		return statisticsDataDao.excelStatisticsIdentifiedList(model);
+	}
+	// JSDP-99 sxy 2015-05-25 start
+
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<BorrowTender> excelStatisticsTenderMoneyList(StatisticsDataModel model) {
+		return statisticsDataDao.excelStatisticsTenderMoneyList(model);
+	}
+	// JSDP-99 sxy 2015-05-25 start
+
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<AccountDraw> excelStatisticsDrawMoneyList(
+			StatisticsDataModel model) {
+		return statisticsDataDao.excelStatisticsDrawMoneyList(model);
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<CreditAssignment> excelStatisticsCreaditOutMoneyList(
+			StatisticsDataModel model) {
+		return statisticsDataDao.excelStatisticsCreaditOutMoneyList(model);
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	// JSDP-99 sxy 2015-05-25 start
+	@Override
+	public List<CreditLog> excelStatisticsCreaditInMoneyList(
+			StatisticsDataModel model) {
+		return statisticsDataDao.excelStatisticsCreaditInMoneyList(model);
+	}
+	// JSDP-99 sxy 2015-05-25 start
+	
+}

@@ -1,0 +1,84 @@
+package com.rongdu.p2psys.user.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import nu.xom.jaxen.saxpath.Operator;
+
+import org.springframework.stereotype.Service;
+
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.dao.NoticeTypeDao;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.user.dao.UserNoticeConfigDao;
+import com.rongdu.p2psys.user.domain.UserNoticeConfig;
+import com.rongdu.p2psys.user.model.UserNoticeConfigModel;
+import com.rongdu.p2psys.user.service.UserNoticeConfigService;
+
+@Service("userNoticeConfigService")
+public class UserNoticeConfigServiceImpl implements UserNoticeConfigService {
+
+	@Resource
+	private UserNoticeConfigDao userNoticeConfigDao;
+	@Resource
+	private NoticeTypeDao noticeTypeDao;
+	@Override
+	public List<UserNoticeConfig> getAllUNConfigs(long userId) {
+		
+		return userNoticeConfigDao.getAllUNConfigs(userId);
+	}
+	@Override
+	public UserNoticeConfig getUNConfig(long userId, String noticeTypeNid) {
+		
+		return userNoticeConfigDao.getUNConfig(userId, noticeTypeNid);
+	}
+	@Override
+	public void updateUNConfigs(List<UserNoticeConfig> uncList, long userId) {
+		
+		userNoticeConfigDao.update(uncList);
+	}
+	
+	@Override
+	public PageDataList<UserNoticeConfigModel> list(int page,int rows,UserNoticeConfigModel userNoticeConfig) {
+		QueryParam  param = QueryParam.getInstance().addPage(page, rows);
+		if(!StringUtil.isBlank(userNoticeConfig.getUserName())){
+			param.addParam("user.userName", Operators.LIKE ,"%"+userNoticeConfig.getUserName()+"%");
+		}
+		if(!StringUtil.isBlank(userNoticeConfig.getNid())){
+			param.addParam("nid", Operators.LIKE, "%"+userNoticeConfig.getNid()+"%");
+		}
+		PageDataList<UserNoticeConfig> pageList = userNoticeConfigDao.findPageList(param);
+		PageDataList<UserNoticeConfigModel> pageModelList = new PageDataList<UserNoticeConfigModel>();
+		pageModelList.setPage(pageList.getPage());
+		List<UserNoticeConfigModel> modelList = new ArrayList<UserNoticeConfigModel>();
+		for(UserNoticeConfig noticeConfig:pageList.getList()){
+			UserNoticeConfigModel configModel = UserNoticeConfigModel.instance(noticeConfig);
+			if(noticeConfig.getUser() != null){
+				configModel.setUserName(noticeConfig.getUser().getUserName());
+			}
+			if(!StringUtil.isBlank(noticeConfig.getNid())){
+				NoticeType noticeType = new NoticeType();
+				noticeType.setNid(noticeConfig.getNid());
+				PageDataList<Map<String, Object>> dataList = noticeTypeDao.getNoticeTypeList(1, 1, noticeType);
+				if(dataList.getList().size() > 0){
+					configModel.setNoticeName(dataList.getList().get(0).get("name").toString());
+				}
+				/*NoticeType smsNoticeType = noticeTypeDao.findByNid(noticeConfig.getNid(), NoticeConstant.NOTICE_SMS);
+				NoticeType emailNoticeType = noticeTypeDao.findByNid(noticeConfig.getNid(), NoticeConstant.NOTICE_EMAIL);
+				NoticeType messageNoticeType = noticeTypeDao.findByNid(noticeConfig.getNid(), NoticeConstant.NOTICE_MESSAGE);
+				if(smsNoticeType != null){
+					
+				}*/
+			}
+			modelList.add(configModel);
+		}
+		pageModelList.setList(modelList);
+		return pageModelList;
+	}
+}

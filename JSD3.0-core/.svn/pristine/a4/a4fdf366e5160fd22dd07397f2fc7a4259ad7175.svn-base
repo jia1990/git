@@ -1,0 +1,56 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record.draw;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountDrawHistoryDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountDrawHistory;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月9日 
+ */
+public class AccountDrawHistoryRecord extends AbstractYmdEvent<AccountDrawHistory>{
+
+	
+	private AccountDrawHistoryDao accountDrawHistoryDao;
+	public AccountDrawHistoryRecord(YmdCash y,User user) {
+		  init();
+          getT();
+          t.setAccountNumber(y.getNumberId());
+          t.setNickName(y.getNickName());
+          t.setSendCleartextInfo(y.SumitSignInfoJsonStr());
+          t.setTradeNo(y.getOutTradeNo());
+          t.setTradeInfo(y.getTransData());
+          t.setTradeReturnCode(y.getErrCode());
+          t.setTradeType(AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_DRAW_CASH);
+          t.setUser(user);
+          t.setAddTime(new Date());
+	}
+
+	@Override
+	public void addRecord() {
+		accountDrawHistoryDao.save(t);
+	}
+
+	@Override
+	public void init() {
+		accountDrawHistoryDao=(AccountDrawHistoryDao) BeanUtil.getBean("accountDrawHistoryDao");
+	}
+
+	public AccountDrawHistoryDao getAccountDrawHistoryDao() {
+		return accountDrawHistoryDao;
+	}
+
+	public void setAccountDrawHistoryDao(AccountDrawHistoryDao accountDrawHistoryDao) {
+		this.accountDrawHistoryDao = accountDrawHistoryDao;
+	}
+
+	
+}

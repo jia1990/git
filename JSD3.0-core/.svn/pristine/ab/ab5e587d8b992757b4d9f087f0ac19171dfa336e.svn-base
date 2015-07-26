@@ -1,0 +1,107 @@
+package com.ddtkj.p2psys.account.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.executer.BaseRechargeSuccessExecuter;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * 
+ * @描述：充值转账executer（借款人）JSDP-156
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月22日
+ */
+public class YunGouTransferSuccessBorrowerExecuter extends BaseRechargeSuccessExecuter {
+
+	private String accountLogType = Constant.TRANSFER_YUNGOU;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		// 操作金额
+		log.setBorrowerRechargeMoney(borrowerRechargeMoney);
+		log.setBorrowerEnterMoney(borrowerEnterMoney);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户各类可用
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		// 账户各类冻结
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		// 账户待还总额
+		log.setRepaymentTotal(account.getRepaymentTotal());
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		//JSDP-159 xingjia 2015-05-23 start
+		log.setPaymentsType((byte) 2);
+		//JSDP-159 xingjia 2015-05-23 end
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		
+		
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+	    // 账户各类可用金额
+	    account.setBorrowerRechargeUsable(BigDecimalUtil.add(account.getBorrowerRechargeUsable(), -borrowerRechargeMoney));
+	    account.setBorrowerEnterUsable(BigDecimalUtil.add(account.getBorrowerEnterUsable(),-borrowerEnterMoney));
+        //账户总额
+	    account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(), -(borrowerRechargeMoney+borrowerEnterMoney)));
+	  //JSDP-164 wcw 20150527 start
+  		accountDao.modifyBorrowerAccount(account, user.getUserId());
+  		//accountDao.update(account);
+  		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+		super.handleAccountSum();
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.TRANSFER_YUNGOU);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+		/*OperationLog operationLog = new OperationLog(super.user, super.operator, Constant.ONLINE_RECHARGE_SUCCESS);
+		operationLog.setOperationResult("（IP:" + super.operator.getLoginIp() + "）用户名为" + super.operator.getUserName()
+				+ "的操作员审核网上充值" + super.user.getUserName() + super.money + "元成功");
+		operationLogDao.save(operationLog);*/
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+
+}

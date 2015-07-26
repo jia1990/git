@@ -1,0 +1,108 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.redpacket.dao.ActivityRPDao;
+import com.ddtkj.p2psys.redpacket.dao.UserActivityDao;
+import com.ddtkj.p2psys.redpacket.domain.UserActivity;
+import com.ddtkj.p2psys.redpacket.model.RedPacketModel;
+import com.ddtkj.p2psys.redpacket.service.UserActivityService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * 活动service实现类
+ * @author YJF
+ *
+ */
+
+@Service("userActivityService")
+public class UserActivityServiceImpl implements UserActivityService {
+
+	@Resource
+	private UserActivityDao userActivityDao ;
+	@Resource
+	private ActivityRPDao  activityRPDao ;
+	
+	
+	
+
+	@Override
+	public UserActivity save(UserActivity rp) {
+		return this.userActivityDao.save(rp);
+	}
+
+	@Override
+	public UserActivity update(UserActivity rp) {
+		return this.userActivityDao.update(rp);
+	}
+
+	@Override
+	public void delete(UserActivity rp) {
+		this.userActivityDao.delete(rp.getId());
+	}
+
+	@Override
+	public List<UserActivity> getAll() {
+		return this.userActivityDao.findAll();
+	}
+
+	@Override
+	public UserActivity addRedpacket(User user, String typecode) {
+		// 获取当前时间符合 typecode的活动
+		UserActivity ua = new UserActivity();
+		ua.setUser(user);
+		ua.setActivityRP(this.activityRPDao.getEntityByTimeAndRPTypeCode(new Date(), typecode));
+		ua.setUserRpIsuse(0); 
+		return this.userActivityDao.save(ua);
+	}
+
+	@Override
+	public UserActivity addRedpacket(User user, User ref, String typecode,String reftypecode) {
+		RedPacketModel rm = RedPacketModel.getInstance(this.activityRPDao.getEntityByTimeAndRPTypeCode(new Date(), typecode)) ;
+		RedPacketModel refRm = RedPacketModel.getInstance(this.activityRPDao.getEntityByTimeAndRPTypeCode(new Date(), reftypecode)) ;
+		UserActivity ua = new UserActivity();
+		ua.setUser(user);
+		ua.setReferrer(ref);
+		ua.setActivityRP(rm);
+		ua.setRefActivityRP(refRm);
+		ua.setUserRpIsuse(0); 
+		ua.setRefRpIsUse(0);
+		return this.userActivityDao.save(ua);
+	}
+
+	@Override
+	public PageDataList<UserActivity> getModleByUserid(long userid,int currentPage,int pagenum) {
+		return this.userActivityDao.getUserActivity(userid, currentPage, pagenum) ;
+	}
+
+	@Override
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,
+			int isuse,int currentPage,int pagenum) {
+		return this.userActivityDao.getModleByUseridAndStatus(userid, isuse, currentPage, pagenum);
+	}
+
+	@Override
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,
+			int isuse, String typecode,int currentPage,int pagenum) {
+		return this.userActivityDao.getModleByUseridAndStatus(userid, isuse, typecode, currentPage, pagenum);
+	}
+
+	@Override
+	public PageDataList<UserActivity> getModleByUseridAndTJ(long userid, int isuse,int currentPage,int pagenum) {
+		return this.userActivityDao.getModleByUseridAndTJ(userid, isuse, currentPage, pagenum);
+	}
+
+	@Override
+	public PageDataList<UserActivity> getModleByUseridRef(long userid, int currentPage,
+			int pagenum) {
+		return this.userActivityDao.getUserActivityRef(userid, currentPage, pagenum);
+	}
+
+
+	
+}

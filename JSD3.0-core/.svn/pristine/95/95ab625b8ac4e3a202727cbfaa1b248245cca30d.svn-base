@@ -1,0 +1,421 @@
+package com.ddtkj.p2psys.webpetcard.service.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.core.util.CardAESUtils;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.model.PetCardModel;
+import com.ddtkj.p2psys.webpetcard.service.PetCardService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck;
+
+/**
+ * @描述：储值卡service实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:2015年6月2日 
+ * @JIRA JSDP-171
+ */
+@Repository("petCardService")
+public class PetCardServiceImpl implements PetCardService {
+
+	private static Logger logger = Logger.getLogger(PetCardServiceImpl.class);
+
+	@Resource
+	private PetCardDao petCardDao;
+	@PersistenceContext
+	protected EntityManager em;
+	
+	/**
+	 * 
+	 * 查询储蓄卡列表
+	 * 
+	 * @作者  孙晓勇
+	 * @时间 2015年6月2日
+	 * 
+	 */
+	@Override
+	public PageDataList<PetCardModel> petCardList(int pageNumber, int pageSize,PetCardModel model) {
+		
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber,pageSize);
+
+		if (model != null) {
+			// 批次号
+			if(StringUtil.isNotBlank(model.getBatchNo())){
+				param.addParam("batchNo", Operators.LIKE, model.getBatchNo()); 
+			}
+			// 卡号
+			if(StringUtil.isNotBlank(model.getCardNo())){
+				param.addParam("cardNo",  model.getCardNo()); 
+			}
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				param.addParam("userName", Operators.LIKE, model.getUserName()); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				param.addParam("status", model.getStatus()); 
+			}
+			// 开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				param.addParam("addTime", Operators.GTE, model.getStartTime()); 
+			}
+			// 结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				param.addParam("addTime", Operators.LTE, model.getEndTime()); 
+			}
+			 
+		}
+		param.addOrder(OrderType.DESC, "id");
+
+		PageDataList<PetCard> plist = petCardDao.findPageList(param);
+		PageDataList<PetCardModel> dataList = new PageDataList<PetCardModel>();
+		List<PetCardModel> list = new ArrayList<PetCardModel>();
+		List<PetCard> listCard = new ArrayList<PetCard>();
+
+		if (plist.getList().size() > 0) {
+			for (int i = 0; i < plist.getList().size(); i++) {
+				
+				DecimalFormat df = new DecimalFormat("#0.00");
+				
+				PetCard petCard = (PetCard) plist.getList().get(i);
+				PetCardModel petCardModel = new PetCardModel();
+				petCardModel.setId(petCard.getId());
+				petCardModel.setBatchNo(petCard.getBatchNo());
+				petCardModel.setCardNo(petCard.getCardNo());
+				petCardModel.setStatus(petCard.getStatus());
+				petCardModel.setMoney(Double.valueOf(df.format(petCard.getMoney())));
+				petCardModel.setUserName(petCard.getUserName());
+				petCardModel.setType(petCard.getType());
+				petCardModel.setIsValid(Byte.valueOf(String.valueOf(petCard.getIsValid())));
+				petCardModel.setValidTime(petCard.getValidTime());
+				petCardModel.setWinTime(petCard.getWinTime());
+				petCardModel.setAddTime(petCard.getAddTime());
+				petCardModel.setAddUser(petCard.getAddUser());
+				
+
+				list.add(petCardModel);
+			}
+		}
+
+		dataList.setList(list);
+		listCard.contains(list);
+		petCardDao.update(listCard);
+		
+		dataList.setPage(plist.getPage());
+		return dataList;
+		
+	}
+	/**
+	 * 
+	 * 查询储蓄卡列表并更新导出状态值
+	 * 
+	 * @作者  孙晓勇
+	 * @时间 2015年6月2日
+	 * 
+	 */
+	/*@Override
+	public boolean updateSelectPetCardList(PetCardModel model) {
+		
+		QueryParam param = QueryParam.getInstance();
+		
+		if (model != null) {
+			// 批次号
+			if(StringUtil.isNotBlank(model.getBatchNo())){
+				param.addParam("batchNo", Operators.LIKE, model.getBatchNo()); 
+			}
+			// 卡号
+			if(StringUtil.isNotBlank(model.getCardNo())){
+				param.addParam("cardNo",  model.getCardNo()); 
+			}
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				param.addParam("userName", Operators.LIKE, model.getUserName()); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				param.addParam("status", model.getStatus()); 
+			}
+			// 开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				param.addParam("addTime", Operators.GTE, model.getStartTime()); 
+			}
+			// 结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				param.addParam("addTime", Operators.LTE, model.getEndTime()); 
+			}
+			
+		}
+		param.addOrder(OrderType.DESC, "id");
+		
+		PageDataList<PetCard> plist = petCardDao.findPageList(param);
+		//PageDataList<PetCardModel> dataList = new PageDataList<PetCardModel>();
+		List<PetCard> list = new ArrayList<PetCard>();
+		
+		if (plist.getList().size() > 0) {
+			for (int i = 0; i < plist.getList().size(); i++) {
+				// 所查询的值改为已导出
+				PetCard petCard = (PetCard) plist.getList().get(i);
+				petCard.setIsExport("1");
+				list.add(petCard);
+			}
+		}
+		
+		boolean result = petCardDao.update(list);
+		if(result == true){
+			return true;
+		}else{
+			return false;
+		}
+		
+	}*/
+	/**
+	 * 
+	 * 查询储蓄卡列表并更新导出状态值
+	 * 
+	 * @作者  孙晓勇
+	 * @时间 2015年6月2日
+	 * 
+	 */
+	@Override
+	public boolean updateSelectPetCardList(PetCardModel model) {
+		// JSDP-171 sxy 20150703 start 按照条件查询所有导出的数据，无分页
+		List<PetCard> dataList = petCardDao.petCardListForSQLToUpdate(model);
+		List<PetCard> list = new ArrayList<PetCard>();
+		if (dataList.size() > 0) {
+			for (int i = 0; i < dataList.size(); i++) {
+				// 所查询的值改为已导出
+				PetCardModel petCardModel = (PetCardModel) dataList.get(i);
+				PetCard petCard = petCardDao.find((long)petCardModel.getIdInt());
+				petCard.setIsExport("1");
+				list.add(petCard);
+			}
+		}
+		boolean result = petCardDao.update(list);
+		if(result == true){
+			return true;
+		}else{
+			return false;
+		}
+		
+	}
+
+	@Override
+	public Boolean petCardAdd(PetCard petCard) {
+		if(petCard != null){
+			petCardDao.save(petCard);
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+
+
+	@Override
+	public PetCard getPetCardByIdOrPwd(String cardNo,String pwd) {
+		QueryParam param = QueryParam.getInstance();
+		
+		if(StringUtil.isNotBlank(cardNo)){
+			param.addParam("cardNo", cardNo);
+		}
+		if(StringUtil.isNotBlank(pwd)){
+			try {
+				//JSDP-171 xingjia 20150609 start 第二次修改
+				param.addParam("paw", pwd);
+				//JSDP-171 xingjia 20150609 end 第二次修改
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		param.addParam("status", PetCard.UN_CARD_STATUS);
+		//JSDP-171 xingjia 20150609 start
+		param.addParam("type", PetCard.TYPE_PET_CARD);
+		//JSDP-171 xingjia 20150609 end
+		PetCard petCard = petCardDao.findByCriteriaForUnique(param);
+		return petCard;
+	}
+
+
+	@Override
+	public long findMaxId() {
+		return petCardDao.findMaxId();
+	}
+
+	@Override
+	public PetCard getPetCardById(long id) {
+		return petCardDao.find(id);
+	}
+	
+    @Override
+    public void update(PetCard petCard) {
+    	petCardDao.update(petCard);
+    }
+    
+    @Override
+    public void updateExcelStatus(long id, String isExport) {
+    	petCardDao.updateExcelStatus(id, isExport);
+    }
+
+	@Override
+	public PageDataList<PetCard> petCardListForSQL(int pageNumber,
+			int pageSize, PetCardModel model) {
+		return petCardDao.petCardListForSQL(pageNumber, pageSize, model);
+	}
+	
+	@Override
+	public List<PetCard> excelPetCardList(PetCardModel model) {
+		
+		return petCardDao.excelPetCardList(model);
+	}
+	
+	@Override
+	public boolean update(List<PetCard> list) {
+		
+		return petCardDao.update(list);
+	}
+
+	@Override
+	public PetCard getPetCardByCardNo(String cardNo) {
+		return petCardDao.getPetCardByCardNo(cardNo);
+	}
+	//JSDP-171 xingjia 20150609 start
+	@Override
+	public double getSumPetCardProduce(long userId) {
+		
+		return petCardDao.getSumPetCardProduce(userId);
+	}
+	//JSDP-171 xingjia 20150609 end
+
+	@Override
+	public List<PetCard> getYgCardByStatusAndType(String status, String type,
+			double money) {
+		return petCardDao.getYgCardByStatusAndType(status, type, money);
+	}
+	
+	@Override
+	public PageDataList<PetCardModel> petCardList(PetCardModel model) throws Exception {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<PetCard> list = petCardDao.findPageList(param);
+		logger.info("云购体验卡记录param:"+param.toMap().toString()+",list size:"+list.getList().size());
+		List<PetCardModel> modelList = new ArrayList<PetCardModel>();
+		PageDataList<PetCardModel> pageDataList = new PageDataList<PetCardModel>();
+		pageDataList.setPage(list.getPage());
+		if (list.getList().size() > 0) {
+			for (int i = 0; i < list.getList().size(); i++) {
+				PetCard petCard = (PetCard)list.getList().get(i);
+				PetCardModel petCardModel = PetCardModel.instance(petCard);
+				YunGouTransferRuleCheck ruleCheck = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+				if(ruleCheck!=null){//获取加密key进行解密
+					petCardModel.setPaw(CardAESUtils.aesDecrypt(petCardModel.getPaw(),ruleCheck.getYungou_petcard_key()));
+				}
+				modelList.add(petCardModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	 
+	@Override
+	public double getPetCardSumByStatusAndType(long userId, String type,
+			String status) {
+		return petCardDao.getPetCardSumByStatusAndType(userId, type, status);
+	}
+	@Override
+	public List<Object[]> getPetCardPackSumByStatusAndType(long userId, String type, String status) {
+		// TODO Auto-generated method stub
+		return petCardDao.getPetCardPackSumByStatusAndType(userId, type,status);
+	}
+	@Override
+	public boolean updateIsCheck(PetCardModel model) {
+		// TODO Auto-generated method stub
+		return petCardDao.updateIsCheck(model);
+	}
+	private QueryParam searchParam(QueryParam param, PetCardModel model) {
+		if(model != null){
+			if (model.getUserId() > 0) {
+				param.addParam("userId", model.getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getUserName())){
+				param.addParam("userName", Operators.LIKE, model.getUserName());
+			}
+			if (StringUtil.isNotBlank(model.getBatchNo())){
+				param.addParam("batchNo", model.getBatchNo());
+			}
+			if (StringUtil.isNotBlank(model.getStatus())){
+				param.addParam("status", model.getStatus());
+			}
+			if (StringUtil.isNotBlank(model.getCardNo())) {
+				param.addParam("cardNo", model.getCardNo());
+			}
+			if (StringUtil.isNotBlank(model.getType())) {
+				param.addParam("type", model.getType());
+			}
+			if (model.getMoneys()!=null && model.getMoneys().length > 0){
+				List<Double> list = new ArrayList<Double>();
+				for(int i = 0 ; i < model.getMoneys().length; i++){
+					list.add(Double.parseDouble(model.getMoneys()[i]));
+				}
+				param.addParam("money",Operators.IN, list);
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+	
+	// JSDP-201 sxy 20150630 start
+	@Override
+	public String petCardDataTotal(PetCardModel model) {
+		return petCardDao.petCardDataTotal(model);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.webpetcard.service.PetCardService#findWinTimePetCard()
+	 */
+	@Override
+	public List<PetCard> findWinTimePetCard() {
+
+		return petCardDao.findWinTimePetCard();
+	}
+	
+}

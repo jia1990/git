@@ -1,0 +1,241 @@
+package com.ddtkj.p2psys.analysis.dao.impl;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.analysis.dao.UserSourceDao;
+import com.ddtkj.p2psys.analysis.domain.UserSource;
+import com.ddtkj.p2psys.analysis.model.UserSourceModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+/**
+ * @描述：用户来源收集dao层实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+@Repository("userSourceDao")
+public class UserSourceDaoImpl extends BaseDaoImpl<UserSource> implements UserSourceDao{
+
+	@Override
+	public PageDataList<UserSourceModel> pageListUserSource(
+			UserSourceModel userSourceModel) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT COUNT(user_id) userCounts,source_url FROM t_jsd_url_source_user where 1=1 " );
+		if(StringUtil.isNotBlank(userSourceModel.getStartTime())){
+			sql.append(" and add_time >=:startTime ");
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getEndTime())){
+			sql.append(" and add_time <:endTime ");
+		}
+		sql.append(" GROUP BY source_url ORDER BY userCounts DESC");
+		Query query  = em.createNativeQuery(sql.toString());
+		//param.addPage(userSourceModel.getPage(), userSourceModel.getSize());
+		if(StringUtil.isNotBlank(userSourceModel.getStartTime())){
+			query.setParameter("startTime", userSourceModel.getStartTime());
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getEndTime())){
+			query.setParameter("endTime", userSourceModel.getEndTime());
+		}
+         Object[] object = new Object[2];
+         Page page = new Page(query.getResultList().size(), userSourceModel.getPage(), userSourceModel.getSize());
+         query.setFirstResult((userSourceModel.getPage() - 1) * userSourceModel.getSize());
+         query.setMaxResults(userSourceModel.getSize());
+         List userSourceList =  query.getResultList();
+         
+         List<UserSourceModel> userSourceModelList = new ArrayList<UserSourceModel>();
+         PageDataList<UserSourceModel> userSourceModelPageList = new PageDataList<UserSourceModel>();
+         for(int i=0;i<userSourceList.size();i++){
+        	 object = (Object[]) userSourceList.get(i);
+        	 UserSourceModel usModel = new UserSourceModel();
+        	 usModel.setUserSCounts((BigInteger) object[0]);
+        	 usModel.setSourceURL((String) object[1]);
+        	 usModel.setStartTime(userSourceModel.getStartTime());
+        	 usModel.setEndTime(userSourceModel.getEndTime());
+        	 userSourceModelList.add(usModel);
+         }
+		
+         userSourceModelPageList.setList(userSourceModelList);
+         userSourceModelPageList.setPage(page);
+		return userSourceModelPageList;
+	}
+
+	@Override
+	public PageDataList<UserSourceModel> pageListUserBySource(
+			UserSourceModel userSourceModel) {
+		StringBuffer sql = new StringBuffer();
+		//JSDP-166 xingjia 20150611 start
+		sql.append("SELECT u.user_id,u.user_name,u.mobile_phone,su.source_url,u.real_name,u.add_time,su.register_way FROM t_jsd_url_source_user su,t_jsd_user u WHERE su.user_id = u.user_id ");
+		//JSDP-166 xingjia 20150611 end
+		if(StringUtil.isNotBlank(userSourceModel.getSourceURL())){
+			sql.append(" AND su.source_url=:sourceURL");
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getStartTime()) && !"undefined".equals(userSourceModel.getStartTime())){
+			sql.append(" AND su.add_time>=:startTime ");
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getEndTime()) && !"undefined".equals(userSourceModel.getEndTime())){
+			sql.append(" AND su.add_time<:endTime ");
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		if(StringUtil.isNotBlank(userSourceModel.getSourceURL())){
+			query.setParameter("sourceURL", userSourceModel.getSourceURL());
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getStartTime()) && !"undefined".equals(userSourceModel.getStartTime())){
+			query.setParameter("startTime", userSourceModel.getStartTime());
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getEndTime()) && !"undefined".equals(userSourceModel.getEndTime())){
+			query.setParameter("endTime", userSourceModel.getEndTime());
+		}
+		
+		Object[] object = new Object[6];
+		Page page = new Page(query.getResultList().size(),userSourceModel.getPage(),userSourceModel.getSize());
+		query.setFirstResult((userSourceModel.getPage() - 1) * userSourceModel.getSize());
+		query.setMaxResults(userSourceModel.getSize());
+		List userBySourceList = query.getResultList();
+		PageDataList<UserSourceModel> pageDataListUserSource = new PageDataList<UserSourceModel>();
+		List<UserSourceModel> usList = new ArrayList<UserSourceModel>();
+		for(int i=0;i<userBySourceList.size();i++){
+			object = (Object[])userBySourceList.get(i);
+			UserSourceModel usModel = new UserSourceModel();
+			usModel.setUserId(Long.parseLong(object[0].toString()) );
+			usModel.setUserName((String) object[1]);
+			usModel.setMobilePhone((String) object[2]);
+			usModel.setSourceURL((String) object[3]);
+			usModel.setRealName((String) object[4]);
+			usModel.setAddTime((Date) object[5]);
+			//JSDP-166 xingjia 20150611 start
+			usModel.setRegisterWay((String) object[6]);
+			//JSDP-166 xingjia 20150611 end
+			usList.add(usModel);
+		}
+		pageDataListUserSource.setList(usList);
+		pageDataListUserSource.setPage(page);
+		return pageDataListUserSource;
+	}
+
+	@Override
+	public PageDataList<UserSourceModel> pageListSourceAndInvest(
+			UserSourceModel userSourceModel) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT SUM(bt.money) investMoney,su.source_url FROM t_jsd_url_source_user su,t_jsd_borrow_tender bt WHERE su.user_id=bt.user_id ");
+		if(StringUtil.isNotBlank(userSourceModel.getStartTime())){
+			sql.append(" and su.add_time >=:startTime ");
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getEndTime())){
+			sql.append(" and su.add_time <:endTime");
+		}
+		sql.append(" GROUP BY source_url order by investMoney desc ");
+		Object[] object = new Object[4];
+		Query query = em.createNativeQuery(sql.toString());
+		if(StringUtil.isNotBlank(userSourceModel.getStartTime())){
+			query.setParameter("startTime", userSourceModel.getStartTime());
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getEndTime())){
+			sql.append(" and su.add_time <:endTime");
+			query.setParameter("endTime", userSourceModel.getEndTime());
+		}
+		Page page = new Page(query.getResultList().size(), userSourceModel.getPage(), userSourceModel.getSize());
+		query.setFirstResult((userSourceModel.getPage() - 1) * userSourceModel.getSize());
+		query.setMaxResults(userSourceModel.getSize());
+		List list = query.getResultList();
+		List<UserSourceModel> sourceInvest = new ArrayList<UserSourceModel>();
+		PageDataList<UserSourceModel> sourceInvestPageList = new PageDataList<UserSourceModel>(); 
+		for(int i=0;i<list.size();i++){
+			object = (Object[]) list.get(i);
+			UserSourceModel usModel = new UserSourceModel();
+			usModel.setInvestMoney((BigDecimal) object[0]);
+			usModel.setSourceURL((String) object[1]);
+			usModel.setStartTime(userSourceModel.getStartTime());
+			usModel.setEndTime(userSourceModel.getEndTime());
+			sourceInvest.add(usModel);
+		}
+		sourceInvestPageList.setList(sourceInvest);
+		sourceInvestPageList.setPage(page);
+		return sourceInvestPageList;
+	}
+
+	@Override
+	public PageDataList<UserSourceModel> pageListSourceInvestDetail(
+			UserSourceModel userSourceModel) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT su.user_id,bt.money,su.user_name,su.source_url,b.name "
+				+ "FROM t_jsd_url_source_user su,t_jsd_borrow_tender bt,rd_borrow b "
+				+ "WHERE su.user_id=bt.user_id AND b.id=bt.borrow_id ");
+		if(StringUtil.isNotBlank(userSourceModel.getSourceURL())){
+			sql.append("AND su.source_url=:sourceURL ");
+		}
+		//JSDP-166 xingjia 20150611 start
+		if(StringUtil.isNotBlank(userSourceModel.getStartTimes()) && !"undefined".equals(userSourceModel.getStartTimes())){
+			sql.append(" and su.add_time>=:startTime ");
+		}else if(StringUtil.isNotBlank(userSourceModel.getStartTime()) && !"undefined".equals(userSourceModel.getStartTime())){
+			sql.append(" and su.add_time>=:startTime ");
+		}
+		
+		if(StringUtil.isNotBlank(userSourceModel.getEndTimes()) && !"undefined".equals(userSourceModel.getEndTimes())){
+			sql.append(" and su.add_time<:endTime ");
+		}else if(StringUtil.isNotBlank(userSourceModel.getEndTime()) && !"undefined".equals(userSourceModel.getEndTime())){
+			sql.append(" and su.add_time<:endTime ");
+		}
+		
+		if(StringUtil.isNotBlank(userSourceModel.getUserName())){
+			sql.append(" and su.user_name =:userName ");
+		}
+		//JSDP-166 xingjia 20150611 end
+		sql.append(" ORDER BY b.add_time ");
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if(StringUtil.isNotBlank(userSourceModel.getSourceURL())){
+			query.setParameter("sourceURL", userSourceModel.getSourceURL());
+		}
+		//JSDP-166 xingjia 20150611 start
+		if(StringUtil.isNotBlank(userSourceModel.getStartTimes()) && !"undefined".equals(userSourceModel.getStartTimes())){
+			//JSDP-166 xingjia 20150611 start 第二次修改
+			query.setParameter("startTime", userSourceModel.getStartTimes());
+			//JSDP-166 xingjia 20150611 end 第二次修改
+		}else if(StringUtil.isNotBlank(userSourceModel.getStartTime()) && !"undefined".equals(userSourceModel.getStartTime())){
+			query.setParameter("startTime", userSourceModel.getStartTime());
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getEndTimes()) && !"undefined".equals(userSourceModel.getEndTimes())){
+			//JSDP-166 xingjia 20150611 start 第二次修改
+			query.setParameter("endTime", userSourceModel.getEndTimes());
+			//JSDP-166 xingjia 20150611 end 第二次修改
+		}else if(StringUtil.isNotBlank(userSourceModel.getEndTime()) && !"undefined".equals(userSourceModel.getEndTime())){
+			query.setParameter("endTime", userSourceModel.getEndTime());
+		}
+		if(StringUtil.isNotBlank(userSourceModel.getUserName())){
+			query.setParameter("userName", userSourceModel.getUserName());
+		}
+		//JSDP-166 xingjia 20150611 end
+		Object[] object = new Object[4];
+		Page page = new Page(query.getResultList().size(), userSourceModel.getPage(), userSourceModel.getSize());
+		query.setFirstResult((userSourceModel.getPage() - 1) * userSourceModel.getSize());
+		query.setMaxResults(userSourceModel.getSize());
+		List list = query.getResultList();
+		List<UserSourceModel> sourceInvest = new ArrayList<UserSourceModel>();
+		PageDataList<UserSourceModel> sourceInvestPageList = new PageDataList<UserSourceModel>(); 
+		for(int i=0;i<list.size();i++){
+			object = (Object[]) list.get(i);
+			UserSourceModel usModel = new UserSourceModel();
+			usModel.setUserId(Long.parseLong(object[0].toString()));
+			usModel.setInvestMoney((BigDecimal) object[1]);
+			usModel.setUserName((String) object[2]);
+			usModel.setSourceURL((String) object[3]);
+			usModel.setBorrowName((String) object[4]);
+			sourceInvest.add(usModel);
+		}
+		sourceInvestPageList.setList(sourceInvest);
+		sourceInvestPageList.setPage(page);
+		
+		return sourceInvestPageList;
+	}
+
+}

@@ -1,0 +1,88 @@
+package com.ddtkj.p2psys.phone.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.phone.dao.PhoneScrollPicDao;
+import com.ddtkj.p2psys.phone.domain.PhoneScrollPic;
+import com.ddtkj.p2psys.phone.model.PhoneScrollPicModel;
+import com.ddtkj.p2psys.phone.service.PhoneScrollPicService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.p2psys.core.Global;
+
+
+@Service("PhoneScrollPicService")
+public class PhoneScrollPicServiceImpl implements PhoneScrollPicService {
+
+	@Resource
+	private PhoneScrollPicDao phoneScrollPicDao;
+	
+	@Override
+	public List<PhoneScrollPicModel> listBySize(int size) {
+		return phoneScrollPicDao.listBySize(size);
+	}
+
+	@Override
+	public PageDataList<PhoneScrollPicModel> list(int page) {
+		return phoneScrollPicDao.list(page);
+	}
+	
+	@Override
+	public PageDataList<PhoneScrollPicModel> list(PhoneScrollPicModel model) {
+	    QueryParam param = QueryParam.getInstance();
+        param.addParam("status", 1);
+        param.addOrder(OrderType.ASC, "sort");
+        param.addOrder(OrderType.DESC, "id");
+        param.addPage(model.getPage(), model.getSize());
+        PageDataList<PhoneScrollPic> pageDataList = phoneScrollPicDao.findPageList(param);
+        PageDataList<PhoneScrollPicModel> pageDataList_ = new PageDataList<PhoneScrollPicModel>();
+        List<PhoneScrollPicModel> list = new ArrayList<PhoneScrollPicModel>();
+        List<PhoneScrollPic> Activitys =  pageDataList.getList();
+        pageDataList_.setPage(pageDataList.getPage());
+        if (Activitys.size() > 0) {
+            for (int i = 0; i < Activitys.size(); i++) {
+            	PhoneScrollPic an = Activitys.get(i);
+            	PhoneScrollPicModel anm = PhoneScrollPicModel.instance(an);
+                anm.setPicPath(Global.getValue("adminurl") + an.getPicPath());
+                
+                list.add(anm);
+            }
+        }
+        pageDataList_.setList(list);
+        return pageDataList_;
+	}
+
+	@Override
+	public PageDataList<PhoneScrollPicModel> phoneScrollPicList(PhoneScrollPicModel model, int pageNumber, int pageSize) {
+		return phoneScrollPicDao.phoneScrollPicList(model, pageNumber, pageSize);
+	}
+	
+	@Override
+	public void phoneScrollPicAdd(PhoneScrollPic phoneScrollPic) {
+		phoneScrollPicDao.save(phoneScrollPic);
+	}
+
+	@Override
+	public PhoneScrollPic find(long id) {
+		return phoneScrollPicDao.find(id);
+	}
+
+	@Override
+	public void phoneScrollPicEdit(PhoneScrollPic phoneScrollPic) {
+		phoneScrollPicDao.phoneScrollPicEdit(phoneScrollPic);
+	}
+
+	@Override
+	public void update(PhoneScrollPic phoneScrollPic) {
+		
+		phoneScrollPicDao.merge(phoneScrollPic);
+	}
+
+	
+}

@@ -1,0 +1,50 @@
+package com.rongdu.p2psys.score.dao.jdbc;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.user.domain.UserLoginHisotry;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.Page;
+import com.rongdu.p2psys.score.dao.ScoreLogDao;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.score.model.ScoreLogModel;
+
+@Repository("scoreLogDao")
+public class ScoreLogDaoImpl extends BaseDaoImpl<ScoreLog> implements ScoreLogDao {
+
+	@Override
+	public List<ScoreLog> getLastTimeSign(long userId){
+		String sql = " FROM ScoreLog where user_id= :userId AND type =  'user_sign_in'  ORDER BY add_time DESC ";
+
+		Query query = em.createQuery(sql);
+		query.setParameter("userId", userId);
+		List<ScoreLog> list = query.getResultList();
+		return list;
+	}
+
+	@Override
+	public PageDataList<ScoreLog> findRepeatScorePage(int pageNumber,
+			int pageSize, ScoreLogModel model) {
+		String sql = "SELECT sl.id,sl.user_id,sl.score,sl.valid_score,sl.freeze_score,sl.score_type_nid ,sl.score_type_name,"
+				+ "sl.type,sl.remark,sl.add_time,sl.add_ip FROM rd_score_log sl,t_jsd_user u WHERE sl.user_id = u.user_id "
+				+ "AND sl.score_type_nid IN ('phone','email','realname') GROUP BY sl.score_type_nid,sl.user_id HAVING COUNT(1)>1 ";
+		
+		Query query = em.createNativeQuery(sql, ScoreLog.class);
+	
+		Page page = new Page(query.getResultList().size(), pageNumber, pageSize);
+		query.setFirstResult((model.getPage() - 1) * pageSize);
+		query.setMaxResults(pageSize);
+		List<ScoreLog> repeatScoreList = query.getResultList();
+
+		PageDataList<ScoreLog> repeatScorePageData = new PageDataList<ScoreLog>();
+		repeatScorePageData.setList(repeatScoreList);
+		repeatScorePageData.setPage(page);
+		return repeatScorePageData;
+	}
+
+}

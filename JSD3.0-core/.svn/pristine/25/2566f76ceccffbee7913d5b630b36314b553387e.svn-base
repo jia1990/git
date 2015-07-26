@@ -1,0 +1,34 @@
+
+package com.ddtkj.p2psys.sms.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.sms.dao.SmsInterfaceDao;
+import com.ddtkj.p2psys.sms.domain.SmsInterface;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+
+/**
+ * @描述: 短信接口dao实现类
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-2-10   
+ */
+@Repository("smsInterfaceDao")
+public class SmsInterfaceDaoImpl extends BaseDaoImpl<SmsInterface> implements SmsInterfaceDao {	
+	
+	
+	@Override
+	public SmsInterface findByStatusAndId(String status, long id) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", status);
+		param.addParam("id", Operators.NOTEQ, id);
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public SmsInterface find(String status) {
+		return findObjByProperty("status", status);
+	}
+	
+}

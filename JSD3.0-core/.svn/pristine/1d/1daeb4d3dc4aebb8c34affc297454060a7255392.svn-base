@@ -1,0 +1,389 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.service.impl;
+
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.transfer.dao.AccountTransferDao;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.transfer.service.AccountTransferService;
+import com.ddtkj.p2psys.transfer.worker.TransferHelper;
+import com.ddtkj.p2psys.transfer.worker.TransferWorker;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.HttpUtil;
+import com.rongdu.common.util.MD5Util;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述：1.0资金账户转账到3.0 业务逻辑层实现类
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月26日 
+ */
+@Service("accountTransferService")
+public class AccountTransferServiceImpl implements AccountTransferService{
+	
+	private static Logger logger = Logger.getLogger(AccountTransferServiceImpl.class);
+	@Resource
+	AccountDao accountDao;
+	@Resource
+	UserDao userDao;
+	@Resource
+	AccountTransferDao accountTransferDao;
+	@Override
+	public Map<String, Object> checkIsOpenAccount(String userName,String phone){
+		Map<String, Object> map=new HashMap<String, Object>();
+	    if(StringUtil.isNotBlank(userName)){
+			User user=userDao.getUserByUserName(userName);
+			if(user!=null&&user.getUserIdentify()!=null&&phone.equals(user.getMobilePhone())){
+				UserIdentify userIdentify=user.getUserIdentify();
+				if("Y".equals(user.getThirdPartyIsOpen())&&StringUtil.isNotBlank(user.getThirdPartyAccount())&&"83".equals(userIdentify.getRealNameStatus())){
+				   map.put("result", "ok");
+				   map.put("msg", "3.0开户成功");
+				}else{
+					map.put("result", "error");
+					map.put("msg", "3.0开户失败");
+				}
+			}else{
+				map.put("result", "error");
+				map.put("msg", "请求参数异常或者网络原因异常");
+			}
+		}else{
+			map.put("result", "error");
+			map.put("msg", "请求参数异常或者网络原因异常");
+		}
+	    return map;
+	}
+	@Override
+	public Map<String, Object> accountTransfer(User oldUser,AccountTransfer accountTransfer)throws Exception{
+		Map<String, Object> map=new HashMap<String, Object>();
+		User newUser=null;
+		if(StringUtil.isNotBlank(oldUser.getUserName())){
+			newUser=userDao.getUserByUserName(oldUser.getUserName());
+		}
+		if(accountTransfer!=null&&StringUtil.isNotBlank(accountTransfer.getTransferNo())){
+			AccountTransfer at=accountTransferDao.findObjByProperty("transferNo", accountTransfer.getTransferNo());
+			if(newUser!=null&&at==null){
+				YmdQuery ymdQuery=new YmdQuery();
+				ymdQuery.setOutTradeNo(accountTransfer.getTransferNo());
+				ymdQuery.setMode("trade");
+				YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+				ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+				List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+				if(queryDetaillist.size()<1){
+					AccountTransferModel atm=new AccountTransferModel();
+					//本地转账
+					map=atm.localTransfer(newUser, accountTransfer,map);
+					//一麻袋转账
+					atm.ymdTransfer(newUser, accountTransfer);
+				}else{
+					//本地转账
+					AccountTransferModel atm=new AccountTransferModel();
+					map=atm.localTransfer(newUser, accountTransfer,map);
+					map.put("transfer_status", AccountTransfer.ACCOUNT_TRANSFER_YMD_SUCCESS);
+			    	map.put("transfer_msg", "第三方转账订单号重复");
+				}
+			}else{
+				map.put("transfer_status", AccountTransfer.ACCOUNT_TRANSFER_LOCAL_SUCCESS);
+		    	map.put("transfer_msg", "本地转账订单号重复");
+			}
+		}else{
+			map.put("transfer_status", AccountTransfer.ACCOUNT_TRANSFER_FAIL);
+	    	map.put("transfer_msg", "请求参数异常");
+		}
+		return map;
+	}
+	
+	@Override
+	public PageDataList<AccountTransfer> getTransferList(AccountTransferModel at,String startTime,String endTime) {
+		PageDataList<AccountTransfer> pageDataList=accountTransferDao.getTransferList(at, startTime, endTime);
+		return pageDataList;
+	}
+	@Override
+	public PageDataList<AccountTransferModel> getPageDataList(
+			AccountTransferModel model) {
+		
+ 		PageDataList<AccountTransfer> pageDataList=accountTransferDao.getTransferList(model);
+		PageDataList<AccountTransferModel> modelPageDataList = new PageDataList<AccountTransferModel>();
+		List<AccountTransfer> transferList = pageDataList.getList();
+		List<AccountTransferModel> transferModelList = new ArrayList<AccountTransferModel>();
+		for(int i = 0;i<transferList.size();i++){
+			AccountTransfer transfer = transferList.get(i);
+			//JSDP-55 gjh 2015-04-22 start
+			if(transfer.getUpdateTime() == null){
+				transfer.setUpdateTime(new Date());
+			}
+			AccountTransferModel transferModel = AccountTransferModel.instance(transfer);
+			//JSDP-55 gjh 2015-5-21 start
+			if(transfer.getUser() != null){
+				transferModel.setUserName(transfer.getUser().getUserName());
+			}else{
+				transferModel.setUserName("平台");
+			}
+			//JSDP-55 gjh 2015-5-21 end
+			if(transfer.getPopUser() != null){
+				transferModel.setPopUserName(transfer.getPopUser().getUserName());
+			}else{
+				transferModel.setPopUserName("平台");
+			}
+			if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_SUCCESS)){
+				transferModel.setTransferStatusStr("转账成功");
+			}else if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_APPLY)){
+				transferModel.setTransferStatusStr("转账申请中");
+			}else if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_VERIFY_NOT)){
+				transferModel.setTransferStatusStr("转账审核不通过");
+			}else if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_ERROR)){
+				transferModel.setTransferStatusStr("其他异常");
+			}else if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_FAIL)){
+				transferModel.setTransferStatusStr("转账失败");
+			}else if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_YMD_SUCCESS)){
+				transferModel.setTransferStatusStr("第三方交易订单号重复");
+			}else if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_LOCAL_SUCCESS)){
+				transferModel.setTransferStatusStr("交易订单号重复");
+			}else if(transfer.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_YUNGOU_YMD_SUC)){
+				//JSDP-156 xingjia 2015-05-22 start
+				transferModel.setTransferStatusStr("云购补单");
+				//JSDP-156 xingjia 2015-05-22 start
+			}
+			//JSDP-55 gjh 2015-04-22 end
+			transferModelList.add(transferModel);
+		}
+		modelPageDataList.setList(transferModelList);
+		modelPageDataList.setPage(pageDataList.getPage());
+		
+		return modelPageDataList;
+	}
+	//JSDBET-943 wcw 2015-04-14 start
+	@Override
+	public Map<String, Object> transfer(User user,
+			AccountTransferModel model) {
+		if(null != model){
+			TransferWorker transferWorker=TransferHelper.getWorker(model);
+			transferWorker.transfer();
+		}
+		
+		
+		return null;
+	}
+	//JSDBET-943 wcw 2015-04-14 start
+	
+	//JSDP-55 gjh 2015-04-22 start
+	@Override
+	public Map<String, Object> transfer(AccountTransferModel atm,
+			AccountTransfer at) {
+		if(null != atm && null != at){
+			TransferWorker transferWorker=TransferHelper.getWorker(atm,at);
+			transferWorker.transfer();
+		}
+		
+		
+		return null;
+	}
+	//JSDP-55 gjh 2015-04-22 end
+	//JSDP-55 gjh 2015-04-22 start
+	@Override
+	public AccountTransfer save(AccountTransfer at) {
+
+		return accountTransferDao.save(at);
+	}
+	@Override
+	public AccountTransfer update(AccountTransfer at) {
+		
+		return accountTransferDao.update(at);
+	}
+	@Override
+	public AccountTransfer findObjByProperty(String property, Object value) {
+		
+		return accountTransferDao.findObjByProperty(property, value);
+	}
+	//JSDP-55 gjh 2015-04-22 end
+	@Override
+	public PageDataList<AccountTransferModel> getForePageDataList(
+			AccountTransferModel model) {
+		PageDataList<AccountTransfer> pageDataList=accountTransferDao.getForeTransferList(model);
+		PageDataList<AccountTransferModel> modelPageDataList = new PageDataList<AccountTransferModel>();
+		List<AccountTransfer> transferList = pageDataList.getList();
+		List<AccountTransferModel> transferModelList = new ArrayList<AccountTransferModel>();
+		for(int i = 0;i<transferList.size();i++){
+			AccountTransfer transfer = transferList.get(i);
+			AccountTransferModel transferModel = AccountTransferModel.instance(transfer);
+			transferModel.setUserName(transfer.getUser().getUserName());
+			if(transfer.getTransferStatus().equals("00")){
+				transferModel.setTransferStatusStr("转账成功");
+			}
+			transferModelList.add(transferModel);
+		}
+		modelPageDataList.setList(transferModelList);
+		modelPageDataList.setPage(pageDataList.getPage());
+		
+		return modelPageDataList;
+	}
+	@Override
+	public List excelListTransfer(AccountTransferModel model) {
+		
+		return accountTransferDao.excelListTransfer(model);
+	}
+	//JSDP-156 xingjia 2015-05-22 start
+	//JSDP-159 xingjia 2015-05-23 start
+	@Override
+	public void accountTyunGou(AccountTransfer accountTransfer,ClientUserModel userInfo,String reqUrlStr) {
+	//JSDP-159 xingjia 2015-05-23 end
+		
+		//处理本地及汇潮账户成功后再向云购发起转账的请求
+		Map<String, Object> transfer = new HashMap<String, Object>();
+		
+		try {
+			transfer.put("trans_no", accountTransfer.getTransferNo());
+			transfer.put("open_id", userInfo.getOpenId());
+			transfer.put("mobile", userInfo.getPhone());
+			transfer.put("username", URLEncoder.encode(userInfo.getUserName(), "UTF-8"));
+			transfer.put("trans_money", accountTransfer.getTransferAmount() + "");
+			transfer.put("trans_type", AccountTransfer.ACCOUNT_TRANSFER);
+			transfer.put("trans_ip", Global.getIP());
+			String secretKey = accountTransfer.getTransferNo() + "|" + userInfo.getOpenId() + "|" + userInfo.getPhone()
+					+ "|" + userInfo.getUserName() + "|" + accountTransfer.getTransferAmount() + "|" + AccountTransfer.ACCOUNT_TRANSFER + "|" + Global.getIP() + "|"+ "jinshangdai";//数字签名
+			transfer.put("sign", MD5Util.MD5Encode(secretKey, "UTF-8").toUpperCase());
+			
+			StringBuffer sb = new StringBuffer();
+			sb.append("jsd_money=[").append(JSON.toJSONString(transfer)+"]");
+			//JSDP-159 xingjia 2015-05-23 start
+			String response = HttpUtil.sendGet(reqUrlStr, sb.toString());
+			//JSDP-159 xingjia 2015-05-23 end
+			logger.info(response);//
+			
+			if(-1!=response.indexOf(accountTransfer.getTransferNo()+"&status=Y")){
+				accountTransfer.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_SUCCESS);
+				accountTransfer.setTransferMsg("status=Y");
+				accountTransferDao.update(accountTransfer);
+			}
+			
+			
+		} catch (Exception e) {
+			throw new HandleException("转账云购回调失败，异常信息："+e.getMessage()+e.getCause(), "转账云购异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_TRANSFER,
+					ErrorLogConstant.CODE_ACCOUNTTRANSFER_SYS, accountTransfer.getUser(), ErrorLogConstant.MODULE_ACCOUNTTRANSFER, accountTransfer.getUser().getUserId(), 1);
+		}
+	}
+	
+	public AccountTransfer verifyAccountTransfer(AccountTransferModel atm,AccountTransfer accountTransfer,String transferMoney) {
+		Map<String, Object> map=new HashMap<String, Object>();
+		User user = accountTransfer.getUser();
+		String[] transMoney = null;
+		if(StringUtil.isNotBlank(transferMoney)){
+			transMoney = transferMoney.split(",");
+		}
+		Global.setTransfer("transferAmount", accountTransfer.getTransferAmount());
+		Global.setTransfer("transferNo", accountTransfer.getTransferNo());
+		map.put("tradeNo", accountTransfer.getTransferNo());//批次号
+		map.put("user", user);
+		try {
+			if(UserConstant.USER_SORT_INVESTOR.equals(user.getUserCache().getUserType())){
+	    		if(null != transMoney){
+	    			
+	    			map.put("rechargeMoney", Double.parseDouble(transMoney[0]));
+	    			//JSDP-168 xingjia 20150528 start
+	    			map.put("awardMoney", Double.parseDouble(transMoney[1]));
+	    			map.put("interestMoney", Double.parseDouble(transMoney[2]));
+	    			//JSDP-168 xingjia 20150528 end
+	    			map.put("returnCapitalMoney", Double.parseDouble(transMoney[3]));
+	    			AbstractExecuter executer = ExecuterHelper.doExecuter("yunGouTransferSuccessInvesterExecuter");
+	    			executer.execute(map, user);
+	    		}
+				
+			}else{
+				if(null != transMoney){
+					map.put("borrowerRechargeMoney", Double.parseDouble(transMoney[0]));
+					map.put("borrowerEnterMoney", Double.parseDouble(transMoney[1]));
+					AbstractExecuter executer = ExecuterHelper.doExecuter("yunGouTransferSuccessBorrowerExecuter");
+					executer.execute(map, user);
+				}
+			}
+		} catch (Exception e) {
+			throw new BussinessException("本地资金处理失败");
+		}
+
+    	//JSDP-171 xingjia 20150609 start
+    	if(null != atm && null != accountTransfer){
+			TransferWorker transferWorker=TransferHelper.getWorker(atm,accountTransfer);
+			transferWorker.transfer();
+		}
+    	//JSDP-171 xingjia 20150609 end
+    	
+    	accountTransfer.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_YUNGOU_YMD_SUC);
+		return accountTransferDao.update(accountTransfer);
+	}
+	//JSDP-159 xingjia 2015-05-23 start
+	@Override
+	public String handleAccountTransferYungou(AccountTransfer accountTransfer,ClientUserModel userInfo,String supplyOrderUrl) {
+	//JSDP-159 xingjia 2015-05-23 end
+		Map<String, Object> transfer = new HashMap<String, Object>();
+		
+		try {
+			transfer.put("trans_no", accountTransfer.getTransferNo());
+			transfer.put("open_id", userInfo.getOpenId());
+			transfer.put("mobile", userInfo.getPhone());
+			transfer.put("username", URLEncoder.encode(userInfo.getUserName(), "UTF-8"));
+			transfer.put("trans_money", accountTransfer.getTransferAmount() + "");
+			transfer.put("trans_type", AccountTransfer.ACCOUNT_TRANSFER);
+			transfer.put("trans_ip", Global.getIP());
+			String secretKey = accountTransfer.getTransferNo() + "|" + userInfo.getOpenId() + "|" + userInfo.getPhone()
+					+ "|" + userInfo.getUserName() + "|" + accountTransfer.getTransferAmount() + "|" + AccountTransfer.ACCOUNT_TRANSFER + "|" + Global.getIP() + "|"+ "jinshangdai";//数字签名
+			transfer.put("sign", MD5Util.MD5Encode(secretKey, "UTF-8").toUpperCase());
+			
+			StringBuffer sb = new StringBuffer();
+			sb.append("jsd_money=[").append(JSON.toJSONString(transfer)+"]");
+			//JSDP-159 xingjia 2015-05-23 start
+			String response = HttpUtil.sendGet(supplyOrderUrl, sb.toString());
+			//JSDP-159 xingjia 2015-05-23 end
+			logger.info(response);//privDecryptcheckInN
+			String returnStr = response.substring(response.indexOf("privDecrypt")+11);
+			if("Y".equals(returnStr)){
+				accountTransfer.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_SUCCESS);
+				accountTransfer.setTransferMsg(returnStr);
+				accountTransferDao.update(accountTransfer);
+				return "repairOrder";
+			}
+			
+			
+		}catch (Exception e) {
+			throw new HandleException("转账云购补单失败，异常信息："+e.getMessage()+e.getCause(), "转账云购补单异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_TRANSFER,
+					ErrorLogConstant.CODE_ACCOUNTTRANSFER_SYS, accountTransfer.getUser(), ErrorLogConstant.MODULE_ACCOUNTTRANSFER, accountTransfer.getUser().getUserId(), 1);
+		}
+		return "checkInN";
+	}
+	@Override
+	public PageDataList<AccountTransfer> accountTransferYunGou(
+			AccountTransferModel model) {
+		PageDataList<AccountTransfer> pageDataList=accountTransferDao.getForeTransferList(model);
+		return pageDataList;
+	}
+	//JSDP-156 xingjia 2015-05-22 start
+
+}

@@ -1,0 +1,333 @@
+package com.ddtkj.mobile.action;
+
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.Resource;
+import org.apache.struts2.convention.annotation.Action;
+import com.ddtkj.mobile.MobileBaseAction;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.credit.model.CreditSwingOutModel;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class CreditMobileAction extends MobileBaseAction<Object> {
+
+	@Resource
+	private UserService userService;
+	@Resource
+	private CreditAssignmentService creditAssignmentService;
+	@Resource
+	private CreditLogService creditLogService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+
+	
+	// 我的债权 - 取得 债权转出 与 债权转入 数据
+	@Action("/jsdmobile/user_creditor")
+	public void user_creditor() throws Exception {
+		data = new HashMap<String, Object>();
+		String type = paramString("type");
+		User user = userService.find(paramLong("uid"));
+		System.out.println(user.getUserId());
+		
+		DecimalFormat df = new DecimalFormat("0.##");
+		if ("ready".equals(type) || "all".equals(type) || "out".equals(type)) { // 可转出债权
+
+			List<CreditSwingOutModel> caList = creditAssignmentService.getSwingOutCreditCa(user);
+			List<CreditSwingOutModel> tList = creditAssignmentService.getSwingOutCreditTender(user);
+			tList.addAll(caList);
+
+			List<HashMap<String, Object>> cArray = new ArrayList<HashMap<String, Object>>();
+			
+			int page = paramInt("page");
+			for (int i=(page-1)*16; i<tList.size() && i<page*16; i++) {
+								
+				CreditSwingOutModel ca = tList.get(i);
+				HashMap<String, Object> cMap = new HashMap<String, Object>();
+				cArray.add(cMap);
+
+				cMap.put("apr", df.format(ca.getApr())); 						// 年利率
+				cMap.put("cipalInterest", df.format(ca.getCipalInterest())); 	// 剩余待收本息=应收本金+剩余应收利息
+				cMap.put("creditAccount", df.format(ca.getCreditAccount())); 	// 应收本金
+				cMap.put("creditCopies", df.format(ca.getCreditCopies()));		 // 可转份数
+				cMap.put("creditId", ca.getCreditId()); 			// 债权CID
+				cMap.put("creditValue", df.format(ca.getCreditValue())); 		// 债权价值=应收本金+本次应收利息
+				cMap.put("fee", df.format(ca.getFee())); 						// 手续费
+			    cMap.put("haveInterest", df.format(ca.getHaveInterest())); 			// 已收利息
+				cMap.put("interest", df.format(ca.getInterest())); 				// 剩余应收利息
+				cMap.put("thisInterest", df.format(ca.getThisInterest())); 		// 本次应收利息
+				cMap.put("nextRepayMentTime", ca.getNextRepayMentTime()); // 下个还款日
+				cMap.put("period", ca.getPeriod()); 						// 总期数
+				cMap.put("residuePeriod", ca.getResiduePeriod()); 			// 剩余期数
+				cMap.put("tenderAccount", df.format(ca.getTenderAccount())); 			// 投资总额
+				cMap.put("type", ca.getType()); 							// 类型, 1-原投资, 2-债权再转出
+			}
+			data.put("creditor_ready_array", cArray);
+
+		}
+		
+		if ("process".equals(type) || "all".equals(type) || "out".equals(type)) {
+
+			List<String> paramlist = new ArrayList<String>();
+			paramlist.add("00");
+			paramlist.add("01");
+			List<CreditAssignment> calist = creditAssignmentService.getDateByUserAndStatusList(UserModel.instance(user), paramlist); // 转让中债权
+			List<HashMap<String, Object>> cArray = new ArrayList<HashMap<String, Object>>();
+			
+			int page = paramInt("page");
+			for (int i=(page-1)*16; i<calist.size() && i<page*16; i++) {
+				
+			    CreditAssignment ca = calist.get(i);
+				HashMap<String, Object> cMap = new HashMap<String, Object>();
+				cArray.add(cMap);
+
+				cMap.put("id", ca.getId()); 																// 债权ID
+				cMap.put("tid", ca.getCaType() == 1 ? ca.getTender().getId() : ca.getCreditLog().getId()); // 债权TID
+				cMap.put("period", (ca.getCreditEndPeriod() - ca.getCreditStartPeriod() + 1) + "/" + ca.getCreditEndPeriod()); // 剩余期数
+				cMap.put("apr", df.format(ca.getBorrow().getApr())); 																		// 年利率
+				cMap.put("valuePerCopy", df.format(ca.getCreditValue() / ca.getCreditCopies())); 				// 债权价值(元/份)
+			    cMap.put("pricePerCopy", df.format(ca.getCreditPrice() / ca.getCreditCopies())); 					// 转让价格(元/份)
+				cMap.put("creditDis", df.format(ca.getCreditPrice() / ca.getCreditValue())); 					// 转让系数
+				cMap.put("residueCopies", (Double.valueOf(ca.getCreditCopies() - ca.getSellCopies()).intValue() + "/" + Double.valueOf(ca.getCreditCopies()).intValue())); // 剩余份数
+			}
+			data.put("creditor_process_array", cArray);
+
+		} 
+		
+		if ("finish".equals(type) || "all".equals(type) || "out".equals(type)) {
+
+			CreditAssignmentModel cam = new CreditAssignmentModel();
+			cam.setUser(user);
+			cam.setStatus(CreditAssignment.CREDIT_CHECK2_SUCCESS);
+
+			List<CreditAssignmentModel> camlist = creditAssignmentService.getCreditAssignmentListTwo(cam); // 已完成
+			List<HashMap<String, Object>> cArray = new ArrayList<HashMap<String, Object>>();
+			
+			int page = paramInt("page");
+			for (int i=(page-1)*16; i<camlist.size() && i<page*16; i++) {
+				
+			    CreditAssignmentModel ca = camlist.get(i);
+				HashMap<String, Object> cMap = new HashMap<String, Object>();
+				cArray.add(cMap);
+				cMap.put("id", ca.getId()); 					// 债权ID
+				cMap.put("sellCopies", ca.getSellCopies()); 	// 成交份数
+				cMap.put("apr", df.format(ca.getBorrow().getApr()));       //年利率
+				cMap.put("creditValue", df.format(ca.getCreditValue())); // 转出时债权总价值
+				cMap.put("soldAccount", df.format(ca.getSoldAccount())); // 转出时总成交金额
+				cMap.put("realInput", df.format(ca.getSoldAccount() - ca.getCreditValue())); // 实际收入
+				cMap.put("sellFee", df.format(ca.getSellFee())); 			// 交易费用
+			}
+			data.put("creditor_finish_array", cArray);
+
+		} 
+		
+		if ("buying".equals(type) || "all".equals(type) || "in".equals(type)) {
+
+			CreditLogModel model = new CreditLogModel();
+			model.setBuyUser(user);
+			int page = paramInt("page");
+			model.setPage(page);
+			PageDataList<CreditLogModel> pageDataList = creditLogService.getCreditLogList(model);
+
+			List<HashMap<String, Object>> cArray = new ArrayList<HashMap<String, Object>>();
+			for (CreditLogModel ca : pageDataList.getList()) {
+				HashMap<String, Object> cMap = new HashMap<String, Object>();
+				cArray.add(cMap);
+
+				cMap.put("id", ca.getId());      //债权id
+				cMap.put("apr", df.format(ca.getCaApr()));  //年利率
+				cMap.put("caName", ca.getCaName());// 债权名
+
+				String status = ca.getStatus();
+				if (status.equals("00")) {
+					status = "未成交";
+				} else if (status.equals("01")) {
+					status = "已成交";
+				} else if (status.equals("02")) {
+					status = "撤回";
+				} else {
+					status = "未知";
+				}
+				cMap.put("status", status);								// 状态
+				cMap.put("sellUserName", ca.getSellUserName());			// 出售债权用户
+			    cMap.put("buyValue", df.format(ca.getBuyValue()));						// 购买后应有价值
+				cMap.put("buyAccount", df.format(ca.getBuyAccount()));				// 购买花费金额
+				cMap.put("buyCopies", ca.getBuyCopies());				// 购买份数
+				SimpleDateFormat sdf_long = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				cMap.put("addTime", sdf_long.format(ca.getAddTime()));	// 记录时间（分秒）
+			}
+			data.put("buying_array", cArray);
+
+		} 
+		
+		if ("buyin".equals(type) || "all".equals(type) || "in".equals(type)) {
+			int page = paramInt("page");
+			CreditLogModel clm = new CreditLogModel();
+			clm.setBuyUser(user);
+			clm.setStatus(CreditLog.CRELOG_STATUS_YEW);
+			clm.setPage(page);
+			PageDataList<CreditLogModel> clmlist = creditLogService.getCreditLogList(clm);
+			List<HashMap<String, Object>> cArray = new ArrayList<HashMap<String, Object>>();
+			
+			
+			for (int i=0; i<clmlist.getList().size(); i++) {
+				
+			    CreditLogModel ca = clmlist.getList().get(i);
+				HashMap<String, Object> cMap = new HashMap<String, Object>();
+				cArray.add(cMap);
+
+				cMap.put("caId", ca.getCaId()); 				// 债权ID
+				cMap.put("period", ca.getCreditStartPeriod() + "/" + ca.getCreditEndPeriod()); // 剩余期数
+				cMap.put("apr", df.format(ca.getCaApr())); 				// 年利率
+			    cMap.put("buyValue", df.format(ca.getBuyValue())); 			// 转入时债权价值
+				cMap.put("buyCopies", ca.getBuyCopies()); 		// 转入份数
+				cMap.put("buyAccount", df.format(ca.getBuyAccount())); 	// 交易金额
+				cMap.put("buyBalance", BigDecimalUtil.sub(ca.getBuyValue(), ca.getBuyAccount()) > 0 ? "盈" : "亏"); // 盈亏
+				SimpleDateFormat sdf_long = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				cMap.put("addTime", sdf_long.format(ca.getAddTime())); // 转入时间
+			}
+			data.put("buy_in_array", cArray);
+		}
+
+		data.put("res_code", "1");
+		data.put("res_msg", "取得债权数据成功");
+		printMap(data);
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	// 我的债权 - 立即转让
+	@Action("/jsdmobile/user_creditor_invest")
+	public void user_creditor_invest() throws Exception {
+		User user = userService.find(paramLong("uid"));
+		data = new HashMap<String, Object>();
+		if (user == null) {
+			data.put("res_code", "0");
+			data.put("res_msg", "用户不存在");
+		} else {
+			CreditSwingOutModel csom = creditAssignmentService.getSwingOutCreditByOne(user, paramInt("type"), paramLong("id"), true);
+			// 需要各种的验证
+			try {
+				CreditAssignment ca = creditAssignmentService.save(user, csom, paramDouble("fee"));
+				if (ca != null) {
+					data.put("res_code", "1");
+					data.put("res_msg", "申请转让成功");
+				} else {
+					data.put("res_code", "0");
+					data.put("res_msg", "申请转让失败");
+				}
+			} catch (Exception e) {
+				data.put("res_code", "0");
+				data.put("res_msg", e.getMessage());
+			}
+		}
+		printMap(data);
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	// 我的债权 - 立即撤回
+	@Action("/jsdmobile/user_creditor_recall")
+	public void user_creditor_recall() throws Exception {
+		User user = userService.find(paramLong("uid"));
+		data = new HashMap<String, Object>();
+		if (user == null) {
+			data.put("res_code", "0");
+			data.put("res_msg", "用户不存在");
+		} else {
+			data = new HashMap<String, Object>();
+			try {
+				CreditAssignment c = creditAssignmentService.getEntityById(paramLong("id"));
+				if(!"00".equals(c.getStatus())){
+					throw new Exception("债权已初审通过,不能进行撤销!");
+				}
+				c.setStatus("05");
+				c = creditAssignmentService.update(c);
+				BorrowTender bt = c.getTender();
+				bt.setIscredit(1);
+				borrowTenderService.update(bt);
+				if (c.getStatus().equals("05")) {
+					data.put("res_code", "1");
+					data.put("res_msg", "撤回成功");
+				}
+			} catch (Exception e) {
+				data.put("res_code", "0");
+				data.put("res_msg", "撤回失败 "+e.getMessage());
+			}
+
+		}
+		printMap(data);
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	// 债权转让 - 立即购买
+	@Action(value = "/jsdmobile/user_creditor_buy")
+	public void user_creditor_buy() throws Exception {
+		
+		try{
+			data = new HashMap<String, Object>();
+			User user = userService.find(paramLong("uid"));
+			
+			String pay_pwd = paramString("pay_pwd");
+			if(null!=user.getPaypwd() && !"".equals(user.getPaypwd())){
+				if(!user.getPaypwd().equals(MD5.encode(pay_pwd))){
+					throw new Exception("支付密码不正确,请重新输入!");
+				}
+			}else{
+				throw new Exception("您尚未设置支付密码, 请先设置支付密码后再操作!");
+			}		
+			
+			if (user == null) {
+				data.put("res_code", "0");
+				data.put("res_msg", "用户不存在");
+			} else {
+				CreditAssignment ca = this.creditAssignmentService.getEntityById(paramLong("id"));
+				if (ca.getUser().getUserId() != user.getUserId()) {
+					try {
+						CreditLog cl = creditLogService.save(user, ca, paramInt("cops"), BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(ca.getCreditPrice(), ca.getCreditCopies()),paramDouble("cops")) , 2));
+						if (cl != null) {
+							data.put("res_code", "1");
+							data.put("res_msg", "购买成功");
+						} else {
+							data.put("res_code", "0");
+							data.put("res_msg", "购买失败");
+						}
+					} catch (Exception e) {
+						data.put("res_code", "0");
+						data.put("res_msg", e.getMessage());
+					}
+				} else {
+					data.put("res_code", "0");
+					data.put("res_msg", "自己不可购买自己的债权！");
+				}
+			}
+		}catch(Exception e){
+			data.put("res_code", "0");
+			data.put("res_msg", "债权投资失败 "+e.getMessage());
+		}
+
+		printMap(data);
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+}

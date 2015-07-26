@@ -1,0 +1,115 @@
+package com.ddtkj.p2psys.redpacket.executer;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountExtra;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * @author fengguoqin  JSDP-228
+ * @since 2015.07.23
+ */
+public class RpStaticInvestExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.RP_STATIC_INVEST_DEDUCT;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountExtra accountExtra = accountExtraDao.getAccountExtraByUserId(user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		//操作金额
+		log.setRpStaticMoney(rpStaticMoney);
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		log.setRpStaticUsable(accountExtra.getRpStaticTotal());
+				
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		log.setFreezeRpStatic(accountExtra.getFreezeRpStatic());
+				
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)0);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		//投标使用静态红包。扣除冻结红包金额，生成待收
+		Account account = accountDao.getAccountByUserId(super.user.getUserId());
+		AccountExtra accountExtra = accountExtraDao.getAccountExtraByUserId(user.getUserId());
+		account.setCollectionTotal(BigDecimalUtil.add(account.getCollectionTotal(),rpStaticMoney));
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),rpStaticMoney));
+        accountExtra.setFreezeRpStatic(BigDecimalUtil.add(accountExtra.getFreezeRpStatic(),-rpStaticMoney));
+        accountDao.update(account);
+		accountExtraDao.update(accountExtra);
+	}
+
+	@Override
+	public void handleAccountSum() {}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {}
+	
+	@Override
+	public void handleReturnMoney() {
+		double returnMoney=BigDecimalUtil.add(returnCapitalMoney,interestMoney);
+		if(returnMoney>0){
+			//回款续投奖励生成
+			 ReturnMoneyUse r=new ReturnMoneyUse();
+			 r.setUser(user);
+			 r.setContinuedInvestMoney(returnMoney);
+			 r.setContinuedInvestRate(0);
+			 r.setContinuedInvestAward(BigDecimalUtil.mul(returnMoney, r.getContinuedInvestRate()));
+			 r.setStatus(ReturnMoneyUse.CONTINUED_INVEST_APPLY_STATUS);
+			 r.setRemark("生成续投奖励："+r.getContinuedInvestAward()+"");
+			 r.setAddTime(new Date());
+			 returnMoneyDao.save(r);
+		}
+	}
+
+	@Override
+	public void extend() {
+		
+	}
+}

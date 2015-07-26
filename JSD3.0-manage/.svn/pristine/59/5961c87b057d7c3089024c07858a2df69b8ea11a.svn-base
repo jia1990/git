@@ -1,0 +1,183 @@
+
+package com.ddtkj.manage.action.scoreaward;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.ddtkj.p2psys.score.model.ScoreAwardObjectModel;
+import com.ddtkj.p2psys.score.service.ScoreAwardService;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.OperationLog;
+import com.rongdu.p2psys.core.service.OperationLogService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 抽奖奖品配置action
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-7   
+ */
+public class ManageScoreAwardObjectAction extends BaseAction implements ModelDriven<ScoreAwardObjectModel> {
+	
+	private static Logger logger = Logger.getLogger(ManageScoreAwardObjectAction.class);
+	
+	@Resource
+	private ScoreRuleAwardService soreRuleAwardService;
+	@Resource
+	private ScoreAwardService soreAwardService;
+	@Resource
+	private OperationLogService operationLogService;
+	
+	private ScoreAwardObjectModel model = new ScoreAwardObjectModel();
+	
+	public ScoreAwardObjectModel getModel() {
+		return model;
+	}
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	
+	/**
+	 * 抽奖规则奖品配置页面
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/allAwardObjectManage")
+	public String allAwardObjectManage() throws Exception {
+		long ruleId = paramLong("id");
+		request.setAttribute("ruleId", ruleId);
+		request.setAttribute("ruleAward", soreRuleAwardService.getRuleAwardByRuleId(ruleId));
+		request.setAttribute("list", soreAwardService.getAwardObjectListByRuleId(ruleId));
+		return "allAwardObjectManage";
+	}
+	
+	/**
+	 * 所有抽奖奖品配置列表
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/allAwardObjectList")
+	public void allAwardObjectList() throws Exception {
+		long ruleId = paramLong("ruleId");
+		List<ScoreAward> list = soreAwardService.getAwardObjectListByRuleId(ruleId);
+		map.put("rows", list);
+		map.put("total", list.size());
+		printJson(getStringOfJpaObj(map));	
+	}
+	
+	/**
+	 * 添加新奖品页面
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/awardObjectAddPage")
+	public String awardObjectAddPage() throws Exception {
+		long ruleId = paramLong("ruleId");
+		saveToken("addObjectToken");
+		request.setAttribute("ruleId", ruleId);
+		return "awardObjectAddPage";
+	}
+
+	/**
+	 * 添加新奖品
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/addAwardObject")
+	public void addAwardObject() throws Exception {
+		String actionType = paramString("actionType");
+		convertAwardObjectRate();
+		model.validAwardObject(model);
+		checkToken("addObjectToken");
+		soreAwardService.addAwardObject(initAwardObject(actionType));
+		printResult("添加奖品规则成功！", true);
+	}
+
+	/**
+	 * 修改奖品信息页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/score/showAwardObjectPage")
+	public String showAwardObjectPage() throws Exception {
+		long ruleId = paramLong("ruleId");
+		long objectId = model.getId();
+		ScoreAward scoreAwardObject = soreAwardService.getAwardObjectByRuleIdAndObjectId(ruleId, objectId);
+		saveToken("modifyObjectToken");
+		request.setAttribute("ruleId", ruleId);
+		request.setAttribute("awardObject", scoreAwardObject);
+		return "showAwardObjectPage";
+	}
+	
+	/**
+	 * 修改奖品信息
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/modifyAwardObject")
+	public void modifyAwardObject() throws Exception {
+		String actionType = paramString("actionType");
+		convertAwardObjectRate();
+		model.validAwardObject(model);
+		checkToken("modifyObjectToken");
+		soreAwardService.updateAwardObject(initAwardObject(actionType));
+		ScoreAward awardObject = soreAwardService.getAwardObjectById(model.getId());
+		request.setAttribute("awardObject", awardObject);
+		OperationLog log = new OperationLog(null, getOperator(), "edit_scoreaward_awardobject");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员修改奖品规则(规则ID："+paramLong("ruleId")+",奖品名："+model.getName()+")");
+		operationLogService.save(log);
+		printResult("修改奖品规则成功！", true);
+	}
+	
+	
+	/**
+	 * 初始化奖品规则信息
+	 * @return ScoreRuleAward 
+	 * @throws Exception   
+	 */ 
+	private ScoreAward initAwardObject(String actionType) throws Exception{
+		long ruleId = paramLong("ruleId");
+		model.setRule(soreRuleAwardService.getRuleAwardByRuleId(ruleId));
+		String picUrl = imgUpload();
+		if (picUrl != null) {
+	        model.setPicUrl(picUrl);
+		}
+		ScoreAward scoreAward = soreAwardService.getAwardObjectById(model.getId());
+		if("add".equals(actionType)){
+			model.setAddTime(new Date());
+			model.setAddIp(getRequestIp());
+		}else if("modify".equals(actionType)){
+			model.setAddTime(scoreAward.getAddTime());
+			model.setAddIp(scoreAward.getAddIp());
+			model.setUpdateTime(new Date());
+			model.setUpdateIp(getRequestIp());
+		}
+		scoreAward = model.prototype();
+		return scoreAward;
+	}
+	
+	/**
+	 * 转化抽奖概率
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	private void convertAwardObjectRate(){
+		String rateStr = paramString("awardrate");
+		logger.info("ScoreAward rateStr:"+rateStr);
+		BigDecimal rate = new BigDecimal(rateStr);
+		logger.info("ScoreAward BigDecimal rate:"+rateStr);
+		model.setRate(rate.multiply(new BigDecimal(100000000)).intValue());
+		logger.info("ScoreAward rate:"+model.getRate());
+	}
+	
+}

@@ -1,0 +1,775 @@
+package com.ddtkj.p2psys.account.service.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.dao.AccountRechargeDao;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.fillorder.dao.FillOrderLogDao;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardDao;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardLogDao;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardSumDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardSum;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.dao.VerifySupplyLogDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.VerifySupplyLog;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述：充值service层
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月12日 
+ */
+@Service(value = "rechargeService")
+@Transactional
+public class AccountRechargeServiceImpl implements AccountRechargeService{
+	
+	@Resource
+	private AccountRechargeDao accountRechargeDao;
+	@Resource
+	private AccountDao accountDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private VerifySupplyLogDao verifySupplyLogDao;
+	@Resource
+    FillOrderLogDao fillOrderLogDao;
+	@Resource
+	PetCardDao petCardDao;
+	@Resource
+	PetCardLogDao petCardLogDao;
+	@Resource
+	PetCardSumDao petCardSumDao;
+
+	
+	@Override
+	public void newRecharge(RechargeModel rem,String tradeStatus,FillOrderLog fillOrderLog) {
+		User user = userDao.find(rem.getUserId());
+		AccountRecharge existRecharge = accountRechargeDao.getRechargeByTradeno(rem.getOrderId());
+		if (existRecharge == null) {
+			//throw new BussinessException("订单号不存在, orderNo:" + rem.getOrderId());
+			//JSDBET-812 gjh 2015-3-14 start
+			throw new HandleException("订单号不存在, orderNo:" + rem.getOrderId(),
+					"充值订单号不存在",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_RECHARGE,
+					ErrorLogConstant.CODE_RECHARGE_FAIL_SYS_ORDER,user,ErrorLogConstant.MODULE_ACCOUNT_RECHARGE,
+					0,1);
+			//JSDBET-812 gjh 2015-3-14 end 
+		}
+		double fee = rem.getFeeAmt();
+		double enterAmount=BigDecimalUtil.sub(existRecharge.getRechargeAmount(),fee);
+		double balance=BigDecimalUtil.sub(NumberUtil.getDouble2(rem.getOrderAmount()),enterAmount);
+		if(balance>=0.1){
+			//throw new BussinessException("充值实际到账金额与一麻袋不符", 1);
+			//JSDBET-812 gjh 2015-3-14 start
+			throw new HandleException("充值实际到账金额与一麻袋不符,orderNo:" + rem.getOrderId(),
+					"到账金额有误",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_RECHARGE,
+					ErrorLogConstant.CODE_RECHARGE_FAIL_SYS_ORDER,user,ErrorLogConstant.MODULE_ACCOUNT_RECHARGE,
+					user.getUserId(),1);
+			//JSDBET-812 gjh 2015-3-14 end 
+		}
+		if (AccountRecharge.RECHARGE_APPLY_STATUS.equals(existRecharge.getTradeStatus()) || AccountRecharge.RECHARGE_FAIL_STATUS.equals(existRecharge.getTradeStatus())) {
+		    double amountIn =NumberUtil.getDouble2(rem.getOrderAmount())-rem.getFeeAmt();
+		    existRecharge.setInAccountAmount(amountIn);
+			// 修改订单状态
+			existRecharge.setRechargeAmount(NumberUtil.getDouble2(rem.getOrderAmount()));
+			existRecharge.setTradeStatus(tradeStatus); // 设置状态
+			//existRecharge.setReturnMsg(rem.getSerialNo()); // 返回参数
+			existRecharge.setReturnMsg(rem.getResultMsg()); // 返回参数
+			existRecharge.setRechargeFee(fee);
+			accountRechargeDao.update(existRecharge);
+			Global.setTransfer("recharge", existRecharge);
+			Global.setTransfer("user", existRecharge.getUser());
+			Map<String, Object> map=new HashMap<String, Object>();
+			User u=existRecharge.getUser();
+			if(u!=null){
+				if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+					map.put("rechargeMoney", amountIn);
+					AbstractExecuter executer = ExecuterHelper.doExecuter("onlineRechargeSuccessInvesterExecuter");
+					executer.execute(map, existRecharge.getUser());
+				}else{
+					map.put("borrowerRechargeMoney", amountIn);
+					AbstractExecuter executer = ExecuterHelper.doExecuter("onlineRechargeSuccessBorrowerExecuter");
+					executer.execute(map, existRecharge.getUser());
+				}
+			}
+			
+			// BUG JSDP32 2015年4月17日   孙晓勇  start
+			// 判断是否是补单操作
+			if(null != fillOrderLog){
+				// 添加补单记录
+				fillOrderLogDao.save(fillOrderLog);
+			}
+			// BUG JSDP32 2015年4月17日   孙晓勇  end
+			
+		}
+	}
+	
+	@Override
+	public void failRecharge(RechargeModel rem) {
+		AccountRecharge existRecharge = accountRechargeDao.getRechargeByTradeno(rem.getOrderId());
+		if (existRecharge == null) {
+			return;
+		}
+		if (AccountRecharge.RECHARGE_APPLY_STATUS.equals(existRecharge.getTradeStatus()) ) {
+			accountRechargeDao.updateRecharge(AccountRecharge.RECHARGE_FAIL_STATUS, rem.getResultMsg(), rem.getSerialNo());
+			Global.setTransfer("user", userDao.getUserById(rem.getUserId()));
+			Global.setTransfer("recharge", existRecharge);
+			BaseMsg msg = new BaseMsg(NoticeConstant.RECHARGE_FAIL);
+			msg.doEvent();
+		}
+	}
+
+	
+	@Override
+	public AccountRecharge findRechargeByOrderTradeNo(String orderTradeNo){
+		return accountRechargeDao.getRechargeByTradeno(orderTradeNo);
+	}
+	
+	@Override
+	public void doRechargeTask(RechargeModel re) {
+		if (AccountRecharge.RECHARGE_SUCCESS_STATUS.equals(re.getResult())){
+			newRecharge(re,AccountRecharge.RECHARGE_SUCCESS_STATUS,null);
+		}else{
+			failRecharge(re);
+		}
+	}
+	
+	@Override
+	public AccountRechargeModel getRechargeSummary(long userId) {
+		return accountRechargeDao.getRechargeSummary(userId);
+	}
+	
+	@Override
+	public AccountRechargeModel getRechargeSummaryByendTime(Date date,
+			long userId) {
+		
+		return accountRechargeDao.getRechargeSummaryByendTime(date,userId);
+	}
+	
+	@Override
+	public double getRechargeToday(long userId) {
+	
+		return accountRechargeDao.getRechargeToday(userId);
+	}
+	
+	/**
+	 * 查询充值用户数
+	 * @author 孙晓勇
+	 */
+	@Override
+	public int rechargedUserCount(String islocked) {
+		return accountRechargeDao.rechargedUserCount(islocked);
+	}
+	
+	@Override
+	public PageDataList<AccountRechargeModel> list(long userId, AccountRechargeModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if(model != null){
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+			if (model.getTime() == 7) {
+				param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			} else if (model.getTime() > 0 && model.getTime() < 4){
+				param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			if (StringUtils.isNotEmpty(model.getTradeStatus()) ) {
+				
+				if("0".equals(model.getTradeStatus())){			
+					param.addParam("tradeStatus", "00");
+				}else{
+					param.addParam("tradeStatus", model.getTradeStatus());
+				}
+			}
+		}
+		param.addParam("user.userId", userId);
+		param.addPage(model.getPage());
+		param.addOrder(OrderType.DESC, "addTime");
+		PageDataList<AccountRecharge> pageDateList = accountRechargeDao.findPageList(param);
+		PageDataList<AccountRechargeModel> pageDateList_ = new PageDataList<AccountRechargeModel>();
+		List<AccountRechargeModel> list = new ArrayList<AccountRechargeModel>();
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountRecharge recharge = (AccountRecharge) pageDateList.getList().get(i);
+				AccountRechargeModel arm = new AccountRechargeModel();
+				BeanUtils.copyProperties(recharge, arm);
+				arm.setAddTimeStr(DateUtil.dateStr4(recharge.getAddTime()));
+				arm.setTypeStr("");
+				list.add(arm);
+			}
+		}
+		pageDateList_.setPage(pageDateList.getPage());
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+	
+	/**
+	 * 时间已添加时分秒，去掉原补充的值
+	 * @author sunxiaoyong@ddtkj.com 2014年12月29日 15:05:36
+	 */
+	@Override
+	public PageDataList<AccountRechargeModel> list(AccountRechargeModel model) {
+		QueryParam param = QueryParam.getInstance();
+		
+		if(model != null){
+			//param.addParam("user.userCache.userType", "11");
+			if(StringUtil.isNotBlank(model.getRechargeType())){
+				param.addParam("rechargeType", model.getRechargeType());
+			}
+			if(StringUtil.isNotBlank(model.getUserType())){
+				param.addParam("user.userCache.userType", model.getUserType());
+			}
+			
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				Date start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+			if (model.getTime() == 7) {
+				param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			} else if (model.getTime() > 0 && model.getTime() < 4){
+				param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			if (StringUtil.isNotBlank(model.getTradeStatus())&& !"66".equals(model.getTradeStatus())) {
+				param.addParam("tradeStatus", model.getTradeStatus());
+			}
+			if (StringUtil.isNotBlank(model.getTradeNo())) {
+				param.addParam("tradeNo", model.getTradeNo());
+			}
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName",Operators.LIKE,model.getUserName());
+		}
+		// JSDP-208 sxy 20150703 start
+		if(StringUtil.isNotBlank(model.getRechargeWay())){
+			param.addParam("rechargeWay", model.getRechargeWay());
+		}
+		// JSDP-208 sxy 20150703 start
+		if(StringUtil.isNotBlank(model.getRealName())){
+			param.addParam("user.realName", model.getRealName());
+		}
+		if(StringUtil.isNotBlank(model.getRows()+"")){
+			param.addPage(model.getPage(), model.getRows());
+		}else{
+			param.addPage(model.getPage());
+		}
+		param.addOrder(OrderType.DESC, "addTime");
+		PageDataList<AccountRecharge> pageDateList = accountRechargeDao.findPageList(param);
+		PageDataList<AccountRechargeModel> pageDateList_ = new PageDataList<AccountRechargeModel>();
+		List<AccountRechargeModel> list = new ArrayList<AccountRechargeModel>();
+		DecimalFormat df =new DecimalFormat("#0.00");
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountRecharge recharge = (AccountRecharge) pageDateList.getList().get(i);
+				AccountRechargeModel arm = new AccountRechargeModel();
+				BeanUtils.copyProperties(recharge, arm);
+				VerifySupplyLog supplyLog = verifySupplyLogDao.findByType(recharge.getTradeNo(), VerifySupplyLog.RECHARGE_TRANSFER, 1);
+				
+				if(null != supplyLog){
+					arm.setAddUser(supplyLog.getAddUser().getName());
+					arm.setVerifyTime(supplyLog.getAddTime());
+				}
+				arm.setAddTimeStr(DateUtil.dateStr4(recharge.getAddTime()));
+				arm.setTypeStr("");
+				arm.setUserName(recharge.getUser().getUserName());
+				arm.setRealName(recharge.getUser().getRealName());
+				arm.setUserType(recharge.getUser().getUserCache().getUserType());
+				arm.setInAccountamountStr(df.format(recharge.getInAccountAmount()));
+				arm.setAccountFeeStr(df.format(recharge.getRechargeFee()));
+				arm.setStatusStr(arm.getStatusStr());
+
+				list.add(arm);
+			}
+		}
+		pageDateList_.setPage(pageDateList.getPage());
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+	@Override
+	public int count(int tradeStatus) {
+		return accountRechargeDao.count(tradeStatus);
+	}
+	@Override
+	public void verifyAccountRecharge(AccountRechargeModel model, Operator operator) {
+		//AccountRecharge existRecharge = accountRechargeDao.getRechargeByTradeno(model.getTradeNo());
+	    
+	}
+	@Override
+    public void verifyFailRecharge(AccountRecharge accountRecharge){
+	    //accountRechargeDao.updateStatus(accountRecharge.getId(), 2,0);
+	}
+
+	/**
+	 * 查询累计充值金额总和
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double rechargedAllMomeny() {
+		
+		return accountRechargeDao.rechargedAllMomeny();
+	}
+
+	/**
+	 * 查询充值用户数——投资人
+	 * @return
+	 * @author 孙晓勇
+	 */
+	@Override
+	public int rechargedTenderUserCount() {
+		
+		return accountRechargeDao.rechargedTenderUserCount();
+	}
+	@Override
+	public Map<String,Object> repairRecharge(String tradeNo)throws Exception{
+		AccountRecharge recharge=accountRechargeDao.find(tradeNo);
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("recharge", recharge);
+		YmdQuery ymdQuery=new YmdQuery();
+		ymdQuery.setOutTradeNo(recharge.getTradeNo());
+		YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+		ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+		List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+		YmdQueryReturnDetails ymdQueryReturnDetails=new YmdQueryReturnDetails();
+		if(queryDetaillist.size()==1){
+			ymdQueryReturnDetails=queryDetaillist.get(0);
+		}
+		map.put("ymdQueryReturn", ymdQueryReturn);
+		map.put("ymdQueryReturnDetails", ymdQueryReturnDetails);
+		return map;
+	}
+
+	@Override
+	public List<AccountRechargeModel> rechargeTotal(AccountRechargeModel model) {
+		return accountRechargeDao.rechargeTotal(model);
+	}
+
+	@Override
+	public AccountRecharge saveRecharge(AccountRecharge ar) {
+		return accountRechargeDao.save(ar);
+	}
+
+	@Override
+	public AccountRecharge findRechargeByTradeNo(String tradeNo) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("tradeNo", tradeNo);
+		return accountRechargeDao.findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public AccountRecharge updateRechargeByTradeNo(AccountRecharge ar,Operator operator,String remark) {
+		
+		//将审核人的用户名和审核结果存入rd_verify_log日志表
+		AccountRecharge recharge = accountRechargeDao.update(ar);
+		boolean flag= false;
+		if(null != recharge && ar.getTradeStatus().equals(AccountRecharge.RECHARGE_SUCCESS_STATUS)){
+			flag = true;
+		}
+		VerifySupplyLog verifySupplyLog = new VerifySupplyLog(operator, "rechargeTransfer", 
+				recharge.getTradeNo(), 1, flag, remark,new Date(),"");
+		verifySupplyLogDao.save(verifySupplyLog);
+		return recharge;
+	}
+	// JSDPBUG-99 20150505  sxy
+	@Override
+	public PageDataList<AccountRechargeModel> rechargeMoneyStatisticsList(
+			AccountRechargeModel model, int pageNumber, int pageSize) {
+		//return accountRechargeDao.rechargeMoneyStatisticsList(model, pageNumber, pageSize);
+		
+		/*
+		sb.append(" SELECT * FROM t_jsd_account_recharge t1 WHERE t1.trade_status = '00' ");
+		
+		if(StringUtil.isNotBlank(model.getTimeType())){
+			
+			if("yesterday".equals(model.getTimeType())){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d')  ");
+			}
+			if("today".equals(model.getTimeType())){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			if("week".equals(model.getTimeType())){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			if("month".equals(model.getTimeType())){
+				sb.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段
+			if("area".equals(model.getTimeType())){
+				if(null != model.getStartTime() && null != model.getEndTime()){
+					sb.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT("+model.getStartTime()+",'%y-%m-%d') AND DATE_FORMAT("+model.getEndTime()+",'%y-%m-%d') ");
+				}
+			}
+
+		}
+		
+		*/
+		
+		QueryParam param = QueryParam.getInstance();
+		
+		if(model != null){
+			
+			// 条件
+			
+			// 充值成功
+			if(StringUtil.isNotBlank(model.getRechargeType())){
+				param.addParam("rechargeType", model.getRechargeType());
+			}
+			
+			// 充值状态
+			if(StringUtil.isNotBlank(model.getTradeStatus())){
+				param.addParam("tradeStatus", model.getTradeStatus());
+			}
+			
+			Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+			
+			// 时间
+			if(StringUtil.isNotBlank(model.getTimeType())){
+				
+				if(StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())){
+					param.addParam("addTime", Operators.GTE, DateUtil.rollDay(nowdate, -1));
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+					param.addParam("addTime", Operators.LT, start);
+				}
+				if(StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())){
+					//param.addParam("addTime", nowdate);
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+					
+					param.addParam("addTime", Operators.GTE, start);
+					param.addParam("addTime", Operators.LT, nowdate);
+					//param.addParam("addTime", Operators.EQ, nowdate);
+				}
+				if(StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())){
+					param.addParam("addTime", Operators.GTE, DateUtil.rollDay(nowdate, -7));
+					param.addParam("addTime", Operators.LTE, nowdate);
+				}
+				if(StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())){
+					// 本月月份
+					//String thisMonth = DateUtil.dateStr11(new Date());
+					
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+					param.addParam("addTime", Operators.GTE, start);
+					param.addParam("addTime", Operators.LT, nowdate);
+				}
+				
+				// 时间段
+				if(StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())){
+					if(StringUtil.isNotBlank(model.getStartTime()) && StringUtil.isNotBlank(model.getEndTime())){
+						Date start = DateUtil.valueOf(model.getStartTime());
+						Date end = DateUtil.valueOf(model.getEndTime());
+						
+						param.addParam("addTime", Operators.GTE, start);
+						param.addParam("addTime", Operators.LTE, end);
+					}
+				}
+				
+				
+			}
+			
+		}
+			/*
+			
+			if(StringUtil.isNotBlank(model.getRechargeType())){
+				param.addParam("rechargeType", model.getRechargeType());
+			}
+			if(StringUtil.isNotBlank(model.getUserType())){
+				param.addParam("user.userCache.userType", model.getUserType());
+			}
+			
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				Date start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+			if (model.getTime() == 7) {
+				param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			} else if (model.getTime() > 0 && model.getTime() < 4){
+				param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			if (StringUtil.isNotBlank(model.getTradeStatus())&& !"66".equals(model.getTradeStatus())) {
+				param.addParam("tradeStatus", model.getTradeStatus());
+			}
+			if (StringUtil.isNotBlank(model.getTradeNo())) {
+				param.addParam("tradeNo", model.getTradeNo());
+			}
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName",Operators.LIKE,model.getUserName());
+		}
+		if(StringUtil.isNotBlank(model.getRealName())){
+			param.addParam("user.realName", model.getRealName());
+		}
+		if(StringUtil.isNotBlank(model.getRows()+"")){
+			param.addPage(model.getPage(), model.getRows());
+		}else{
+			param.addPage(model.getPage());
+		}
+		param.addOrder(OrderType.DESC, "addTime");*/
+		PageDataList<AccountRecharge> pageDateList = accountRechargeDao.findPageList(param);
+		PageDataList<AccountRechargeModel> pageDateList_ = new PageDataList<AccountRechargeModel>();
+		List<AccountRechargeModel> list = new ArrayList<AccountRechargeModel>();
+		DecimalFormat df =new DecimalFormat("#0.00");
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountRecharge recharge = (AccountRecharge) pageDateList.getList().get(i);
+				AccountRechargeModel arm = new AccountRechargeModel();
+				BeanUtils.copyProperties(recharge, arm);
+				VerifySupplyLog supplyLog = verifySupplyLogDao.findByType(recharge.getTradeNo(), VerifySupplyLog.RECHARGE_TRANSFER, 1);
+				
+				if(null != supplyLog){
+					arm.setAddUser(supplyLog.getAddUser().getName());
+					arm.setVerifyTime(supplyLog.getAddTime());
+				}
+				arm.setAddTimeStr(DateUtil.dateStr4(recharge.getAddTime()));
+				arm.setTypeStr("");
+				arm.setUserName(recharge.getUser().getUserName());
+				arm.setRealName(recharge.getUser().getRealName());
+				arm.setUserType(recharge.getUser().getUserCache().getUserType());
+				arm.setInAccountamountStr(df.format(recharge.getInAccountAmount()));
+				arm.setAccountFeeStr(df.format(recharge.getRechargeFee()));
+				arm.setStatusStr(arm.getStatusStr());
+
+				list.add(arm);
+			}
+		}
+		pageDateList_.setPage(pageDateList.getPage());
+		pageDateList_.setList(list);
+		return pageDateList_;
+		
+		
+		
+	}
+
+	@Override
+	public List excelRechargeList(AccountRechargeModel model) {
+		
+		return accountRechargeDao.excelRechargeList(model);
+	}
+
+	// 99  2015年5月27日   孙晓勇
+	@Override
+	public PageDataList<AccountRecharge> rechargeMoneyStatisticsListForSQL(
+			AccountRechargeModel model, int page, int size) {
+		return accountRechargeDao.rechargeMoneyStatisticsListForSQL(model,page,size);
+	}
+	//JSDP-171 xingjia 20150609 start
+	@Override
+	public AccountRecharge verifyAccountRecharge(PetCard petCard,AccountRechargeModel model,
+			AccountRecharge recharge, String rechargeMoney) {
+		//处理本地账户金额，account,recharge,然后再处理第三方
+		//JSPP-171 xingjia 20150714 start
+//		model.setBatchNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER));
+		Map<String, Object> map=new HashMap<String, Object>();
+		User user = recharge.getUser();
+		Global.setTransfer("rpMoney", recharge.getInAccountAmount());
+		Global.setTransfer("user", recharge.getUser());
+
+		map.put("user", user);
+//		try {
+//			if(UserConstant.USER_SORT_INVESTOR.equals(user.getUserCache().getUserType())){
+//	    		if(null != rechargeMoney){
+//	    			map.put("rechargeMoney", Double.parseDouble(rechargeMoney));
+//	    			
+//	    			AbstractExecuter executer = ExecuterHelper.doExecuter("petCardRechargeSuccessInvesterExecuter");
+//	    			executer.execute(map, user);
+//	    		}
+//			}else{
+//				if(null != rechargeMoney){
+//					map.put("borrowerRechargeMoney", Double.parseDouble(rechargeMoney));
+//					AbstractExecuter executer = ExecuterHelper.doExecuter("petCardRechargeSuccessBorrowerExecuter");
+//					executer.execute(map, user);
+//				}
+//			}
+//		} catch (Exception e) {
+//			throw new BussinessException("本地资金处理失败");
+//			e.printStackTrace();
+//		}
+		
+		//开始转账
+//		if(null != model && null != rechargeMoney){
+//			TransferWorker transferWorker=TransferHelper.getWorker(model,recharge);
+//			transferWorker.transfer();
+//		}
+		//JSPP-171 xingjia 20150714 end
+		recharge.setTradeStatus(AccountRecharge.RECHARGE_PET_CARD_SUC);
+		
+		petCard.setStatus(PetCard.ED_CARD_STATUS);
+		petCard.setActivateTime(Calendar.getInstance().getTime());
+		petCard.setTradeNo(recharge.getTradeNo());
+		petCard.setUserName(user.getUserName());
+//		petCard.setConsumeUser(user);
+		petCard.setUserId(user.getUserId());
+		petCardDao.update(petCard);
+		//JSPP-171 xingjia 20150714 start 增加体验卡的汇总信息
+		//体验卡汇总信息
+		PetCardSum petCardSum = petCardSumDao.findObjByProperty("user.userId", user.getUserId());
+		if(null != petCardSum){
+			petCardSum.setPtAccountAll(BigDecimalUtil.add(petCardSum.getPtAccountAll(),petCard.getMoney()));
+			petCardSum.setPtAccountUnuse(BigDecimalUtil.add(petCardSum.getPtAccountUnuse(),petCard.getMoney()));
+			petCardSumDao.update(petCardSum);
+		}else{
+			PetCardSum petCardSumn = new PetCardSum();
+			petCardSumn.setPtAccountAll(petCard.getMoney());
+			petCardSumn.setUser(user);
+			petCardSumn.setUserName(user.getUserName());
+			petCardSumn.setPtAccountUnuse(petCard.getMoney());
+			petCardSumDao.save(petCardSumn);
+		}
+		//JSPP-171 xingjia 20150714 end
+		return accountRechargeDao.update(recharge);
+	}
+	//JSDP-171 xingjia 20150609 end
+
+	@Override
+	public PageDataList<AccountRechargeModel> petCardRechargeList(AccountRechargeModel model) {
+		QueryParam param = QueryParam.getInstance();
+		
+		if(model != null){
+			//param.addParam("user.userCache.userType", "11");
+			if(StringUtil.isNotBlank(model.getRechargeType())){
+				param.addParam("rechargeType", model.getRechargeType());
+			}
+			if(StringUtil.isNotBlank(model.getUserType())){
+				param.addParam("user.userCache.userType", model.getUserType());
+			}
+			
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				Date start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+			if (model.getTime() == 7) {
+				param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			} else if (model.getTime() > 0 && model.getTime() < 4){
+				param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			if (StringUtil.isNotBlank(model.getTradeStatus())&& !"66".equals(model.getTradeStatus())) {
+				param.addParam("tradeStatus", model.getTradeStatus());
+			}
+			if (StringUtil.isNotBlank(model.getTradeNo())) {
+				param.addParam("tradeNo", model.getTradeNo());
+			}
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName",Operators.LIKE,model.getUserName());
+		}
+		if(StringUtil.isNotBlank(model.getRealName())){
+			param.addParam("user.realName", model.getRealName());
+		}
+		if(StringUtil.isNotBlank(model.getRows()+"")){
+			param.addPage(model.getPage(), model.getRows());
+		}else{
+			param.addPage(model.getPage());
+		}
+		param.addOrder(OrderType.DESC, "addTime");
+		PageDataList<AccountRecharge> pageDateList = accountRechargeDao.findPageList(param);
+		PageDataList<AccountRechargeModel> pageDateList_ = new PageDataList<AccountRechargeModel>();
+		List<AccountRechargeModel> list = new ArrayList<AccountRechargeModel>();
+		DecimalFormat df =new DecimalFormat("#0.00");
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountRecharge recharge = (AccountRecharge) pageDateList.getList().get(i);
+				//JSDP-171 xingjia 20150610 start
+				PetCard petCard = petCardDao.findObjByProperty("tradeNo", recharge.getTradeNo());
+				//JSDP-171 xingjia 20150610 end
+				AccountRechargeModel arm = new AccountRechargeModel();
+				BeanUtils.copyProperties(recharge, arm);
+				VerifySupplyLog supplyLog = verifySupplyLogDao.findByType(recharge.getTradeNo(), VerifySupplyLog.RECHARGE_TRANSFER, 1);
+				//JSDP-171 xingjia 20150610 start
+				if(null != petCard && StringUtil.isNotBlank(petCard.getCardNo())){
+					arm.setCardNo(petCard.getCardNo());
+				}
+				//JSDP-171 xingjia 20150610 end
+				
+				if(null != supplyLog){
+					arm.setAddUser(supplyLog.getAddUser().getName());
+					arm.setVerifyTime(supplyLog.getAddTime());
+				}
+				arm.setAddTimeStr(DateUtil.dateStr4(recharge.getAddTime()));
+				arm.setTypeStr("");
+				arm.setUserName(recharge.getUser().getUserName());
+				arm.setRealName(recharge.getUser().getRealName());
+				arm.setUserType(recharge.getUser().getUserCache().getUserType());
+				arm.setInAccountamountStr(df.format(recharge.getInAccountAmount()));
+				arm.setAccountFeeStr(df.format(recharge.getRechargeFee()));
+				arm.setStatusStr(arm.getStatusStr());
+
+				list.add(arm);
+			}
+		}
+		pageDateList_.setPage(pageDateList.getPage());
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+	
+}

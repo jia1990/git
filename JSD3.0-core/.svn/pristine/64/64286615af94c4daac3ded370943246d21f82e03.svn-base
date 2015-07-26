@@ -1,0 +1,194 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import com.alibaba.fastjson.JSON;
+
+public class UserCenterRuleCheck extends RuleCheck {
+
+	private static final long serialVersionUID = 782745443078877352L;
+
+	private String url;
+	private String appId;
+	private String appSecret;
+	private String signKey;
+	private String accessToken;
+	private String jsdUser;
+	private String userInfo;
+	private String checkMobile;
+	private String setMobile;
+	private String checkEmail;
+	private String setEmail;
+	private String setAvatar;
+	private String loginUrl;
+	private String logoutUrl;
+	private String registerUrl;
+	private String setPwdUrl;
+	private int status;//是否开启
+
+	public String getUrl() {
+		return url;
+	}
+
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
+	public String getAppId() {
+		return appId;
+	}
+
+	public void setAppId(String appId) {
+		this.appId = appId;
+	}
+
+	public String getAppSecret() {
+		return appSecret;
+	}
+
+	public void setAppSecret(String appSecret) {
+		this.appSecret = appSecret;
+	}
+
+	public String getSignKey() {
+		return signKey;
+	}
+
+	public void setSignKey(String signKey) {
+		this.signKey = signKey;
+	}
+
+	public String getAccessToken() {
+		return accessToken;
+	}
+
+	public void setAccessToken(String accessToken) {
+		this.accessToken = accessToken;
+	}
+
+	public String getJsdUser() {
+		return jsdUser;
+	}
+
+	public void setJsdUser(String jsdUser) {
+		this.jsdUser = jsdUser;
+	}
+
+	public String getUserInfo() {
+		return userInfo;
+	}
+
+	public void setUserInfo(String userInfo) {
+		this.userInfo = userInfo;
+	}
+
+	public String getCheckMobile() {
+		return checkMobile;
+	}
+
+	public void setCheckMobile(String checkMobile) {
+		this.checkMobile = checkMobile;
+	}
+
+	public String getSetMobile() {
+		return setMobile;
+	}
+
+	public void setSetMobile(String setMobile) {
+		this.setMobile = setMobile;
+	}
+
+	public String getCheckEmail() {
+		return checkEmail;
+	}
+
+	public void setCheckEmail(String checkEmail) {
+		this.checkEmail = checkEmail;
+	}
+
+	public String getSetEmail() {
+		return setEmail;
+	}
+
+	public void setSetEmail(String setEmail) {
+		this.setEmail = setEmail;
+	}
+
+	public String getSetAvatar() {
+		return setAvatar;
+	}
+
+	public void setSetAvatar(String setAvatar) {
+		this.setAvatar = setAvatar;
+	}
+
+	public String getLoginUrl() {
+		return loginUrl;
+	}
+
+	public void setLoginUrl(String loginUrl) {
+		this.loginUrl = loginUrl;
+	}
+
+	public String getLogoutUrl() {
+		return logoutUrl;
+	}
+	
+	public void setLogoutUrl(String logoutUrl) {
+		this.logoutUrl = logoutUrl;
+	}
+	
+	public int getStatus() {
+		return status;
+	}
+
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	public String getRegisterUrl() {
+		return registerUrl;
+	}
+
+	public void setRegisterUrl(String registerUrl) {
+		this.registerUrl = registerUrl;
+	}
+
+	public String getSetPwdUrl() {
+		return setPwdUrl;
+	}
+
+	public void setSetPwdUrl(String setPwdUrl) {
+		this.setPwdUrl = setPwdUrl;
+	}
+
+	@Override
+	public boolean checkRule() {
+		
+		return false;
+	}
+	
+	public static void main(String[] args) throws Exception {
+		// 测试使用
+		InputStream in = ScoreProduceRuleCheck.class
+				.getResourceAsStream("用户中心参数规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<UserCenterRuleCheck> clazz = UserCenterRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		UserCenterRuleCheck test = (UserCenterRuleCheck) jsonObj;
+		double r = Math.floor(1000 * (20 / 30d));
+		System.out.println(r);
+	}
+
+}

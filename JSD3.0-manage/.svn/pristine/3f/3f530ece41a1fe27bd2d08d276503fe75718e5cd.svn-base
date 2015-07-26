@@ -1,0 +1,108 @@
+<!-- 导入体验卡Excel -->
+<script type="text/javascript">
+$(function(){
+	
+	$("#yes").click(function() {
+		$('#validTime').show(300);
+	});
+	$("#no").click(function() {
+		$('#validTime').hide(300);
+	});
+	
+	
+	$.fn.dataGridOptions.formSubFun("#form",'/modules/petcard/petcard/petCardExcelForImport.html');
+});
+</script>
+
+<style>
+	.lab{
+		font-size:15px;
+		color:#393939;
+	}
+	#file{
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		height:30px;
+		width:280px;
+		border:1px #DFDFDF solid;
+	}
+	.table{
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		height:230px;
+		width:450px;
+		border:1px #DFDFDF solid;
+		background-color:#F0F0F0;
+	}
+	.table tr td{
+		height:30px;
+		font-size:14px;
+		color:#666;
+	
+	}
+
+</style>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	
+		<div class="formitm">
+		     <div class="ipt">
+		     	<span style="font-size:35px;text-align:center;color:#3D9EEF">体验卡数据导入</span>
+		     </div>
+		</div>
+		<br />
+		<hr width="80%" color="#999"/>
+		<br />
+		<div class="formitm">
+		     <label class="lab" id="title_label">Excel文件：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file" id="file"  style="background-color:#E6E6E6"  title="点击文件上传"/>
+		     </div>
+		</div>
+		<br />
+		<input name="aaa" value="123" type="hidden"/>
+		<div class="formitm" style="padding-left:30px;">
+		     <table class="table" border="0">
+		     	<tr height="20">
+		     		<td colspan="2">&nbsp;</td>
+		     	</tr>
+		     	<tr>
+		     		<td colspan="2" align="left">&nbsp;<font size="3">注意：</font></td>
+		     	</tr>
+		     	<tr >
+		     		<td width="30"></td>
+		     		<td>1、该操作仅限于文件名后缀为.xls或.xlsx文件</td>
+		     	</tr>
+		     	<tr>
+		     		<td></td>
+		     		<td>2、确保文件表格数据从第三行开始，不读取表头和标题</td>
+		     	</tr>
+		     	<tr>
+		     		<td></td>
+		     		<td>3、确保导入数据与所接收数据顺序相同，避免数据导入错位</td>
+		     	</tr>
+		     	<tr>
+		     		<td></td>
+		     		<td>4、数据量较大时，可能花费时间较长，请耐心等待</td>
+		     	</tr>
+		     	<tr>
+		     		<td></td>
+		     		<td></td>
+		     	</tr>
+		     	<!-- <tr>
+		     		<td></td>
+		     		<td></td>
+		     	</tr> -->
+		     	
+		     </table>
+		</div>
+		
+		
+	</form>
+</div>
+
+

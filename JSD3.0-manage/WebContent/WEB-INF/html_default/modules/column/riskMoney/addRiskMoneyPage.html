@@ -1,0 +1,143 @@
+
+<script type="text/javascript">
+$(function(){
+	
+	// 图片大小限制提示
+	if($('#siteNid').val() == 'riskMoney'){			// 风险备用金图片
+		$('#remarkAlt').html('（建议大小：宽:550  高:600）');
+	}else{											// 其他
+		$('#remarkAlt').html('（建议大小：无）');
+	}
+	
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/column/article/articleAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址
+    
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">栏目：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" id="siteNewName" name="siteNewName" value="${site.name}" readonly="readonly">
+		     	<input type="hidden" id="siteId" name="siteId" value="${site.id}">
+		     	<input type="hidden" id="siteNid" name="siteNid" value="${site.nid}">
+		     	<b>*</b>
+		     </div>
+		</div>
+	
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" class="w400 easyui-validatebox" data-options="required: true" maxlength="50"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+				<input type="radio" name="status" value="1" checked="checked"/>&nbsp;&nbsp;显示
+		     	<input type="radio" name="status" value="0" />&nbsp;&nbsp;隐藏
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" class="easyui-numberbox" value="${sortId!1}" data-options="required: true" maxlength="4"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm"  hidden="hidden">
+		     <label class="lab">是否推荐：</label>
+		     <div class="ipt">
+				<input type="radio" name="isRecommend" value="1"/>&nbsp;&nbsp;是
+		     	<input type="radio" name="isRecommend" value="0" checked="checked"/>&nbsp;&nbsp;否
+		     </div>
+		</div>
+		<div class="formitm"  hidden="hidden">
+		     <label class="lab">是否置顶：</label>
+		     <div class="ipt">
+				<input type="radio" name="isTop" value="1"/>&nbsp;&nbsp;是
+		     	<input type="radio" name="isTop" value="0" checked="checked"/>&nbsp;&nbsp;否
+		     </div>
+		</div>
+		<!-- <div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file">	<br /><a id="imgSize"></a>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">图片链接：</label>
+		     <div class="ipt">
+		     	<input type="text" name="content" class="w400 easyui-validatebox"/>
+		     </div>
+		</div> -->
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="introduction"  maxlength="120"></textarea>	
+		     </div>
+		</div>
+		<div><br/></div>
+
+
+		<input name="content" value="风险备用金" type="hidden"> 
+
+		<div class="borrowForm">
+
+			<table style="height:40px;">
+				<tr style="height:40px;">
+					<td class="borrowFormTitle">图片信息</td>
+					<td class="borrowForme"><span id="remarkAlt">()</span></td>
+				</tr>
+			</table>
+			<div class="guarantee_type">
+				<div id="uploadGuaranteeBox" data-arr="uploadFile"
+					style="height: auto;">
+					<ul id="uploadPiclistRiskMoney" class="photoUpload"
+						style="list-style: none; padding: 0; margin: 0;">
+						<li class="add_btn" style="float: left;"><i class="a"></i> <i
+							class="b"></i> <input type="file" name="file" id="uploadFile4"
+							onchange="return ajaxFileUpload1('uploadFile4','/imageUp.jsp','riskMoney','3');"
+							title="点击上传图片" /></li>
+					</ul>
+				</div>
+			</div>
+
+		</div>
+
+		<input name="articleAddToken" value="${articleAddToken!}" type="hidden"> 
+		   	
+	</form>
+</div>
+<div id="siteNewDialog">
+	<ul id="siteNewTree"></ul>
+</div>
+
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+
+<!-- 编辑器 -->
+<!-- <script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+    var descriptionBox = UE.getEditor('detail', {
+        autoHeight: false,
+        initialFrameWidth:728,
+        toolbars: [
+                   ['undo', 'redo', 'justifyleft', 'justifyright','justifycenter', 'justifyjustify', 'forecolor', 'fontfamily', 
+                    'fontsize', 'paragraph', 'customstyle','anchor', 'bold', 'indent','italic','underline', 'strikethrough', 'subscript','fontborder', 
+                    'superscript', 'formatmatch', 'source', 'blockquote', 'pasteplain', 'selectall', 'print', 'horizontal', 'removeformat', 'time', 
+                     'date', 'unlink', 'insertrow', 'insertcol', 'mergeright', 'mergedown','deleterow', 'deletecol', 'splittorows', 'splittocols', 'splittocells',
+                       'deletecaption','inserttitle','mergecells', 'deletetable', 'cleardoc', 'insertparagraphbeforetable','simpleupload', 'insertimage','edittable',
+                       'edittd', 'link', 'spechars', 'searchreplace','backcolor','insertorderedlist','insertunorderedlist', 'fullscreen', 'directionalityltr', 'directionalityrtl', 
+                       'rowspacingtop', 'rowspacingbottom', 'pagebreak', 'imagenone', 'imageleft', 'imageright', 'attachment','imagecenter','lineheight','edittip ', 'autotypeset', 
+                       'touppercase', 'tolowercase', 'background', 'template','inserttable', 'drafts', 'charts'
+                   ]
+               ]
+        
+    });
+   
+</script> -->
+
+

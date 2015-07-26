@@ -1,0 +1,94 @@
+package com.ddtkj.p2psys.account.model;
+
+import java.lang.reflect.Field;
+
+import sun.misc.Unsafe;
+
+import com.rongdu.p2psys.account.domain.AccountBank;
+
+/**
+ * @描述：提现model
+ * @作者:guojunhui@ddtkj.com
+ * @创建时间:  2015年1月14日 
+ */
+public class AccountBankModel extends AccountBank{
+	private static final long serialVersionUID = -5719655251603437167L;
+	/** 当前页码 */
+	private int page;
+	/** 每页总数 **/
+	private int rows;
+	/** 用户名 **/
+	private String userName;
+	/** 真实姓名**/
+	private String realName;
+	/** 手机号 **/
+	private String mobilePhone;
+	
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getRows() {
+		return rows;
+	}
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	public String getRealName() {
+		return realName;
+	}
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+	public String getMobilePhone() {
+		return mobilePhone;
+	}
+	public void setMobilePhone(String mobilePhone) {
+		this.mobilePhone = mobilePhone;
+	}
+	public static void main(String[] args) {
+		 try {  
+	            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");  
+	            theUnsafe.setAccessible(true);  
+	            Unsafe unsafe = (Unsafe) theUnsafe.get(null);  
+	            AccountBankModel testBean = new AccountBankModel();  
+	            Field intField = AccountBankModel.class.getDeclaredField("rows");  
+	            long start = 0, stop = 0;  
+	            start = System.currentTimeMillis();  
+	            for (int i = 0; i < 100000000; i++) {  
+	                intField.get(testBean);  
+	            }  
+	            stop = System.currentTimeMillis();  
+	            System.out.println("使用Field.get方式时间：" + (stop - start));  
+	  
+	            start = System.currentTimeMillis();  
+	            long offset = unsafe.objectFieldOffset(intField);  
+	            for (int i = 0; i < 100000000; i++) {  
+	                unsafe.getInt(testBean, offset);  
+	            }  
+	            stop = System.currentTimeMillis();  
+	            System.out.println("使用Unsafe.get方式时间：" + (stop - start));  
+	  
+	        } catch (SecurityException e) {  
+	            e.printStackTrace();  
+	        } catch (NoSuchFieldException e) {  
+	            // TODO Auto-generated catch block  
+	            e.printStackTrace();  
+	        } catch (IllegalArgumentException e) {  
+	            // TODO Auto-generated catch block  
+	            e.printStackTrace();  
+	        } catch (IllegalAccessException e) {  
+	            // TODO Auto-generated catch block  
+	            e.printStackTrace();  
+	        }  
+	}
+	
+}

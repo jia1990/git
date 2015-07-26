@@ -1,0 +1,32 @@
+package com.ddtkj.p2psys.authorize.dao;
+
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.domain.ClientUser;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.rongdu.common.dao.BaseDao;
+/**
+ * @author sxy
+ * @version 3.0
+ * @since 2015年3月18日
+ */
+public interface ClientUserDao extends BaseDao<ClientUser> {
+	
+	/**
+	 * 根据用户ID及应用ID
+	 * 
+	 * @param user_id
+	 * @param clientId
+	 * @return
+	 */
+    public ClientUserModel selectByUserAndClient(long userId, String clientId);
+    
+    
+    /**
+     * 添加授权信息
+     * 
+     * @param userInfo
+     * @param client
+     */
+    public void insertUserInfo(ClientUserModel cum,Client client);
+    
+}

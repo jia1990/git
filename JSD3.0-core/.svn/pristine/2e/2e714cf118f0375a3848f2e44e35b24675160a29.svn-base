@@ -1,0 +1,115 @@
+package com.ddtkj.p2psys.redpacket.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述：活动红包的产生model   JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+public class RpActivityModel extends RpActivity {
+	
+	/** 当前页**/
+	private int page = 1;
+	/** 每页总数 **/
+	private int size = Page.ROWS;
+	private Page pages;
+	private String activityName;//活动名称
+	private String activityStartTime;
+	private String activityEndTime;
+	private String status;//活动状态(进行中，已停止)
+	private String optName;//添加活动的人
+	private String updateOptName;//修改活动的人
+	
+
+	public static RpActivityModel instance(RpActivity rpActivity) {
+		RpActivityModel rpActivityModel = new RpActivityModel();
+		BeanUtils.copyProperties(rpActivity, rpActivityModel);
+		return rpActivityModel;
+	}
+
+	public RpActivity prototype() {
+		RpActivity rpActivity = new RpActivity();
+		BeanUtils.copyProperties(this, rpActivity);
+		return rpActivity;
+	}
+	
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public Page getPages() {
+		return pages;
+	}
+
+	public void setPages(Page pages) {
+		this.pages = pages;
+	}
+
+	public String getActivityName() {
+		return activityName;
+	}
+
+	public void setActivityName(String activityName) {
+		this.activityName = activityName;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getActivityStartTime() {
+		return activityStartTime;
+	}
+
+	public void setActivityStartTime(String activityStartTime) {
+		this.activityStartTime = activityStartTime;
+	}
+
+	public String getActivityEndTime() {
+		return activityEndTime;
+	}
+
+	public void setActivityEndTime(String activityEndTime) {
+		this.activityEndTime = activityEndTime;
+	}
+
+	public String getOptName() {
+		return optName;
+	}
+
+	public void setOptName(String optName) {
+		this.optName = optName;
+	}
+
+	public String getUpdateOptName() {
+		return updateOptName;
+	}
+
+	public void setUpdateOptName(String updateOptName) {
+		this.updateOptName = updateOptName;
+	}
+	
+
+	
+}

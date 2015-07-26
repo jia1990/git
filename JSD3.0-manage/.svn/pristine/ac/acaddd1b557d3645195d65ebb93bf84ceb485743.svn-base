@@ -1,0 +1,171 @@
+package com.ddtkj.manage.action.reward;
+
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.award.domain.ActivityConfig;
+import com.ddtkj.p2psys.award.domain.TakeWay;
+import com.ddtkj.p2psys.award.service.ActivityAwardService;
+import com.ddtkj.p2psys.award.service.ActivityConfigService;
+import com.ddtkj.p2psys.award.service.TakeWayService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class ManageActivityAction extends BaseAction<ActivityConfig> implements ModelDriven<ActivityConfig> {
+	@Resource
+	private ActivityConfigService activityConfigService;
+	@Resource
+	private ActivityAwardService activityAwardService;
+	@Resource
+	private TakeWayService takeWayService;
+
+	private Map<String, Object> data;
+	private Map<String,Object> map = new HashMap<String, Object>();
+	
+	/**
+	 * 活动奖励页面的展示
+	 * @author xingjia
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/activityManager")
+	public String activityManager() throws Exception {
+		
+		return "activityManager";
+	}
+	
+	
+	
+	/**
+	 * 所有活动展示
+	 * @author xingjia
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/activityList")
+	public void activityList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		map.put("model", model);
+		
+		
+		//能够接收到搜索值
+		String actName = paramString("actName");
+		//String actStartTime = paramString("actStartTime");
+		//String actEndTime = paramString("actName");
+		
+		//System.out.println("接受到的搜索值为："+ actName);
+		data.put("actName",actName);
+		
+		model.setActName(actName);
+		//model.setActName(actStartTime);
+		//model.setActName(actEndTime);
+		map.put("actName", actName);
+		//map.put("actStartTime", actStartTime);
+		//map.put("actEndTime", actEndTime);
+		
+		
+		PageDataList<ActivityConfig> activityConfigPageList = activityConfigService.getPageDataList(map, pageNumber, pageSize);
+		int totalPage = activityConfigPageList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", activityConfigPageList.getList());
+		
+		printJson(getStringOfJpaObj(data));
+
+	}
+	
+	
+	/**
+	 * 添加活动页面的展示
+	 * @author xingjia
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/activityAddPage")
+	public String activityAddPage() throws Exception {
+		
+		List<TakeWay> takeWayList = activityConfigService.findAllTakeWayList();
+		request.setAttribute("takeWayList", takeWayList);
+		return "activityAdd";
+	}
+	
+	
+	/**
+	 * 活动的添加方法
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/activityAdd")
+	public void activityAdd() throws Exception{
+		
+		String goodtype = model.getActivityAward().getGoodsType();
+		if(null == goodtype || "" == goodtype){
+			goodtype = "N";
+			model.getActivityAward().setGoodsType(goodtype);
+		}
+		data = new HashMap<String, Object>();
+		model.setActCreator(getOperatorId());
+		model.setActCreateName(getOperatorUserName());
+		model.setActCrateTime(Calendar.getInstance().getTime());
+		model.setActVerifyStatus(0);//审核中:2未审核:0审核通过;1
+		activityConfigService.saveAcitvityConfig(model);
+		data.put("result", true);
+		data.put("msg", "添加成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 活动的修改页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/reward/activityEditPage")
+	public String activityEditPage() throws Exception {
+		System.out.println("进入修改方法。。。");
+		//int id = paramInt("id");
+		//System.out.println("点击获得id值为："+id);
+		//ActivityConfig activityConfig = activityConfigService.findActivityById(id);
+		
+		//request.setAttribute("activity", activityConfig);
+/*		RedPacket redPaceket = redPackService.getEntityById(id);
+		redPaceket.getOperator().getId();
+		request.setAttribute("redPacket", redPaceket);
+		
+		request.setAttribute("isopen", redPaceket.getIsopen());*/
+		
+		int id = paramInt("id");
+		System.out.println("点击获得id值为："+id);
+		ActivityConfig activityConfig = activityConfigService.findActivityById(id);
+		//ActivityAward activityAward = activityAwardService.findActivityAwardById(id);
+		//request.setAttribute("activity", activityAward);
+		request.setAttribute("activity", activityConfig);
+		saveToken("activityConfigEditToken");
+		return "activityEdit";
+		
+	}
+	
+	
+	/**
+	 * 活动修改
+	 * @throws Exception
+	 */
+	@Action(value="/modules/reward/activityEdit")
+	public void activityEdit() throws Exception{
+		data = new HashMap<String, Object>();
+		//checkToken("redPackEditToken");
+//		redPackService.update(model);
+//		activityConfigService.update(model);
+		data.put("msg", "修改成功");
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+}

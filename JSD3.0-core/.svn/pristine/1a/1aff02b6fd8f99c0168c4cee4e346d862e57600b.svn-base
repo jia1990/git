@@ -1,0 +1,59 @@
+
+package com.ddtkj.p2psys.score.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.rongdu.common.dao.BaseDao;
+
+/**
+ * @描述:积分抽奖规则DAO
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+public interface ScoreRuleAwardDao extends BaseDao<ScoreRuleAward> {
+
+
+	/**
+	 * 根据抽奖类型取得有效时间的规则ID
+	 * @param awardType 抽奖类型
+	 * @return 规则ID
+	 */
+	ScoreRuleAward getRuleAwardByAwardType(int awardType);
+
+	/**
+	 * 取得抽奖规则列表
+	 * @return 抽奖规则列表
+	 */
+	List<ScoreRuleAward> getRuleAwardList();
+
+	/**
+	 * 更新抽奖规则表的领用金额
+	 * @param ruleId 规则ID
+	 * @param money 领用金额
+	 */
+	void updateBestowMoney(long ruleId, double money);
+
+	/**
+	 * 更新抽奖规则表的总金额
+	 * @param ruleId 规则ID
+	 * @param money 总金额
+	 */
+	void updateTotalMoney(long ruleId, double money);
+
+	/**
+	 * 根据状态获取抽奖规则
+	 * @param  status
+	 * @return ScoreRuleAward 
+	 */ 
+	ScoreRuleAward getRuleAwardByStatus(String status);
+	
+	/**
+	 * 根据状态获取抽奖规则
+	 * @param  status
+	 * @param  id
+	 * @return ScoreRuleAward 
+	 */ 
+	ScoreRuleAward getRuleAwardByStatusAndId(String status, long id);
+	
+}

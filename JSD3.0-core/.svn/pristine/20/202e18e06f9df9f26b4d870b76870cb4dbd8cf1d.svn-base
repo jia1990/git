@@ -1,0 +1,139 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @描述：活动配置类 	JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月25日 
+ */
+@Entity
+@Table(name="t_jsd_rp_activity")
+public class RpActivity {
+	
+	public static final String ACTIVITY_STATUS_OPEN = "op";//活动开启
+	public static final String ACTIVITY_STATUS_CLOSE  = "cl";//活动关闭
+	public static final String ACTIVITY_STATUS_DEL = "dl";//活动删除	
+	public static final String AWARD_TYPE_PET = "petCard";//晋商贷体验卡
+	public static final String AWARD_TYPE_YUNGOU = "yunGouCard";//云购充值卡
+	public static final String AWARD_TYPE_SCORE = "score";//积分
+	public static final String AWARD_TYPE_RP = "rpMoney";//红包
+	public static final String ACTIVITY_DRAGON = "dragon";//端午节活动
+	public static final String ACTIVITY_INDIANA_JONES = "indianaJones";//夺宝奇兵活动
+	//JSDP-229 gjh 2015-7-23 start
+	public static final String ACTIVITY_QUESTIONS = "questions";//智力答题
+	//JSDP-229 gjh 2015-7-23 end
+	
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	private String activityName;//活动名称
+	private String activityType;//活动标识
+	private Date startTime;
+	private Date endTime;
+	private String keyWord;//规则关键词
+	private String status;//状态  活动是否开启
+	@ManyToOne
+    @JoinColumn(name = "add_user")
+	private Operator operator;//添加人
+	private Date addTime;//添加时间
+	@ManyToOne
+    @JoinColumn(name = "update_user")
+	private Operator updateOperator;//修改人
+	private Date updateTime;//修改时间
+	private String remark;//备注
+	private String awardType;//奖励类型    petCard:晋商贷储值卡，yunGouCard:云购卡，score:积分，rpMoney:红包
+	
+	
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getActivityName() {
+		return activityName;
+	}
+	public void setActivityName(String activityName) {
+		this.activityName = activityName;
+	}
+	public String getActivityType() {
+		return activityType;
+	}
+	public void setActivityType(String activityType) {
+		this.activityType = activityType;
+	}
+	public Date getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+	public Date getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+	public String getKeyWord() {
+		return keyWord;
+	}
+	public void setKeyWord(String keyWord) {
+		this.keyWord = keyWord;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public Operator getOperator() {
+		return operator;
+	}
+	public void setOperator(Operator operator) {
+		this.operator = operator;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public Operator getUpdateOperator() {
+		return updateOperator;
+	}
+	public void setUpdateOperator(Operator updateOperator) {
+		this.updateOperator = updateOperator;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public String getAwardType() {
+		return awardType;
+	}
+	public void setAwardType(String awardType) {
+		this.awardType = awardType;
+	}
+	
+}

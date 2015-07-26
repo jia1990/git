@@ -1,0 +1,74 @@
+package com.ddtkj.p2psys.core.quartz.cancelBorrow;
+
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.core.quartz.LoanTask;
+/**
+ * 撤销标队列
+ * @author wcw
+ */
+public class CancelBorrowJobQueue<T> {
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Queue<T> queue = new ConcurrentLinkedQueue();
+	private LoanTask task;
+
+	public CancelBorrowJobQueue(LoanTask task) {
+		super();
+		this.task = task;
+	}
+
+	public synchronized void offer(T model) {
+		if (!queue.contains(model)) {
+			queue.offer(model);
+			synchronized (task.getLock()) {
+				task.execute();
+			}
+		}
+	}
+
+	public synchronized void offer(List<T> ts) {
+		for (int i = 0; i < ts.size(); i++) {
+			T t = ts.get(i);
+			if (!queue.contains(t)) {
+				queue.offer(t);
+			}
+		}
+		synchronized (task.getLock()) {
+			task.execute();
+		}
+	}
+
+	public synchronized T poll() {
+		return queue.poll();
+	}
+
+	public synchronized T peek() {
+		return queue.peek();
+	}
+
+	public synchronized void remove(T model) {
+		queue.remove(model);
+	}
+
+	public int size() {
+		return queue.size();
+	}
+
+	public static CancelBorrowJobQueue<CancelBorrowBean> CANCEL_BORROW = null;
+
+	public static void init(AutoBorrowService autoBorrowService) {
+		CANCEL_BORROW = new CancelBorrowJobQueue<CancelBorrowBean>(new CancelBorrowTask(autoBorrowService));
+	}
+
+	public static void stop() {
+		CANCEL_BORROW.task.stop();
+	}
+
+	public void doAutoQueue() {
+	}
+
+}

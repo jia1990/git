@@ -1,0 +1,462 @@
+package com.rongdu.p2psys.web.account;
+
+import java.io.IOException;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.core.usercenter.HttpResult;
+import com.ddtkj.p2psys.core.usercenter.HttpUtils;
+import com.ddtkj.p2psys.core.usercenter.SignUtils;
+import com.ddtkj.p2psys.core.util.CardAESUtils;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.service.PetCardLogService;
+import com.ddtkj.p2psys.webpetcard.service.PetCardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.account.service.PayOfflinebankService;
+import com.rongdu.p2psys.account.service.PayOnlinebankService;
+import com.rongdu.p2psys.account.service.PayService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.domain.Article;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck.YungouNoticeUrl;
+import com.rongdu.p2psys.core.service.ArticleService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 充值
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年3月17日10:49:14
+ */
+public class RechargeAction extends BaseAction implements
+		ModelDriven<AccountRechargeModel> {
+
+	private static Logger logger = Logger.getLogger(RechargeAction.class);
+	private AccountRechargeModel model = new AccountRechargeModel();
+
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	@Resource
+	private PayService payService;
+	@Resource
+	private PayOnlinebankService payOnlinebankService;
+	@Resource
+	private PayOfflinebankService payOfflinebankService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+
+	@Resource
+	private YmdService ymdService;
+
+	@Resource
+	private ArticleService articleService;
+	@Resource
+	private PetCardService petCardService;
+	@Resource
+	private PetCardLogService petCardLogService;
+	
+
+	private User user;
+	private Map<String, Object> data;
+
+	/**
+	 * @author 李建云 前往投资人账户充值页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action(value = "/member/recharge/newRecharge", results = {
+			@Result(name = "newRecharge", type = "ftl", location = "/member/recharge/newRecharge.html"),
+			@Result(name = "newRecharge_firm", type = "ftl", location = "/member_borrow/recharge/newRecharge.html"),
+			@Result(name = "newRecharge_assure", type = "ftl", location = "/member_guarantee/recharge/newRecharge.html"),
+			@Result(name = "newRecharge_merchart", type = "ftl", location = "/member_merchant/recharge/newRecharge.html")})
+	public String newRecharge() throws Exception {
+
+		//防止重复提交
+		saveToken("newRechargeToken");
+		user = userService.find(getSessionUser().getUserId());
+		session.put(Constant.SESSION_USER, user);
+		Account account = accountService.findByUser(user.getUserId());
+		Article article = articleService.findBySiteId(50);
+		if(article!=null ){
+			request.setAttribute("rechargeHint", article.getContent());
+		}else{
+			request.setAttribute("rechargeHint", null);
+		}
+		// List<IpsRechargeBank> ipsBankList =
+		// accountRechargeService.getIpsRechargeBankList();
+		// request.setAttribute("ipsBankList", ipsBankList);
+		//JSDP-171 xingjia 20150614 start
+		double usableAmount = account.getAccountTotal();
+		request.setAttribute("usableAmount", usableAmount);
+		
+		if (UserConstant.USER_SORT_BORROW.equals(user.getUserCache().getUserType())) {
+			//wcw  借款人充值记录 start
+//			double usableAmount=BigDecimalUtil.add(account.getBorrowerEnterUsable(),account.getBorrowerRechargeUsable());
+//			request.setAttribute("usableAmount", usableAmount);
+			return "newRecharge_firm";
+		}else if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			//担保公司充值记录
+//			double usableAmount=BigDecimalUtil.add(account.getBorrowerEnterUsable(),account.getBorrowerRechargeUsable());
+//			request.setAttribute("usableAmount", usableAmount);
+			return "newRecharge_assure";
+		}else if(UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())){
+			//wcw  商户充值记录 start
+//			double usableAmount=BigDecimalUtil.add(account.getBorrowerEnterUsable(),account.getBorrowerRechargeUsable());
+//			request.setAttribute("usableAmount", usableAmount);
+			return "newRecharge_merchart";
+		}
+//		double usableAmount = BigDecimalUtil.add(account.getAwardUsable(),
+//				account.getInterestUsable(), account.getRechargeUsable(),
+//				account.getReturnCapitalUsable());
+		
+		//JSDP-171 xingjia 20150614 end
+		return "newRecharge";
+	}
+
+	/**
+	 * 进行线上充值
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/member/recharge/doRecharge")
+	public void doRecharge() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		String channelType = paramString("channelType");
+		if(StringUtil.isNotBlank(channelType)){
+			model.setChannelType(channelType);
+		}
+		
+		user = userService.find(getSessionUser().getUserId());
+		//JSDP-119 wcw 2015-05-16 start
+		if(session.get(Constant.SESSION_USER)!=null){
+			session.remove(Constant.SESSION_USER);
+		}
+		session.put(Constant.SESSION_USER, user);
+		//JSDP-119 wcw 2015-05-16 end
+		UserIdentify userIdentify = userIdentifyService
+				.findById(getSessionUserIdentify().getUserId());
+		//JSDP-119 wcw 2015-05-16 start
+		if(session.get(Constant.SESSION_USER_IDENTIFY)!=null){
+			session.remove(Constant.SESSION_USER_IDENTIFY);
+		}
+		session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+		//JSDP-119 wcw 2015-05-16 end
+		//JSDP-171 xingjia 20150609 start
+		
+		if(StringUtil.isNotBlank(model.getChannelType()) && model.getChannelType().equals("eBank")){
+			try {
+				model.validIdentifyForRecharge(userIdentify);
+				model.validNewRecharge();
+				//JSDMOBILE-10 wcw 2015-3-20 start  充值來源优化
+				model.setRechargeWay(AccountTradeConstant.TRADE_WAY_PC);
+				//JSDMOBILE-10 wcw 2015-3-20 end  充值來源优化
+				this.checkToken("newRechargeToken");
+				
+				YmdRecharge recharge = ymdService.doRecharge(model, user);
+				data.put("ymd", recharge);
+				data.put("submitUrl", recharge.getWS_URL());
+				data.put("result", true);
+				//JSDBET-812 gjh 2015-3-16 start
+			} catch (HandleException e) {
+				throw e;
+				//JSDBET-812 gjh 2015-3-16 end
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+			}
+			//JSDP-171 xingjia 20150609 end
+		}else if(StringUtil.isNotBlank(model.getChannelType()) && model.getChannelType().equals("petCard")){
+			//JSDP-171 XINGJIA 20150608 start
+
+			if(StringUtil.isBlank(noticeYungouURL())){
+				data.put("msg", "此功能暂时关闭！");
+				data.put("result", false);
+			}else{
+				
+				model.validPetCard();
+				this.checkToken("newRechargeToken");
+				//JSDP-171 xingjia 20150609 end 第二次修改
+				//根据卡号查询充值金额
+				PetCard petCard = null;
+				if(StringUtil.isNotBlank(model.getPaw())){
+					petCard = petCardService.getPetCardByIdOrPwd(model.getCardNo(),CardAESUtils.aesEncrypt(model.getPaw(),PetCard.JSD_PETCARD_KEY));
+				}
+				
+				//本地账户余额与一麻袋账户余额对账
+				accountService.accountCompare(this.getSessionUserId());
+				if(null != petCard){
+					//判断此卡是否已过期
+					if( petCard.getIsValid() == 0){
+						if(null != petCard.getWinTime()){
+							Date endTime = DateUtil.rollDay(petCard.getWinTime(), petCard.getValidTime());
+							if(endTime.before(new Date())){
+								//修改卡的状态
+								petCard.setStatus(PetCard.DD_CARD_STATUS);
+								petCardService.update(petCard);
+								data.put("result", false);
+								data.put("msg","此卡已过期！");
+								printJson(getStringOfJpaObj(data));
+								throw new BussinessException("此卡已过期！");
+							}
+						}else{
+							data.put("result", false);
+							data.put("msg","此卡未中奖！");
+							printJson(getStringOfJpaObj(data));
+							throw new BussinessException("此卡未中奖！");
+						}
+						
+					}
+					//JSDP-171 xingjia 20150609 end 第二次修改
+					//得到充值金额后将钱充入用户的账号内
+					AccountRecharge recharge = new AccountRecharge();
+					recharge.setAddIp(Global.getIP());
+					recharge.setAddTime(Calendar.getInstance().getTime());
+					recharge.setRechargeAmount(petCard.getMoney());
+					recharge.setIsfree("0");
+					recharge.setInAccountAmount(petCard.getMoney());
+					recharge.setRechargeFee(0.0);
+					recharge.setRechargeType("01");//晋商贷体验卡充值转账
+					recharge.setRechargeWay(AccountTradeConstant.TRADE_WAY_PC);
+					recharge.setSendCleartextInfo("暂无");//签名明文信息
+					recharge.setUser(getSessionUser());
+					recharge.setTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER));
+					try {
+						
+						AccountRecharge accountRecharge = accountRechargeService.verifyAccountRecharge(petCard,model, recharge, petCard.getMoney()+"");
+						if(null != accountRecharge){
+							//JSDP-171 xingjia 20150614 start
+							//用户充值成功后通知云购
+							petCardRechargeSuc(petCard.getCardNo(), petCard.getPaw(),petCard.getActivateTime());
+							data.put("msg", "petCard");
+							data.put("result", true);
+							//JSDP-171 xingjia 20150614 end
+						}
+					}  catch (HandleException e) {
+						throw e;
+						//JSDBET-812 gjh 2015-3-16 end
+					} catch (Exception e) {
+						data.put("result", false);
+						data.put("msg", e.getMessage());
+					}
+					
+				}else{
+					data.put("result", false);
+					data.put("msg", "此卡不存在或已激活！");
+				}
+			}
+		}
+		//JSDP-171 XINGJIA 20150608 end
+		
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	/**JSDP-171 XINGJIA 20150608 start
+	 * 晋商贷体验卡在这边充值成功后通知云购
+	 */
+	public static void petCardRechargeSuc(String cardNo,String paw,Date activateTime){
+		Map<String, Object> map = new HashMap<String, Object>();
+		
+		
+		
+		String signKey = null;
+		String rechargeNoticUrl = null;
+		YungouNoticeUrl yungouNoticeUrl = noticeYungouURL();
+		if(null != yungouNoticeUrl){
+			rechargeNoticUrl = yungouNoticeUrl.getRechargeNoticeUrl();
+			signKey = yungouNoticeUrl.getSignKey();
+		}
+		map.put("cardNo", cardNo);
+		map.put("paw", paw);
+		map.put("activateTime", DateUtil.getTime(activateTime));
+		map.put("sign", signKey);
+		
+		HttpResult result = null;
+		if(StringUtil.isNotBlank(rechargeNoticUrl)){
+			result =HttpUtils.sendGet(SignUtils.getUrl(rechargeNoticUrl, map, signKey), null);
+		}
+		if(result != null){
+			String resultString = result.getContent();
+			JSONObject jso = JSON.parseObject(resultString) ;
+			logger.info(jso.getBooleanValue("status")+"==="+jso.getString("msg"));
+	
+		}
+
+	}
+	
+	public static YungouNoticeUrl noticeYungouURL(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(null != check && null != check.getYungouNoticeUrl()){
+			YungouNoticeUrl yungouNoticeUrl = check.getYungouNoticeUrl();
+			//判断此功能是否可以使用 1启用 0停用
+			if(yungouNoticeUrl.getStatus().equals(YunGouTransferRuleCheck.TRANSFER_STATUS_ENABLE)){
+				return yungouNoticeUrl;
+			}
+		}
+		return null;
+	}
+	
+	@Action("/member/recharge/petCardMoney")
+	public void petCardMoney() throws IOException{
+		
+		if(StringUtil.isNotBlank(model.getCardNo()) && model.getCardNo().length()==16){
+			
+			PetCard petCard = petCardService.getPetCardByIdOrPwd(model.getCardNo(), null);
+			if(null != petCard){
+				data.put("result", true);
+				data.put("msg", petCard.getMoney());
+			}else{
+				data.put("result", false);
+				data.put("msg", "卡号不存在或已被激活");
+			}
+		}else{
+			data.put("result", false);
+			data.put("msg", "卡号不正确！");
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	//JSDP-171 XINGJIA 20150608 end
+	/**
+	 * 进行线下充值
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/recharge/doOfflineRecharge")
+	public void doOfflineRecharge() throws Exception {
+		user = getSessionUser();
+		UserIdentify userIdentify = getSessionUserIdentify();
+		model.validIdentifyForRecharge(userIdentify);
+		model.validNewRecharge();
+		double offlineRechargefee = 0; // Global.getValue("online_rechargefee"),
+										// 待完善
+		// double fee = BigDecimalUtil.mul(model.getMoney(),
+		// offlineRechargefee);
+		try {
+			/*
+			 * AccountRecharge recharge = model.prototype(user, fee);
+			 * recharge.setRemark(model.getRemark());
+			 * accountRechargeService.add(recharge);
+			 */
+			printSuccess();
+		} catch (Exception e) {
+			throw new AccountException("充值失败！", 1);
+		}
+	}
+
+	/**
+	 * @author 李建云 投资人充值明细页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member/recharge/log", results = {
+			@Result(name = "log", type = "ftl", location = "/member/recharge/log.html"),
+			@Result(name = "log_firm", type = "ftl", location = "/member_borrow/recharge/log.html"),
+			@Result(name = "log_assure", type = "ftl", location = "/member_guarantee/recharge/log.html"),
+			@Result(name = "log_merchant", type = "ftl", location = "/member_merchant/recharge/log.html")
+			})
+	public String log() throws Exception {
+		user = getSessionUser();
+		AccountRechargeModel recharge = accountRechargeService.getRechargeSummary(getSessionUser().getUserId());
+		Account account = accountService.findByUser(user.getUserId());
+		double rechargeToday = accountRechargeService.getRechargeToday(getSessionUser().getUserId());
+		request.setAttribute("rechargeToday", BigDecimalUtil.round(rechargeToday, 2));
+		request.setAttribute("recharge", recharge);
+		if (UserConstant.USER_SORT_BORROW.equals(user.getUserCache().getUserType())) {
+			  //wcw  借款人充值记录 
+			double usableAmount = BigDecimalUtil.add(account.getBorrowerEnterUsable(),
+					account.getBorrowerRechargeUsable());
+			request.setAttribute("usableAmount", usableAmount);
+			return "log_firm";
+		}else if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			//担保公司充值记录
+			double usableAmount = BigDecimalUtil.add(account.getBorrowerEnterUsable(),
+					account.getBorrowerRechargeUsable());
+			request.setAttribute("usableAmount", usableAmount);
+			//投资人充值记录
+			return "log_assure";	
+		}else  if (UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())) {
+			  //wcw  借款人充值记录 
+			double usableAmount = BigDecimalUtil.add(account.getBorrowerEnterUsable(),
+					account.getBorrowerRechargeUsable());
+			request.setAttribute("usableAmount", usableAmount);
+			return "log_merchant";
+		}
+		request.setAttribute("usableAmount", account.getUsableAccount());
+		return "log";
+	}
+
+	/**
+	 * @author 李建云 投资人充值明细 ajax数据接口
+	 * 
+	 * @return
+	 */
+	@Action("/member/recharge/logList")
+	public void logList() throws Exception {
+		user = getSessionUser();
+		long userId = user.getUserId();
+		PageDataList<AccountRechargeModel> pageDataList = accountRechargeService
+				.list(userId, model);
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	@Override
+	public AccountRechargeModel getModel() {
+		return model;
+	}
+
+}

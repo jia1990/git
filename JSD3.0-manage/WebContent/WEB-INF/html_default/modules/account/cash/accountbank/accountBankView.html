@@ -1,0 +1,215 @@
+<div class="popForm">
+<form id="form" method="post" >
+		<div class="formitm">
+		     <label class="lab">用户名：</label>
+		     <div class="ipt">
+		     	${bank.user.userName!}&nbsp;
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">真实姓名：</label>
+		     <div class="ipt">
+		     	${bank.user.realName!}&nbsp;
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">手机号：</label>
+		     <div class="ipt">
+		     	${bank.user.mobilePhone!}&nbsp;
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">所属银行：</label>
+		     <div class="ipt">
+		     	${bank.bank!}&nbsp;
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">银行卡号：</label>
+		     <div class="ipt">
+		     	<input type="text" name="bankNo" value="${bank.bankNo!}" maxlength="20" autocomplete="off" class="w300 easyui-validatebox" data-options="required: true,validType:'maxLength[25]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">支行名称：</label>
+		     <div class="ipt">
+		     	<input type="text" name="branch" value="${bank.branch!}" maxlength="20" autocomplete="off" class="w300 easyui-validatebox" data-options="required: true,validType:'maxLength[25]'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">所属地区：</label>
+		     <div class="ipt">
+		     	<select name="province" id="province"  data-options="required: true,validType:selectValueRequired['#province']">
+					<option value="">请选择</option>
+				</select> 
+				<select name="city" id="city"  data-options="required: true,validType:selectValueRequired['#city']">
+					<option value="">请选择</option>
+				</select>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">添加时间：</label>
+		     <div class="ipt">
+		     	${bank.addTime?string("yyyy-MM-dd HH:mm:ss")}
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">当前状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="0" disabled="disabled" <#if bank.status == 0> checked="checked"</#if> />关闭
+				<input type="radio" name="status" value="1" disabled="disabled" <#if bank.status == 1> checked="checked"</#if>>启用
+		     </div>
+		</div>
+
+	<input name="id" value="${bank.id!}" type="hidden"/>
+	<input name="accountBankUpdateToken" value="${accountBankUpdateToken!}" type="hidden"/>
+</form>
+</div>
+
+<script type="text/javascript">
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/account/cash/accountbank/updateBank.html');
+		/*
+		 *初始化省份选择框
+		 * */
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html",
+	        dataType:"json",
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		 var province=json[i];
+	        		 if(province.id=="${bank.province!}"){
+	        			 $("#province").append("<option value="+province.id+" selected='selected'>"+province.name+"</option>");
+	        			 getEditCity(${bank.province!});
+	        		 }else{
+	        		 	 $("#province").append("<option value="+province.id+">"+province.name+"</option>");
+	        		 }
+	        	 }
+	        }
+	    });
+		
+		//根据id获取city
+		function getEditCity(id){
+			$.ajax({
+		        type:"get",
+		        url:"/modules/user/user/user/regionList.html",
+		        dataType:"json",	        
+		        data:{
+		        	pId:id
+		        },
+		        success:function(json){
+		        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+		        		  var city=json[i];
+		        		  if(city.id=="${bank.city!}"){
+		        			  
+		        		  	  $("#city").append("<option value="+city.id+" selected='selected'>"+city.name+"</option>");
+		        		  	  
+		        		  	  //getEditArea(${bank.city!});
+		        		  }else{
+		        			  $("#city").append("<option value="+city.id+" >"+city.name+"</option>");
+		        		  }
+		        	 }
+		        }
+		    });
+		}
+		
+		
+		
+		//根据id获取country
+/* 		function  getEditArea(id){
+			//ajax逻辑
+			$.ajax({
+		        type:"get",
+		        url:"/modules/user/user/user/regionList.html",
+		        dataType:"json",	        
+		        data:{
+		        	pId:id
+		        },
+		        success:function(json){
+		        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+		        		  var county=json[i];
+		        		  JSDP-102  fgq 5.14 start freemark非空判断 
+		        		  if(county.id=="${bank.area!}"){
+		        		   JSDP-102  fgq 5.14 end freemark非空判断
+		        			  $("#county").append("<option value="+county.id+" selected='selected'>"+county.name+"</option>");
+		        		  }else{
+		        		      $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+		        		  }
+		        	 }
+		        }
+		    });
+			
+		} */
+		//给省份下拉选择框注册change事件 
+		 $("#province").change(function(){
+			 $("#city").empty();
+			 $("#city").append("<option value=''>请选择</option>");
+			 var id = $(this).val();
+			 if($(this).val() != ''){
+			 	getCity(id);
+			 }else{
+			 	 $("#county").empty();
+				 $("#county").append("<option value=''>请选择</option>");
+			 }
+		 });
+		
+		
+		/*省份发生变化
+		 *AJAX一步后台获取与此省份关联的城市
+		 * 
+		 * */
+		function  getCity(id){
+			//ajax逻辑
+			
+			$.ajax({
+		        type:"get",
+		        url:"/modules/user/user/user/regionList.html",
+		        dataType:"json",	        
+		        data:{
+		        	pId:id
+		        },
+		        success:function(json){
+		        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+		        		  var city=json[i];
+		        		 $("#city").append("<option value="+city.id+">"+city.name+"</option>");
+		        	 }
+		        }
+		    });
+			
+		}
+		
+		/*给城市选择框注册change事件*/
+		$("#city").change(function(){
+			 $("#county").empty();
+			 $("#county").append("<option value=''>请选择</option>");
+			var id = $(this).val();
+			if($(this).val() != ''){
+				getCounty(id);
+			}
+		});
+
+		/*城市发生变化
+		 *AJAX一步后台获取与此市关联的县（区）
+		 * 
+		 * */
+		function getCounty(id){
+			//ajax逻辑
+			$.ajax({
+		        type:"get",
+		        url:"/modules/user/user/user/regionList.html",
+		        dataType:"json",	        
+		        data:{
+		        	pId:id
+		        },
+		        success:function(json){
+		        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+		        		  var county=json[i];
+		        		 $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+		        	 }
+		        }
+		    });
+		}
+</script>

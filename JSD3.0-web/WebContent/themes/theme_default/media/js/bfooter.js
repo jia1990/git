@@ -1,0 +1,19 @@
+define(function(require,exports,modlue){
+	require('jquery');
+	$(function(){
+		$(".c_contact_icon").hover(function(){
+			var index=$(this).index(".c_contact_icon");
+			$(".pophover-content").hide();
+			$(".pophover-content").eq(index).show();
+		},function(){
+			$(".pophover-content").hide();
+		})
+	})
+	$(function(){
+		$(".c_weixin").hover(function(){
+			$(".c_foot_weixin").show();
+		},function(){
+			$(".c_foot_weixin").hide();
+		})
+	});
+});

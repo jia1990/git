@@ -1,0 +1,263 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.web.action.CommonAction;
+
+/**
+ * @描述:VIP会员升级规则
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月15日
+ */
+public class MemberVIPRuleCheck extends RuleCheck {
+
+	private String  upgrade_way;//升级方式(C 现金,S:积分)
+	private CashBuy cash_buy;// 现金购买规则
+	private ScoreConvert score_convert;// 积分兑换规则
+
+	public MemberVIPRuleCheck() {
+
+	}
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+
+
+
+	/**
+	 * 现金购买规则
+	 * */
+	private static  class CashBuy implements java.io.Serializable{
+		private CashBuyProperty member_vip_normal;// 普通VIP
+		private CashBuyProperty member_vip_silver;// 银牌
+		private CashBuyProperty member_vip_gold;// 金牌
+		private CashBuyProperty member_vip_diamond;// 钻石
+
+		public CashBuyProperty getMember_vip_silver() {
+			return member_vip_silver;
+		}
+
+		public void setMember_vip_silver(CashBuyProperty member_vip_silver) {
+			this.member_vip_silver = member_vip_silver;
+		}
+
+		public CashBuyProperty getMember_vip_gold() {
+			return member_vip_gold;
+		}
+
+		public void setMember_vip_gold(CashBuyProperty member_vip_gold) {
+			this.member_vip_gold = member_vip_gold;
+		}
+
+		public CashBuyProperty getMember_vip_diamond() {
+			return member_vip_diamond;
+		}
+
+		public void setMember_vip_diamond(CashBuyProperty member_vip_diamond) {
+			this.member_vip_diamond = member_vip_diamond;
+		}
+
+		public CashBuyProperty getMember_vip_normal() {
+			return member_vip_normal;
+		}
+
+		public void setMember_vip_normal(CashBuyProperty member_vip_normal) {
+			this.member_vip_normal = member_vip_normal;
+		}
+
+	};
+
+	/**
+	 * 积分兑换规则
+	 * */
+	private static class ScoreConvert implements java.io.Serializable{
+		private ScoreConvertProperty member_vip_normal;// 铜牌VIP
+		private ScoreConvertProperty member_vip_silver;// 银牌
+		private ScoreConvertProperty member_vip_gold;// 金牌
+		private ScoreConvertProperty member_vip_diamond;// 钻石
+
+		public ScoreConvertProperty getMember_vip_normal() {
+			return member_vip_normal;
+		}
+
+		public void setMember_vip_normal(ScoreConvertProperty member_vip_normal) {
+			this.member_vip_normal = member_vip_normal;
+		}
+
+		public ScoreConvertProperty getMember_vip_silver() {
+			return member_vip_silver;
+		}
+
+		public void setMember_vip_silver(ScoreConvertProperty member_vip_silver) {
+			this.member_vip_silver = member_vip_silver;
+		}
+
+		public ScoreConvertProperty getMember_vip_gold() {
+			return member_vip_gold;
+		}
+
+		public void setMember_vip_gold(ScoreConvertProperty member_vip_gold) {
+			this.member_vip_gold = member_vip_gold;
+		}
+
+		public ScoreConvertProperty getMember_vip_diamond() {
+			return member_vip_diamond;
+		}
+
+		public void setMember_vip_diamond(
+				ScoreConvertProperty member_vip_diamond) {
+			this.member_vip_diamond = member_vip_diamond;
+		}
+	}
+
+	/**
+	 * 现金购买属性
+	 * 
+	 * */
+	private static class CashBuyProperty implements java.io.Serializable{
+		private String level;
+		private double fee;// 费用
+		private int month;// 年限
+
+		public double getFee() {
+			return fee;
+		}
+
+		public void setFee(double fee) {
+			this.fee = fee;
+		}
+		public String getLevel() {
+			return level;
+		}
+
+		public void setLevel(String level) {
+			this.level = level;
+		}
+
+		public int getMonth() {
+			return month;
+		}
+
+		public void setMonth(int month) {
+			this.month = month;
+		}
+
+	};
+
+	/**
+	 * 积分兑换属性
+	 * */
+	private static class ScoreConvertProperty implements java.io.Serializable{
+		private String level;;
+		private long score;// 积分
+		private int month;//月
+
+		public long getScore() {
+			return score;
+		}
+
+		public void setScore(long score) {
+			this.score = score;
+		}
+
+
+		public String getLevel() {
+			return level;
+		}
+
+		public void setLevel(String level) {
+			this.level = level;
+		}
+
+		public int getMonth() {
+			return month;
+		}
+
+		public void setMonth(int month) {
+			this.month = month;
+		}
+
+	}
+
+	
+
+	public CashBuy getCash_buy() {
+		return cash_buy;
+	}
+
+	public void setCash_buy(CashBuy cash_buy) {
+		this.cash_buy = cash_buy;
+	}
+
+	public ScoreConvert getScore_convert() {
+		return score_convert;
+	}
+
+	public void setScore_convert(ScoreConvert score_convert) {
+		this.score_convert = score_convert;
+	};
+
+
+	/**
+	 * 现金规则
+	 * 
+	 * */
+   public Map<String,Double> cashWayMap(){
+	     Map<String,Double>  map = new HashMap<String,Double>();
+	     map.put(cash_buy.getMember_vip_normal().getLevel(), cash_buy.getMember_vip_normal().getFee());
+	     map.put(cash_buy.getMember_vip_silver().getLevel(), cash_buy.getMember_vip_silver().getFee());
+	     map.put(cash_buy.getMember_vip_gold().getLevel(), cash_buy.getMember_vip_gold().getFee());
+	     map.put(cash_buy.getMember_vip_diamond().getLevel(), cash_buy.getMember_vip_diamond().getFee());
+	     return map;
+   }
+ 
+  /**
+   * 积分规则
+   * 
+   * */
+ public Map<String,Long> scoreWayMap(){
+	 
+     Map<String,Long>  map = new HashMap<String,Long>();
+     map.put(score_convert.getMember_vip_normal().getLevel(), score_convert.getMember_vip_normal().getScore());
+     map.put(score_convert.getMember_vip_silver().getLevel(), score_convert.getMember_vip_silver().getScore());
+     map.put(score_convert.getMember_vip_gold().getLevel(), score_convert.getMember_vip_gold().getScore());
+     map.put(score_convert.getMember_vip_diamond().getLevel(), score_convert.getMember_vip_diamond().getScore());
+    return map;
+ }
+	
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = MemberVIPRuleCheck.class.getResourceAsStream("会员VIP升级规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n","").replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<MemberVIPRuleCheck> clazz = MemberVIPRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		MemberVIPRuleCheck test = (MemberVIPRuleCheck) jsonObj;
+
+	  System.out.println(test.toString());
+
+	}
+
+	public String getUpgrade_way() {
+		return upgrade_way;
+	}
+
+	public void setUpgrade_way(String upgrade_way) {
+		this.upgrade_way = upgrade_way;
+	}
+
+}

@@ -1,0 +1,76 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @描述： 红包活动实体类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月8日
+ */
+@Entity
+@Table(name="t_jsd_activity")
+public class Activity {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name="act_id")
+	private int id ;   // 主键ID
+	private String actName ; // 活动名称
+	private	Date begintime ;  // 开始时间
+	private Date endtime ;  //  结束时间
+	private Date createtime ;  // 创建时间.
+	
+	@ManyToOne
+	@JoinColumn(name="add_user")
+	private Operator operator ;  // 添加人员  
+	
+	
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getActName() {
+		return actName;
+	}
+	public void setActName(String actName) {
+		this.actName = actName;
+	}
+	public Date getBegintime() {
+		return begintime;
+	}
+	public void setBegintime(Date begintime) {
+		this.begintime = begintime;
+	}
+	public Date getEndtime() {
+		return endtime;
+	}
+	public void setEndtime(Date endtime) {
+		this.endtime = endtime;
+	}
+	public Date getCreatetime() {
+		return createtime;
+	}
+	public void setCreatetime(Date createtime) {
+		this.createtime = createtime;
+	}
+
+	public Operator getOperator() {
+		return operator;
+	}
+	public void setOperator(Operator operator) {
+		this.operator = operator;
+	}
+}

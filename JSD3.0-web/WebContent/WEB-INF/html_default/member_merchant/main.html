@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html>
+<#assign nid="account_home" > 
+<#assign web_title='我的账户 - ${webname!}' >
+<#assign web_description='我的账户，${webname!}p2p网贷平台' >
+<#include "../include/resource1.html"> 
+<#include "../common/function.html">
+<#include "../include/resource2.html"> 
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/header_footer.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/account.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/b_money_man.css">
+<body>
+<script>
+
+$(function(){
+	//time		
+		var newda=new Date();
+		newdaHours=newda.getHours();
+		if(newdaHours>=7&&newdaHours<=10){
+			$(".time_text").hide();
+			$(".time_textmorning").show();
+			$(".MemberCenter_con1").css({background: "url(${webroot}${theme_dir}/images/MemberCenter/MemberCenter_03.jpg) no-repeat center 0"})
+		}else if(newdaHours>10&&newdaHours<=13){
+			$(".time_text").hide();
+			$(".time_textnoon").show();
+			$(".MemberCenter_con1").css({background: "url(${webroot}${theme_dir}/images/MemberCenter/MemberCenter_04.jpg) no-repeat center 0"})
+		}else if(newdaHours>13&&newdaHours<=18){
+			$(".time_text").hide();
+			$(".time_textafternoon").show();
+			$(".MemberCenter_con1").css({background: "url(${webroot}${theme_dir}/images/MemberCenter/MemberCenter_04.jpg) no-repeat center 0"})
+		}else{
+			$(".time_text").hide();
+			$(".time_textnight").show();
+			$(".MemberCenter_con1").css({background: "url(${webroot}${theme_dir}/images/MemberCenter/MemberCenter_02.jpg) no-repeat center 0"})
+		}
+		$(window).resize(function(){
+			if($(window).width()>=1911){
+				$(".MemberCenter_con1").css("backgroundSize","100%");
+			}else{
+			     $(".MemberCenter_con1").css("backgroundSize","");
+			}
+		});
+		$(window).resize();
+		$(".c_record li").click(function(){
+			var index=$(this).index(".c_record li");
+			$(".c_record li").removeClass("c_recent_record");
+			$(this).addClass("c_recent_record");	
+			$(".record_conssin_num").css("display","none");
+			$($(".record_conssin_num")[index]).css("display","block");
+		});
+});
+</script>
+<#include  "../include/b_header.html"> 
+<!--header-end-->  
+	<input type="hidden" id="webpath" value="${webroot}${theme_dir}"></input>
+	<input type="hidden" id="webpathnodir" value="${webroot}"></input>
+    <div class="MemberCenter_con1 MemberCenter_con1">
+    <!-- 头部图片信息 -->
+		<div class="MemberCenter_con1in">
+			<div class="y_user_img"><a href="/member_borrow/info/face.html" hidefocus title="编辑资料"><img src="${webroot}/avatar/${session_user.userId?c}.jpg" style="width: 84px;height: 84px;border-radius: 50%;"></a></div>
+		</div>
+	</div>
+	<div class="memberData" >
+	
+	</div>
+	<div class="MemberCenter_con4" style="border: 1px solid #ddd;border-top:none;margin:20px auto 80px;padding:0;padding-bottom:50px;">
+		<ul class="y_jy_title c_record">
+			<li class="c_recent_record">完成订单记录</li>
+			<li>提现记录</li>
+		</ul>
+		<!-- <div class="record_conss c_b_data" style="min-height: 264px;"> -->
+		<!-- <div class="main_order" style="min-height: 264px;"> -->
+		<div class="record_conss c_b_data" style="min-height: 264px;">
+			
+			 <ul class="record_conssin_num record_conssin_num1" style="display:block;"></ul>
+			 <ul class="record_conssin_num record_conssin_num1"> </ul>
+			 <ul class="record_conssin_num "></ul> 
+			
+		</div>
+		
+		
+	</div>
+	<div class="calculatorCpmBox3" style="left: 505px; top: 9px; display: none;">
+		<h1>原因<img src="${webroot}${theme_dir}/images/bid/cpm.png"></h1>
+		<form id="kfForm">
+			<textarea id="reason" name="reason" ></textarea>
+			<#if kefu?exists >
+				<input type="hidden" id="kfid" name="kfid" value="${kefu.id}"/>
+			</#if>			
+			<a class="change_true">提交</a>
+		</form>
+	</div>
+	<div class="calculatorCpmBottom" style="display: none;"></div>
+	<div class="calculatorCpmBox4" style="left: 505px; top: 9px; display: none;">
+		<#if kefu?exists >
+		<h1>更换专属客服<img src="${webroot}${theme_dir}/images/bid/cpm.png"></h1>
+		<#else>
+		<h1>选择专属客服<img src="${webroot}${theme_dir}/images/bid/cpm.png"></h1>
+		</#if>
+		<div class="changeprevious changebutton"></div>
+		<div class="changenext changebutton"></div>
+		<a class="change_true">确定</a>
+		<div class="change_con">
+			<div class="change_conin">
+			</div>
+		</div>
+	</div>
+	<div class="calculatorCpmBottom" style="display: none;"></div>
+<script>
+	seajs.use('${webroot}${theme_dir}/media/js/member_merchant/main');
+</script>
+<#include "../include/footer.html">
+</body>
+</html>

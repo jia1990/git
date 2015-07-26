@@ -1,0 +1,80 @@
+package com.ddtkj.p2psys.core.quartz.cancelBorrow;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+/**
+ * 撤销标业务处理
+ * @author wcw
+ */
+public class CancelBorrowTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(CancelBorrowTask.class);
+
+	@Resource
+	private AutoBorrowService autoBorrowService;
+	
+	
+
+	public AutoBorrowService getAutoBorrowService() {
+		return autoBorrowService;
+	}
+
+	public void setAutoBorrowService(AutoBorrowService autoBorrowService) {
+		this.autoBorrowService = autoBorrowService;
+	}
+
+	public CancelBorrowTask(AutoBorrowService autoBorrowService) {
+		super();
+		task.setName("CancelBorrow.Task");
+		this.autoBorrowService = autoBorrowService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (CancelBorrowJobQueue.CANCEL_BORROW!=null && CancelBorrowJobQueue.CANCEL_BORROW.size() > 0) {
+			CancelBorrowBean tb = CancelBorrowJobQueue.CANCEL_BORROW.peek();
+			if (tb != null) {
+				String result="success";
+				try {
+					autoBorrowService.autoCancel(tb.getBorrow());
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					CancelBorrowJobQueue.CANCEL_BORROW.remove(tb);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				    if(tb.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(tb.getResultFlag(), result);
+			            }
+			        }
+				}
+		}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return CancelBorrowTask.TENDER_STATUS;
+	}
+
+}

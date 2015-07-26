@@ -1,0 +1,168 @@
+package com.ddtkj.p2psys.statistics.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * 
+ * 数据统计实体
+ * 
+ * @author 孙晓勇
+ * @time 2015年4月22日
+ * 
+ * JSDPBUG-99 20150505  sxy
+ */
+@Entity
+@Table(name = "t_jsd_statistics_data")
+public class StatisticsData implements Serializable{
+
+	private static final long serialVersionUID = -8656384737605357790L;
+	
+    // -----------------------------	注册统计(人数)		    -------------------------------------------
+	/** 注册    */
+    public static final String DATA_WAY_REGISTER = "register"; 								// 注册
+    /** PC注册    */
+    public static final String DATA_WAY_REGISTER_PC = "register_way_pc"; 					// PC注册
+    /** 手机注册    */
+    public static final String DATA_WAY_REGISTER_PHONE = "register_way_phone"; 				// 手机注册
+    
+    // -----------------------------	投资统计(用户   + 金额)		-------------------------------------------
+    /** 投资人数    */
+    public static final String DATA_WAY_TENDER_USER = "tender_user";						// 投资人数
+    /** 网站投资人数 */
+    public static final String DATA_WAY_TENDER_USER_WEB = "tender_user_web";				// 网站投资人数
+    /** 自动投资人数 */
+    public static final String DATA_WAY_TENDER_USER_AUTO = "tender_user_auto";				// 自动投资人数
+    /** 手机投资人数 */
+    public static final String DATA_WAY_TENDER_USER_PHONE = "tender_user_phone";			// 手机投资人数
+    
+    /** 投资金额    */
+    public static final String DATA_WAY_TENDER_MONEY = "tender_money";						// 投资金额
+    /** 网站投资金额    */
+    public static final String DATA_WAY_TENDER_MONEY_WEB = "tender_money_web";				// 网站投资金额
+    /** 自动投资金额    */
+    public static final String DATA_WAY_TENDER_MONEY_AUTO = "tender_money_auto";			// 自动投资金额
+    /** 手机投资金额    */
+    public static final String DATA_WAY_TENDER_MONEY_PHONE = "tender_money_phone";			// 手机投资金额
+    
+    // -----------------------------	充值统计(用户    + 金额)	-------------------------------------------
+    /** 充值用户    */
+    public static final String DATA_WAY_RECHARGE_USER = "recharge_user";					// 充值用户
+    /** 第三方充值用户    */
+    public static final String DATA_WAY_RECHARGE_USER_ONLINE = "recharge_user_online";		// 第三方充值用户
+    /** 转账充值用户(云购卡充值) */
+    public static final String DATA_WAY_RECHARGE_USER_CHANGE = "recharge_user_change";		// 转账充值用户
+    /** 平台转账充值用户    */
+    public static final String DATA_WAY_RECHARGE_USER_STAGE = "recharge_user_stage";		// 平台转账充值用户
+    
+    /** 充值金额    */
+    public static final String DATA_WAY_RECHARGE_MONEY = "recharge_money";					// 充值金额
+    /** 第三方充值金额    */
+    public static final String DATA_WAY_RECHARGE_MONEY_ONLINE = "recharge_money_online";	// 第三方充值金额
+    /** 转账充值金额(云购卡充值)    */
+    public static final String DATA_WAY_RECHARGE_MONEY_CHANGE = "recharge_money_change";	// 转账充值金额
+    /** 平台转账充值金额    */
+    public static final String DATA_WAY_RECHARGE_MONEY_STAGE = "recharge_money_stage";		// 平台转账充值金额
+    
+    // -----------------------------	提现统计(用户    + 金额)	-------------------------------------------
+    /** 提现用户    */
+    public static final String DATA_WAY_DRAW_USER = "draw_user";							// 提现用户
+    /** 提现金额    */
+    public static final String DATA_WAY_DRAW_MONEY = "draw_money";							// 提现金额
+    
+	// -----------------------------	认证统计(用户    + 金额)	-------------------------------------------
+    /** 三项认证    */
+    public static final String DATA_WAY_PROVE_ALL = "prove_all";					// 全部认证
+    /** 实名认证    */
+    public static final String DATA_WAY_PROVE_REALNAME = "prove_realname";			// 实名认证
+    /** 手机认证    */
+    public static final String DATA_WAY_PROVE_PHONE = "prove_phone";				// 手机认证
+    /** 邮箱认证    */
+    public static final String DATA_WAY_PROVE_EMAIL = "prove_email";				// 邮箱认证
+    
+    // -----------------------------	债权统计(金额)	        -------------------------------------------
+    /** 债权转让——售出    */
+    public static final String DATA_WAY_CREADIT_MONEY_OUT = "creadit_money_out";	// 债权转让 —— 售出
+    /** 债权转让——买入    */
+    public static final String DATA_WAY_CREADIT_MONEY_IN = "creadit_money_in";		// 债权转让 —— 买入
+    
+    // -----------------------------	                    时间                              	-------------------------------------------
+    /** 全部   */
+    public static final String DATA_TIME_ALL = "0";									// 全部
+    /** 昨日    */
+    public static final String DATA_TIME_YESTERDAY = "1";							// 昨日
+    /** 今日    */
+    public static final String DATA_TIME_TODAY = "2";								// 今日
+    /** 一周内    */
+    public static final String DATA_TIME_WEEK = "3"; 								// 一周内
+    /** 本月    */
+    public static final String DATA_TIME_MONTH = "4";								// 本月
+    /** 上月    */
+    public static final String DATA_TIME_MONTH_UP = "5";							// 上月
+    /** 今年    */
+    public static final String DATA_TIME_YEAR = "6";								// 今年
+    /** 去年    */
+    public static final String DATA_TIME_YEAR_LAST = "7";							// 去年
+    /** 时间段    */
+    public static final String DATA_TIME_AREA = "99";								// 时间段
+    
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;				// id
+	
+	private String title;			// 统计名称
+	private String sign;			// 标识
+	private String timeType;		// 时间类型：
+	private String count;			// 数据
+	private Date updateTime;		// 更新时间
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getTitle() {
+		return title;
+	}
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	public String getSign() {
+		return sign;
+	}
+	public void setSign(String sign) {
+		this.sign = sign;
+	}
+	public String getTimeType() {
+		return timeType;
+	}
+	public void setTimeType(String timeType) {
+		this.timeType = timeType;
+	}
+	public String getCount() {
+		return count;
+	}
+	public void setCount(String count) {
+		this.count = count;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	
+	
+	
+	
+	
+	
+}

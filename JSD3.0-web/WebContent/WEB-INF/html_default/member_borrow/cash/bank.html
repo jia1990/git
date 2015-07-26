@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#assign web_title='银行账户 - ${webname!}'>
+<#assign web_description='银行账户，${webname!}p2p网贷平台'>
+<#include "../../include/resource.html">
+<#include "../../include/resource1.html">
+<head>
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<style>
+.y_alertsBoxCon{color: #555555;font-size: 16px;line-height: 30px;}
+.y_alertsBoxCon span{color: #12adff;font-size: 16px;}
+.y_alertsBoxCon a{font-size: 14px;margin-left:180px;display:block;background:#12adff;width:140px;height:36px;color:#fff;text-align:center;line-height:36px;margin-top:10px;}
+.c_deal_content .y_account_nav dd span.c_member_icon{background:url(${webroot}${theme_dir}/images/contact/vip.png) no-repeat 0 2px;}
+.c_deal_content .y_account_nav .c_invest_this span.c_member_icon{background-position:0 -20px;}
+
+.is_del{border-bottom: 1px solid #ddd;color: #0697da;display: block;font-size: 16px;height: 40px;line-height: 40px;padding-left: 15px;}
+.fileconfirm{width:400px;height:200px;}
+.address_close{background: url("/themes/theme_default/images/authentications.png") repeat scroll 0 0 rgba(0, 0, 0, 0);cursor: pointer;display: block;height: 38px;position: absolute; right: -15px; top: -15px;width: 34px;}
+.del_bank{height:80px;line-height:80px;text-align:center;font-size:18px;}
+.fileconfirmbtn a{display:inline-block;height:30px;line-height:30px;margin-top:10px;text-align:center;background:#12adff;color:#fff;border-radius:2px;}
+
+</style>
+<title>晋商贷</title>
+</head>
+ <body>
+ <#assign nid="my_account"> 
+  <#include "../../include/b_header.html">
+  <#include "../../common/function.html">
+    <p  class="pss" style="display:none;">尊敬的用户，由于银行卡绑定与监管账户有关联，请确保<span>监管账户开通</span>，否则会导致银行卡绑定失败，请先开通监管账户。
+	<br/>
+	<a href="${webroot}/member_borrow/security/realNameIdentify.html">马上去开通</a>
+	</p>
+	<!--  -->
+	<div class="c_deal">
+		<div class="c_deal_content" style="overflow: hidden;">
+			<!-- 左侧导航 -->
+			<#assign mid="m_bankinfo" >
+			<#include "../account_menu.html">
+			<!-- 右侧 -->
+			<div class="c_deal_record y_account_right y_account_password_right">
+				<!-- 账户设置 -->
+				<div class="c_detail_title">
+					<a href="/member/useridentify/identify.html" class="c_detail_back">返回</a>
+					<span>我的银行卡</span>
+					<b></b>
+				</div>
+				<#if bankList?? && bankList?size gt 0>
+				<#list bankList as item>
+				<div class="y_add_bank_shows">
+					<h1 class="y_add_bank_showsh1" style="height:90px;padding-top: 10px;">
+					<#if dictList?? && dictList?size gt 0>
+					<#list dictList as itemDict>
+					<#if itemDict.value=item.bank>	
+					<li><img  class="imgBankName" data-val="${item.value!}"  src="${webroot}${theme_dir}/images/bank/${itemDict.value!}.jpg"><span></span></li>
+					 </#if>
+					</#list>
+					</#if>
+					<a href="javascript:void(0)"  style="line-height:10px;">${item.hideBankNo!""}</a>
+					</h1>
+					<span class="y_add_bank_showsspan">
+					<a href="javascript:;" data-value="${item.id}" id="resetBank">删除</a>
+					</span>
+					
+				</div>
+				</#list>		
+				<#if bankList.size() lt 3>
+				<a href="addBankPage.html" class="y_add_bank_as">添加银行卡</a>
+				</#if>
+				<#else>
+					<ul class="cardList">
+						<li class="addCard"><a href="addBankPage.html" title="添加银行卡"><i class="iconfont">&#xe613;</i>添加银行卡</a></li>
+					</ul>
+				</#if>
+			</div>
+		</div>
+	</div>
+		<#include "../../include/b_foot.html">
+ </body>
+<script>
+	seajs.use("${webroot}${theme_dir}/media/js/member_borrow/cash_bank")
+</script>
+</html>

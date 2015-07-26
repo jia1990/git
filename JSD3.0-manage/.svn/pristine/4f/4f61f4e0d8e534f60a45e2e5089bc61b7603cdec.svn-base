@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>系统参数管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = false;
+</script>
+<script type="text/javascript">
+	$.canGrant = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  480;
+	var winHeight = 360;
+	var addTitle = "添加";
+	var addUrl =  "/modules/system/sconfig/sconfigAddPage.html";
+	var editTitle = "编辑";
+	var editUrl =  "/modules/system/sconfig/sconfigEditPage.html";
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'sconfigList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 50, checkbox : false},
+			{ field: 'nid', title: '标识', width: 150, sortable:false, editor:{type:'validatebox', options:{'required':true}}},
+			{ field: 'name', title: '名称', width: 150, sortable:false, editor:{type:'validatebox', options:{'required':true}}},
+			{ field: 'value', title: '值', width: 220, sortable:false,
+				editor : {type : 'validatebox',
+					options : {
+						'required' : true,
+						'missingMessage' : '请输入相应的值'
+					}
+				}	
+			}, 
+			{ field: 'type', title: '类型', width: 80, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 1){
+						return "基础数据";
+					} else if(value == 2){
+						return "统计数据";
+					} else {
+						return value;
+					}
+				}
+			},
+			{ field: 'status', title: '状态', width: 50, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 1){
+						return "启用";
+					} else if(value == 0){
+						return "禁用";
+					}
+				}
+			},
+			{	field : 'action',
+				title : '操作',
+				width :100,
+				formatter : function(value, row, index) {
+					var str = '';
+					
+					if(row.editing){
+						
+						str += '<a href="#" onclick="saverow('+index+',this)">保存</a>&nbsp;';
+					}
+					if ($.canAdd) {
+						 
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.addFun('+addWinParmeters+');" src="{1}" title="添加"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil_add.png');
+					}
+					str += '&nbsp;';
+					if ($.canEdit) {
+						 str += "<@secAuthorizeUrl value='/parameterEditBtn.html' >";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+						 str += "</@secAuthorizeUrl>";
+					}
+					str += '&nbsp;';
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			}
+		});
+	});	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>标识：<input type="text" name="nid" autocomplete="off"/></li>
+            		<li>名称：<input type="text" name="name" autocomplete="off"/></li>
+            		<li>类型：
+						<select name="type" class="type">
+							<option value="99" selected="selected">全部</option>
+							<option value="1">基础数据</option>
+							<option value="0">其他</option>
+						</select>
+					</li>
+					<li>状态：
+						<select name="status" class="type">
+							<option value="99" selected="selected">全部</option>
+							<option value="1">启用</option>
+							<option value="0">禁用</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<@secAuthorizeUrl value='/parameterAddBtn.html' >
+	<div id="toolbar" style="display: none;">		
+		<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>				
+	</div>
+	</@secAuthorizeUrl>
+<div id="menu" class="easyui-menu" style="width: 120px; display: none;">		
+	<div onclick="$.fn.dataGridOptions.addFun($(this).attr('node-id'),addTitle,winWidth,winHeight,addUrl);" data-options="iconCls:'pencil_add'">增加</div>		
+	<div onclick="$.fn.dataGridOptions.editFun($(this).attr('node-id'),editTitle,winWidth,winHeight,editUrl);" data-options="iconCls:'pencil'">编辑</div>		
+</div>
+</body>
+</html>

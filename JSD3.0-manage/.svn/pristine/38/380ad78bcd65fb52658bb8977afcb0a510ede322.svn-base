@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>文章管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#999933}
+</style>
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = true;
+</script>
+<script>
+	function articleUpdate(id,param,value){
+		$.ajax({
+			url : '/modules/column/article/articleUpdate.html',
+			dataType: "json",
+			data: {id:id,type:param,value:value},
+			success : function(data){
+				if(data.result){
+					$('#dataGrid').datagrid('reload'); 
+					//alert(data.msg)
+					parent.$.messager.alert('提示', data.msg, 'info');
+				}
+			}
+		});
+	}
+	
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  950;
+	var winHeight = 600;
+	var addTitle = "添加文章";
+	var addUrl =  "/modules/column/article/articleAddPage.html";
+	var editTitle = "编辑文章";
+	var editUrl =  "/modules/column/article/articleEditPage.html";
+	var deleteUrl = "/modules/column/article/articleDel.html";	//删除记录接口地址
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	
+	var viewUrl = "${weburl}/article/detail.html"
+	var viewWinParmeters = "'{0}','" + viewUrl + "'"+",'{2}'";
+	
+	var viewTitle4 = "预览图片";
+	var winWidth4 =  800;
+	var winHeight4 = 500;
+	var viewUrl4 =  "/modules/column/article/getPicPage.html";
+	var viewWinParmeters4 = "'{0}','"+viewTitle4+"',"+winWidth4+","+winHeight4+",'"+viewUrl4+"'";
+	
+	
+	
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'articleList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect:true,
+			resizable : false,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 50,fixed:true, checkbox : false},
+			{ field: 'name', title: '名称', width: 80, sortable : false},
+			//{ field: 'title', title: '标题', width: 100, sortable : false},
+			{ field: 'title', title: '标题', width: 100, sortable : false,
+				formatter:function(value, row, index){
+					var str = "";
+					str += $.formatString('<a onclick="$.fn.dataGridOptions.viewFun('+viewWinParmeters4+');" src="{1}" title="预览">'+row.title+'</a>', row.id);
+					
+					return str;
+				}
+			
+			},
+			{ field: 'nid', title: '类型', width: 100, sortable:true},
+			{ field: 'status', title: '状态', width: 50, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 0){
+						return "<a onclick='articleUpdate("+row.id+",\"status\","+value+")'>隐藏</a>";
+					}else if(value == 1){
+						return "<a onclick='articleUpdate("+row.id+",\"status\","+value+")'>显示</a>";
+					}
+					return "";
+				}
+			},
+			/* { field: 'isRecommend', title: '是否推荐', width: 40, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 0){
+						return "<a onclick='articleUpdate("+row.id+",\"isRecommend\","+value+")'>否</a>";
+					}else if(value == 1){
+						return "<a onclick='articleUpdate("+row.id+",\"isRecommend\","+value+")'>是</a>";
+					}
+					return "";
+				}	
+			},
+			{ field: 'isTop', title: '是否置顶', width: 40, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 0){
+						return "<a onclick='articleUpdate("+row.id+",\"isTop\","+value+")'>否</a>";
+					}else if(value == 1){
+						return "<a onclick='articleUpdate("+row.id+",\"isTop\","+value+")'>是</a>";
+					}
+					return "";
+				}	
+			}, */
+			//{ field: 'introduction', title: '简介', width: 200, sortable:false },
+			// { field: 'content', title: '内容', width: 200, sortable:false },
+			//{ field: 'clicks', title: '点击量', width: 50, sortable:false },
+			{ field: 'sort', title: '排序', width: 50, sortable:false },
+			{ field: 'addTime', title: '添加时间', width: 90,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{field:'updateUserName', title:'操作人',width: 100},
+			{field:'updateTime', title:'修改时间',width: 100,formatter:function(value, row, index){
+				if (value){
+					return getLocalTime(value,4);
+				} else {
+					return "";
+				}
+			}},
+			{	field : 'action',
+				title : '操作',
+				fixed: true,
+				width :90,
+				formatter : function(value, row, index) {
+					var str = '';
+					if ($.canEdit) {
+						str += "<@secAuthorizeUrl value='/article/articleEditBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					str += '&nbsp;';
+					if ($.canDelete) {
+						str += "<@secAuthorizeUrl value='/article/articleDelBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					str += '&nbsp;';
+					if(row.status == 1){
+						
+						// 若为晋商贷视频、法律援助团队、团队介绍、管理团队、合作伙伴、办公环境、公司荣誉 、事务所 、账户提示、风险备用金,则不显示
+						if(row.nid != 'jsdVideo' && row.nid != 'lawTeam' && row.nid != 'teamIntroduc' && row.nid != 'manageTeam' && row.nid != 'partners' &&  row.nid != 'officeEnvir' &&  row.nid != 'honor' &&  row.nid != 'lawOffice' &&  row.nid != 'chongzhi' &&  row.nid != 'tixian'){
+							str += "<@secAuthorizeUrl value='/article/articlePreviewBtn.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.viewArticleFun('+viewWinParmeters+');" src="{1}" title="预览" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/link.png', row.nid);
+							str += "</@secAuthorizeUrl>";
+						}
+					}
+					str += '&nbsp;';					
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			},
+			onRowContextMenu : function(e, rowIndex, rowData) {
+				e.preventDefault();
+				$(this).datagrid('unselectAll').datagrid('uncheckAll');
+				$(this).datagrid('selectRow', rowIndex);
+				$('#menu').menu('show', {
+					left : e.pageX,
+					top : e.pageY
+				});
+			}
+		});
+	});
+</script>
+<script>
+$(function(){
+/* 	$('#siteNewDialog').dialog({   
+		title:'栏目',
+		width:320,
+		height:398,
+		modal: true
+	}); 
+	$('#siteNewDialog').dialog("close");
+	$('#siteNewName').click(function(){
+		$('#siteNewDialog').dialog("open");
+		$('#siteNewTree').tree({
+			url:'/modules/column/article/articleTreeList.html',
+			onClick: function(node){
+				$('#siteId').val(node.id);
+				$('#siteNewName').val(node.text);
+				$('#siteNewDialog').dialog("close");
+			}
+		});
+	});
+	 */
+})
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>文章类型：
+		            <select name="siteId" class="type">
+		            <option value="" selected="selected">全部</option>
+					<#list siteList as item>
+						<option value="${item.id}">
+						${item.name}
+						</option>
+					</#list>
+					</select>
+            					
+            		</li>
+            		<li>标题：<input type="text" name="title" autocomplete="off"/></li>
+            		<li>状态：
+	                	<select name="status" class="type">
+							<option value="-1" selected="selected">全部</option>
+							<option value="1">显示</option>
+							<option value="2">隐藏</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');" ondragstart="return false">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');" ondragstart="return false">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">	
+			<@secAuthorizeUrl value='/article/articleAddBtn.html'>	
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn" ondragstart="return false">添加</a>				
+			</@secAuthorizeUrl>
+	</div>
+	<div id="siteNewDialog">
+		<ul id="siteNewTree"></ul>
+	</div>
+</body>
+</html>

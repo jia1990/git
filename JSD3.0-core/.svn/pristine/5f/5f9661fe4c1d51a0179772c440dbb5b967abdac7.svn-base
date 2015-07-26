@@ -1,0 +1,229 @@
+package com.ddtkj.p2psys.activity.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.activity.dao.ActivityPublishDao;
+import com.ddtkj.p2psys.activity.domain.ActivityPublish;
+import com.ddtkj.p2psys.activity.model.ActivityPublishModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+
+
+@Repository("ActivityDao")
+public class ActivityPublishDaoImpl extends BaseDaoImpl<ActivityPublish> implements ActivityPublishDao {
+
+	@Override
+	public List<ActivityPublishModel> listBySize(String type, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("type", type);
+		param.addParam("status", 1);
+		Date date = new Date();
+		param.addAddFilter("onlineTime", Operators.LT, date, "nolineTime",
+				Operators.GT, date);
+		param.addOrder(OrderType.DESC, "isTop");
+		param.addOrder(OrderType.DESC, "isRecommend");
+		param.addOrder(OrderType.ASC, "sort");
+		param.addOrder(OrderType.DESC, "id");
+		List<ActivityPublish> list = super.findByCriteria(param, 0, size);
+		List<ActivityPublishModel> mlist = new ArrayList<ActivityPublishModel>();
+		for (ActivityPublish ActivityNew : list) {
+			ActivityPublishModel anm = ActivityPublishModel.instance(ActivityNew);
+			
+			anm.setPicPath(Global.getValue("adminurl")
+					+ ActivityNew.getPicPath());
+			
+			mlist.add(anm);
+		}
+		return mlist;
+	}
+
+	/**
+	 * 
+	 * 分页查询
+	 * 
+	 */
+	@Override
+	public PageDataList<ActivityPublishModel> list(String type, int page) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("type", type);
+		param.addParam("status", 1);
+		param.addOrder(OrderType.DESC, "isTop");
+		param.addOrder(OrderType.DESC, "isRecommend");
+		param.addOrder(OrderType.ASC, "sort");
+		param.addOrder(OrderType.DESC, "id");
+		param.addPage(page);
+		PageDataList<ActivityPublish> pageDataList = super.findPageList(param);
+		PageDataList<ActivityPublishModel> pageDataList_ = new PageDataList<ActivityPublishModel>();
+		List<ActivityPublishModel> list = new ArrayList<ActivityPublishModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				ActivityPublish an = (ActivityPublish) pageDataList.getList().get(i);
+				ActivityPublishModel anm = ActivityPublishModel.instance(an);
+				
+				list.add(anm);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+
+	/**
+	 * 
+	 * 更新活动信息
+	 * 
+	 */
+	@Override
+	public void addClick(long id) throws Exception {
+		ActivityPublish activity = super.find(id);
+		activity.setClicks(activity.getClicks() + 1);
+		super.update(activity);
+	}
+
+	
+	/**
+	 * 查询所有活动信息
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * 
+	 */
+	@Override
+	public PageDataList<ActivityPublishModel> activityList(ActivityPublishModel model,
+			int pageNumber, int pageSize) {
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber,
+				pageSize);
+		if (model.getStatus() != -1 && model.getStatus() != 0) {
+			if (model.getStatus() == 2) {
+				param.addParam("status", 2);
+			} else {
+				param.addParam("status", model.getStatus());
+			}
+		}
+		if (!StringUtil.isBlank(model.getTitle())) {
+			param.addParam("title", Operators.LIKE, model.getTitle());
+		}
+		
+		// 类型
+		if (!StringUtil.isBlank(model.getType())) {
+			param.addParam("type", model.getType());
+		}
+		Date date = new Date();
+		
+		//DateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		//date = DateUtil.getDateByFullDateStr(dateformat.format(date));
+		
+		// 活动状态
+		if (!StringUtil.isBlank(model.getActivityStatus()) && "" != model.getActivityStatus()) {
+			// 活动未开始
+			if(model.getActivityStatus().equals("0")){
+				//param.addAddFilter("onlineTime", Operators.GT, date);
+				param.addParam("onlineTime", Operators.GT, date);
+			}
+			// 活动进行中
+			if (model.getActivityStatus().equals("1")) {
+				//param.addAddFilter("nolineTime", Operators.GT, date);
+				param.addParam("nolineTime", Operators.GT, date);
+			}
+			// 活动已结束
+			if (model.getActivityStatus().equals("2")) {
+				//param.addAddFilter("nolineTime", Operators.LT, date);
+				param.addParam("nolineTime", Operators.LT, date);
+			}
+			
+		}
+		param.addParam("isDelete", false);
+		param.addOrder(OrderType.DESC, "isTop");
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<ActivityPublish> pageDataList = super.findPageList(param);
+		PageDataList<ActivityPublishModel> pageDataList_ = new PageDataList<ActivityPublishModel>();
+		List<ActivityPublishModel> list = new ArrayList<ActivityPublishModel>();
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				ActivityPublish activity = (ActivityPublish) pageDataList.getList().get(i);
+
+				ActivityPublishModel activityNewModel = ActivityPublishModel.instance(activity);
+				
+				Date nowDate = new Date();
+				
+				Date onlineTime = activityNewModel.getOnlineTime();
+				Date nolineTime = activityNewModel.getNolineTime();
+				
+				if (nowDate.before(onlineTime)){
+					activityNewModel.setActivityStatus("未开始");
+				}
+				if (nowDate.after(nolineTime)) {
+					activityNewModel.setActivityStatus("已结束");
+				}
+				if ((onlineTime.before(nowDate) || onlineTime.compareTo(nowDate) == 0) && (nolineTime.after(nowDate) || onlineTime.compareTo(nowDate)==0)) {
+					activityNewModel.setActivityStatus("进行中");
+				}
+				
+				activityNewModel.setPicPath(Global.getValue("adminurl")
+						+ activity.getPicPath());
+				
+				list.add(activityNewModel);
+			}
+		}
+
+		pageDataList_.setList(list);
+		pageDataList_.setPage(pageDataList.getPage());
+		return pageDataList_;
+	}
+	
+	/**
+	 * 
+	 * 更新活动信息
+	 * 
+	 */
+	@Override
+	public void activityEdit(ActivityPublish Activity) {
+		String jpql = "Update Activity set type = :type, title = :title,status = :status,sort = :sort,"
+				+ "isRecommend = :isRecommend, isTop = :isTop,introduction = :introduction,content = :content where id = :id";
+		String[] names = new String[] { "type", "title", "status", "sort",
+				"isRecommend", "isTop", "introduction", "content", "id" };
+		Object[] values = new Object[] { Activity.getType(),
+				Activity.getTitle(), Activity.getStatus(),
+				Activity.getSort(), Activity.getIsRecommend(),
+				Activity.getIsTop(), Activity.getIntroduction(),
+				Activity.getContent(), Activity.getId() };
+		super.updateByJpql(jpql, names, values);
+
+	}
+
+	/**
+	 * 查询下一篇活动信息
+	 */
+	@Override
+	public ActivityPublish findNextActivity(ActivityPublish Activity) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("type", Activity.getType());
+		param.addParam("status", 1);
+		param.addParam("id", Operators.GT, Activity.getId());
+		param.addPage(1, 1);
+		return findByCriteriaForUnique(param);
+	}
+
+	
+	/**
+	 * 查询上一篇活动信息
+	 */
+	@Override
+	public ActivityPublish findPrevActivity(ActivityPublish activity) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("type", activity.getType());
+		param.addParam("status", 1);
+		param.addParam("id", Operators.LT, activity.getId());
+		param.addPage(1, 1);
+		return findByCriteriaForUnique(param);
+	}
+
+}

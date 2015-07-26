@@ -1,0 +1,166 @@
+package com.rongdu.p2psys.user.dao;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.user.domain.UserOff;
+import com.ddtkj.p2psys.user.model.UserModel;
+
+/**
+ * @author xx
+ * @version 2.0
+ * @since 2014年1月8日
+ */
+public interface UserOffDao extends BaseDao<UserOff> {
+
+	/**
+	 * 根据用户名获取用户ID
+	 * 
+	 * @param username
+	 * @return
+	 * @throws Exception
+	 */
+	long getUserIdByUserName(String username) throws Exception;
+
+	/**
+	 * 统计注册数量
+	 * 
+	 * @return
+	 */
+	int count(QueryParam param);
+
+	/**
+	 * 根据用户名计数
+	 * 
+	 * @param username
+	 * @return
+	 */
+	int countByUserName(String username);
+	/**
+	 * 根据用户名计数
+	 * 
+	 * @param username
+	 * @return
+	 */
+	int countByNickName(String nickName);
+
+	/**
+	 * 根据身份证计数
+	 * 
+	 * @param cardId
+	 * @return
+	 */
+	int countByCardId(String cardId);
+	
+    /**
+     * 根据手机计数
+     * 
+     * @param mobilePhone
+     * @return
+     */
+    int countByMobilePhone(String mobilePhone);
+    
+    /**
+     * 根据邮箱计数 注意:已经邮箱激活的用户
+     * 
+     * @param email
+     * @return
+     */
+    int countByEmail(String email);
+
+	/**
+	 * 修改用户密码
+	 * 
+	 * @param user
+	 * @return User
+	 */
+	User modifyPwd(User user);
+
+	/**
+	 * 修改用户交易密码
+	 * 
+	 * @param user
+	 * @return User
+	 */
+	User modifyPaypwd(User user);
+
+	/**
+	 * 实名认证更新真实姓名
+	 * 
+	 * @param userId real_name
+	 * @return
+	 */
+	void modifyRealname(long userId, String real_name);
+	
+	/**
+     * 更新用户名
+     * 
+     * @param userId 用户ID
+     *  @param userName 用户名
+     * @return
+     */
+    void modifyUsername(long userId, String userName);
+
+	/**
+	 * 更新邮箱
+	 * 
+	 * @param userId
+	 */
+	void modifyEmail(long userId, String email);
+
+	/**
+	 * 手机认证更新手机号码
+	 * 
+	 * @param userId
+	 */
+	void modifyPhone(long userId, String phone);
+
+	/**
+	 * 获得用户清单列表
+	 * 
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<UserModel> userList(int pageNumber, int pageSize, UserModel model);
+
+	/**
+	 * 通过用户名获得User
+	 * 
+	 * @param userName
+	 * @return
+	 */
+	User getUserByUserName(String userName);
+
+	/**
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	User getUserById(long userId);
+	/**
+	 * 修改证件号
+	 * @param userId 用户ID，
+	 * @param card_id  证件号
+	 */
+	void modify(long userId, String card_id);
+	/**
+	 * 修改用户第三方账户
+	 * @param userId  用户ID
+	 * @param api_id 第三方托管编号
+	 * @param api_status 第三方认证状态
+	 * @param apiUserCustId  第三方账户（用于登录第三方）
+	 */
+	void modifyApi(long userId, String api_id, String api_status,String apiUserCustId);
+	
+    /**
+     * 查找已开通第三方支付的企业账户
+     * @param pageNumber
+     * @param pageSize
+     * @return
+     */
+    PageDataList<User> findUserList(int pageNumber, int pageSize);
+    
+}

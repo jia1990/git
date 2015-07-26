@@ -1,0 +1,47 @@
+package com.rongdu.p2psys.score.dao;
+
+import java.util.List;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.model.ScoreModel;
+
+public interface ScoreDao extends BaseDao<Score> {
+	
+	/**
+	 * 修改用户积分
+	 * @param userId 用户ID
+	 * @param totalScore 总积分
+	 * @param validScore 有效积分
+	 * @param expenseScore 消费积分
+	 * @param freezeScore 冻结积分
+	 * @return 修改是否成功
+	 */
+	public boolean updateScore(long userId, int totalScore, int validScore, int expenseScore, int freezeScore);
+	
+	/**
+	 * 根据用户ID查询用户积分信息
+	 * @param userId 用户ID
+	 * @return 用户积分信息
+	 */
+	public Score getScoreByUserId(long userId);
+	
+	
+	/**
+	 * 修改用户积分
+	 * @param  userId
+	 * @param  value 操作积分
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	public int editScoreExpenseValue(long userId, int value);
+	/**
+	 * 导出excel使用sql
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 xingjia 2015-05-15 start
+	List<Score> excelScoreList(ScoreModel model);
+	//JSDP-116 xingjia 2015-05-15 start
+	
+}

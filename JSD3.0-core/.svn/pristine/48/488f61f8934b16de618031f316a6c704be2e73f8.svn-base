@@ -1,0 +1,187 @@
+package com.rongdu.p2psys.core.disruptor;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoTenderService;
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.ddtkj.p2psys.member.service.MemberVipAwardService;
+import com.ddtkj.p2psys.member.service.MemberVipService;
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.lmax.disruptor.EventHandler;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.service.UserCacheService;
+
+public class CEventHandler implements EventHandler<ValueEvent> {
+	Logger logger = Logger.getLogger(CEventHandler.class);
+	@Override
+	public void onEvent(ValueEvent event, long sequence, boolean endOfBatch) throws Exception {
+		//@param event  事件
+	    //@param sequence   事件正在处理
+	    //@param endOfBatch 是否是最后一个事件在处理
+		String result = "success";
+        boolean isSystemMessage = false;
+	    try {
+			AutoBorrowService autoBorrowService = (AutoBorrowService) BeanUtil.getBean("autoBorrowService");
+			
+			if ("repay".equals(event.getOperate())) {
+			    isSystemMessage = true;
+			    //还款
+			    YmdService ymdService=(YmdService) BeanUtil.getBean("ymdService");
+				ymdService.repaySkip(event.getBorrowRepayment(), (byte)0, event.getResultFlag());
+				result=null;
+			}
+			else if ("repaySuccess".equals(event.getOperate())) {
+			    isSystemMessage = true;
+			    // 还款成功
+				autoBorrowService.autoBorrowRepay(event.getBorrowRepayment());
+				result="还款成功";
+				
+			}else if("doInstantLiveBorrowRepay".equals(event.getOperate())){
+				//即时生息自动还款
+				isSystemMessage = true;
+				autoBorrowService.autoInstantLiveBorrowRepay(event.getBorrowCollection());
+			} else if ("borrowAutoTender".equals(event.getOperate())) {
+				// 自动投标
+			    isSystemMessage = true;
+				BorrowAutoTenderService borrowAutoTenderService = (BorrowAutoTenderService) BeanUtil.getBean("borrowAutoTenderService");
+			    borrowAutoTenderService.autoDealTender(event.getBorrowModel());
+			} else if ("autoVerifyFullSuccess".equals(event.getOperate())) {
+            	// 复审通过
+			    isSystemMessage = true;
+				autoBorrowService.autoVerifyFullSuccess(event.getBorrowModel());
+				result="操作成功";
+			} else if ("autoVerifyFullFail".equals(event.getOperate())) {
+				// 复审不通过
+			    isSystemMessage = true;
+				autoBorrowService.autoVerifyFullFail(event.getBorrowModel());
+				result="操作成功";
+			} else if ("autoCancel".equals(event.getOperate())) {
+				//管理员撤标
+			    isSystemMessage = true;
+				autoBorrowService.autoCancel(event.getBorrow());
+				result="操作成功";
+			} /*else if ("verifyDrawBack".equals(event.getOperate())) {
+				//提现汇潮请求回调处理
+			    isSystemMessage = true;
+				AccountDrawCashService accountDrawCashService = (AccountDrawCashService) BeanUtil.getBean("accountDrawCashService");
+			    accountDrawCashService.drawCashCallBack(event.getYmdCash());
+			}*/else if ("drawBankFailBack".equals(event.getOperate())) {
+			    isSystemMessage = true;
+				//提现银行转账失败回调全部处理
+				AccountDrawCashService accountDrawCashService = (AccountDrawCashService) BeanUtil.getBean("accountDrawCashService");
+				//JSDP - BUG32  sxy
+				accountDrawCashService.drawCashBankFailCallBack(event.getYmdCash(),null);
+				//JSDP - BUG32  sxy
+			}else if ("verifyRecharge".equals(event.getOperate())) {
+			    isSystemMessage = true;
+				//充值回调全部处理
+				AccountRechargeService rechargeService = (AccountRechargeService) BeanUtil.getBean("rechargeService");
+			    rechargeService.doRechargeTask(event.getRechargeModel());
+			} else if ("doPriorRepay".equals(event.getOperate())) {
+			    isSystemMessage = true;
+				//提前还款
+				autoBorrowService.doPriorRepay(event.getBorrowRepayment());
+			}  else if ("overdue".equals(event.getOperate())) {
+			    isSystemMessage = true;
+				//后台逾期垫付
+				autoBorrowService.overdue(event.getBorrowRepayment());
+			}  else if ("overduePayment".equals(event.getOperate())) {
+			    isSystemMessage = true;
+				//前台逾期垫付
+				autoBorrowService.overduePayment(event.getBorrowRepayment());
+			}else if ("doCompensate".equals(event.getOperate())) {
+                isSystemMessage = true;
+                //汇潮代偿还款校验处理（担保公司代偿还款）
+                autoBorrowService.autoCompensate(event.getBorrowRepayment());
+            }
+			else if ("doCompensateSuccess".equals(event.getOperate())) {
+                isSystemMessage = true;
+                //汇潮代偿成功处理（担保公司代偿还款）
+                autoBorrowService.autoCompensateSuccess(event.getBorrowRepayment());
+            } else if ("ymdRegister".equals(event.getOperate())) {
+			    isSystemMessage = true;
+				//汇潮开户回调的处理
+				UserCacheService userCacheService = (UserCacheService) BeanUtil.getBean("userCacheService");
+				userCacheService.ymdRegisterCall(event.getUser(), event.getYmdRegister());
+			}else if("doAddTender".equals(event.getOperate())) {
+				//普通投标处理
+				isSystemMessage = true;
+				BorrowTenderService borrowTenderService = (BorrowTenderService) BeanUtil.getBean("borrowTenderService");
+				borrowTenderService.addTender(event.getUser(), event.getBorrow(), event.getTender(),event.getBorrowModel());
+			    result="投标成功";
+			}else if("creditVerifyFullSuccess".equals(event.getOperate())){
+				// 债权转让复审成功
+				isSystemMessage = true;
+				CreditLogService creditLogService = (CreditLogService)BeanUtil.getBean("creditLogService");
+				creditLogService.creditVerifyFullSuccess(event.getCreditAssignment()); 
+				result="债权复审成功" ;
+			}else if ("creditVerifyFullFail".equals(event.getOperate())) {
+				isSystemMessage = true;
+				CreditLogService creditLogService = (CreditLogService)BeanUtil.getBean("creditLogService");
+				creditLogService.creditVerifyFullFail(event.getCreditAssignment()); 
+				result="债权复审不通过";	
+			}else if("creditBuySuccess".equals(event.getOperate())){
+				isSystemMessage = true;
+				CreditLogService creditLogService = (CreditLogService)BeanUtil.getBean("creditLogService");
+				creditLogService.save(event.getUser(), event.getCreditAssignment(), event.getCl().getBuyCopies(), event.getCl().getBuyAccount());
+				result="债权购买成功" ;
+			}else if("creditReCall".equals(event.getOperate())){
+				isSystemMessage = true;
+				CreditLogService creditLogService = (CreditLogService)BeanUtil.getBean("creditLogService");
+				creditLogService.creditReCall(event.getCreditAssignment()); 
+				result="债权已撤销" ;
+			}else if("buyVipTransfer".equals(event.getOperate())){
+				isSystemMessage = true;
+				MemberVipService memberVipService = (MemberVipService)BeanUtil.getBean("memberVipService");
+				memberVipService.buyVipTransfer(event.getMemberVipSubModel());
+				result="buyVIPSuccess";
+			}else if("convertVipForVipAward".equals(event.getOperate())){
+				isSystemMessage = true;
+				MemberVipAwardService memberVipAwardService = (MemberVipAwardService)BeanUtil.getBean("memberVipAwardService");
+				memberVipAwardService.convertVipForVipAward(event.getMemberVipAwardSubModel());
+				result="VIP兑换成功";
+			}else if("goodsBuySuccess".equals(event.getOperate())){
+				isSystemMessage = true;
+				GoodsOrderService goodsOrderService = (GoodsOrderService)BeanUtil.getBean("goodsOrderSerive");
+				goodsOrderService.addByNoBorrowSuccess(event.getUser(), event.getGoodsOrder());
+				result="分期宝直接购买";
+			}else if("goodsBuyOneSuccess".equals(event.getOperate())){
+				isSystemMessage = true;
+				GoodsOrderService goodsOrderService = (GoodsOrderService)BeanUtil.getBean("goodsOrderSerive");
+				goodsOrderService.addOneSuccess(event.getUser(), event.getGoodsOrder(), event.getGm(), event.getBorrow());
+				result="分期宝分期购买";
+			}
+		} catch (Exception e) {
+			logger.error(e);
+			//JSDBET-812 gjh 2015-3-17 start
+			if(e instanceof HandleException){
+                result = e.getMessage();
+            	((HandleException)e).saveExceptionLog((HandleException)e);
+            //JSDBET-812 gjh 2015-3-17 end
+            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+                result = e.getMessage();
+            }else{
+            	result = "系统异常，操作失败！！！";
+            }
+		}finally{
+		  //Global bug wcw  2015-3-26 start
+	        Global.removeTransfer();
+	      //Global bug wcw 2015-3-26 end
+		    if(isSystemMessage && event.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+		    	if(StringUtil.isNotBlank(result)){
+	                Global.RESULT_MAP.put(event.getResultFlag(), result);
+	            }
+	        }
+		}
+	 
+	}
+	
+}

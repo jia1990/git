@@ -1,0 +1,176 @@
+package com.rongdu.p2psys.core.sms.sendMsg;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.struts2.ServletActionContext;
+
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.RandomUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.ddtkj.p2psys.user.domain.User;
+
+public class RegisterMobileMsg extends BaseMsg {
+
+	/** 序列化 */
+	private static final long serialVersionUID = 5750101385895758527L;
+	/** 发送通知service */
+	protected NoticeService noticeService;
+	
+	protected User user ;
+	
+	protected String email;
+	
+	protected String mobile;
+	
+	/** 模块编码 */
+	protected String noticeTypeNid;
+
+	@Override
+	public void doEvent() {
+		// 邮件、短信、站内信
+		sendMsg();
+	}
+
+	/**
+	 * 构造方法
+	 */
+	public RegisterMobileMsg() {
+		super();
+		noticeService = (NoticeService) BeanUtil.getBean("noticeService");
+	}
+
+	/**
+	 * 构造方法
+	 * 
+	 * @param nid 模块ID
+	 */
+	public RegisterMobileMsg(String nid,User user) {
+		this();
+		this.setNoticeTypeNid(nid);
+		this.setUser(user);
+	}
+	/**
+	 * 构造方法
+	 * 
+	 * @param nid 模块ID
+	 */
+	public RegisterMobileMsg(String nid,String email,String mobile) {
+		this();
+		this.setNoticeTypeNid(nid);
+		this.setEmail(email);
+		this.setMobile(mobile);
+	}
+
+	@Override
+	public void sendMsg() {
+		if (!"".equals(noticeTypeNid)) {
+			if(user != null){
+				String code = RandomUtil.getRandomNumString(6);
+				Global.setTransfer("code", code);
+				Global.setTransfer("vtime", Global.getValue("verify_code_time"));
+
+				Map<String, Object> map = Global.getTransfer();
+				map.put("userName", getUser().getUserName());
+				map.put("todo", "phone_code");
+				map.put("user",getUser());
+				map.put("code", code);
+				map.put("host", Global.getValue("weburl"));
+				map.put("webname", Global.getValue("webname"));
+				map.put("vtime",  Global.getValue("verify_code_time")) ;
+				map.put("noticeTime", DateUtil.dateStr(new Date(), "MM月dd日 HH时mm分ss秒"));
+				HttpServletRequest request = ServletActionContext.getRequest();
+				map.put("mobile", mobile);//将手机号存入map
+				map.put("email", email);//将邮箱号存入map
+				
+				/*request.getSession().setAttribute(noticeTypeNid + "_mobile", mobile);
+				request.getSession().setAttribute(noticeTypeNid + "_email", email);
+				request.getSession().setAttribute(noticeTypeNid + "_code", code);*/
+				//Global.SESSION_MAP.put(noticeTypeNid + "_mobile", mobile);
+				//Global.SESSION_MAP.put(noticeTypeNid + "_email", email);
+				if(StringUtil.isNotBlank(mobile)){
+					//Global.SESSION_MAP.put(mobile + "_" + noticeTypeNid + "_code", code);
+					request.getSession().setAttribute(mobile + "_" + noticeTypeNid + "_code", code);
+				}
+				if(StringUtil.isNotBlank(email)){
+					//Global.SESSION_MAP.put(email + "_" + noticeTypeNid + "_code", code);
+					request.getSession().setAttribute(email + "_" + noticeTypeNid + "_code", code);
+				}
+				noticeService.sendNotice(noticeTypeNid, map);
+			}else if(StringUtil.isNotBlank(email) || StringUtil.isNotBlank(mobile)){//不写入用户表
+				String code = RandomUtil.getRandomNumString(6);
+				Global.setTransfer("code", code);
+				Global.setTransfer("vtime",  Global.getValue("verify_code_time"));
+				//JSDBET-812 gjh 2015-3-18 start
+				Map<String, Object> map = Global.getTransfer();
+				//JSDBET-812 gjh 2015-3-18 end
+				//map.put("userName", getUser().getUserName());
+				map.put("todo", "phone_code");
+				//map.put("user",getUser());
+				map.put("code", code);
+				map.put("host", Global.getValue("weburl"));
+				map.put("webname", Global.getValue("webname"));
+				map.put("vtime",  Global.getValue("verify_code_time")) ;
+				map.put("noticeTime", DateUtil.dateStr(new Date(), "MM月dd日 HH时mm分ss秒"));
+				map.put("email",email);
+				map.put("mobile",mobile);
+				HttpServletRequest request = ServletActionContext.getRequest();
+				/*request.getSession().setAttribute(noticeTypeNid + "_mobile", mobile);
+				request.getSession().setAttribute(noticeTypeNid + "_email", email);
+				request.getSession().setAttribute(noticeTypeNid + "_code", code);*/
+				/*Global.SESSION_MAP.put(noticeTypeNid + "_mobile", mobile);
+				Global.SESSION_MAP.put(noticeTypeNid + "_email", email);
+				Global.SESSION_MAP.put(noticeTypeNid + "_code", code);*/
+				if(StringUtil.isNotBlank(mobile)){
+					//Global.SESSION_MAP.put(mobile + "_" + noticeTypeNid + "_code", code);
+					request.getSession().setAttribute(mobile + "_" + noticeTypeNid + "_code", code);
+				}
+				if(StringUtil.isNotBlank(email)){
+					//Global.SESSION_MAP.put(email + "_" + noticeTypeNid + "_code", code);
+					request.getSession().setAttribute(email + "_" + noticeTypeNid + "_code", code);
+				}
+				noticeService.sendNotice(noticeTypeNid, map);
+			}
+			Global.removeTransfer();
+		}
+	}
+
+	public String getNoticeTypeNid() {
+		return noticeTypeNid;
+	}
+
+	public void setNoticeTypeNid(String noticeTypeNid) {
+		this.noticeTypeNid = noticeTypeNid;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getMobile() {
+		return mobile;
+	}
+
+	public void setMobile(String mobile) {
+		this.mobile = mobile;
+	}
+
+}

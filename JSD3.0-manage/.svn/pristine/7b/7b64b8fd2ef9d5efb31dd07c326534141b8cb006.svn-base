@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>活动红包消费记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'rpActivityConsumeList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			showFooter: true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width:40},
+			{ field: 'userName', title: '用户名', width:80},
+			{ field: 'realName', title: '真实姓名', width: 80},
+			{ field: 'consumeType', title: '活动类型', width: 100,formatter:function(value, row, index){
+				if(value=='dragon'){
+					return "端午活动";
+				}
+				
+			}},
+			{ field: 'consumeMoney', title: '消费金额', width: 100,formatter:function(value, row, index){
+				
+				if(value=='null'){
+					return "0";
+				}
+				return value;
+			}},
+			{ field: 'consumeStatus', title: '消费状态', width: 100,formatter:function(value, row, index){
+				
+				if(value=='suc'){
+					return "成功";
+				}else if(value=='fail'){
+					return '失败';
+				}else{
+					return '无';
+				}
+			}},
+			{ field: 'addTime', title: '消费时间', width: 150, formatter: function(value,row,index){
+          	  return getLocalTime(value,4);
+          	}}, 
+			{ field: 'remark', title: '备注', width: 150, sortable:false} 
+			 ]],
+			 toolbar : '#toolbar',
+			 onLoadSuccess : function() {
+					$('#searchForm table').show();
+					parent.$.messager.progress('close');
+					$(this).datagrid('tooltip');
+			 }
+		});
+		
+	});
+	function exportExcel(){
+		var url = "/modules/redPackage/excelRpActivityConsume.html";
+		var userName = $("#userName").val();
+		
+		var type = $("#type").val();
+		var consumeStatus = $("#consumeStatus").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&type=" + type + "&startTime=" + startTime + "&endTime=" + endTime +"&consumeStatus=" + consumeStatus;
+		
+		window.location.href = url + sou;
+	}
+	
+
+	
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>消费类型：
+	            		<select name="type" class="type" id="type">
+	            			<option value="99">全部</option>
+				            <option value="dragon">端午</option>
+						</select>
+					</li>
+					<li>消费状态：
+	            		<select name="consumeStatus" class="type" id="consumeStatus">
+	            			<option value="suc">成功</option>
+	            			<option value="fail">失败</option>
+						</select>
+					</li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>		
+
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/redPackage/rpExcelBtn.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

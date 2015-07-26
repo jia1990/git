@@ -1,0 +1,74 @@
+package com.ddtkj.p2psys.core.quartz.creditAssignment;
+
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.ddtkj.p2psys.core.quartz.LoanTask;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+/**
+ * 债权队列
+ * @author wcw
+ */
+public class CreditAssignmentJobQueue<T> {
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Queue<T> queue = new ConcurrentLinkedQueue();
+	private LoanTask task;
+
+	public CreditAssignmentJobQueue(LoanTask task) {
+		super();
+		this.task = task;
+	}
+
+	public synchronized void offer(T model) {
+		if (!queue.contains(model)) {
+			queue.offer(model);
+			synchronized (task.getLock()) {
+				task.execute();
+			}
+		}
+	}
+
+	public synchronized void offer(List<T> ts) {
+		for (int i = 0; i < ts.size(); i++) {
+			T t = ts.get(i);
+			if (!queue.contains(t)) {
+				queue.offer(t);
+			}
+		}
+		synchronized (task.getLock()) {
+			task.execute();
+		}
+	}
+
+	public synchronized T poll() {
+		return queue.poll();
+	}
+
+	public synchronized T peek() {
+		return queue.peek();
+	}
+
+	public synchronized void remove(T model) {
+		queue.remove(model);
+	}
+
+	public int size() {
+		return queue.size();
+	}
+
+	public static CreditAssignmentJobQueue<CreditAssignmentBean> CREDIT_ASSIGNMENT = null;
+
+	public static void init(CreditLogService  creditLogService) {
+		CREDIT_ASSIGNMENT = new CreditAssignmentJobQueue<CreditAssignmentBean>(new CreditAssignmentTask(creditLogService));
+	}
+
+	public static void stop() {
+		CREDIT_ASSIGNMENT.task.stop();
+	}
+
+	public void doAutoQueue() {
+	}
+
+}

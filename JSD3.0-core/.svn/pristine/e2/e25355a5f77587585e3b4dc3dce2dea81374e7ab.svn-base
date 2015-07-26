@@ -1,0 +1,619 @@
+package com.ddtkj.p2psys.account.model;
+
+import java.util.Date;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+
+/**
+ * 充值
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年3月17日10:49:14
+ */
+public class AccountRechargeModel extends AccountRecharge {
+
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7759034791526003005L;
+
+	/** 用户类型编号 */
+	private String userType;
+	
+	/** 当前页码 */
+	private int page;
+	/** 每页总数 **/
+	private int rows;
+	/** 排序 asc/desc **/
+	private String order;
+	/** 排序字段 **/
+	private String sort;
+	/** 用户名 **/
+	private String userName;
+	
+	private String addUser;//添加人
+	private Date verifyTime; //添加时间
+	
+	private double rechargeSucSum;//充值成功金额汇总
+	private double rechargeIngSum;//充值中金额汇总
+	private double rechargeFailSum;//充值失败金额汇总
+	//JSDP-175 xingjia 20150610 start
+	private double supplyRechargeSucSum;//补单充值成功
+	//JSDP-175 xingjia 20150610 end
+	
+	// JSDPBUG-99 20150505  sxy
+	// 2015年4月24日 14:20:33  孙晓勇
+	private String timeType;
+	public String getTimeType() {
+		return timeType;
+	}
+
+	public void setTimeType(String timeType) {
+		this.timeType = timeType;
+	}
+	// 2015年4月24日 14:20:33  孙晓勇
+	
+	
+	public String getAddUser() {
+		return addUser;
+	}
+
+	public void setAddUser(String addUser) {
+		this.addUser = addUser;
+	}
+
+	
+
+	public Date getVerifyTime() {
+		return verifyTime;
+	}
+
+	public void setVerifyTime(Date verifyTime) {
+		this.verifyTime = verifyTime;
+	}
+
+	public String getUserType() {
+		return userType;
+	}
+
+	public void setUserType(String userType) {
+		this.userType = userType;
+	}
+
+	/** 真实姓名 **/
+	private String realName;
+	/** 锁定会话 **/
+	private String rechargeToken;
+	/** 支付方式-网银直联(线上银行) */
+	private String payOnlinebank;
+	/** 支付方式 */
+	private String pay;
+	/** 支付方式-线下支付(线下银行/收款账户) */
+	private String payOfflinebank;
+	/** 支付方式名称 */
+	private String payName;
+	/** 验证码 **/
+	private String valicode;
+	/** 累计成功充值总额 **/
+	private double rechargeTotal;
+	/** 今日充值 **/
+	private double rechargeToday;
+	/** 线上成功充值 **/
+	private double onlineRechargeTotal;
+	/** 线下成功充值 **/
+	private double offlineRechargeTotal;
+	/** 审核会话 **/
+	public String verifyRechargeToken;
+	/** 审核人 **/
+	private String verifyUserName;
+	/** 审核备注 **/
+	private String verifyRemark;
+	/** 充值状态名 **/
+	private String statusStr;
+	/** 充值方式名 1网上充值 2 网上支付 3线下充值 21银行充值 22线下充值奖励 23回款续投奖励 24调单充值 25活动奖励 26其他充值 **/
+	private String typeStr;
+	/** 充值时间 **/
+	private String addTimeStr;
+	/**
+	 * 银行编号
+	 */
+	private String bankCode;
+	/**
+	 * 充值渠道：1：网银 2代 扣充值3晋商贷体验卡
+	 */
+	private String channelType;
+
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	private String inAccountamountStr;//将到账金额由金额变为字符串
+	
+	private String accountFeeStr;//手续费金额
+	//JSDP-171 xingjia 20150609 start
+	private String cardNo;//晋商贷体验卡卡号
+	private String paw;//晋商贷体验卡密码
+	private String batchNo;//大批次号
+	private String valicode2;//验证码（晋商贷体验卡）
+	//JSDP-171 xingjia 20150609 end
+	
+	
+	
+	
+	public String getBatchNo() {
+		return batchNo;
+	}
+
+	public void setBatchNo(String batchNo) {
+		this.batchNo = batchNo;
+	}
+
+	public String getInAccountamountStr() {
+		return inAccountamountStr;
+	}
+
+	public void setInAccountamountStr(String inAccountamountStr) {
+		this.inAccountamountStr = inAccountamountStr;
+	}
+
+	public String getTypeStr() {
+		return typeStr;
+	}
+
+	public void setTypeStr(String typeStr) {
+		this.typeStr = typeStr;
+	}
+	
+	
+
+	public String getAccountFeeStr() {
+		return accountFeeStr;
+	}
+
+	public void setAccountFeeStr(String accountFeeStr) {
+		this.accountFeeStr = accountFeeStr;
+	}
+
+	public static AccountRechargeModel instance(AccountRecharge accountRecharge) {
+		AccountRechargeModel accountRechargeModel = new AccountRechargeModel();
+		BeanUtils.copyProperties(accountRecharge, accountRechargeModel);
+		return accountRechargeModel;
+	}
+
+	public AccountRecharge prototype(User user, double fee) {
+		AccountRecharge accountRecharge = new AccountRecharge();
+		BeanUtils.copyProperties(this, accountRecharge);
+		accountRecharge.setUser(user);
+		accountRecharge.setRechargeFee(fee);
+		accountRecharge.setAddTime(new Date());
+		accountRecharge.setAddIp(Global.getIP());
+		/*
+		 * switch (getTypeStr()) { case 1: accountRecharge.setRemark("网银直连充值" +
+		 * getMoney() + "元"); accountRecharge.setPayment(getPayOnlinebank());
+		 * break; case 2: accountRecharge.setRemark("网上支付充值" + getMoney() +
+		 * "元"); accountRecharge.setPayment(getPay()); break; case 3:
+		 * accountRecharge
+		 * .setTradeNo(RechargeUtil.generateTradeNO(user.getUserId(), "E"));
+		 * accountRecharge.setRemark("线下支付充值" + getMoney() + "元");
+		 * accountRecharge.setPayment(getPayOfflinebank()); break; default:
+		 * throw new AccountException("暂不支持该充值方式！", 1); }
+		 */
+
+		return accountRecharge;
+	}
+
+	/**
+	 * 充值前的各种认证效验
+	 */
+	public void validIdentifyForRecharge(UserIdentify userAttestation) {
+		if (!"83".equals(userAttestation.getRealNameStatus())) {
+			throw new AccountException("请先通过实名认证！", 1);
+		}
+		if (!"86".equals(userAttestation.getMobilePhoneStatus())) {
+			throw new AccountException("请先通过手机认证！", 1);
+		}
+//		if (!"81".equals(userAttestation.getEmailStatus())) {
+//			throw new AccountException("请先通过邮箱认证！", 1);
+//		}
+	}
+
+	/**
+	 * 充值校验
+	 */
+	public void validNewRecharge() {
+		/*
+		 * if (getType() == 1 && StringUtil.isBlank(getPayOnlinebank())) { throw
+		 * new AccountException("请选择" + RechargeConstant.PAY_ONLINE + "充值方式！",
+		 * 1); } if (getType() == 2 && StringUtil.isBlank(getPay())) { throw new
+		 * AccountException("请选择" + RechargeConstant.PAY + "充值方式！", 1); }
+		 */
+		/*
+		 * if (this.getTypeStr() == 3 &&
+		 * StringUtil.isBlank(getPayOfflinebank())) { throw new
+		 * AccountException("请选择" + RechargeConstant.PAY_OFFLINE + "收账账户！", 1);
+		 * }
+		 */
+		if (this.getRechargeAmount() <= 0) {
+			/*
+			 * if (getType() == 1 && StringUtil.isBlank(getPayOnlinebank())) {
+			 * throw new AccountException("请选择" + RechargeConstant.PAY_ONLINE +
+			 * "充值方式！", 1); } if (getType() == 2 &&
+			 * StringUtil.isBlank(getPay())) { throw new AccountException("请选择"
+			 * + RechargeConstant.PAY + "充值方式！", 1); }
+			 */
+			/*
+			 * if (getType() == 3 && StringUtil.isBlank(getPayOfflinebank())) {
+			 * throw new AccountException("请选择" + RechargeConstant.PAY_OFFLINE +
+			 * "收账账户！", 1); }
+			 */
+
+			throw new AccountException("充值的金额不能小于0！", 1);
+		}
+
+		if (!ValidateUtil.checkValidCode(getValicode())) {
+			throw new AccountException("验证码错误！", 1);
+		}
+
+		/*
+		 * if (BaseTPPWay.isOpenApi() && "2".equals(BaseTPPWay.apiCode()) &&
+		 * StringUtil.isBlank(getBankCode())) { throw new
+		 * AccountException("请选择充值银行！", 1); }
+		 */
+	}
+	
+	/**
+	 * 校验晋商贷体验卡的格式
+	 */
+	public void validPetCard(){
+		if(this.channelType.equals("petCard")&& this.cardNo.trim().length()<16){
+			throw new AccountException("卡号格式不正确！",1);
+		}
+		if (!ValidateUtil.checkValidCode(getValicode2())){
+			throw new AccountException("验证码错误！", 1);
+		}
+	}
+
+	/**
+	 * 添加线下充值校验
+	 */
+	public void validAccountRecharge() {
+		if (StringUtil.isBlank(this.getRechargeToken())) {
+			throw new AccountException("会话为空！", 1);
+		}
+		if (StringUtil.isBlank(this.getUserName())) {
+			throw new AccountException("用户名不能为空！", 1);
+		}
+		if (this.getRechargeAmount() <= 0) {
+			throw new AccountException("充值金额过小,请重新输入金额！", 1);
+		}
+		/*
+		 * if (this.getRechargeAmount() >= 100000000) { throw new
+		 * AccountException("你充值的金额过大,目前系统仅支持千万级别的充值！", 1); }
+		 */
+		/*
+		 * if (StringUtil.isBlank(this.getRemark())) { throw new
+		 * AccountException("备注不能为空！", 1); }
+		 */
+	}
+
+	/**
+	 * 线下充值审核
+	 */
+	public void validVerifyAccountRecharge() {
+		if (StringUtil.isBlank(this.getVerifyRechargeToken())) {
+			throw new AccountException("会话为空！", 1);
+		}
+		if (this.getRechargeAmount() <= 0) {
+			throw new AccountException("当前充值金额为" + this.getRechargeAmount()
+					+ ",充值金额不能为负数！", 1);
+		}
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public String getPayOnlinebank() {
+		return payOnlinebank;
+	}
+
+	public void setPayOnlinebank(String payOnlinebank) {
+		this.payOnlinebank = payOnlinebank;
+	}
+
+	public String getPay() {
+		return pay;
+	}
+
+	public void setPay(String pay) {
+		this.pay = pay;
+	}
+
+	public String getPayOfflinebank() {
+		return payOfflinebank;
+	}
+
+	public void setPayOfflinebank(String payOfflinebank) {
+		this.payOfflinebank = payOfflinebank;
+	}
+
+	public String getPayName() {
+		return payName;
+	}
+
+	public void setPayName(String payName) {
+		this.payName = payName;
+	}
+
+	public String getValicode() {
+		return valicode;
+	}
+
+	public void setValicode(String valicode) {
+		this.valicode = valicode;
+	}
+
+	public double getRechargeTotal() {
+		return rechargeTotal;
+	}
+
+	public void setRechargeTotal(double rechargeTotal) {
+		this.rechargeTotal = rechargeTotal;
+	}
+
+	public double getRechargeToday() {
+		return rechargeToday;
+	}
+
+	public void setRechargeToday(double rechargeToday) {
+		this.rechargeToday = rechargeToday;
+	}
+
+	public double getOnlineRechargeTotal() {
+		return onlineRechargeTotal;
+	}
+
+	public void setOnlineRechargeTotal(double onlineRechargeTotal) {
+		this.onlineRechargeTotal = onlineRechargeTotal;
+	}
+
+	public double getOfflineRechargeTotal() {
+		return offlineRechargeTotal;
+	}
+
+	public void setOfflineRechargeTotal(double offlineRechargeTotal) {
+		this.offlineRechargeTotal = offlineRechargeTotal;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	public String getOrder() {
+		return order;
+	}
+
+	public void setOrder(String order) {
+		this.order = order;
+	}
+
+	public String getSort() {
+		return sort;
+	}
+
+	public void setSort(String sort) {
+		this.sort = sort;
+	}
+
+	public String getRechargeToken() {
+		return rechargeToken;
+	}
+
+	public void setRechargeToken(String rechargeToken) {
+		this.rechargeToken = rechargeToken;
+	}
+
+	public String getVerifyRechargeToken() {
+		return verifyRechargeToken;
+	}
+
+	public void setVerifyRechargeToken(String verifyRechargeToken) {
+		this.verifyRechargeToken = verifyRechargeToken;
+	}
+
+	public String getVerifyUserName() {
+		return verifyUserName;
+	}
+
+	public void setVerifyUserName(String verifyUserName) {
+		this.verifyUserName = verifyUserName;
+	}
+
+	public String getVerifyRemark() {
+		return verifyRemark;
+	}
+
+	public void setVerifyRemark(String verifyRemark) {
+		this.verifyRemark = verifyRemark;
+	}
+
+	public String getStatusStr() {
+
+		String statusStr2 = getTradeStatus();
+		if ("00".equals(statusStr2)) {
+			statusStr = "充值成功";
+		} else if ("55".equals(statusStr2)) {
+			statusStr = "充值中";
+		} else if ("99".equals(statusStr2)) {
+			statusStr = "失败";
+		} else if ("01".equals(statusStr2)) {
+			statusStr = "补单成功";
+		}
+		return statusStr;
+	}
+
+	public void setStatusStr(String statusStr) {
+		this.statusStr = statusStr;
+	}
+
+	public String getAddTimeStr() {
+		return addTimeStr;
+	}
+
+	public void setAddTimeStr(String addTimeStr) {
+		this.addTimeStr = addTimeStr;
+	}
+
+	public String getBankCode() {
+		return bankCode;
+	}
+
+	public void setBankCode(String bankCode) {
+		this.bankCode = bankCode;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public String getChannelType() {
+		return channelType;
+	}
+
+	public void setChannelType(String channelType) {
+		this.channelType = channelType;
+	}
+
+	/**
+	 * @return the rechargeSucSum
+	 */
+	public double getRechargeSucSum() {
+		return rechargeSucSum;
+	}
+
+	/**
+	 * @param rechargeSucSum the rechargeSucSum to set
+	 */
+	public void setRechargeSucSum(double rechargeSucSum) {
+		this.rechargeSucSum = rechargeSucSum;
+	}
+
+	/**
+	 * @return the rechargeIngSum
+	 */
+	public double getRechargeIngSum() {
+		return rechargeIngSum;
+	}
+
+	/**
+	 * @param rechargeIngSum the rechargeIngSum to set
+	 */
+	public void setRechargeIngSum(double rechargeIngSum) {
+		this.rechargeIngSum = rechargeIngSum;
+	}
+
+	/**
+	 * @return the rechargeFailSum
+	 */
+	public double getRechargeFailSum() {
+		return rechargeFailSum;
+	}
+
+	/**
+	 * @param rechargeFailSum the rechargeFailSum to set
+	 */
+	public void setRechargeFailSum(double rechargeFailSum) {
+		this.rechargeFailSum = rechargeFailSum;
+	}
+
+	public String getCardNo() {
+		return cardNo;
+	}
+
+	public void setCardNo(String cardNo) {
+		this.cardNo = cardNo;
+	}
+
+	public String getPaw() {
+		return paw;
+	}
+
+	public void setPaw(String paw) {
+		this.paw = paw;
+	}
+
+	public String getValicode2() {
+		return valicode2;
+	}
+
+	public void setValicode2(String valicode2) {
+		this.valicode2 = valicode2;
+	}
+
+	public double getSupplyRechargeSucSum() {
+		return supplyRechargeSucSum;
+	}
+
+	public void setSupplyRechargeSucSum(double supplyRechargeSucSum) {
+		this.supplyRechargeSucSum = supplyRechargeSucSum;
+	}
+	
+	
+}

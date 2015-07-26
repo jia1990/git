@@ -1,0 +1,43 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/account/transfer/accountTransferVerify.html');		
+	});
+</script>
+<div class="popShow" style="padding-bottom:0">
+	<h1 class="borrowTitle"><span>订单号：</span>${(transfer.transferNo)!}</h1>
+	<div class="showItem">
+		<span>转入人：</span>
+		<!-- JSDP-55 gjh 2015-5-21 start -->
+		<#if transfer.user??&&transfer.user.userName??>${(transfer.user.userName)!}<#else>平台账户</#if>
+		<!-- JSDP-55 gjh 2015-5-21 end -->
+	</div>
+	<div class="showItem">
+		<span>转出人：</span>
+		<#if transfer.popUser??&&transfer.popUser.userName??>${(transfer.popUser.userName)!}<#else>平台账户</#if>
+	</div>
+	<div class="showItem">
+		<span>转账金额：</span>
+		${(transfer.transferAmount)!}元
+	</div>
+	
+</div>
+<form id="form" method="post">
+<div class="popForm" style="padding-top:0;">
+ 	<div class="formitm">
+		<label class="lab">是否通过：</label>
+		<div class="ipt">
+			<input type="radio" name="status" class="easyui-validatebox" value="1" data-options="required: true"/>通过&nbsp;&nbsp;
+			<input type="radio" name="status" class="easyui-validatebox" value="0" data-options="required: true" checked="checked"/>不通过
+		</div>
+	</div> 
+ 	<div class="formitm">
+		<label class="lab">备注：</label>
+		<div class="ipt">
+			<textarea name="remark" class="easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></textarea>
+		</div>
+	</div> 
+
+	<input name="transferNo" value="${(transfer.transferNo)!}" type="hidden"/>
+	<input name="accountTransferVerifyToken" value="${accountTransferVerifyToken!}" type="hidden" />
+</div>
+</form>

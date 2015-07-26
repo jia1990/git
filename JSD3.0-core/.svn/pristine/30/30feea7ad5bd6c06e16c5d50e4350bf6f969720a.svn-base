@@ -1,0 +1,47 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpUseLogDao;
+import com.ddtkj.p2psys.redpacket.domain.RpUseLog;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+/**
+ * 
+ * @描述：红包使用记录DAO实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月24日
+ */
+@Repository("rpUseLogDao")
+public class RpUseLogDaoImpl extends BaseDaoImpl<RpUseLog> implements RpUseLogDao {
+
+	@Override
+	public PageDataList<RpUseLog> getAll(QueryParam param) {
+		return null;
+	}
+
+	@Override
+	public double getAllUseDynamicTotal(long userid) {
+		
+		String jpql = "SELECT   SUM(account) FROM t_jsd_rp_use_log  WHERE rp_type=2 AND user_id=:userId ";
+		Query query = em.createNativeQuery(jpql);
+		query.setParameter("userId", userid);
+		
+		Object dRedPackUseSumMoney = query.getSingleResult();
+		
+		if(dRedPackUseSumMoney!=null){
+		return Double.parseDouble(dRedPackUseSumMoney.toString());	
+		}
+		return 0.0;
+	}
+
+	@Override
+	public double getAllByBorrow(long borrowid) {
+		return 0;
+	}
+
+}

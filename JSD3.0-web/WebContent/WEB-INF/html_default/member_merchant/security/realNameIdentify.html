@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<#include "../../include/resource1.html"> 
+<body>
+	<#assign nid="my_account"> 
+	<#include "../../include/b_header.html">
+	<!--header-end-->
+	<!--用户中心的主栏目 开始-->
+	<div class="c_deal">
+		<div class="c_deal_content">
+			<#assign mid="m_realNameIdentify"> 
+			<#include "../account_menu.html">
+			<!-- 右侧 -->
+			<#if apiStatus=="Y">
+			<div class="c_deal_record">
+				<div class="c_deal_title c_pay_count">支付账户</div>
+				<div class="c_bind_pay">
+					<div class="c_huichao_pay">
+						<div class="c_already_bind">
+							<b>已经绑定汇潮支付</b>
+							<div class="c_bind_counter">汇潮账户：<span>${thirdAccount}</span></div>
+						</div>
+						<a href="${ymdUrl}" target="_black" hidefocus>进入汇潮支付</a>
+						<div class="c_clear"></div>
+					</div>
+					<dl>
+						<dd>1、汇潮支付托管账户系统，是汇潮支付为P2P平台提供的资金托管账户体系，保障用户账户中的资金独立存放，P2P平台无权动用。</dd>
+						<dd>2、晋商贷托管版采用汇潮支付作为第三方支付及资金托管平台，充值、提现、投资支付等操作均在汇潮支付平台上进行。</dd>
+						<dd>3、晋商贷托管版无法触碰用户资金账户，为了您的资产安全，请牢记汇潮支付账户的登录密码及交易密码，并定期修改。</dd>
+					</dl>
+				</div>
+			</div>
+			<#else>
+			<div class="c_deal_record y_account_right y_account_password_right">
+				<!-- 账户设置 -->
+				<div class="c_deal_title">汇潮支付绑定<a href='huichao.html' style="color: #12adff;text-decoration: underline;" target="_blank">(了解汇潮支付)</a></div>
+				<form class="y_forms payAccountForm" style="margin-top:20px;" action="/member_borrow/security/borrowRealname.html" target="_blank" enctype="multipart/form-data">
+				</form>
+				<p class="y_invite_title" style="margin-top:60px;margin-left: 20px;_margin-left:10px;margin-bottom:10px;background:url(${webroot}${theme_dir}/images/account/pbg.png) no-repeat 5px 10px;">温馨提示：</p>
+				<div class="y_reminder_box" style="margin: 0 20px 20px;padding: 40px;">
+					<p>若您无法通过认证，可点此联系客服：联系客服进行<a href="javascript:void(0);"  onclick="javascript:window.open('http://b.qq.com/webc.htm?new=0&amp;sid=4000803000&amp;eid=218808P8z8p8K808R8x8x&amp;o=&amp;q=7&amp;ref='+document.location, '_blank', 'height=544, width=644,toolbar=no,scrollbars=no,menubar=no,status=no');"  style="color:#ff7800;">人工处理</a></p>
+					<p>用户须知：</p>
+					<p>1. 为了确保您的账户安全，实名认证后请及时登录汇潮支付官网修改默认密码及交易密码</p>
+					<p>2. 8-16个字符，建议使用字母加数字或符号的组合密码</p>
+				</div>
+			</div>
+			</#if>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+	<!--用户中心的主栏目 结束-->
+	<script>seajs.use('member_merchant/security_realNameIdentify');</script>
+	<#include "../../include/b_foot.html">
+</body>
+</html>

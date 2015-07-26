@@ -1,0 +1,27 @@
+package com.ddtkj.p2psys.subbranch.dao.impl;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.subbranch.dao.MarketerBranchUnModelDao;
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+/**
+ * @描述：市场专员和加盟商的非modeldao层实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月23日 
+ */
+@Repository("marketerBranchUnModelDao")
+public class MarketerBranchUnModelDaoImpl extends BaseDaoImpl<BranchMarketer> implements MarketerBranchUnModelDao {
+
+	@Override
+	public void delMargeterBranchById(long marketerId) {
+		Query query = em.createNativeQuery("delete from t_jsd_branch_marketer where user_id=?1").setParameter(1, marketerId);
+		query.executeUpdate();
+		
+	}
+
+
+}

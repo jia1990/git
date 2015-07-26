@@ -1,0 +1,113 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/creditassignment/credit/caVerify.html',"初审成功！","初审失败！");
+	});
+</script>
+
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>债权名：</span>
+		${caName!}
+	</div>
+	<div class="showItem">
+		<span>出售债权用户名：</span>
+		${sellUserName!}
+	</div>
+	<div class="showItem">
+		<span>债权转让类型：</span>
+		<#if ca.caType==1>
+			投资转出
+		<#elseif ca.caType==2>
+			购买的债权转出
+		<#else>
+			错误状态
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>债权预期价值：</span>
+		${ca.creditValue!}
+	</div>
+	<div class="showItem">
+		<span>债权发布价格：</span>
+		${ca.creditPrice!}
+	</div>
+	<div class="showItem">
+		<span>债权转让费率：</span>
+		${ca.creditDis!}
+	</div>
+	<div class="showItem">
+		<span>债权转让份数：</span>
+		${ca.creditCopies!}
+	</div>
+	<div class="showItem">
+		<span>已售金额：</span>
+		${ca.soldAccount!}
+	</div>
+	<div class="showItem">
+		<span>已售份数：</span>
+		${ca.sellCopies!}
+	</div>
+	<div class="showItem">
+		<span>债权状态：</span>
+		<#if ca.status=="00">
+			发布
+		<#elseif ca.status=="01">
+			初审通过
+		<#elseif borrow.status=="02">
+			初审未通过
+		<#elseif borrow.status=="03">
+			复审通过
+		<#elseif borrow.status=="04">
+			复审未通过
+		<#elseif borrow.status=="05">
+			撤回
+		<#elseif borrow.status=="06">
+			待复审
+		<#elseif borrow.status=="07">
+			已完成
+		<#elseif borrow.status=="08">
+			撤销申请中
+		<#else>
+			错误状态
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>债权转让截止时间：</span>
+		${ca.buyEndTime?string("yyyy-MM-dd HH:mm:ss")!}
+	</div>
+	<div class="showItem">
+		<span>添加时间：</span>
+		${ca.addTime?string("yyyy-MM-dd HH:mm:ss")!}
+	</div>
+	<div class="showItem">
+		<span>添加IP：</span>
+		${ca.addIp!}
+	</div>
+</div>
+<div class="popForm" style="padding-top:0;">
+<form id="form" method="post" enctype="multipart/form-data">
+	<div class="formitm">
+		<label class="lab">债权等级：</label>
+		<div class="ipt">
+		   	<label><input type="radio" name="level" class="easyui-validatebox" value="1" data-options="required: true" checked="checked" id="norLevel"/>普通债权</label>
+			<label><input type="radio" name="level" class="easyui-validatebox" value="2" data-options="required: true" id="highLevel"/>优质债权</label>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">是否通过：</label>
+		<div class="ipt">
+		   	<label><input type="radio" name="status" class="easyui-validatebox" value="01" data-options="required: true" checked="checked" id="status"/>初审通过</label>
+			<label><input type="radio" name="status" class="easyui-validatebox" value="02" data-options="required: true" id="noStatus"/>初审不通过</label>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">审核备注：</label>
+		<div class="ipt">
+		   <textarea name="verifyRemark" class="w400 easyui-validatebox" data-options="required: true"></textarea>
+		</div>
+	</div>
+	<input type="hidden" name="caVerifyToken" value="${caVerifyToken!}" >
+	<input type="hidden" name="id" value="${ca.id}"/>
+	<input type="hidden" name="actionType" value="caVerify">
+</form>
+</div>

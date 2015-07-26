@@ -1,0 +1,75 @@
+package com.ddtkj.p2psys.activity.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.activity.domain.ActivityPublish;
+import com.ddtkj.p2psys.activity.model.ActivityPublishModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * 活动Dao
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 3.0
+ * @since 2015年1月10日
+ */
+public interface ActivityPublishDao extends BaseDao<ActivityPublish> {
+
+	/**
+	 * 列表
+	 * 
+	 * @param nid
+	 * @param size
+	 * @return
+	 */
+	List<ActivityPublishModel> listBySize(String type, int size);
+
+	/**
+	 * 分页
+	 * 
+	 * @param nid
+	 * @param page
+	 * @return
+	 */
+	PageDataList<ActivityPublishModel> list(String type, int page);
+
+	/**
+	 * 增加点击量
+	 * 
+	 * @param id
+	 */
+	void addClick(long id) throws Exception;
+
+	/**
+	 * 活动列表
+	 * 
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<ActivityPublishModel> activityList(ActivityPublishModel model, int pageNumber, int pageSize);
+
+	/**
+	 * 修改文章
+	 * 
+	 * @param activity
+	 */
+	void activityEdit(ActivityPublish activity);
+
+	/**
+	 * 下一篇文章
+	 * @param ActivityPublish
+	 * @return Activity
+	 */
+    ActivityPublish findNextActivity(ActivityPublish activity);
+    /**
+     * 上一篇文章
+     * @param ActivityPublish
+     * @return Activity
+     */
+    ActivityPublish findPrevActivity(ActivityPublish activity);
+
+    
+}

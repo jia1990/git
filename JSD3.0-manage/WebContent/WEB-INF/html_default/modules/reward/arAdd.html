@@ -1,0 +1,56 @@
+<script type="text/javascript">
+$(function() {
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/reward/arAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址	
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+
+    <div class="formitm">
+	     <label class="lab">活动名称：</label>
+	     <div class="ipt">
+	     	<input type="text" class="w400 easyui-validatebox" name="activity.actName" data-options="required: true">
+	     	<b>*</b>
+	     </div>
+	</div>
+    
+    <div class="formitm" id="time">
+	     <label class="lab">开始时间：</label>
+	     <div class="ipt">
+	     	<input type="text" class="dateInput w200 easyui-validatebox" name="activity.begintime" id="startTime" data-options="required: true"/>
+	     	<b>*</b>
+	     	&nbsp;
+	     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="activity.endtime" id="endTime" data-options="required: true"/>
+	     	<b>*</b>
+	     </div>
+	</div>
+    <div class="formitm">
+	     <label class="lab">添加红包：</label>
+	     <div class="ipt">
+	     	<input type="hidden" id="redId" name="rp.id">
+	     	<input type="text" id="redPackName" name="rp.name" class="w200 easyui-validatebox" readonly="readonly" data-options="required: true" />&nbsp;&nbsp;
+	     	<input type="text" id="validtime" name="rp.validtime" class="w50 easyui-validatebox" readonly="readonly" data-options="required: true" />天
+	     	<input type="button" value="选择" onclick="showRedPacket()" class="btnRedPack"/>
+	     	<b>*</b>
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">红包金额：</label>
+	     <div class="ipt">
+	     	<input type="text" class="w400 easyui-validatebox" name="account" data-options="required: true,validType:'numeric'">
+	     	<b>*</b>
+	     </div>
+	</div>
+	<input type="hidden" name="activity_add_token" value="${activity_add_token}">
+	</form>
+</div>
+<!-- <script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script> -->
+<style>
+
+.btnRedPack{
+	margin-left:10px;width:50px;line-height:30px;border:none;font-size:14px;color:#fff;background-color: #4b93cf;font-size: 16px;text-align: center;-moz-border-radius:5px; -webkit-border-radius: 5px; border-radius: 5px;cursor: pointer;
+}
+</style>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>
+

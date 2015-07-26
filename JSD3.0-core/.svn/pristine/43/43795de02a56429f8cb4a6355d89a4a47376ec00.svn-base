@@ -1,0 +1,116 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述：活动产生红包的消费记录  JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+@Entity
+@Table(name="t_jsd_rp_activity_consume")
+public class RpActivityConsume {
+	
+	public static final String RP_CONSUME_INVEST="vt";//红包的消费:用于投标
+	public static final String RP_CONSUME_STATUS_SUC = "suc";//消费成功
+	public static final String RP_CONSUME_STATUS_FAIL = "fail";//消费失败
+	public static final String RP_CONSUME_STATUS_FZEN ="fzen";//消费红包冻结中
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;//主键
+	private String consumeType;//消费类型  消费红包类型  投标:vt,债权:ct,购买vip:vp
+	private double consumeMoney;//消费金额
+	@ManyToOne
+	@JoinColumn(name="consume_user")
+	private User consumeUser;//消费人
+	private String consumeStatus;//消费状态 成功：suc 失败：fail 冻结中：fzen
+	private Date addTime;//添加时间
+	private String remark;
+	private String activityType;//产生此红包的活动(不同的红包的用途不一致时使用)
+	@ManyToOne
+	@JoinColumn(name="consume_bid")
+	private Borrow consumeBid;//消费此红包的标id
+	
+	
+	//fengguoqin@ddtkj.com  JSDP-215  20150709 start
+	public String consumeTypeTransfer(String consumeType){
+		if("vt".equals(consumeType)){
+			return "投标";
+		}else if("ct".equals(consumeType)){
+			return "购买债权";
+		}else if("vp".equals(consumeType)){
+			return "购买VIP";
+		}else {
+			return null;
+		}
+	}
+	//fengguoqin@ddtkj.com  JSDP-215  20150709 end
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getConsumeType() {
+		return consumeType;
+	}
+	public void setConsumeType(String consumeType) {
+		this.consumeType = consumeType;
+	}
+	public double getConsumeMoney() {
+		return consumeMoney;
+	}
+	public void setConsumeMoney(double consumeMoney) {
+		this.consumeMoney = consumeMoney;
+	}
+	public User getConsumeUser() {
+		return consumeUser;
+	}
+	public void setConsumeUser(User consumeUser) {
+		this.consumeUser = consumeUser;
+	}
+	public String getConsumeStatus() {
+		return consumeStatus;
+	}
+	public void setConsumeStatus(String consumeStatus) {
+		this.consumeStatus = consumeStatus;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public String getActivityType() {
+		return activityType;
+	}
+	public void setActivityType(String activityType) {
+		this.activityType = activityType;
+	}
+	public Borrow getConsumeBid() {
+		return consumeBid;
+	}
+	public void setConsumeBid(Borrow consumeBid) {
+		this.consumeBid = consumeBid;
+	}
+	
+	
+}

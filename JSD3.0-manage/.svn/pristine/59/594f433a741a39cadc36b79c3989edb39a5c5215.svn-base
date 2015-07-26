@@ -1,0 +1,351 @@
+
+package com.ddtkj.manage.action.credit;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 债权转让购买记录
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-22   
+ */
+public class ManageCreditLogAction extends BaseAction implements ModelDriven<CreditLogModel> {
+	
+	@Resource
+	private CreditLogService creditLogService;
+	
+	private Map<String, Object> data;
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	private CreditLogModel model = new CreditLogModel();
+	
+	public CreditLogModel getModel() {
+		return model;
+	}
+	
+	/**
+	 * 债权转让购买记录页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/creditlog/caLogManage")
+	public String caLogManage() throws Exception {
+			
+		return "creditLogManage";
+	}
+	
+	/**
+	 * 债权转让购买记录列表
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/creditlog/caLogList")
+	public void caLogList() throws Exception {
+		PageDataList<CreditLogModel> pageList = new PageDataList<CreditLogModel>();
+		if(StringUtil.isNotBlank(model.getStatus()) || StringUtil.isNotBlank(model.getStartTime()) ||
+				StringUtil.isNotBlank(model.getCaName()) || StringUtil.isNotBlank(model.getBuyUserName())){
+			pageList = creditLogService.getCreditLogList(model);
+			int totalPage = pageList.getPage().getTotal();
+			map.put("rows", pageList.getList());
+			map.put("total", totalPage);
+		}	
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	
+	/**
+	 * 债权转让购买记录页面
+	 * @throws Exception
+	 */
+	@Action("/modules/creditassignment/creditlog/creditBuyPage")
+	public String creditBuyPage() throws Exception{
+		request.setAttribute("id", model.getId());
+		return "creditBuyPage";
+	}
+	
+	/**
+	 * 债权转让购买记录查询
+	 * @throws Exception
+	 */
+	@Action("/modules/creditassignment/creditlog/creditBuyList")
+	public void creditBuyList() throws Exception{
+		//根据id查询购买债权的记录
+		model.setCaId(model.getId());
+		model.setId(0);
+		PageDataList<CreditLogModel> pageDataList = creditLogService.getCreditLogList(model);
+		
+		int totalPage = pageDataList.getPage().getTotal();
+		map.put("rows", pageDataList.getList());
+		map.put("total", totalPage);
+		printJson(getStringOfJpaObj(map));
+		
+	}
+	/**
+	 * 债权转让购买记录补单
+	 * @throws Exception
+	 */
+	@Action("/modules/creditassignment/creditlog/creditOrderBuy")
+	public void creditOrderBuy() throws Exception{
+		
+		
+		map.put("result", true);
+		map.put("msg", "重置密码成功！");
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	
+	/**
+	 * 债权转让购买记录导出
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/creditlog/exportCaLogList")
+	public void exportCaLogList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("status");
+//		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setSize(99999999);
+//		// 记录取得
+//		List<CreditLogModel> list = creditLogService.getCreditLogList(model).getList();
+//		List<CreditLogModel> newList = new ArrayList<CreditLogModel>();		
+//		for(int i=0; i<list.size(); i++){
+//			CreditLogModel caLogModel = list.get(i);
+//			caLogModel.setStatus(CreditLogModel.convertBuyCreditStatus(caLogModel.getStatus()));
+//			caLogModel.setBuyFeeStatusExport(CreditLogModel.convertBuyFeeStatus(caLogModel.getBuyFeeStatus()));
+//			caLogModel.setSellFeeStatusExport(CreditLogModel.convertSellFeeStatus(caLogModel.getSellFeeStatus()));
+//			caLogModel.setIsSellExport(CreditLogModel.convertIsSell(caLogModel.getIsSell()));
+//			newList.add(caLogModel);
+//		}
+		String title = "";
+		if (CreditLog.CRELOG_STATUS_ALL.equals(status)) {
+			title = "所有债权购买记录Excel表";
+		}else if (CreditLog.CRELOG_STATUS_YEW.equals(status)) {
+			title = "已成交债权购买记录Excel表";
+		}else if (CreditLog.CRELOG_STATUS_NO.equals(status)){
+			title = "未成交债权购买记录Excel表";
+		}
+		String[] hearders = new String[] {"编号","债权名","债权转让ID","状态","出售债权用户","购买债权用户名","购买时间","购买份数","购买后应有价值","购买花费金额","购买手续费","购买手续费状态","出售手续费","出售手续费状态","是否再售出","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","caName","caId","status","sellUserName","buyUserName","buyTime","buyCopies","buyValue","buyAccount","buyFee","buyFeeStatusExport","sellFee","sellFeeStatusExport","isSellExport","addTime","addIp"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<CreditLogModel> tdList = new ArrayList<CreditLogModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				CreditLogModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = creditLogService.excelListCreditLog(model);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	}
+	
+	
+	/**
+	 * 债权转让购买页面，用于债权满审时查看
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/creditlog/viewCreditLogPage")
+	public String viewCreditLogPage() throws Exception {
+		request.setAttribute("id", model.getId());
+		return "viewCreditLogPage";
+	}
+	
+	/**
+	 * 债权转让购买记录，用于债权满审时查看
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/creditlog/creditLogDetail")
+	public void fullVerifyCreditLogDetail() throws Exception {
+		PageDataList<CreditLogModel> list = creditLogService.getCreditLogList(model);
+		map.put("rows", list.getList());
+		map.put("total", list.getPage().getTotal());
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	
+
+	/**
+	 * 明细——债权(买入)金额列表页面
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/creaditInMoneyStatisticsListPage")
+	public String tenderMoneyStatisticsListPage() throws Exception {
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			request.setAttribute("startTimeStr", startTime);
+			request.setAttribute("endTimeStr", endTime);
+		}
+		
+		request.setAttribute("timeType", timeType);
+		
+		return "creaditInMoneyStatisticsListPage";
+	}
+	
+	
+	
+	/**
+	 * 明细——债权(买入)清单列表
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/dataStatistics/creaditInMoneyStatisticsList")
+	public void tenderMoneyStatisticsList() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		CreditLogModel model = new CreditLogModel();
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		
+		model.setPage(pageNumber);
+		model.setSize(pageSize);
+		/*
+		PageDataList<CreditLogModel> pageDataList = creditLogService.getCreditLogList(model);
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+		
+		*/
+		
+		model.setCaId(model.getId());
+		model.setId(0);
+		// 原Model查询
+		//PageDataList<CreditLogModel> pageDataList = creditLogService.getCreditInLogList(model);
+		// 新SQL查询
+		PageDataList<CreditLog> pageDataList = creditLogService.getCreditInAssignmentListForSQL(model,pageNumber,pageSize);
+		
+		
+		
+		int totalPage = pageDataList.getPage().getTotal();
+		map.put("rows", pageDataList.getList());
+		map.put("total", totalPage);
+		printJson(getStringOfJpaObj(map));
+		
+		
+		
+	}
+	/**
+	 * 债权转让(买入)购买记录导出
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/creditlog/creaditInMoneyStatisticsList")
+	public void creaditInMoneyStatisticsList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("status");
+		// 第一页开始
+		model.setPage(1);
+		// 最多出99999999条记录
+		model.setSize(99999999);
+		// 记录取得
+		//List<CreditLogModel> list = creditLogService.getCreditLogList(model).getList();
+		PageDataList<CreditLogModel> list = creditLogService.getCreditInLogList(model);
+		List<CreditLogModel> newList = new ArrayList<CreditLogModel>();		
+		for(int i=0; i<list.getList().size(); i++){
+			CreditLogModel caLogModel = list.getList().get(i);
+			caLogModel.setStatus(CreditLogModel.convertBuyCreditStatus(caLogModel.getStatus()));
+			caLogModel.setBuyFeeStatusExport(CreditLogModel.convertBuyFeeStatus(caLogModel.getBuyFeeStatus()));
+			caLogModel.setSellFeeStatusExport(CreditLogModel.convertSellFeeStatus(caLogModel.getSellFeeStatus()));
+			caLogModel.setIsSellExport(CreditLogModel.convertIsSell(caLogModel.getIsSell()));
+			newList.add(caLogModel);
+		}
+		String title = "债权转让购买";
+		if (CreditLog.CRELOG_STATUS_ALL.equals(status)) {
+			title = "所有债权购买记录Excel表";
+		}else if (CreditLog.CRELOG_STATUS_YEW.equals(status)) {
+			title = "已成交债权购买记录Excel表";
+		}else if (CreditLog.CRELOG_STATUS_NO.equals(status)){
+			title = "未成交债权购买记录Excel表";
+		}
+		String[] hearders = new String[] {"编号","债权名","债权转让ID","状态","出售债权用户","购买债权用户名","购买时间","购买份数","购买后应有价值","购买花费金额","购买手续费","购买手续费状态","出售手续费","出售手续费状态","是否再售出","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","caName","caId","status","sellUserName","buyUserName","buyTime","buyCopies","buyValue","buyAccount","buyFee","buyFeeStatusExport","sellFee","sellFeeStatusExport","isSellExport","addTime","addIp"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<CreditLogModel> tdList = new ArrayList<CreditLogModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				CreditLogModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+	}
+	// JSDPBUG-99 20150505  sxy
+	
+	
+}

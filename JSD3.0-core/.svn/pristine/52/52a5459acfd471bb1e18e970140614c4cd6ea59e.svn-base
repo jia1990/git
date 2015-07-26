@@ -1,0 +1,199 @@
+package com.ddtkj.p2psys.account.service;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @描述：充值service接口
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月12日 
+ */
+public interface AccountRechargeService {
+	/**
+	 * 充值回调处理
+	 * 
+	 * @remark 如果不是补单操作，则fillOrderLog值设为NULL
+	 * 
+	 * @param rem
+	 */
+	public void newRecharge(RechargeModel rem,String tradeStatus,FillOrderLog fillOrderLog);
+	/**
+	 * 充值失败业务逻辑处理
+	 * @param rem
+	 */
+	public void failRecharge(RechargeModel rem);
+	/**
+	 * 通过流水号获取充值对象
+	 * @param orderTradeNo
+	 * @return
+	 */
+	public AccountRecharge findRechargeByOrderTradeNo(String orderTradeNo);
+	/**
+	 * 充值任务调度
+	 * @param re
+	 */
+	public void doRechargeTask(RechargeModel re);
+	/**
+	 * 累计充值
+	 * @param userId
+	 * @return
+	 */
+	public AccountRechargeModel getRechargeSummary(long userId);
+	
+	/**
+	 * @author 李建云
+	 * 截止某个时间点用户累计充值
+	 * @param userId
+	 * @return
+	 */
+	public AccountRechargeModel getRechargeSummaryByendTime(Date date,long userId);
+	
+	/**
+	 * 查询充值用户数
+	 * @param status
+	 * @return
+	 * @author 孙晓勇
+	 */
+	public int rechargedUserCount(String islocked);
+	
+	/**
+	 * 查询累计充值金额总和
+	 * @param status
+	 * @return
+	 * @author 孙晓勇
+	 */
+	public double rechargedAllMomeny();
+	
+	/**
+	 * @author 李建云
+	 * 今日充值
+	 * @param userId
+	 * @return
+	 */
+	public double getRechargeToday(long userId);
+	
+	/**
+	 * 充值记录
+	 * @param userId
+	 * @return
+	 */
+	public PageDataList<AccountRechargeModel> list(long userId, AccountRechargeModel model) ;
+	
+	PageDataList<AccountRechargeModel> list(AccountRechargeModel model);
+	/**
+	 * 等待审核充值数量
+	 * @param tradeStatus
+	 * @return
+	 */
+	public int count(int tradeStatus) ;
+	/**
+	 * 充值审核（出现充值订单时使用）
+	 * @param model
+	 * @param operator
+	 */
+	void verifyAccountRecharge(AccountRechargeModel model, Operator operator);
+	/**
+	 * 充值审核失败（出现充值订单时使用）
+	 * @param accountRecharge
+	 */
+	void verifyFailRecharge(AccountRecharge accountRecharge);
+	
+	/**
+	 * 查询充值用户数——投资人
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int rechargedTenderUserCount();
+	/**
+	 * 本地数据与第三方充值对账
+	 * @param id
+	 * @return
+	 */
+	 Map<String,Object> repairRecharge(String tradeNo)throws Exception;
+	 /**
+	  * 对充值金额的汇总
+	  * @param model
+	  * @return
+	  */
+	 List<AccountRechargeModel> rechargeTotal(AccountRechargeModel model);
+	 
+	 AccountRecharge saveRecharge(AccountRecharge ar);
+	 
+	 /**
+	  * 根据批次号查询记录
+	  * @param tradeNo
+	  * @return
+	  */
+	 AccountRecharge findRechargeByTradeNo(String tradeNo);
+	 /**
+	  * 更新充值状态
+	  * @param ar
+	  * @param operator
+	  * @param remark
+	  * @return
+	  */
+	 AccountRecharge updateRechargeByTradeNo(AccountRecharge ar,Operator operator,String remark);
+	 
+	/**
+	 * 
+	 * 明细——查询时间段内充值金额记录
+	 * // JSDPBUG-99 20150505  sxy
+	 * @author sxy 2015年4月24日 14:37:43
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<AccountRechargeModel> rechargeMoneyStatisticsList(AccountRechargeModel model, int pageNumber, int pageSize);
+	/**
+	 * 
+	 * 明细——查询时间段内充值金额记录
+	 * // JSDPBUG-99 20150527  sxy
+	 * @author sxy 2015年0527
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<AccountRecharge> rechargeMoneyStatisticsListForSQL(AccountRechargeModel model, int pageNumber, int pageSize);
+	
+	/**
+	 * 使用sql进行充值的导出excel
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 xingjia 2015-05-15 start
+	public List excelRechargeList(AccountRechargeModel model);
+	//JSDP-116 xingjia 2015-05-15 start
+	//JSDP-171 xingjia 20150609 start
+	/**
+	 * 晋商贷储值卡充值转账
+	 * @param petCard
+	 * @param model
+	 * @param recharge
+	 * @param rechargeMoney
+	 * @return
+	 */
+	public AccountRecharge verifyAccountRecharge(PetCard petCard, AccountRechargeModel model,AccountRecharge recharge,String rechargeMoney);
+	//JSDP-171 xingjia 20150609 end
+	
+	//JSDP-207 xingjia 20150702 start
+	/**
+	 * 晋商贷体验卡充值记录查询
+	 * @param userId
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<AccountRechargeModel> petCardRechargeList(AccountRechargeModel model) ;
+	//JSDP-207 xingjia 20150702 end
+
+}

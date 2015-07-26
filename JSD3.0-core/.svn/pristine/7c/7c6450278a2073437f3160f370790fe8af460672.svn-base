@@ -1,0 +1,103 @@
+package com.ddtkj.p2psys.award.service.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.award.dao.ActivityAwardDao;
+import com.ddtkj.p2psys.award.dao.ActivityConfigDao;
+import com.ddtkj.p2psys.award.dao.ActivityRuleDao;
+import com.ddtkj.p2psys.award.dao.TakeWayDao;
+import com.ddtkj.p2psys.award.domain.ActivityAward;
+import com.ddtkj.p2psys.award.domain.ActivityConfig;
+import com.ddtkj.p2psys.award.domain.TakeWay;
+import com.ddtkj.p2psys.award.service.ActivityConfigService;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+/**
+ * 
+ * @描述：活动配置service的实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2014年12月12日
+ */
+@Service("activityConfigService")
+public class ActivityConfigServiceImpl extends BaseDaoImpl<ActivityConfig> implements ActivityConfigService{
+	@Resource
+	private ActivityConfigDao activityConfigDao;
+	
+	@Resource
+	private ActivityRuleDao activityRuleDao;
+	
+	@Resource
+	private ActivityAwardDao activityAwardDao;
+	
+	@Resource
+	private TakeWayDao takeWayDao;
+	
+	@Override
+	public PageDataList<ActivityConfig> getPageDataList(
+		
+		Map<String, Object> map, int currentPage, int pageSize) {
+		
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pageSize);
+		
+		String actName = (String)map.get("actName");
+		
+		//SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		//date = format.parse(map.get("actStartTime"));
+		//String actStartTime = (Date)map.get("actStartTime");
+		//Date actEndTime = (Date)map.get("actEndTime");
+		
+		//System.out.println("map里的actName值为："+actName);
+		if (!StringUtil.isBlank(actName)) {
+			param.addParam("actName", Operators.LIKE, actName);
+		}
+		param.addOrder(OrderType.DESC, "actId");
+		/*if (!StringUtil.isBlank(actStartTime)) {
+			param.addParam("actStartTime", Operators.LIKE, actStartTime);
+		}
+		if (!StringUtil.isBlank(actEndTime)) {
+			param.addParam("actEndTime", Operators.LIKE, actEndTime);
+		}*/
+		return activityConfigDao.findPageList(param);
+	}
+	
+	@Override
+	public ActivityConfig findActivityById(int actId) {
+		
+		return activityConfigDao.find(actId);
+	}
+	
+	/**
+	 * 添加活动（判断是否有规则）
+	 */
+	@Override
+	public void saveAcitvityConfig(ActivityConfig activityConfig) {
+		
+		
+		ActivityAward ava = activityConfig.getActivityAward() ;
+		activityConfig.setActivityAward(null);
+		activityConfig = activityConfigDao.save(activityConfig) ;
+		
+		//判断是否有规则（可以分别判断两个实体是否为空，分别添加）
+		ava.setActId(activityConfig.getActId());
+		ava = activityAwardDao.addActivityAward(ava) ;
+		activityConfig.setActivityAward(ava);
+	}
+
+	@Override
+	public List<TakeWay> findAllTakeWayList() {
+		
+		return takeWayDao.findAllTakeWayList();
+	} 
+
+
+
+}

@@ -1,0 +1,168 @@
+package com.ddtkj.p2psys.core.usercenter;
+
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
+
+/**
+ * 签名与校验工具
+ * @author ZDF
+ * @date 2015年3月6日
+ *
+ */
+public class SignUtils {
+	/** 日志记录器 */
+	public static Logger logger = LoggerFactory.getLogger(SignUtils.class);
+	
+	/** 排序比较器 */
+	private static final Comparator<String> comparator = new Comparator<String>() {
+		@Override
+		public int compare(String o1, String o2) {
+			return o1.compareTo(o2);
+		}
+	};
+	
+	/**
+	 * 校验MAP参数的MD5值
+	 * 
+	 * @author ZDF
+	 * @date 2015年2月6日
+	 * @param parameterMap
+	 * @param signKey
+	 * @return 
+	 * 		    校验通过时返回排序后的参数集合，失败是返回null
+	 * @throws Exception
+	 */
+	public static Map<String, Object> checkMap(Map<String, Object> parameterMap, String signKey) {
+		Map<String, Object> dataMap = new TreeMap<String, Object>(comparator);
+		dataMap.putAll(parameterMap);
+	
+		String key = null;
+		Object value = null;
+		StringBuffer sb = new StringBuffer();
+		for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
+			key = entry.getKey();
+			value = entry.getValue();
+			if (!"sign".equals(key))
+				sb.append(key).append("=").append(value).append("&");
+		}
+		sb.append("key=").append(signKey);
+	
+		String signValue = Encodes.md5(sb.toString()).toUpperCase();
+		String sign = (String) dataMap.get("sign");
+		
+		if (signValue.equals(sign))
+			return dataMap;
+		else{
+			logger.warn("签名校验失败：\nSRC: {}\nDES: {}", sign, signValue);
+			return null;
+		}
+	}
+
+	/**
+	 * 校验XML参数的MD5值
+	 * @author ZDF
+	 * @date 2015年3月6日
+	 * @param xml
+	 * @param signKey
+	 * @return
+	 * 			校验通过时返回排序后的参数集合，失败是返回null
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public static Map<String, Object> checkXml(String xml, String signKey) {
+		Map<String, Object> dataMap = null;
+		try {
+			Document doc = DocumentHelper.parseText(xml);
+			Map<String, String> parameterMap = new TreeMap<String, String>();
+			Element item = null;
+			Element rootElement = doc.getRootElement();
+			Iterator<Element> iterator = rootElement.elementIterator();
+			while(iterator.hasNext()){
+				item = iterator.next();
+				parameterMap.put(item.getName(), item.getText());
+			}
+			
+			dataMap = new TreeMap<String, Object>(comparator);
+			dataMap.putAll(parameterMap);
+			
+			String key = null;
+			Object value = null;
+			StringBuffer sb = new StringBuffer();
+			for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
+				key =  entry.getKey();
+				value = entry.getValue();
+				if(!"sign".equals(key))
+					sb.append(key).append("=").append(value).append("&");
+			}
+			sb.append("key=").append(signKey);
+			
+			String signValue = Encodes.md5(sb.toString()).toUpperCase();
+			String sign = (String) dataMap.get("sign");
+			
+			if(!signValue.equals(sign)){
+				logger.warn("签名校验失败：\nSRC: {}\nDES: {}", sign, signValue);
+				dataMap = null;
+			}
+		} catch (DocumentException e) {
+			dataMap = null;
+			e.printStackTrace();
+		}
+		
+		return dataMap;
+	}
+
+	/**
+	 * 对参数进行MD5签名
+	 * 
+	 * @author ZDF
+	 * @date 2015年2月9日
+	 * @param parameterMap
+	 * @param signKey
+	 * @return
+	 * 		校验通过时返回排序后的参数集合，并追加签名参数
+	 * @throws Exception
+	 */
+	public static Map<String, Object> signMap(Map<String, Object> parameterMap, String signKey) {
+		Map<String, Object> dataMap = new TreeMap<String, Object>(comparator);
+		dataMap.putAll(parameterMap);
+		
+		String key = null;
+		Object value = null;
+		StringBuffer sb = new StringBuffer();
+		for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
+			key =  entry.getKey();
+			value = entry.getValue();
+			if(!"sign".equals(key))
+				sb.append(key).append("=").append(value).append("&");
+	    }
+		sb.append("key=").append(signKey);
+		
+		dataMap.put("sign", Encodes.md5(sb.toString()).toUpperCase());
+		return dataMap;
+	}
+	
+	/**
+	 * 获取真实的请求地址
+	 * @author ZDF
+	 * @date 2015年4月14日
+	 * @param url 接口地址
+	 * @param parameterMap	请求参数
+	 * @param signKey	签名密钥
+	 * @return
+	 */
+	public static String getUrl(String url, Map<String, Object> parameterMap, String signKey){
+		parameterMap = signMap(parameterMap, signKey);
+		return HttpUtils.getUrl(url, parameterMap);
+	}
+}

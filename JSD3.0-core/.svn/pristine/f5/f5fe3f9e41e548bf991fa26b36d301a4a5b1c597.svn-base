@@ -1,0 +1,88 @@
+package com.ddtkj.p2psys.activity.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.activity.domain.SchoolRecruit;
+
+
+/**
+ * 扩展预约借款类,新增省市区县中文值
+ * @author sunxiaoyong
+ * @since 2015年2月16日 
+ * @version V3.0   
+ */
+public class SchoolRecruitModel extends SchoolRecruit{
+
+
+	private static final long serialVersionUID = -492533340380823520L;
+
+	/** 状态(用于展示和导出) */
+	private String statusStr;
+	
+	/** 学校 (用于展示和导出) */
+	private String schoolStr;
+	
+	
+	public String getSchoolStr() {
+		return schoolStr;
+	}
+
+	public void setSchoolStr(String schoolStr) {
+		this.schoolStr = schoolStr;
+	}
+
+	public String getStatusStr() {
+		return statusStr;
+	}
+
+	public void setStatusStr(String statusStr) {
+		this.statusStr = statusStr;
+	}
+
+	/** 省中文值 **/
+	private String provinceName;
+	
+	/** 市中文值 **/
+	private String cityName;
+	
+	/** 区(县)中文值 **/
+	private String countyName;
+	
+
+	public String getProvinceName() {
+		return provinceName;
+	}
+
+	public void setProvinceName(String provinceName) {
+		this.provinceName = provinceName;
+	}
+
+	public String getCityName() {
+		return cityName;
+	}
+
+	public void setCityName(String cityName) {
+		this.cityName = cityName;
+	}
+
+	public String getCountyName() {
+		return countyName;
+	}
+
+	public void setCountyName(String countyName) {
+		this.countyName = countyName;
+	}
+	
+	public static SchoolRecruitModel instance(SchoolRecruit schoolRecruit) {
+		SchoolRecruitModel schoolRecruitModel = new SchoolRecruitModel();
+		BeanUtils.copyProperties(schoolRecruit, schoolRecruitModel);
+		return schoolRecruitModel;
+	}
+
+	public SchoolRecruit prototype() {
+		SchoolRecruit schoolRecruit = new SchoolRecruit();
+		BeanUtils.copyProperties(this, schoolRecruit);
+		return schoolRecruit;
+	}
+
+}

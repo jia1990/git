@@ -1,0 +1,111 @@
+<script type="text/javascript">
+//$(function(){
+	
+	$.fn.dataGridOptions.formSubFun("#form",'/modules/system/operator/operatorAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址		
+		
+//});	
+</script>
+<div class="popForm">
+    <form id="form"  method="post"  enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">姓名：</label>
+		     <div class="ipt">
+		     	<input type="text" name="name" class="w400 easyui-validatebox" data-options="required: true,validType:'chinese'" maxlength="5"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">用户名：</label>
+		     <div class="ipt">
+		     	<input type="text" name="userName" id="userName" class="w400 easyui-validatebox adminUserName" data-options="required: true,validType:'name'" maxlength="16" onkeyup="value=value.replace(/[^\w]/g,'')"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">密码：</label>
+		     <div class="ipt">
+		     	<input id="fstPass" type="password" name="pwd" class="w400 easyui-validatebox adminPwd" data-options="required: true,validType:'password'" maxlength="16" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">确认密码：</label>
+		     <div class="ipt">
+		     	<input id="sedPass" type="password" name="confirmPassword" class="w400 easyui-validatebox adminPwdTwo" data-options="required: true,validType:'eqPwd[\'#fstPass\']'" maxlength="16" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">部门：</label>
+		     <div class="ipt">
+		     	<input type="text" name="department" class="w400 easyui-validatebox" maxlength="11"/>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">工号：</label>
+		     <div class="ipt">
+		     	<input type="text" name="no" class="easyui-validatebox"  maxlength="60"/>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">电话：</label>
+		     <div class="ipt">
+		     	<input type="text" name="phone" class="w400 easyui-validatebox"  maxlength="15" data-options="required: true,validType:'tel'" />
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">手机：</label>
+		     <div class="ipt">
+		     	<input type="text" name="mobile" class="w400 easyui-validatebox" maxlength="15" data-options="required: true,validType:'mobile'"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">qq：</label>
+		     <div class="ipt">
+		     	<input type="text" name="qq" class="w400 easyui-validatebox"  maxlength="15" data-options="required: true,validType: 'qq'"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">邮箱：</label>
+		     <div class="ipt">
+		     	<input type="text" name="email" class="w400 easyui-validatebox"  maxlength="35" data-options="required: true,validType: 'email'"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">用户角色：</label>
+		     <div class="ipt">
+		     	<#if roleList??>
+					<!--  <#list roleList as item>
+						<input type="radio" name="roleId" value="${item.id!}"  style="margin-top:-2px;" />&nbsp;&nbsp;<font>${item.name!}</font>&nbsp;&nbsp;&nbsp;&nbsp;
+					</#list> -->
+					<select name="roleId"> 
+						<#list roleList as item>
+							<option value="${item.id}">${item.name}</option> 
+						</#list>
+					</select> 
+				</#if>
+			</div>
+		    
+		</div>		
+		<div class="formitm">
+		     <label class="lab">备注：</label>
+		     <div class="ipt">
+		     	<textarea name="remark" class="w400 easyui-validatebox"  maxlength="120"/></textarea>	
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">上传头像：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file" id="uploadify" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/>
+		     </div>
+		</div>
+		
+		<input type="hidden" value="${operatorAddToken!}" name="operatorAddToken">
+		
+		
+	</form>
+</div>

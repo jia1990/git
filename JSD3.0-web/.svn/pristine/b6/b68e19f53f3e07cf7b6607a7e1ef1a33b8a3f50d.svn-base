@@ -1,0 +1,26 @@
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script type="text/javascript">
+$(function(){
+	if($("#sessionId").val()=="F"){
+	$("#c_address_icon_dd").show();
+	}
+})
+</script>
+<style>
+	.c_borrow dd span.c_address_icon{background: url(${webroot}${theme_dir}/images/account/icon_account.png) no-repeat;background-position: -30px -334px;}
+	.c_borrow dd.c_invest_this span.c_address_icon{background-position: 0 -334px;top: 12px;}
+	
+</style>
+<input  id = "sessionId" type="hidden" value="${session_user.userCache.borrowType!}"/>
+<dl class="c_aside_nav c_borrow">                                 
+	<dd class="<#if (mid??&&mid=='my_account')>c_invest_this</#if>"><span class="c_set_icon"></span><a href="${webroot}/member/useridentify/identify.html" hidefocus>账户设置</a></dd>
+	<dd class="<#if (mid??&&mid=='m_realNameIdentify')>c_invest_this</#if>"><span class="c_counter_icon"></span><a href="${webroot}/member_borrow/security/realNameIdentify.html" hidefocus>监管账户</a></dd>
+	<dd class="<#if (mid??&&mid=='m_bankinfo')>c_invest_this</#if>"><span class="c_bank_icon"></span><a href="${webroot}/member/cash/bank.html" hidefocus>银行卡绑定</a></dd>
+	<dd class="<#if (mid??&&mid=='m_recharge')>c_invest_this</#if>"><span class="c_pay_icon"></span><a href="${webroot}/member/recharge/newRecharge.html" hidefocus>账户充值</a></dd>
+	<dd class="<#if (mid??&&mid=='m_cash')>c_invest_this</#if>"><span class="c_withdraw_icon"></span><a href="${webroot}/member/cash/newCash.html" hidefocus>账户提现</a></dd>
+	<!-- <dd class="<#if (mid??&&mid=='m_transfer')>c_invest_this</#if>"><span class="c_money_icon"></span><a href="${webroot}/member/invest/accounTyunGou.html" hidefocus>转账云购</a></dd> -->
+	<dd class="<#if (mid??&&mid=='m_invest')>c_invest_this</#if>"><span class="c_money_icon"></span><a href="${webroot}/member/account/log.html" hidefocus>资金记录</a></dd>
+	<dd class="<#if (mid??&&mid=='m_identify')>c_invest_this</#if>"><span class="c_datum_icon"></span><a href="${webroot}/member_borrow/info/face.html" hidefocus>基本资料</a></dd>
+	<dd class="<#if (mid??&&mid=='m_info')>c_invest_this</#if>"><span class="c_site_icon"></span><a href="${webroot}/member/message/detail.html" hidefocus>站内信息</a></dd>
+	<div class="c_clear"></div>
+</dl>

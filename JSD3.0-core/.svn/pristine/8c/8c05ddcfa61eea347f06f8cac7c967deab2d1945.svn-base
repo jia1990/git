@@ -1,0 +1,204 @@
+package com.ddtkj.p2psys.redpacket.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的产生model   JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+public class RpActivityProduceModel extends RpActivityProduce {
+	
+	/** 当前页**/
+	private int page = 1;
+	/** 每页总数 **/
+	private int size = Page.ROWS;
+	private Page pages;
+	
+	private String userName;//用户名
+	private String realName;//真实姓名
+	private double rpActivityProduceSum;//活动红包产生的总额
+	private String type;//活动类型
+	private String startTime;
+	private String endTime;
+	private String borrowStr;//项目名称
+	private String awardName;//获得奖励名称
+	private double tenderMoney;//投资金额
+	private double awardMoney;//获取奖励
+	private String borrowApr;//标利益
+	private String batchNo;//批次号
+	private String awardType;//红包类型（ot为无效）
+	private String awardActivityType;//活动红包奖励 petCard,rpMoney,card,score;
+	
+
+	public static RpActivityProduceModel instance(RpActivityProduce rpActivityProduce) {
+		RpActivityProduceModel rpActivityProduceModel = new RpActivityProduceModel();
+		BeanUtils.copyProperties(rpActivityProduce, rpActivityProduceModel);
+		return rpActivityProduceModel;
+	}
+
+	public RpActivityProduce prototype() {
+		RpActivityProduce rpActivityProduce = new RpActivityProduce();
+		BeanUtils.copyProperties(this, rpActivityProduce);
+		return rpActivityProduce;
+	}
+	
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	
+	public double getRpActivityProduceSum() {
+		return rpActivityProduceSum;
+	}
+
+	public void setRpActivityProduceSum(double rpActivityProduceSum) {
+		this.rpActivityProduceSum = rpActivityProduceSum;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public Page getPages() {
+		return pages;
+	}
+
+	public void setPages(Page pages) {
+		this.pages = pages;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getBorrowStr() {
+		return borrowStr;
+	}
+
+	public void setBorrowStr(String borrowStr) {
+		this.borrowStr = borrowStr;
+	}
+
+	public String getAwardName() {
+		return awardName;
+	}
+
+	public void setAwardName(String awardName) {
+		this.awardName = awardName;
+	}
+
+	public double getTenderMoney() {
+		return tenderMoney;
+	}
+
+	public void setTenderMoney(double tenderMoney) {
+		this.tenderMoney = tenderMoney;
+	}
+
+	public double getAwardMoney() {
+		return awardMoney;
+	}
+
+	public void setAwardMoney(double awardMoney) {
+		this.awardMoney = awardMoney;
+	}
+
+	public String getBorrowApr() {
+		return borrowApr;
+	}
+
+	public void setBorrowApr(String borrowApr) {
+		this.borrowApr = borrowApr;
+	}
+
+	public String getBatchNo() {
+		return batchNo;
+	}
+
+	public void setBatchNo(String batchNo) {
+		this.batchNo = batchNo;
+	}
+	public String getAwardType() {
+		return awardType;
+	}
+
+	public void setAwardType(String awardType) {
+		this.awardType = awardType;
+	}
+
+	public String getAwardActivityType() {
+		return awardActivityType;
+	}
+
+	public void setAwardActivityType(String awardActivityType) {
+		this.awardActivityType = awardActivityType;
+	}
+	
+	public static boolean findReapetData(long borrowId, String awardType,String isEnable) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("borrowId", borrowId);
+		param.addParam("awardType", awardType);
+		if(StringUtil.isNotBlank(isEnable)){
+			param.addParam("isEnable", Integer.parseInt(isEnable));
+		}
+		RpActivityProduceDao rpActivityProduceDao = (RpActivityProduceDao) BeanUtil.getBean("rpActivityProduceDao");
+		RpActivityProduce rpActivityProduce = rpActivityProduceDao.findByCriteriaForUnique(param);
+		if(null != rpActivityProduce){
+			return true;
+		}
+		return false;
+	}
+	
+}

@@ -1,0 +1,144 @@
+package com.rongdu.p2psys.core.dao.jdbc;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.dao.NoticeTypeDao;
+import com.rongdu.p2psys.core.domain.NoticeType;
+
+@Repository("noticeTypeDao")
+public class NoticeTypeDaoImpl extends BaseDaoImpl<NoticeType> implements NoticeTypeDao {
+
+	@Override
+	public PageDataList<NoticeType> noticeTypeList(int page) {
+		QueryParam param = QueryParam.getInstance();
+		param.addOrder(OrderType.ASC, "nid");
+		param.addOrder(OrderType.ASC, "noticeType");
+		return this.findPageList(param);
+	}
+
+	@Override
+	public int modify(NoticeType noticeType) {
+		String jpql = "UPDATE NoticeType SET name=:name,type=:type,send=:send,sendRoute=:sendRoute,"
+				+ "titleTemplet=:titleTemplet, templet=:templet,remark=:remark,"
+				+ "updateTime=:updateTime,updateIp=:updateIp WHERE nid=:nid AND noticeType=:noticeType";
+		Query query = em.createQuery(jpql);
+		query.setParameter("name", noticeType.getName());
+		query.setParameter("type", noticeType.getType());
+		query.setParameter("send", noticeType.getSend());
+		query.setParameter("sendRoute", noticeType.getSendRoute());
+		query.setParameter("titleTemplet", noticeType.getTitleTemplet());
+		query.setParameter("templet", noticeType.getTemplet());
+		query.setParameter("remark", noticeType.getRemark());
+		query.setParameter("updateTime", noticeType.getUpdateTime());
+		query.setParameter("updateIp", noticeType.getUpdateIp());
+		query.setParameter("nid", noticeType.getNid());
+		query.setParameter("noticeType", noticeType.getNoticeType());
+		return query.executeUpdate();
+	}
+
+	@Override
+	public List<NoticeType> findAllSend() {
+		// 系统通知短信用户也可以配置为接收或者不接收，所以传回前台的配置类型不能只是用户类型短信了，要全部发送短信类型，但验证类的短信比较特殊，不能配置，所以只有可canswitch为1才能配置
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("send", 1).addParam("canSwitch", 1);
+		return findByCriteria(param);
+	}
+
+	@Override
+	public NoticeType findByNid(String nid, int noticeType) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("nid", nid).addParam("noticeType", noticeType);
+		return super.findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public List<NoticeType> list() {
+		QueryParam param = QueryParam.getInstance();
+		param.addOrder(OrderType.ASC, "nid").addOrder(OrderType.ASC, "noticeType");
+		return findByCriteria(param);
+	}
+
+	@Override
+	public PageDataList<NoticeType> list(int page, int rows, NoticeType noticeType) {
+		QueryParam param = QueryParam.getInstance();
+		if (StringUtil.isNotBlank(noticeType.getNid())) {
+			param.addParam("nid", noticeType.getNid());
+		}
+		if(StringUtil.isNotBlank(noticeType.getName())){
+			param.addParam("name",Operators.LIKE ,noticeType.getName());
+		}
+		if(noticeType.getNoticeType()!=0){
+			param.addParam("noticeType", noticeType.getNoticeType());
+		}
+		
+		if(noticeType.getType() != 0){
+			param.addParam("type", noticeType.getType());
+		}
+		
+		if(noticeType.getSend()==1){
+			param.addParam("send", 1);
+		}else if(noticeType.getSend()==2){
+			param.addParam("send", 0);
+		}
+		param.addOrder(OrderType.DESC, "id");
+		param.addPage(page, rows);
+		return findPageList(param);
+	}
+	
+	@Override
+	public PageDataList<Map<String,Object>> getNoticeTypeList(int page, int rows,
+			NoticeType noticeType) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT DISTINCT rt.nid,rt.name,CASE rr.send " +
+				"WHEN 1 THEN 1 ELSE 2 END AS sms,CASE rs.send WHEN 1 THEN 1 ELSE 2 END AS email," +
+				"CASE rn.send WHEN 1 THEN 1 ELSE 2 END AS msg" +
+				" FROM rd_notice_type rt LEFT JOIN rd_notice_type rs ON rs.nid=rt.nid AND rs.notice_type=2 AND rs.send=1" +
+				" LEFT JOIN rd_notice_type rn ON rn.nid=rt.nid AND rn.notice_type=3 AND rn.send=1" +
+				" LEFT JOIN rd_notice_type rr ON rr.nid=rt.nid AND " +
+				" rr.notice_type=1 AND rr.send=1 WHERE 1 = 1 AND rt.send=1 ");
+		if(noticeType.getType() != 0){
+			sql.append(" AND rt.type=" + noticeType.getType());
+		}
+		if(noticeType.getUserType() != 0){
+			sql.append(" AND rt.user_type in(0," + noticeType.getUserType() + ")");
+		}
+		if(!StringUtil.isBlank(noticeType.getNid())){
+			sql.append(" AND rt.nid like'%" + noticeType.getNid() + "%'");
+		}
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		Page pages = new Page(query.getResultList().size(), page, rows);
+		PageDataList<Map<String,Object>> pageList = new PageDataList<Map<String,Object>>();
+		query.setFirstResult((page - 1) * rows);
+		query.setMaxResults(rows);
+		List<Object[]> queryList = query.getResultList();
+		List<Map<String,Object>> noticeTypeList = new ArrayList<Map<String,Object>>();
+		for(int i=0;i<queryList.size();i++){
+			Object[] object = queryList.get(i);
+			Map<String,Object> map = new HashMap<String,Object>();
+			map.put("nid", object[0].toString());
+			map.put("name", object[1]);
+			map.put("sms", object[2]);
+			map.put("email", object[3]);
+			map.put("msg", object[4]);
+			noticeTypeList.add(map);
+		}
+		pageList.setList(noticeTypeList);
+		pageList.setPage(pages);
+		return pageList;
+	}
+}

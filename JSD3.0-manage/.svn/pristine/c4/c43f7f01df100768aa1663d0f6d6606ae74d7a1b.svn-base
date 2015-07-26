@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>提现详情</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'accountCashList.html?id='+${id!},
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : false,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'desc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			showFooter: true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width: 50,fixed: true,sortable:true},
+			{ field: 'userName', title: '用户名', width: 60},
+			{ field: 'realName', title: '真实姓名', width: 60},
+			{ field: 'userType', title: '用户类型', width: 60,formatter:function(value,row,index){
+				if(value=="10"){
+					return '投资人';
+				}
+				if(value=="11"){
+					return '借款人';
+				}
+				if(value=="12"){
+					return '担保公司';
+				}
+				if(value=='13'){
+					return '商城'
+				}
+				return '';
+			}},
+			{ field: 'bankNo', title: '银行卡账号', width: 100},
+ 			{ field: 'bankBranchName', title: '支行', width: 60},
+			{ field: 'bankProvinceName', title: '开户省', width: 60},
+			{ field: 'bankCityName', title: '开户市', width: 60},
+			{ field: 'bankName', title: '所属银行', width: 80}, 
+			{ field: 'drawAmountStr', title: '提现总额', width: 100,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'drawInAccountAmountStr', title: '到账金额', width: 100,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'drawFeeStr', title: '手续费', width: 100,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'addTime', title: '提现提交时间', width: 80,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+ 			{ field: 'firstTrialUserName', title: '初审审核人', width: 80},
+			
+			{ field: 'firstTrialTime', title: '初审时间', width: 80,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'firstTrialFailRemark', title: '初审备注', width: 60,fixed: true,
+				formatter:function(value, row, index){
+					if(value!=undefined){
+						if( value.length>3){
+							return '<span title="'+value+'">'+value.substring(0,3)+'<span>';
+						}else{
+							return value;
+						}
+					}
+				}
+			},
+			{ field: 'recheckUserName', title: '复审审核人', width: 80},
+			{ field: 'recheckTime', title: '复审时间', width: 80,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'recheckFailRemark', title: '复审备注', width: 60,fixed: true,
+				formatter:function(value, row, index){
+					if(value!=undefined){
+						if( value.length>3){
+							return '<span title="'+value+'">'+value.substring(0,3)+'<span>';
+						}else{
+							return value;
+						}
+					}
+				}
+			}, 
+			
+			{ field: 'drawHandleStatus', title: '状态', width: 80,formatter:function(value, row, index){
+					switch(value){
+					case "00":return "申请提现";
+					case "11":return "初审成功";
+					case "10":return "初审失败";
+					case "21":return "复审成功";
+					case "20":return "复审失败";
+					case "99":return "取消提现";
+					case "30" :return "提现成功";
+					case "42" :return "等待银行转账";
+					case "41" :return "汇潮请求失败";
+					case "88" :return "银行处理失败";
+					}
+				}
+			}
+			 ]],
+	        toolbar : '#toolbar',
+	        onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip');
+			}
+		});
+	});
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<!-- <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入用户名查询用户信息）</font></h2>
+			<form id="searchForm">
+				<ul>
+					<li>用户名：<input type="text" name="userName" id="userName"  autocomplete="off"/></li>
+					<li>状态：
+					<select name="drawHandleStatus" id="status" class="type">
+						<option value="">请选择</option>
+						<option value="00">申请提现</option>
+						<option value="30">提现成功</option>
+						<option value="88">银行处理失败</option>
+						<option value="11">初审成功</option>
+						<option value="10">初审失败</option>
+						<option value="21">复审成功</option>
+						<option value="20">复审失败</option>
+						<option value="99">取消提现</option>
+						<option value="42">等待银行转账</option>
+						<option value="41">汇潮请求失败</option>
+						
+					</select></li>
+
+            		<li>用户类型：<select name="userType" class="type">
+            			<option value="">全部</option>
+            			<option value="10">投资人</option>
+            			<option value="11">借款人</option>
+            			<option value="12">担保公司</option>
+            			<option value="13">商城</option>
+            		</select></li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div> -->
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+
+</html>

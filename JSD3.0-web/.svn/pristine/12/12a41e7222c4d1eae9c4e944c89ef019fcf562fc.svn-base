@@ -1,0 +1,757 @@
+package com.rongdu.p2psys.web.user;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.domain.UserRealnameApplication;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.ddtkj.p2psys.user.service.UserRealnameApplicationService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.model.accountlog.BaseAccountLog;
+import com.rongdu.p2psys.account.model.accountlog.noac.GetCodeLog;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.rule.RealNameAttestationRuleCheck;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.domain.UserPwdQuestion;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserPwdQuestionService;
+import com.rongdu.p2psys.user.service.UserService;
+import com.rongdu.p2psys.web.borrow.BorrowAction;
+
+/**
+ * 安全中心
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月25日16:57:51
+ */
+
+public class SecurityAction extends BaseAction implements ModelDriven<UserModel> {
+	
+	private Logger logger = Logger.getLogger(BorrowAction.class);
+	private UserModel model = new UserModel();
+	private Map<String, Object> data;
+	
+	@Override
+	public UserModel getModel() {
+		return model;
+	}
+
+	public void setModel(UserModel model) {
+		this.model = model;
+	}
+	
+	@Resource
+	private RegionService regionService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private UserPwdQuestionService userPwdQuestionService;
+	@Resource
+	private UserRealnameApplicationService userRealnameApplicationService;
+	@Resource
+	private DictService dictService ;
+
+	private User user;
+
+	private RealNameAttestationRuleCheck realNameAttestationRuleCheck = (RealNameAttestationRuleCheck) Global
+			.getRuleCheck("realNameAttestation");
+
+	/**
+	 * 前往安全中心设置页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/setting")
+	public String setting() throws Exception {
+		
+		// 清判断跳转页面用Flag
+		request.getSession().removeAttribute("returnFlag");
+		
+		request.setAttribute("real_name_style", realNameAttestationRuleCheck.style());
+
+		// 更新下userIdentify缓存
+		UserIdentify userIdentify = getSessionUserIdentify();
+		session.put(Constant.SESSION_USER_IDENTIFY, userIdentifyService.findById(userIdentify.getUserId())); 
+		
+		// 获取Session中的用户对象
+		user = getSessionUser();
+		// 判断交易密码是否已设置
+		request.setAttribute("payPwd", ""); // TODO 于俊斐    参数：user.getPayPwd() 不在用户表中了
+		
+		// 密保问题List取得
+		List<UserPwdQuestion> list = userPwdQuestionService.pwdQuestion(user);
+		// 密保已设置的场合、设置/修改按钮显示判断用Flag设定值
+		if (list != null && list.size() > 0) {
+			request.setAttribute("pwdQuestion", 1);
+		}
+		request.setAttribute("realNameStatus", userIdentify.getRealNameStatus());
+		return "setting";
+	}
+
+	/**
+	 * 修改登录密码
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/modifyPwd")
+	public void modifyPwd() throws Exception {
+		user = getSessionUser();
+		model.validModifyPwdModel(user);
+		try {
+			user.setPassword(model.getNewPwd());
+			if(user!=null){
+				session.remove(Constant.SESSION_USER);
+				session.put(Constant.SESSION_USER, userService.modifyPwd(user));
+			}
+			printSuccess();
+		} catch (Exception e) {
+			logger.error("修改密码失败", e);
+			printResult("result", false);
+		}
+	}
+	
+	/**
+	 * 借款人修改登录密码
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/borrowModifyPwd")
+	public void borrowModifyPwd() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>() ;
+		try {
+			model.validModifyPwdModel(user);
+			user.setPassword(model.getNewPwd());
+			if(user!=null){
+				session.remove(Constant.SESSION_USER);
+				session.put(Constant.SESSION_USER, userService.modifyPwd(user));
+			}
+			data.put("code","01") ;
+			data.put("msg","修改成功") ;
+			data.put("result",true) ;
+			printJson(getStringOfJpaObj(data));
+		} catch (Exception e) {
+			data.put("msg", e.getMessage()) ;
+			data.put("code","02") ;
+			data.put("result", false) ;
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 借款人 判断交易密码是否为空
+	 * 于俊斐
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/getPaypwd")
+	public void getPaypwd() throws Exception {
+		User user = this.userService.find( getSessionUser().getUserId()) ;
+		data = new HashMap<String, Object>() ;
+		if(StringUtils.isNotEmpty(user.getPaypwd())){
+			data.put("result", false) ;
+			printJson(getStringOfJpaObj(data));
+		}else{
+			data.put("result", true) ;
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 借款人 获取密保问题列表
+	 * 于俊斐
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/getQuestion")
+	public void getQuestion() throws Exception {
+		User user = this.userService.find( getSessionUser().getUserId()) ;
+		List<UserPwdQuestion> list = userPwdQuestionService.pwdQuestion(user);
+		List<Dict> diclist = dictService.list("pwd_protection") ;
+		data = new HashMap<String, Object>() ;
+		if(diclist!=null && diclist.size()>0 ){
+			data.put("size", list==null?0:list.size()) ;
+			data.put("questionlist", list) ;
+			data.put("list",diclist) ;
+			data.put("result", false) ;
+			printJson(getStringOfJpaObj(data));
+		}else{
+			data.put("size",-1) ;
+			data.put("questionlist", null) ;
+			data.put("list",null) ;
+			data.put("result", true) ;
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 借款人 修改交易密码
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/modifyPaypwd")
+	public void borrowModifyPaypwd() throws Exception {
+		user = getSessionUser();
+		user = userService.find(user.getUserId());
+		data = new HashMap<String, Object>() ;
+		try{
+			String flag = model.validModifyPaypwdModel(user);  // TODO 验证交易密码  交易密码不在用户表中了。
+			if("OK".equals(flag)){ // 新增
+				try {
+					user.setPaypwd(model.getNewPayPwd());
+					if(user!=null){
+						session.remove(Constant.SESSION_USER);
+						session.put(Constant.SESSION_USER, userService.modifyPaypwd(user));
+					}
+					data.put("msg","设置或修改交易密码成功") ;
+					data.put("code", "01") ;
+					data.put("result", true) ;
+					printJson(getStringOfJpaObj(data));
+				} catch (Exception e) {
+					data.put("msg", e.getMessage()) ;
+					data.put("code","02") ;
+					data.put("result", false) ;
+					printJson(getStringOfJpaObj(data));
+				}
+			}
+		}catch(Exception e){
+			data.put("msg", e.getMessage()) ;
+			data.put("code","03") ;
+			data.put("result", false) ;
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 投资人 修改交易密码
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/modifyPaypwd")
+	public void memberModifyPaypwd() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>() ;
+		String flag = model.validModifyPaypwdModel(user);  // TODO 验证交易密码  交易密码不在用户表中了。
+		if("OK".equals(flag)){ // 新增
+			try {
+				user.setPaypwd(model.getNewPayPwd());
+				if(user!=null){
+					session.remove(Constant.SESSION_USER);
+					session.put(Constant.SESSION_USER, userService.modifyPaypwd(user));
+				}
+				data.put("msg","设置或修改交易密码成功") ;
+				data.put("code", "01") ;
+				data.put("result", true) ;
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("msg", e.getMessage()) ;
+				data.put("code","02") ;
+				data.put("result", false) ;
+				printJson(getStringOfJpaObj(data));
+			}
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 实名认证
+	 * 
+	 * @return String
+	 * @throws Exception if has error
+	 */
+	@Action(value="/member/security/realname",results = { @Result(name = "ymdregister", type = "ftl", location = "/tpp/ymdregister.html")})
+	//@Action("/member/security/realname")
+	public String realname() throws Exception {
+		try {
+			//因汇潮接口开户原因，修改到开户是查询的手机号是否存在改为认证通过的手机号是否存在
+			user = getSessionUser();
+			Object obj=userCacheService.doRealname(user, model);
+			if (obj != null) {
+				return madeApiRegisterReturn(obj, user);
+			}
+		}catch (BussinessException e) {
+			logger.info("实名人工抛出异常原因====="+e.getMessage());
+			message(e.getMessage());
+		} catch (Exception e) {
+			logger.info("实名程序异常原因====="+e.getMessage());
+			String weburl=Global.getValue("weburl");
+			message("系统异常联系管理员！", weburl+"/member/security/realNameIdentify.html");
+			e.printStackTrace();
+		}
+		return MSG;
+	}
+	
+	
+	/**
+	 * 借款人实名认证
+	 * 
+	 * @return String
+	 * @throws Exception if has error
+	 */
+	@Action(value="/member_borrow/security/borrowRealname",results = {@Result(name = "ymdregister", type = "ftl", location = "/tpp/ymdregister.html")})
+	public String borrowRealname() throws Exception {
+		//因汇潮接口开户原因，修改到开户是查询的手机号是否存在改为认证通过的手机号是否存在
+		//ValidateUtil.checkPhoneExist(model.getMobilePhone());
+		try {
+			user = getSessionUser();
+			logger.info("用户名==="+user.getUserName());
+			UserModel um = UserModel.instance(user);
+			Object obj = userCacheService.doRealname(user, um);
+			if (obj != null) {
+				return madeApiRegisterReturn(obj, user);
+			}
+		}catch (BussinessException e) {
+			message(e.getMessage());
+		} catch (Exception e) {
+			String weburl=Global.getValue("weburl");
+			message("系统异常联系管理员！", weburl+"/member/security/realname.html");
+		}
+		return MSG;
+	}
+	
+	/**
+	 * 处理不同第三方接口
+	 * @param object 
+	 * @param user 用户
+	 * @return 返回的页面
+	 */
+	private String madeApiRegisterReturn(Object object, User user) {
+		int apiType = StringUtil.toInt(Global.getValue("api_code"));
+		switch (apiType) {
+		case 1:// 易极付接口
+			request.setAttribute("yjf", object);
+			return "yjf";
+		case 2:// 汇潮接口
+			request.setAttribute("ips", object);
+			return "ipsregister";
+		case 3:// 汇潮接口
+			request.setAttribute("ymd", object);
+			return "ymdregister";
+		default:
+			message("实名认证申请成功，请到个人中心查看","/member/main.html");
+			return MSG;
+		}
+	}
+	
+	/**
+	 * 前往修改绑定邮箱页面
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/modifyEmail")
+	public String modifyEmail() throws Exception {
+		user = getSessionUser();
+		List<UserPwdQuestion> pwdQuestionList = userPwdQuestionService.listRand(user.getUserId());
+		if (pwdQuestionList != null && pwdQuestionList.size() > 0) {
+			request.setAttribute("pwdQuestionList", pwdQuestionList);
+		} else {
+			//throw new UserException("请先设置密保问题，再进行绑定邮箱操作！", 1);
+			this.redirect("/member/security/pwdQuestion.html");
+		}
+		return "modifyEmail";
+	}
+
+	/**
+	 * 修改绑定邮箱 校验密码和密保
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/doModifyEmail")
+	public void doModifyEmail() throws Exception {
+		user = getSessionUser();
+		User u = this.userService.find(user.getUserId());
+		UserPwdQuestion question = this.userPwdQuestionService.find(model.getQuestion(), u.getUserId());
+		model.validUserQuestion(u, question);
+		data = new HashMap<String, Object>();
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 投资人实名认证
+	 *@author 李建云 
+	 * 前往实名认证页面
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	@Action(value="/member/security/realNameIdentify",results = { 
+			@Result(name = "realNameIdentify", type = "ftl", location = "/member/security/realNameIdentify.html"),
+			@Result(name = "realNameIdentifySuccess", type = "ftl", location = "/member/security/realNameIdentifySuccess.html"),
+			@Result(name = "realNameSetting", type = "ftl", location = "/member/security/realNameSetting.html")})
+	public String realNameIdentify() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		UserRealnameApplication  userRealnameApplication = userRealnameApplicationService.findUserRealnameApplication(getSessionUser().getUserId());
+	    logger.info("用户名==="+user.getUserName());
+		String thirdPartyOpen = user.getThirdPartyIsOpen();
+		request.setAttribute("user", user);
+		if(user.getThirdPartyOpenCount()>2&&"N".equals(user.getThirdPartyIsOpen())){	
+			//如果开户2次失败，跳转到提交认证资料页面
+				
+		    if(userRealnameApplication != null && userRealnameApplication.getStatus()==1){
+				//提交认证资料，后台审核成功，继续认证
+				request.setAttribute("flag", "flag");
+				return "realNameIdentify";
+			}else if(userRealnameApplication != null && userRealnameApplication.getStatus()==2){
+				//提交认证资料，后台审核失败，继续填写
+				return "realNameSetting";
+			}
+			return "realNameSetting";	
+		}else if(thirdPartyOpen != null &&"Y".equals(thirdPartyOpen)){
+			//如果开户成功，跳转开户成功页面 
+			String ymdSubmitTestUrl = Global.getValue("ymd_submit_test_url");
+			request.setAttribute("ymdSubmitTestUrl", ymdSubmitTestUrl);
+			return "realNameIdentifySuccess";
+		}else{
+			return "realNameIdentify";
+		}
+	}
+	
+	
+	/**
+	 * 担保公司实名认证
+	 *@author 李建云 
+	 * 前往实名认证页面
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	@Action(value="/member/security/realNameIdentifyAssure",results = { 
+			@Result(name = "realNameIdentify", type = "ftl", location = "/member_guarantee/security/realNameIdentify.html"),
+			@Result(name = "realNameIdentifySuccess", type = "ftl", location = "/member_guarantee/security/realNameIdentifySuccess.html"),
+			@Result(name = "realNameSetting", type = "ftl", location = "/member_guarantee/security/realNameSetting.html")})
+	public String realNameIdentifyAssure() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		UserRealnameApplication  userRealnameApplication = userRealnameApplicationService.findUserRealnameApplication(getSessionUser().getUserId());
+	    logger.info("用户名==="+user.getUserName());
+		String thirdPartyOpen = user.getThirdPartyIsOpen();
+		request.setAttribute("user", user);
+		if(user.getThirdPartyOpenCount()>2&&"N".equals(user.getThirdPartyIsOpen())){	
+			//如果开户2次失败，跳转到提交认证资料页面
+				
+		 if(userRealnameApplication != null && userRealnameApplication.getStatus()==1){
+				//提交认证资料，后台审核成功，继续认证
+				request.setAttribute("flag", "flag");
+				return "realNameIdentify";
+			}else if(userRealnameApplication != null && userRealnameApplication.getStatus()==2){
+				//提交认证资料，后台审核失败，继续填写
+				return "realNameSetting";
+			}
+			return "realNameSetting";	
+		}else if(thirdPartyOpen != null &&"Y".equals(thirdPartyOpen)){
+			//如果开户成功，跳转开户成功页面 
+			String ymdSubmitTestUrl = Global.getValue("ymd_submit_test_url");
+			request.setAttribute("ymdSubmitTestUrl", ymdSubmitTestUrl);
+			return "realNameIdentifySuccess";
+		}else{
+			return "realNameIdentify";
+		}
+	}
+	
+	
+
+	/**
+	 * 前往绑定邮箱页面
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/bindEmail")
+	public String bindEmail() {
+		UserIdentifyModel model = new UserIdentifyModel();
+		model.validAttestationForBindEmail();
+		return "bindEmail";
+	}
+
+	/**
+	 * 绑定邮箱-获取校验码
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/bindEmailCode")
+	public void bindEmailCode() throws Exception {
+		user = getSessionUser();
+		//JSDP-223 gjh 2015-7-15 start
+		data = new HashMap<String, Object>();
+		UserModel userModel = new UserModel();
+		userModel.setValidCode(paramString("validCode"));
+		try {
+			userModel.validRegRule();
+		} catch (Exception e) {
+			e.printStackTrace();
+			data.put("result", false);
+			data.put("code", "011");
+			data.put("msg", e.getMessage());
+			printJson(getStringOfJpaObj(data));
+			data = null;
+			return;
+		}
+		//JSDP-223 gjh 2015-7-15 start
+		BaseAccountLog blog = new GetCodeLog(user, user.getUserName(), model.getEmail(), null,
+				NoticeConstant.NOTICE_BIND_EMAIL);
+		blog.initCode("bindEmail");
+		blog.doEvent();
+		printSuccess();
+	}
+
+	/**
+	 * 绑定邮箱
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/doBindEmail")
+	public void doBindEmail() throws Exception {
+		user = getSessionUser();
+		long userId = user.getUserId();
+		model.validBindEmail();
+		userIdentifyService.modifyEmailStatus(userId,"81", "80");
+		userService.modifyEmail(userId, model.getEmail());
+		// 更新session_user
+		user.setEmail(model.getEmail());
+		session.put(Constant.SESSION_USER, user);
+		// 更新SESSION_USER_IDENTIFY
+		UserIdentify userAttestation = getSessionUserIdentify();
+		userAttestation.setEmailStatus("81");
+		session.put(Constant.SESSION_USER_IDENTIFY, userAttestation);
+		data = new HashMap<String, Object>();
+		data.put("result", true);
+		data.put("msg", "邮箱绑定成功!");
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 前往修改绑定手机页面
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/modifyPhone")
+	public String modifyPhone() throws Exception {
+		user = getSessionUser();
+		List<UserPwdQuestion> pwdQuestionList = userPwdQuestionService.listRand(user.getUserId());
+		if (pwdQuestionList != null && pwdQuestionList.size() > 0) {
+			request.setAttribute("pwdQuestionList", pwdQuestionList);
+		} else {
+			//throw new UserException("请先设置密保问题，再进行绑定手机操作！", 1);
+			this.redirect("/member/security/pwdQuestion.html");
+		}
+		return "modifyPhone";
+	}
+
+	/**
+	 * 修改绑定手机 校验密码和密保
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/doModifyPhone")
+	public void doModifyPhone() throws Exception {
+		user = getSessionUser();
+		User u = this.userService.find(user.getUserId());
+		UserPwdQuestion question = this.userPwdQuestionService.find(model.getQuestion(), u.getUserId());
+		model.validUserQuestion(u, question);
+		data = new HashMap<String, Object>();
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 前往绑定手机页面
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/bindPhone")
+	public String bindPhone() {
+		UserIdentifyModel model = new UserIdentifyModel();
+		model.validAttestationForBindPhone();
+		return "bindPhone";
+	}
+
+	/**
+	 * 绑定手机-获取校验码
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/bindPhoneCode")
+	public void bindPhoneCode() throws Exception {
+		user = getSessionUser();
+		//JSDP-223 gjh 2015-7-15 start
+		data = new HashMap<String, Object>();
+		UserModel userModel = new UserModel();
+		userModel.setValidCode(paramString("validCode"));
+		try {
+			userModel.validRegRule();
+		} catch (Exception e) {
+			e.printStackTrace();
+			data.put("result", false);
+			data.put("code", "011");
+			data.put("msg", e.getMessage());
+			printJson(getStringOfJpaObj(data));
+			return;
+		}
+		//JSDP-223 gjh 2015-7-15 start
+		BaseAccountLog blog = new GetCodeLog(user, user.getUserName(), null, model.getMobilePhone(),
+				NoticeConstant.NOTICE_BIND_PHONE);
+		blog.initCode("bindPhone");
+		blog.doEvent();
+		printSuccess();
+	}
+
+	/**
+	 * 绑定手机
+	 * 
+	 * @return
+	 */
+	@Action("/member/security/doBindPhone")
+	public void doBindPhone() throws Exception {
+		user = getSessionUser();
+		long userId = user.getUserId();
+		model.validBindPhone();
+		userService.modifyPhone(userId, model.getMobilePhone(),"86");
+		// 更新session_user
+		user.setMobilePhone(model.getMobilePhone());
+		session.put(Constant.SESSION_USER, user);
+		// 更新SESSION_USER_IDENTIFY
+		UserIdentify userIdentify = getSessionUserIdentify();
+		userIdentify.setMobilePhoneStatus("86");
+		session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+		data = new HashMap<String, Object>();
+		data.put("result", true);
+		data.put("msg", "手机绑定成功!");
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 密保问题展示页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/pwdQuestion")
+	public String pwdQuestion() throws Exception {
+		user = getSessionUser();
+		List<UserPwdQuestion> list = userPwdQuestionService.pwdQuestion(user);
+		if (list != null && list.size() > 0) {
+			request.setAttribute("list", list);
+			return "pwdQuestion";
+		} else {
+			// 判断跳转页面用Flag(null：跳转到设置密保页面;1：跳转到安全中心页面)
+			request.getSession().setAttribute("returnFlag", 1);
+			// 判断按钮名称显示用Flag(1：确认；1以外：确认修改;)
+			// 未设置密保的场合、按钮名称：确认
+			request.setAttribute("showFlag", 1);
+			return "setPwdQuestion";
+		}
+	}
+
+	/**
+	 * 回答密保问题页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/answerPwdQuestion")
+	public String answerPwdQuestion() throws Exception {
+		user = getSessionUser();
+		List<UserPwdQuestion> list = userPwdQuestionService.pwdQuestion(user);
+		request.setAttribute("list", list);
+		return "answerPwdQuestion";
+	}
+
+	/**
+	 * 回答密保问题
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/doAnswerPwdQuestion")
+	public void doAnswerPwdQuestion() throws Exception {
+		user = getSessionUser();
+		userPwdQuestionService.doAnswerPwdQuestion(model, user);
+		printSuccess();
+	}
+
+	/**
+	 * 设置密保问题页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/setPwdQuestion")
+	public String setPwdQuestion() throws Exception {
+		
+		// 判断跳转页面用Flag(null：跳转到设置密保页面;1：跳转到安全中心页面)
+		if (request.getSession().getAttribute("returnFlag") == null) {
+			request.getSession().setAttribute("returnFlag", 1);
+		}
+		return "setPwdQuestion";
+	}
+
+	/**
+	 * 设置密保问题
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/security/doSetPwdQuestion")
+	public void doSetPwdQuestion() throws Exception {
+		user = getSessionUser();
+		userPwdQuestionService.doSetPwdQuestion(model, user);
+		printSuccess();
+	}
+
+}

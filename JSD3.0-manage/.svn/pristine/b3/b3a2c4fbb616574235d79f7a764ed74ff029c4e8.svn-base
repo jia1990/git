@@ -1,0 +1,324 @@
+package com.rongdu.manage.action.account;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.ddtkj.p2psys.account.service.AccountLogService;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.domain.Score;
+
+public class ManageAccountLogAction extends BaseAction implements ModelDriven<AccountLogModel> {
+
+	@Resource
+	private AccountLogService accountLogService;
+	@Resource
+	private DictService dictService;
+
+	private AccountLogModel model = new AccountLogModel();
+
+	private Map<String, Object> data;
+
+	public AccountLogModel getModel() {
+		return model;
+	}
+
+	/**
+	 * 资金记录列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountlog/accountLogManager")
+	public String accountLogManager() throws Exception {
+		List<Dict> dictList = dictService.list("account_type");
+		request.setAttribute("dictList", dictList);
+		return "accountLogManager";
+	}
+	
+	/**
+	 * 借款人资金记录列表页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountlog/accountBorrowLogManager")
+	public String accountBorrowLogManager() throws Exception {
+		List<Dict> dictList = dictService.list("account_type");
+		request.setAttribute("dictList", dictList);
+		return "accountBorrowLogManager";
+	}
+	/**
+	 * 担保公司资金日志记录页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountlog/accountGuaranteeLogManager")
+	public String accountGuaranteeLogManager() throws Exception{
+		List<Dict> dictList = dictService.list("account_type");
+		request.setAttribute("dictList", dictList);
+		return "accountGuaranteeLogManager";
+	}
+	/**
+	 * 商城账户资金日志
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountlog/accountVmallLogManager")
+	public String accountVmallLogManager() throws Exception{
+		List<Dict> dictList = dictService.list("account_type");
+		request.setAttribute("dictList", dictList);
+		return "accountVmallLogManager";
+	}
+
+	/**
+	 * 资金记录列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountlog/accountLogList")
+	public void accountLogList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String userType = paramString("userType");
+		model.setUserType(userType);
+		
+		String tradeNo = paramString("tradeNo");
+		if(null != tradeNo && !"".equals(tradeNo)){
+			model.setTradeNo(tradeNo);
+		}
+		String outTradeNo = paramString("outTradeNo");
+		if(null != outTradeNo && !"".equals(outTradeNo)){
+			model.setOutTradeNo(outTradeNo);
+		}
+		
+		PageDataList<AccountLogModel> accountLogList = new PageDataList<AccountLogModel>();
+		if(StringUtil.isNotBlank(model.getUserName())||StringUtil.isNotBlank(tradeNo)||StringUtil.isNotBlank(outTradeNo)
+				|| StringUtil.isNotBlank(model.getStartTime())||StringUtil.isNotBlank(model.getEndTime()) 
+			//JSDP-100 gjh 2015-5-12 start	
+				|| StringUtil.isNotBlank(model.getType())){
+			if("11".equals(model.getType())){
+				model.setType("");
+			}
+			//JSDP-100 gjh 2015-5-12 end	
+			accountLogList = accountLogService.accountLogPageList(model, pageNumber, pageSize);
+			data.put("total", accountLogList.getPage().getTotal()); // 总行数
+			data.put("rows", accountLogList.getList()); // 集合对象
+		}
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 导出报表
+	 * @author sunxiaoyong@ddtkj.com   调整字段
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountlog/exportExcelAccountLog")
+	public void exportExcelAccountLog() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		String userType = paramString("userType");
+		
+		String title = "用户资金日志Excel表";
+		
+		if ("10".equals(userType)){				//投资人
+			title = "投资人资金日志Excel表";
+		} else if("11".equals(userType)) {		//借款人
+			title = "借款人资金日志Excel表";
+		}
+		model.setUserType(userType);
+		// 记录取得
+		//List list = accountLogService.accountLogPageList(model, 1, 99999999).getList();
+
+		//String title = "资金日志Excel表";
+		
+		String[] hearders = new String[] {
+				"编号","用户名","交易对方用户","类型","账户总额","充值操作金额","奖励操作金额","钱袋子操作金额","利息可用总额","奖励可用总额","充值可用总额","钱袋子可用金额","冻结使用利息金额","冻结使用充值金额","冻结使用回款本金金额","冻结使用奖励金额","待收总额","回款本金可用总额","收支明细","添加时间","添加IP","交易批次号","交易流水号"
+		};
+		
+		String[] fields = new String[] { 
+				"id","userName","toUserName","typeName","accountTotalStr","rechargeMoneyStr","awardMoneyStr","rpDynamicMoneyStr","interestUsableStr","awardUsableStr","rechargeUsableStr","rpDynamicUsableStr","freezeUseInterestStr","freezeUseRechargeStr","freezeUseReturnCapitalStr","freezeUseAwardStr","collectionTotalStr","returnCapitalUsableStr","payMentDetails","addTime","addIp","tradeNo","outTradeNo"
+		};
+		
+//		int sheetRows = 50000;	//导出一页的条数
+//		int sheetPage = list.size() / sheetRows;
+//		if (list.size() % sheetRows > 0) {
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountLogModel> tdList = new ArrayList<AccountLogModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <list.size(); j++ ){
+//				AccountLogModel sm = list.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = accountLogService.excelLogList(model);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	}	
+	/**
+	 * 导出借款人资金日志报表
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountlog/exportExcelBorrowAccountLog")
+	public void exportExcelBorrowAccountLog() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		String userType = paramString("userType");
+		
+		String title = "";
+		String[] hearders = null;
+		String[] fields = null;
+		model.setUserType(userType);
+		if(userType.equals("12")){
+			//担保公司记录
+			title="担保公司资金日志Excel表";
+			
+			hearders = new String[] {
+					"编号","用户名","交易对方用户","类型","账户总额","充值可用总额","担保公司充值操作金额","担保公司入账操作金额","担保公司入账可用金额","担保公司冻结充值金额","担保公司冻结借款入账金额","待还金额","收支明细","添加时间"
+			};
+			
+			fields = new String[] {
+					"id","userName","toUserName","typeName","accountTotalStr","rechargeUsableStr","borrowerRechargeMoneyStr","borrowerEnterMoneyStr","borrowerEnterUsableStr","borrowerFreezeUseRechargeStr","borrowerFreezeUseEnterStr","repaymentTotalStr","payMentDetails","addTime"
+			};
+		}
+		if(userType.equals("11")){
+			title="借款人资金日志Excel表";
+			
+			hearders = new String[] {
+					"编号","用户名","交易对方用户","类型","账户总额","充值可用总额","借款人充值操作金额","借款入账操作金额","借款入账可用金额","借款人冻结充值金额","借款人冻结借款入账金额","待还金额","收支明细","添加时间"
+			};
+			
+			fields = new String[] {
+					"id","userName","toUserName","typeName","accountTotalStr","rechargeUsableStr","borrowerRechargeMoneyStr","borrowerEnterMoneyStr","borrowerEnterUsableStr","borrowerFreezeUseRechargeStr","borrowerFreezeUseEnterStr","repaymentTotalStr","payMentDetails","addTime"
+			};
+		}
+		if(userType.equals("13")){
+			title="商城资金日志Excel表";
+			hearders = new String[] {
+					"编号","用户名","交易对方用户","类型","账户总额","充值可用总额","商城充值操作金额","商城入账操作金额","收支明细","添加时间"
+			};
+			
+			fields = new String[] {
+					"id","userName","toUserName","typeName","accountTotalStr","rechargeUsableStr","borrowerRechargeMoneyStr","borrowerEnterMoneyStr","payMentDetails","addTime"
+			};
+		}
+		// 记录取得
+//		List<AccountLogModel> list = accountLogService.accountLogPageList(model, 1, 99999999).getList();
+//		
+//		int sheetRows = 50000;	//导出一页的条数
+//		int sheetPage = list.size() / sheetRows;
+//		if (list.size() % sheetRows > 0) {
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountLogModel> tdList = new ArrayList<AccountLogModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <list.size(); j++ ){
+//				AccountLogModel sm = list.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = accountLogService.excelLogList(model);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	/**
+	 * 资金详细日志记录
+	 * @return
+	 */
+	@Action("/modules/account/accountlog/showDetailAccountLog")
+	public String showDetailAccountLog(){
+		String id = request.getParameter("id");
+		Integer logId = Integer.parseInt(id);
+		AccountLogModel accountLogModel = accountLogService.findAccountLogModelById(logId);
+		request.setAttribute("user", accountLogModel.getUser());
+		request.setAttribute("userType", accountLogModel.getUser().getUserCache().getUserType());
+		request.setAttribute("accountLogModel", accountLogModel);
+		return "accountDetailLog";
+	}
+    /**
+     * 资金记录与第三方交易记录对账view
+     * @throws Exception
+     */
+	@Action("/modules/account/accountlog/compairAccountLogPage")
+	public String compairAccountLog()throws Exception{
+		//交易订单号
+		String outTradeNo=paramString("outTradeNo");
+		if(StringUtil.isNotBlank(outTradeNo)&&!"undefined".equals(outTradeNo)){
+			Map<String, Object> map=accountLogService.compairAccountLog(outTradeNo, null);
+			if(map.size()>0){
+				//本地交易日志
+				AccountLogModel accountLogModel=(AccountLogModel) map.get("accountLogModel");
+				//一麻袋交易日志
+			    YmdQueryReturnDetails yrd=(YmdQueryReturnDetails) map.get("yrd");
+			    YmdQueryReturn ymdQueryReturn=(YmdQueryReturn) map.get("ymdQueryReturn");
+			    request.setAttribute("ymdQueryReturnDetails", yrd);
+				request.setAttribute("ymdQueryReturn", ymdQueryReturn);
+				request.setAttribute("accountLogModel", accountLogModel);
+			}
+		}else{
+			request.setAttribute("ymdQueryReturnDetails", null);
+			request.setAttribute("ymdQueryReturn", null);
+			request.setAttribute("accountLogModel", null);
+		}
+		return "compairAccountLogPage";
+	}
+		
+
+}

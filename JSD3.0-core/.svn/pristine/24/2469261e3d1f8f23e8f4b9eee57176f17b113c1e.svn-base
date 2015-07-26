@@ -1,0 +1,269 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.member.model;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.member.domain.MemberVipAward;
+import com.ddtkj.p2psys.member.domain.MemberVipHistory;
+import com.rongdu.common.util.DateUtil;
+
+/**
+ * @描述：处理业务逻辑模型
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年2月5日 
+ */
+public class MemberVipSubModel extends MemberVipModel{
+	
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3148999864837137829L;
+
+	
+	public void selectMethodBuyVip() throws Exception {
+
+		MemberVip memberVipOld = memberVipDao.find(this.getUser().getUserId());
+
+		if (null != memberVipOld && MemberVip.MEMBER_USABLE.equals(memberVipOld.getUsable())) {
+			if (this.getVipLevel().equals(memberVipOld.getVipLevel())) {
+				// 购买同级延期续费
+				sameLevelRenew();
+
+			} else if (!this.getVipLevel().equals(memberVipOld.getVipLevel())) {
+				// 购买升级
+				upGrade();
+			}
+		} else if (null != memberVipOld && MemberVip.MEMBER_DISABLED.equals(memberVipOld.getUsable())) {
+			// 到期后继续购买
+			rePurchase();
+
+		} else {
+			// 初次购买
+			firstBuyVIP();
+		}
+	}
+	
+	/**
+	 *@author 李建云
+	 *第一次购买vip 
+	 * 
+	 * */
+	public void firstBuyVIP() throws Exception {
+		Date startTime = Calendar.getInstance().getTime();
+
+		// 开始时间和结束时间全部为新的
+		this.setUsable(MemberVip.MEMBER_USABLE);
+		this.setStartTime(startTime);
+		this.setEndTime(DateUtil.timeMonthManage(startTime,
+				this.getValidMonth()));
+		this.setUser(this.getUser());
+
+		// 第一次购买VIP
+		MemberVipHistory mvhistory = new MemberVipHistory();
+
+		mvhistory.setUser(getUser());
+		mvhistory.setUserName(getUser().getUserName());
+		mvhistory.setVipLevel(getVipLevel());
+		mvhistory.setVipProduceType(MemberVipAward.AWARD_RESOURCE_CASHBUY);
+		mvhistory.setVipFee(getVipFee());
+		mvhistory.setStartTime(startTime);
+		mvhistory.setEndTime(DateUtil.timeMonthManage(startTime,getValidMonth()));
+		mvhistory.setValidMonth(getValidMonth());
+		mvhistory.setBeforeMoney(0.00);
+		mvhistory.setUpgradeMoney(0.00);
+		mvhistory.setUpgradeBeforeLevel(null);
+		mvhistory.setBeforeId(0);
+		mvhistory.setUpgradeAfterLevel(getVipLevel());
+		mvhistory.setAddTime(startTime);
+		mvhistory.setIsvalid(MemberVip.MEMBER_USABLE);
+
+		memberVipDao.save(prototype());
+		memberVipHistoryDao.save(mvhistory);
+		// 更新用户表，vip等级
+		userDao.updateMemberLevel(getUser().getUserId(),getVipLevel());
+		//JSDBET-818 gjh 2015-3-28 start
+		List<BorrowAutoSet> auto = borrowAutoSetDao.getBorrowAutoSetList(getUser().getUserId());
+		if(auto.size() > 0){
+			borrowAutoSetDao.updateVipLevelByUserId(getVipLevel(),getUser().getUserId());
+		}
+		//JSDBET-818 gjh 2015-3-28 end
+		
+	}
+	
+	
+	/**
+	 *@author 李建云 
+	 * 同级vip续费
+	 * */
+	public void sameLevelRenew() throws Exception {
+
+		Date startTime = Calendar.getInstance().getTime();
+
+		MemberVipHistory vipHistoryOld = memberVipHistoryDao
+				.findMemberVipHistory(getUser().getUserId());
+
+		setMemberVipHistory(vipHistoryOld);
+
+		// 插入新的会员历史记录
+		MemberVipHistory mvhistory = new MemberVipHistory();
+
+		mvhistory.setUser(getUser());
+		mvhistory.setUserName(getUser().getUserName());
+		mvhistory.setVipLevel(getVipLevel());
+		mvhistory.setVipProduceType(MemberVipAward.AWARD_RESOURCE_MEMBERUPGRADE);
+		mvhistory.setVipFee(getVipFee() + getUnUsedVipFee());
+		mvhistory.setStartTime(startTime);
+		mvhistory.setEndTime(DateUtil.timeMonthManage(startTime,
+				 getValidMonth() + getUnUsedMonth()));
+		mvhistory.setValidMonth( getValidMonth() +  getUnUsedMonth());
+		mvhistory.setBeforeMoney(getUnUsedVipFee());
+		mvhistory.setUpgradeMoney(getTransferVipFee());
+		mvhistory.setUpgradeBeforeLevel(vipHistoryOld.getVipLevel());
+		mvhistory.setBeforeId(vipHistoryOld.getId());
+		mvhistory.setUpgradeAfterLevel(getVipLevel());
+		mvhistory.setAddTime(startTime);
+		mvhistory.setIsvalid(MemberVip.MEMBER_USABLE);
+
+		// 开始时间为原来的，结束时间为扩充的
+		 setStartTime(startTime);
+		 setUsable(MemberVip.MEMBER_USABLE);
+		 setEndTime(DateUtil.timeMonthManage(startTime,
+				 getValidMonth() +  getUnUsedMonth()));
+
+		// 如果是续费购买 同一级VIP
+		vipHistoryOld.setIsvalid(MemberVip.MEMBER_DISABLED);
+		vipHistoryOld.setEndTime(startTime);// 更新原来的结束时间
+		//vipHistoryOld.setVipFee( getUsedVipFee());// 更新原来的VIP已使用费用
+		vipHistoryOld.setValidMonth( getUsedMonth());// 更新原来的已使用月份
+
+		memberVipDao.update( prototype());
+		memberVipHistoryDao.modifyMemberVipHistory(vipHistoryOld);
+		memberVipHistoryDao.save(mvhistory);
+
+	}
+	
+	/**
+	 *@author 李建云
+	 * VIP升级
+	 * */
+	public void upGrade() throws Exception {
+
+		Date startTime = Calendar.getInstance().getTime();
+
+		MemberVipHistory vipHistoryOld = memberVipHistoryDao
+				.findMemberVipHistory( getUser().getUserId());
+		 setMemberVipHistory(vipHistoryOld);
+
+		// VIP会员升级
+		// 插入新的会员历史记录
+		MemberVipHistory mvhistory = new MemberVipHistory();
+
+		mvhistory.setUser( getUser());
+		mvhistory.setUserName( getUser().getUserName());
+		mvhistory.setVipLevel( getVipLevel());
+		mvhistory.setVipProduceType(MemberVipAward.AWARD_RESOURCE_MEMBERUPGRADE);
+		mvhistory.setVipFee( getVipFee());
+		mvhistory.setStartTime(startTime);
+		mvhistory.setEndTime(DateUtil.timeMonthManage(startTime,
+				 getValidMonth()));
+		mvhistory.setValidMonth( getValidMonth());
+		mvhistory.setBeforeMoney( getUnUsedVipFee());//上一次会员未使用的钱
+		mvhistory.setUpgradeMoney( getTransferVipFee());//购买此次会员的实际需要的钱
+		mvhistory.setUpgradeBeforeLevel(vipHistoryOld.getVipLevel());
+		mvhistory.setBeforeId(vipHistoryOld.getId());
+		mvhistory.setUpgradeAfterLevel( getVipLevel());
+		mvhistory.setAddTime(startTime);
+		mvhistory.setIsvalid(MemberVip.MEMBER_USABLE);
+
+		// 开始时间和结束时间全部为新的
+		 setUsable(MemberVip.MEMBER_USABLE);
+		 setStartTime(startTime);
+		 setVipLevel( getVipLevel());
+		 setEndTime(DateUtil.timeMonthManage(startTime,
+				 getValidMonth()));
+
+		// 将原来的会员历史记录更新为N,并插入新的数据修改状态为Y
+		vipHistoryOld.setIsvalid(MemberVip.MEMBER_DISABLED);
+		vipHistoryOld.setEndTime(startTime);// 更新原来的结束时间
+		vipHistoryOld.setVipFee( getUsedVipFee());// 更新原来的VIP已使用费用
+		vipHistoryOld.setValidMonth( getUsedMonth());// 更新原来的已使用月份
+
+		memberVipDao.update( prototype());
+		memberVipHistoryDao.modifyMemberVipHistory(vipHistoryOld);
+		memberVipHistoryDao.save(mvhistory);
+
+		// 更新用户表，vip等级
+		userDao.updateMemberLevel( getUser().getUserId(),
+				 getVipLevel());
+		//JSDBET-818 gjh 2015-3-28 start
+		List<BorrowAutoSet> auto = borrowAutoSetDao.getBorrowAutoSetList(getUser().getUserId());
+		if(auto.size() > 0){
+			borrowAutoSetDao.updateVipLevelByUserId(getVipLevel(),getUser().getUserId());
+		}
+		//JSDBET-818 gjh 2015-3-28 end
+		//borrowAutoSetDao.updateVipLevelByUserId(getVipLevel(), getUser().getUserId());
+	}
+
+	/**
+	 *@author 李建云 
+	 *vip到期，重新购买
+	 * */
+	public void rePurchase() throws Exception {
+		Date startTime = Calendar.getInstance().getTime();
+
+		// 开始时间和结束时间全部为新的
+		setUsable(MemberVip.MEMBER_USABLE);
+		setStartTime(startTime);
+		setEndTime(DateUtil.timeMonthManage(startTime,
+				getValidMonth()));
+		setUser(getUser());
+
+		// 生成VIP历史记录
+		MemberVipHistory mvhistory = new MemberVipHistory();
+
+		mvhistory.setUser(getUser());
+		mvhistory.setUserName(getUser().getUserName());
+		mvhistory.setVipLevel(getVipLevel());
+		mvhistory.setVipProduceType(MemberVipAward.AWARD_RESOURCE_CASHBUY);
+		mvhistory.setVipFee(getVipFee());
+		mvhistory.setStartTime(startTime);
+		mvhistory.setEndTime(DateUtil.timeMonthManage(startTime,
+				getValidMonth()));
+		mvhistory.setValidMonth(getValidMonth());
+		mvhistory.setBeforeMoney(0.00);
+		mvhistory.setUpgradeMoney(0.00);
+		mvhistory.setUpgradeBeforeLevel(null);
+		mvhistory.setBeforeId(0);
+		mvhistory.setUpgradeAfterLevel(null);
+		mvhistory.setAddTime(startTime);
+		mvhistory.setIsvalid(MemberVip.MEMBER_USABLE);
+
+		memberVipDao.update(prototype());
+		memberVipHistoryDao.save(mvhistory);
+
+		// 更新用户表，vip等级
+		userDao.updateMemberLevel(getUser().getUserId(),
+				getVipLevel());
+		//JSDBET-818 gjh 2015-3-28 start
+		List<BorrowAutoSet> auto = borrowAutoSetDao.getBorrowAutoSetList(getUser().getUserId());
+		if(auto.size() > 0){
+			borrowAutoSetDao.updateVipLevelByUserId(getVipLevel(),getUser().getUserId());
+		}
+		//JSDBET-818 gjh 2015-3-28 end
+		//borrowAutoSetDao.updateVipLevelByUserId(getVipLevel(), getUser().getUserId());
+	}
+
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+	
+	
+
+}

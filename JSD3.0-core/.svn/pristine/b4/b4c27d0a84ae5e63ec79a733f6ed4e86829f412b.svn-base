@@ -1,0 +1,94 @@
+package com.ddtkj.p2psys.analysis.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * @描述：用户来源关系实体
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+@Entity
+@Table(name = "t_jsd_url_source_user")
+public class UserSource implements Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7460847172430958122L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;//自增id
+	@OneToOne
+	@JoinColumn(name = "user_id")
+	private User user;//关联的用户id
+	private String userName;//关联的用户名
+	private String sourceUrl;//注册用户的来源
+	private Date addTime;//来源和用户的关系
+	//JSDP-166 xingjia 20150611 start
+	private String registerWay;//注册方式
+	public String getRegisterWay() {
+		return registerWay;
+	}
+
+	public void setRegisterWay(String registerWay) {
+		this.registerWay = registerWay;
+	}
+	//JSDP-166 xingjia 20150611 end
+	
+	public UserSource() {
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getSourceUrl() {
+		return sourceUrl;
+	}
+
+	public void setSourceUrl(String sourceUrl) {
+		this.sourceUrl = sourceUrl;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+
+	
+
+}

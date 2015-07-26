@@ -1,0 +1,207 @@
+<script language="JavaScript" type="text/javascript"> 
+//by ahuinan 2009-4-10 
+    function clearNoNum(event,obj){ 
+        //响应鼠标事件，允许左右方向键移动 
+        event = window.event||event; 
+        if(event.keyCode == 37 | event.keyCode == 39){ 
+            return; 
+        } 
+        //先把非数字的都替换掉，除了数字和. 
+        obj.value = obj.value.replace(/[^\d.]/g,""); 
+        //必须保证第一个为数字而不是. 
+        obj.value = obj.value.replace(/^\./g,""); 
+        //保证只有出现一个.而没有多个. 
+        obj.value = obj.value.replace(/\.{2,}/g,"."); 
+        //保证.只出现一次，而不能出现两次以上 
+        obj.value = obj.value.replace(".","$#$").replace(/\./g,"").replace("$#$","."); 
+    } 
+    function checkNum(obj){ 
+        //为了去除最后一个. 
+        obj.value = obj.value.replace(/\.$/g,""); 
+    } 
+</script> 
+<script type="text/javascript">
+    $(function() {
+    	/* 
+    	$('#goodsCategoryList').dialog({   
+    		title:'商品分类(请点击选择)',
+    		width:320,
+    		height:398,
+    		modal: true
+    	}); 
+    	$('#goodsCategoryList').dialog("close");
+    	
+    	$('#parentIdName').click(function(){
+    		$('#goodsCategoryList').dialog("open");
+    		
+    		$('#goodsCategoryTree').tree({
+    			url:'/modules/goods/goodsMessage/goodsCategoryTreeList.html',
+    			onClick: function(node){
+    				
+    				// 开始截取
+    				var name = node.text; 
+    				
+    				//alert(node.id);
+    				$('#parentIdName').val(name);
+    				$('#categoryId').val(node.id);
+    				$('#goodsCategoryList').dialog("close");
+    				
+    				
+    				//在action层做商品分类的信息验证，判断是否已选择
+    				
+    			} 
+    				
+    		}); 
+    	});
+    	 */
+    	
+    	 
+        $.fn.dataGridOptions.formSubFun("#form",'/modules/goods/goodsMessage/editGoods.html');
+    });
+</script>
+<style>
+	#title_label{ font-size:15px; }
+</style>
+<form id="form" method="post" enctype="multipart/form-data">
+<div class="borrowForm" style="border-top:none;">
+	<h1 class="borrowFormTitle">基本信息</h1>
+	<ul>
+		<li><span id="title_label">商品名称：</span><input type="text" name="name" value="${goods.name!}" maxlength="30" autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/></li>
+		<li><span id="title_label">所属分类：</span><input type="text" name="parentId" id="parentIdName" value="${ddtkjGoodsCategory.name}" maxlength="20" autocomplete="off" class="borrowFormTxt easyui-validatebox" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" disabled="disabled"/>
+			<input type="hidden" name="categoryId" id="categoryId" value="${goods.goodsCategory.id}" />
+		</li>
+		
+		<!-- <li><span>参数id：</span><input type="hidden" name="categoryId" id="categoryId" value="${goods.goodsCategory.id}" /></li>
+		 -->
+		<li><span id="title_label">商品编码：</span><input type="text" name="goodsNo" id="goodsNo" value="${goods.goodsNo!}" maxlength="35" autocomplete="off" size="15" class="borrowFormTxt2 easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" style="width:200px;"/></li>
+		
+		<li><span id="title_label">所属商户：</span><input type="text" name="userName" id="userName" value="${user.userName!}" onclick="showUser(21)" maxlength="20" autocomplete="off" class="borrowFormTxt easyui-validatebox" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" readonly="readonly" value="(请点击选择)"/>
+			<input type="hidden" name="userId" id="userId" value="${user.userId!}" />
+		</li>
+		
+		<li><span id="title_label">商品价格：</span><input type="text" name="cost" value="${goods.cost!}"  autocomplete="off" onkeyup="value=value.replace(/[^0-9]/g,'')" maxlength="5" class="borrowFormTxt1 easyui-validatebox" data-options="required: true,validType:'accout[1,10000]'"><em>元</em></li>
+		
+		<li><span id="title_label">类型：</span>
+		<select name="type" style="width: 210px; margin-left: -4px;">
+			<option value="10" <#if goods.type==10>selected="selected"</#if>>待上架</option>
+			<option value="11" <#if goods.type==11>selected="selected"</#if>>已上架</option>
+			<option value="12" <#if goods.type==12>selected="selected"</#if>>已下架</option>
+		</select>
+		<input type="hidden" name="type"  value="${goods.type!}"  />
+		</li>
+		
+		<li><span id="title_label">屏幕尺寸：</span><input type="text" name="size" value="${goods.size!}"  autocomplete="off" onKeyUp="clearNoNum(event,this)" onBlur="checkNum(this)" maxlength="20" class="borrowFormTxt1 easyui-validatebox" ><em>寸</em></li>
+		<li><span id="title_label">年化利率：</span><input type="text" style="width:170px;" name="goodsApr"  value="${goods.goodsApr!}" autocomplete="off" maxlength="5" class="borrowFormTxt1 easyui-validatebox"  style="width:60px" data-options="required: true,validType:'apr[1,24]'" onkeyup="value=value.replace(/[^0-9]/g,'')" ><em>%</em></li>
+		
+		<li><span id="title_label">商品库存：</span><input type="text" style="width:170px;" name="stock" value="${goods.stock!}" autocomplete="off" maxlength="10" class="borrowFormTxt1 easyui-validatebox"  style="width:60px" data-options="required: true" onkeyup="value=value.replace(/[^0-9]/g,'')" ><em>件</em>
+		</li>
+		
+		<li><span id="title_label">商品颜色：</span><input type="text" name="color" value="${goods.color!}"  maxlength="15" autocomplete="off" size="15" class="borrowFormTxt easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></li>
+		<li><span id="title_label">商品版本：</span><input type="text" name="vesion" maxlength="20" value="${goods.vesion!}"  autocomplete="off" class="borrowFormTxt easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		</li>
+		
+		<input type="hidden" name="id" value="${goods.id!}"/>
+		<input type="hidden" name="id" value="${goods.addTime?string('yyyy-MM-dd HH:mm:ss')!}"/>
+		
+		<!-- <input name="borrowAddPageToken" value="${borrowAddPageToken!}" type="hidden"/> -->
+	</ul>
+	
+	<div class="borrowFormMuti" style="passing-top:15px;">
+		<span style="font-size:15px;">商品描述：</span><textarea id="description" name="description" maxlength="1000" class="easyui-validatebox borrowFormTextarea" style="width:555px;">${goods.description!}</textarea>
+	</div>
+	
+</div>
+
+<div class="borrowForm">
+
+	<h2 class="borrowFormTitle">商品图片</h2>
+	<div class="guarantee_type">
+		<div id="uploadGuaranteeBox" data-arr="uploadFile" style="height: auto;">
+			<ul id="uploadPiclistGoods" class="photoUpload" style="list-style: none; padding: 0; margin: 0;">
+		    	
+		    	<li class="add_btn" style="float: left;">
+		        	<i class="a"></i> <i class="b"></i>
+		            	<input type="file" name="file" id="uploadFile4" onchange="return ajaxFileUpload1('uploadFile4','/imageUp.jsp','goodsPic','3');" title="点击上传图片" />
+		        </li>
+		        
+		    </ul>
+		</div>
+	</div>
+	
+	<h2 class="borrowFormTitle">商品详情</h2>
+	<!-- <div class="borrowFormMuti">
+		<textarea id="detail" name="content"  class="easyui-validatebox borrowFormTextarea" ></textarea>
+		
+	</div> -->
+	<div class="ipt">
+		<script id="detail" name="detail" type="text/plain">${goods.detail!}</script>
+	</div>
+	
+	<br />
+	<h2 class="borrowFormTitle" style="passing-top:15px;">备注</h2>
+	<div class="borrowFormMuti" >
+		<textarea id="remark" name="remark" style="width:719px;" maxlength="1000" class="easyui-validatebox borrowFormTextarea" >${goods.remark!}</textarea>
+	</div>
+	
+</div>
+
+	<input type="hidden" value="${goodsMessageEditToken!}" name="goodsMessageEditToken">
+
+</form>
+<div id="goodsCategoryList">
+	<ul id="goodsCategoryTree"></ul>
+</div>
+
+
+<!-- 编辑器 -->
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+    var descriptionBox = UE.getEditor('detail', {
+        autoHeight: false,
+        initialFrameWidth:728,
+        toolbars: [
+                   ['undo', 'redo', 'justifyleft', 'justifyright','justifycenter', 'justifyjustify', 'forecolor', 'fontfamily', 
+                    'fontsize', 'paragraph', 'customstyle','anchor', 'bold', 'indent','italic','underline', 'strikethrough', 'subscript','fontborder', 
+                    'superscript', 'formatmatch', 'source', 'blockquote', 'pasteplain', 'selectall', 'print', 'horizontal', 'removeformat', 'time', 
+                     'date', 'unlink', 'insertrow', 'insertcol', 'mergeright', 'mergedown','deleterow', 'deletecol', 'splittorows', 'splittocols', 'splittocells',
+                       'deletecaption','inserttitle','mergecells', 'deletetable', 'cleardoc', 'insertparagraphbeforetable','simpleupload', 'insertimage','edittable',
+                       'edittd', 'link', 'spechars', 'searchreplace','backcolor','insertorderedlist','insertunorderedlist', 'fullscreen', 'directionalityltr', 'directionalityrtl', 
+                       'rowspacingtop', 'rowspacingbottom', 'pagebreak', 'imagenone', 'imageleft', 'imageright', 'attachment','imagecenter','lineheight','edittip ', 'autotypeset', 
+                       'touppercase', 'tolowercase', 'background', 'template','inserttable', 'drafts', 'charts'
+                   ]
+               ]
+        
+    });
+   
+</script>
+<script type="text/javascript">
+//担保函列表
+$.ajax({
+	url:"/modules/goods/goodsMessage/getGoodsPic.html?id=${goods.id}",
+	type:"get",
+	dataType:"json",
+	success:function(data){
+		if(data.list.length > 0){
+			for(var i = 0;i < data.list.length; i++){
+				var sHtml = "";
+				sHtml += '<li data-mum="' + data.list[i].id + '">';
+				sHtml += '<a href="' + data.list[i].picUrl + '" class="fileshow" rel="group1" ondragstart="return false"><img src="' + data.list[i].picUrl + '" alt="" style="width:100px;height:100px;float:left;" ></a>';
+				sHtml += '<a class="closePic" style="float:left;" href="javascript:;" title="删除图片" ondragstart="return false">x</a>';
+				sHtml += '</li>';
+				$(".photoUpload").append(sHtml);
+				
+			}
+		}
+	}
+	
+});
+
+</script>
+
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>

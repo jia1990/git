@@ -1,0 +1,82 @@
+package com.ddtkj.p2psys.goods.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+public interface GoodsService {
+	
+
+	
+	/**
+     * 修改商品
+     * @param 
+     * @return 是否成功
+     */
+    public void update(DdtkjGoods goods);
+    /**
+     * 商品查询分页
+     * @param model 查询条件分装类
+     * @return page
+     */
+    PageDataList<GoodsModel> getGoodsPage(GoodsModel model);
+    
+    /**
+     * 添加商品
+     * @param model 商品model
+     * @return 是否成功
+     */
+    Boolean addGoods(GoodsModel model);
+    
+    /**
+     * 根据ID查询商品信息
+     * @param id ID
+     * @return 商品
+     */
+    DdtkjGoods getGoodsById(long id);
+    
+    /**
+     * 修改商品
+     * @param model 商品model
+     * @return 是否成功
+     */
+    Boolean editGoods(GoodsModel model, List<DdtkjGoodsPic> list, long[] delIds);
+    /**
+	 * 获取产品的颜色列表
+	 * @return
+	 */
+	List<String> getColorList(GoodsModel model);
+    /**
+     * 更新抵押物图片
+     * @param list 新上传的图片集合
+     * @param delIds 删除的图片ID
+     */
+    void updatePic(List<DdtkjGoodsPic> list, long[] delIds);
+    /**
+     * 修改商品
+     * @param 
+     * @return 是否成功
+     */
+    public void update(DdtkjGoods goods, List<DdtkjGoodsPic> list, long[] delIds);
+
+	/**
+	 * 获取产品的版本列表
+	 * @return
+	 */
+	List<String> getVesionList(GoodsModel model);
+	/**
+	 * 获取产品的尺寸列表
+	 * @return
+	 */
+	List<String> getSizeList(GoodsModel model);
+	/**
+	 * 根据商家账户查找商家产品
+	 * @param userId
+	 * @param type
+	 * @return
+	 */
+	List<DdtkjGoods> getGoodsList(long userId,int type);
+}

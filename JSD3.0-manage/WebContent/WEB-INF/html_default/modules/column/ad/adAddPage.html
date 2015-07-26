@@ -1,0 +1,103 @@
+
+<script type="text/javascript">
+$(function(){
+	
+	// 图片大小限制提示
+	if($('#siteNid').val() == 'scrollPic'){			// 轮展图
+		$('#imgSize').html('建议大小：(1900 * 405)');
+	}else if($('#siteNid').val() == 'indexAd'){		// 首页广告条
+		$('#imgSize').html('建议大小：1900 * 80');
+	}else{											// 其他
+		$('#imgSize').html('建议大小：无');
+	}
+	
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/column/article/articleAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址
+    
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">栏目：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" id="siteNewName" name="siteNewName" value="${site.name}" readonly="readonly">
+		     	<input type="hidden" id="siteId" name="siteId" value="${site.id}">
+		     	<input type="hidden" id="siteNid" name="siteNid" value="${site.nid}">
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间开始 -->
+		<div class="formitm" id="time">
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="onlineTime" id="startTime" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="nolineTime" id="endTime" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间结束 -->
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" class="w400 easyui-validatebox" data-options="required: true" maxlength="50"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="0" />&nbsp;&nbsp;隐藏
+				<input type="radio" name="status" value="1" checked="checked"/>&nbsp;&nbsp;显示
+		     </div>
+		</div>
+		<div class="formitm"  hidden="hidden">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" value="${sortId!'1'}" class="easyui-numberbox"  maxlength="4"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm"  hidden="hidden">
+		     <label class="lab" >是否推荐：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isRecommend" value="0" checked="checked"/>&nbsp;&nbsp;否
+				<input type="radio" name="isRecommend" value="1"/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm" hidden="hidden">
+		     <label class="lab">是否置顶：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isTop" value="0" checked="checked"/>&nbsp;&nbsp;否
+				<input type="radio" name="isTop" value="1"/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file">	<br /><a id="imgSize"></a>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">图片链接：</label>
+		     <div class="ipt">
+		     	<input type="text" name="content" class="w400 easyui-validatebox"/>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="introduction"  maxlength="120"></textarea>	
+		     </div>
+		</div>
+		<input name="typeName" type="hidden" value="${typeName!}" />
+		<input name="articleAddToken" value="${articleAddToken!}" type="hidden">
+		
+		     	
+	</form>
+</div>
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>
+

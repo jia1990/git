@@ -1,0 +1,44 @@
+package com.rongdu.p2psys.region.service;
+
+import java.util.List;
+
+import com.rongdu.p2psys.region.domain.Region;
+/**
+ * 行政区域Service
+ * 
+ * @author 李建云
+ * @version 3.0
+ * @since 2014年11月28日
+ */
+public interface RegionService {
+	
+	/**
+     * 获取行政区域信息列表
+     * @param regionId
+     * @return 行政区域的总信息
+     */
+    List<Region> getRegionList(long pId);
+
+    /**
+     * 获取行政区域对象
+     * @param  id
+     * @return Region 
+     * @throws Exception   
+     */ 
+    Region getRegionById(long id);
+    
+    /**
+     * 根据CODE查询省市县名称
+     * @author 孙晓勇
+     * @param  CODE
+     * @return Region 
+     * @throws Exception   
+     */ 
+    Region findByCode(String code);
+    
+    /**
+     * 获取当前各省人数
+     * @return
+     */
+    List<Object[]> getProvincialEnrollment();
+}

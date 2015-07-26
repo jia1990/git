@@ -1,0 +1,133 @@
+package com.ddtkj.p2psys.award.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+/**
+ * 活动规则实体类
+ * @author xingjia
+ * @date 20141211
+ */
+@Entity
+@Table(name = "t_jsd_activity_award_rule")
+public class ActivityRule implements Serializable{
+
+	private static final long serialVersionUID = 1017874749378386739L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name="rule_id")
+	private int ruleId;//规则id
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name="act_id")
+	private ActivityConfig activityConfig;//活动id
+	private String ruleName;//规则名称
+	private long awardParam;//规则参数(如果为百分制则是百分比或者是具体的金额界限)
+	private long rpMoney;//奖励的红包金额
+	private String ruleStatus;//规则开关(项目暂不需要)
+	private int ruleType;//规则类型按投标百分比:1固定金额:0首次充值2每次充值:3
+	
+	
+	/**
+	 * 类的空构造方法
+	 */
+	public ActivityRule() {
+		super();
+	}
+	/**
+	 * @return ruleId 规则id
+	 */
+	public int getRuleId() {
+		return ruleId;
+	}
+	/**
+	 * @param ruleId 规则id
+	 */
+	public void setRuleId(int ruleId) {
+		this.ruleId = ruleId;
+	}
+	/**
+	 * @return activityConfig 一对一活动关系
+	 */
+	public ActivityConfig getActivityConfig() {
+		return activityConfig;
+	}
+	/**
+	 * @param activityConfig 一对一活动关系
+	 */
+	public void setActivityConfig(ActivityConfig activityConfig) {
+		this.activityConfig = activityConfig;
+	}
+	/**
+	 * @return ruleName 规则名称
+	 */
+	public String getRuleName() {
+		return ruleName;
+	}
+	/**
+	 * @param ruleName 规则名称
+	 */
+	public void setRuleName(String ruleName) {
+		this.ruleName = ruleName;
+	}
+	/**
+	 * @return awardParam 奖励参数
+	 */
+	public long getAwardParam() {
+		return awardParam;
+	}
+	/**
+	 * @param awardParam 奖励参数
+	 */
+	public void setAwardParam(long awardParam) {
+		this.awardParam = awardParam;
+	}
+	/**
+	 * @return rpMoney 奖励红包金额
+	 */
+	public long getRpMoney() {
+		return rpMoney;
+	}
+	/**
+	 * @param rpMoney 奖励红包金额
+	 */
+	public void setRpMoney(long rpMoney) {
+		this.rpMoney = rpMoney;
+	}
+	/**
+	 * @return ruleStatus 规则开关
+	 */
+	public String getRuleStatus() {
+		return ruleStatus;
+	}
+	/**
+	 * @param ruleStatus 规则开关
+	 */
+	public void setRuleStatus(String ruleStatus) {
+		this.ruleStatus = ruleStatus;
+	}
+	/**
+	 * @return ruleType 规则类型
+	 */
+	public int getRuleType() {
+		return ruleType;
+	}
+	/**
+	 * @param ruleType 规则类型
+	 */
+	public void setRuleType(int ruleType) {
+		this.ruleType = ruleType;
+	}
+	
+	
+	
+}

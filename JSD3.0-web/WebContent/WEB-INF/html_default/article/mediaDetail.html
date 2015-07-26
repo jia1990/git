@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="robots" content="" />
+<meta name="author" content="网页作者的资料">
+<meta name="description" content="晋商贷媒体新闻频道，为大家提供最新的P2P行业最新资讯。" />
+<meta name="keywords" content="新闻，P2P新闻，行业最新新闻" />
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/contact.css">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/account.css">
+<link rel="stylesheet" type="text/css"href="${webroot}${theme_dir}/media/css/media.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/index.js"></script>
+<#include "../include/resource1.html">
+<#include "../include/header.html">
+<script>
+	$(function() {
+		// 控制字数 start
+		for (i = 0; i < $(".y_notice_list li .y_notice_listliright p").length; i++) {
+			if ($(
+					".y_notice_list li .y_notice_listliright p")
+					.eq(i).html().length >= 98) {
+				$(
+						".y_notice_list li .y_notice_listliright p")
+						.eq(i)
+						.html(
+								$(
+										".y_notice_list li .y_notice_listliright p")
+										.eq(i).html()
+										.slice(0, 98)
+										+ "...");
+			}
+		}
+		// 控制字数 end
+	})
+</script>
+<style>
+ /*    .y_plat_notice{width:700px;}
+	.noborder a{float:left;margin-left:60px;}
+	.noborder .y_notice_listliright{float:left;height:60px;line-height:60px;}
+	.y_notice_mediaList{width:100%;}
+	.y_notice_mediaList .noborder{width:100%;height:60px;padding-bottom:25px;border-bottom:1px dashed #eee;padding-top:25px;}
+	.noborder .y_notice_listliright h1{margin-left:50px;} */
+	.c_plat_detail{padding: 0 59px 40px;}
+</style>
+
+<#if subListMap?? && subListMap.article?? >
+ <title>${subListMap?if_exists.article?if_exists.title?if_exists}</title>
+<#else>
+    <title>晋商贷媒体新闻，P2P新闻，P2P行业最新新闻-晋商贷</title>
+</#if>
+</head>
+<body>
+	<!-- 平台资讯二级导航 -->
+
+
+	<div class="c_sub_nav">
+		<dl>
+			<dd>
+				<a href="${webroot}/article/detail.html?nid=notice" hidefocus>平台公告</a>
+			</dd>
+			<dd>
+				<a class="c_contact_us" href="javascript:void(0);" hidefocus>媒体报道</a>
+			</dd>
+			<dd>
+				<a href="${webroot}/article/detail.html?nid=supervise" hidefocus>晋商新闻</a>
+			</dd>
+			<!-- // JSDP-131 SXY start -->
+			<dd>
+				<a   href="${webroot}/article/risk.html?nid=riskMoney" hidefocus id="riskMoneyId">风险备用金</a>
+			</dd>
+			<div class="c_clear"></div>
+		</dl>
+	</div>
+	<!-- 新闻列表 -->
+	<div class="">
+		<!--S- service_right_con -->
+			<#if subListMap?? && subListMap.article?? >
+				<div class="arcInfo_content">
+					<script>
+						window._bd_share_config = {
+							"common" : {
+								"bdSnsKey" : {},
+								"bdText" : "",
+								"bdMini" : "2",
+								"bdMiniList" : false,
+								"bdPic" : "",
+								"bdStyle" : "0",
+								"bdSize" : "16"
+							},
+							"share" : {},
+							"image" : {
+								"viewList" : [ "qzone", "tsina", "tqq",
+										"renren", "weixin" ],
+								"viewText" : "分享到：",
+								"viewSize" : "16"
+							}
+						};
+						with (document)
+							0[(getElementsByTagName('head')[0] || body)
+									.appendChild(createElement('script')).src = 'http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='
+									+ ~(-new Date() / 36e5)];
+					</script>
+				</div>
+		</div>
+		<div class="c_plat_detail" style="width:880px;">
+			<h1>${subListMap?if_exists.article?if_exists.title?if_exists}</h1>
+			<span class="y_plat_noticetime">${subListMap?if_exists.article?if_exists.addTime?string("yyyy-MM-dd HH:mm:ss")?if_exists}</span>
+		   	<div class="c_article">${subListMap?if_exists.article?if_exists.content?if_exists}</div>
+		   	<div class="pageTurning">
+				<p class="return">
+					<a href="javascript:history.go(-1);">返回</a>
+				</p>
+				<br><br><br>
+			</div>
+			<ul class="c_article_piece">
+				<p class="Up">
+					上一篇： <#if subListMap.prevArticle??> <a
+						href="${webroot}/article/mediaDetail.html?nid=${subListMap.prevArticle.site.nid}&id=${subListMap.prevArticle.id}">${subListMap.prevArticle.title}</a>
+					<#else> <a href="javascript:;">无</a> </#if>
+				</p>
+				<p class="Down">
+					下一篇： <#if subListMap.nextArticle??> <a
+						href="${webroot}/article/mediaDetail.html?nid=${subListMap.nextArticle.site.nid}&id=${subListMap.nextArticle.id}">${subListMap.nextArticle.title}</a>
+					<#else> <a href="javascript:;">无</a> </#if>
+				</p>
+			</ul>
+		</div>
+		<#elseif subListMap?? && subListMap.leafChild??
+		&&subListMap.leafChild.type == 2>
+		<div class="y_plat_notice" style="min-height:330px">
+			<ul class="y_notice_list"></ul>
+			<div id="kkpager" style="text-align:center;"></div>
+		</div>
+		</#if>
+		<div class="c_look_more c_artical_end">没有更多文章了</div>
+		
+	</div>
+	</div>
+	
+
+</body>
+
+<script type="text/javascript">
+	seajs.use("${webroot}${theme_dir}/media/js/mediaDetailList");
+</script>
+</html>
+<#include "../include/footer.html">

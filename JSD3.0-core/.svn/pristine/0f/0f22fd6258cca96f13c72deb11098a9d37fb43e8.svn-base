@@ -1,0 +1,236 @@
+package com.rongdu.p2psys.borrow.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+public class BorrowTenderModel extends BorrowTender {
+
+	private static final long serialVersionUID = 1L;
+
+	/** 当前页面 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+
+	/** 借款标ID **/
+	private long borrowId;
+	/** 借款标名 **/
+	private String borrowName;
+	/** 借款标名隐藏后**/
+	private String borrowNameHide;
+	/** 实还总金额 **/
+	private double accountYes;
+	/** 借款总额 **/
+	private double account;
+	/** 投资人ID **/
+	private long userId;
+	/** 投资人用户名 **/
+	private String userName;
+	/** 借款人用户名 **/
+	private String borrowUserName;
+	/** 还款方式 **/
+	private int borrowStyle;
+	/** 借款期限 **/
+	private int timeLimit;
+	/** 预计还款时间 **/
+	private int repayTime;
+	/** 已经还款时间 **/
+	private int repayYesTime;
+	/** 预还金额 **/
+	private int repayAccount;
+
+	/** 应收开始日期 **/
+	private String startTime;
+	/** 应收结束开始日期 **/
+	private String endTime;
+	/**日期范围：0：全部，1：最近七天 2：最近一个月  3：最近两个月，4 最近三个月**/
+	private int time;
+
+	/** 按投标金额比例(0.1-0.6) **/
+	private double partAccount;
+
+	/** 还款结束后奖励 **/
+	private double lateAward;
+	/** 进度 **/
+	private double scales;
+	
+	public String getBorrowNameHide() {
+		if (StringUtil.isNotBlank(borrowName)&& borrowName.length()>7) {
+			return borrowName.substring(0, 6) + "***";
+		}
+		return "";
+	}
+
+	public void setBorrowNameHide(String borrowNameHide) {
+		this.borrowNameHide = borrowNameHide;
+	}
+	public static BorrowTenderModel instance(BorrowTender borrowTender) {
+		BorrowTenderModel model = new BorrowTenderModel();
+		BeanUtils.copyProperties(borrowTender, model);
+		return model;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size > 0 ? size : Page.ROWS;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public long getBorrowId() {
+        return borrowId;
+    }
+
+    public void setBorrowId(long borrowId) {
+        this.borrowId = borrowId;
+    }
+
+    public String getBorrowName() {
+		return borrowName;
+	}
+
+	public void setBorrowName(String borrowName) {
+		this.borrowName = borrowName;
+	}
+
+	public double getAccountYes() {
+		return accountYes;
+	}
+
+	public void setAccountYes(double accountYes) {
+		this.accountYes = accountYes;
+	}
+
+	public double getAccount() {
+		return account;
+	}
+
+	public void setAccount(double account) {
+		this.account = account;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public int getBorrowStyle() {
+		return borrowStyle;
+	}
+
+	public void setBorrowStyle(int borrowStyle) {
+		this.borrowStyle = borrowStyle;
+	}
+
+	public int getTimeLimit() {
+		return timeLimit;
+	}
+
+	public void setTimeLimit(int timeLimit) {
+		this.timeLimit = timeLimit;
+	}
+
+	public int getRepayTime() {
+		return repayTime;
+	}
+
+	public void setRepayTime(int repayTime) {
+		this.repayTime = repayTime;
+	}
+
+	public int getRepayYesTime() {
+		return repayYesTime;
+	}
+
+	public void setRepayYesTime(int repayYesTime) {
+		this.repayYesTime = repayYesTime;
+	}
+
+	public int getRepayAccount() {
+		return repayAccount;
+	}
+
+	public void setRepayAccount(int repayAccount) {
+		this.repayAccount = repayAccount;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public double getLateAward() {
+		return lateAward;
+	}
+
+	public void setLateAward(double lateAward) {
+		this.lateAward = lateAward;
+	}
+
+	public double getScales() {
+		return scales;
+	}
+
+	public void setScales(double scales) {
+		this.scales = scales;
+	}
+
+	public double getPartAccount() {
+		return partAccount;
+	}
+
+	public void setPartAccount(double partAccount) {
+		this.partAccount = partAccount;
+	}
+
+	public String getBorrowUserName() {
+		return borrowUserName;
+	}
+
+	public void setBorrowUserName(String borrowUserName) {
+		this.borrowUserName = borrowUserName;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
+}

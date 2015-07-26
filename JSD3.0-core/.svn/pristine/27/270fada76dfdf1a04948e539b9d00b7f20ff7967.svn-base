@@ -1,0 +1,95 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.member.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoSetDao;
+import com.ddtkj.p2psys.member.dao.MemberVipAwardDao;
+import com.ddtkj.p2psys.member.dao.MemberVipDao;
+import com.ddtkj.p2psys.member.dao.MemberVipHistoryDao;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.member.domain.MemberVipAward;
+import com.ddtkj.p2psys.member.model.MemberVipAwardModel;
+import com.ddtkj.p2psys.member.model.MemberVipAwardSubModel;
+import com.ddtkj.p2psys.member.service.MemberVipAwardService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述：会员奖励来源
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月22日 
+ */
+@Repository("memberVipAwardService")
+public class MemberVipAwardServiceImpl implements MemberVipAwardService{
+
+	@Resource
+	private MemberVipDao memberVipDao;
+	@Resource
+	private MemberVipHistoryDao memberVipHistoryDao;
+	@Resource
+	private MemberVipAwardDao memberVipAwardDao;
+	@Resource
+	private AccountDao accountDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private BorrowAutoSetDao borrowAutoSetDao;
+
+	@Override
+	public PageDataList<MemberVipAwardModel> memberVipAwardPageList(
+			MemberVipAwardModel model) {
+		// TODO Auto-generated method stub
+				QueryParam param = QueryParam.getInstance();
+				param.addPage(model.getPage(), model.getRows());
+				param.addParam("user.userId", model.getUser().getUserId());
+				param.addOrder(OrderType.DESC, "id");
+				PageDataList<MemberVipAward> vipHistoryPageList = memberVipAwardDao.findPageList(param);
+				
+				PageDataList<MemberVipAwardModel> pageDateList_ = new PageDataList<MemberVipAwardModel>();
+				List<MemberVipAwardModel> list = new ArrayList<MemberVipAwardModel>();
+				if (vipHistoryPageList.getList().size() > 0) {
+					for (int i = 0; i < vipHistoryPageList.getList().size(); i++) {
+						MemberVipAward vipAward = (MemberVipAward) vipHistoryPageList.getList().get(i);
+						MemberVipAwardModel arm = MemberVipAwardModel.instance(vipAward);
+						arm.setUserName(vipAward.getUser().getUserName());
+						list.add(arm);
+					}
+				}
+				pageDateList_.setPage(vipHistoryPageList.getPage());
+				pageDateList_.setList(list);
+				return pageDateList_;
+	}
+
+	@Override
+	public void modifyIsConvert(int id) {
+		memberVipAwardDao.modifyIsConvert(id);
+		
+	}
+
+	@Override
+	public MemberVipAward findMemberVipAward(int id) {
+		// TODO Auto-generated method stub
+		return memberVipAwardDao.findMemberVipAwardById(id);
+	}
+	
+	@Override
+	public void convertVipForVipAward(MemberVipAwardSubModel model) throws Exception {
+		
+		model.vipPackageConvertVip();
+	}
+
+
+
+
+}

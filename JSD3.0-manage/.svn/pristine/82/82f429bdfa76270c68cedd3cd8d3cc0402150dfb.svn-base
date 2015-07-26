@@ -1,0 +1,121 @@
+package com.rongdu.manage.action.system;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.common.http.HttpClientUtils;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.reset.global.service.GlobalResetService;
+import com.ddtkj.p2psys.reset.global.util.JSON2RuleChek;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.MD5Util;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.rule.RuleModel;
+import com.rongdu.p2psys.core.service.RuleLogService;
+import com.rongdu.p2psys.core.service.RuleService;
+import com.rongdu.p2psys.core.util.JsonFormat;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 数据字典管理
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014年3月21日
+ */
+public class ManageRuleAction extends BaseAction<RuleModel> implements
+		ModelDriven<RuleModel> {
+
+	private RuleModel model = new RuleModel();
+
+	public RuleModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private RuleService ruleService;
+	@Resource
+	private RuleLogService ruleLogService;
+	@Resource
+	private GlobalResetService globalResetService;
+	private Map<String, Object> map = new HashMap<String, Object>();
+
+	/**
+	 * 数据字典页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/system/rule/ruleManager")
+	public String ruleManager() throws Exception {
+		return "ruleManager";
+	}
+
+	/**
+	 * 数据字典列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/system/rule/ruleList")
+	public void ruleList() throws Exception {
+		// PageDataList<Dict> pageList = dictService.list(model);
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		PageDataList<Rule> pageList = ruleService.getPageList(
+				RuleModel.instance(model), pageNumber, pageSize);
+
+		int totalPage = pageList.getPage().getTotal(); // 总页数
+		map.put("total", totalPage);
+		map.put("rows", pageList.getList());
+		printJson(getStringOfJpaObj(map));
+	}
+
+	/**
+	 * 数据字典修改页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/system/rule/ruleEditPage")
+	public String ruleEditPage() throws Exception {
+		// Dict dict = dictService.find(this.model.getId());
+		Rule rule = ruleService.findById(model.getId());
+		String jsonStr = rule.getRuleCheck();
+		String newFormatStr = JsonFormat.outJsonStr(jsonStr);
+
+		request.setAttribute("rule", rule);
+		request.setAttribute("newFormatStr", newFormatStr);
+		saveToken("ruleEditToken");
+		return "ruleEditPage";
+	}
+
+	/**
+	 * 修改
+	 * 
+	 * @author xingjia@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action("/modules/system/rule/ruleEdit")
+	public void ruleEdit() throws Exception {
+		if (null != model && null != model.getRuleCheck()) {
+			String newFormatStr = model.getRuleCheck().replaceAll("\r|\n|\t",
+					"");
+			model.setRuleCheck(newFormatStr.trim());
+		}
+		try {
+			checkToken("ruleEditToken");
+			ruleService.updateRule(RuleModel.instance(model), getOperatorId());
+		} catch (Exception e) {
+			map.put("msg", "规则修改失败");
+		}
+		map.put("result", true);
+		map.put("msg", "规则修改成功!");
+		printJson(getStringOfJpaObj(map));
+	}
+}

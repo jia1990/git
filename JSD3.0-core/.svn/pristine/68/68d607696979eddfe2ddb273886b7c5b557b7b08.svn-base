@@ -1,0 +1,148 @@
+package com.rongdu.p2psys.borrow.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.domain.AccountSum;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.domain.AccountSumLog;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.enums.EnumAccountSumProperty;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+
+/**
+ * 投标奖励
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class AwardTenderAwardExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.AWARD_ADD;
+	protected String logAwardRemarkTemplate = "奖励总和:收入奖励${award}元。";
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		//操作金额
+		log.setAwardMoney(awardMoney);
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		/*log.setMoney(super.money);
+		log.setTotal(account.getTotal());
+		log.setUseMoney(account.getUseMoney());
+		log.setNoUseMoney(account.getNoUseMoney());
+		log.setCollection(account.getCollection());*/
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)1);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		//accountDao.modify(super.money, super.money, 0, 0, super.user.getUserId());
+		//投标奖励
+		/*Account account = new Account(user);
+		//账户总额（操作金额）
+		account.setAccountTotal(awardMoney);
+		//账户多种可用金额
+		account.setAwardUsable(awardMoney);
+		accountDao.modify(account);*/
+		
+		
+		//投标奖励
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		//账户奖励可用金额
+		account.setAwardUsable(BigDecimalUtil.add(
+				account.getAwardUsable(), awardMoney));
+		//账户总额
+		account.setAccountTotal(BigDecimalUtil.add(
+				account.getAccountTotal(), awardMoney));
+		// 更新
+		//JSDP-164 wcw 20150527 start
+		accountDao.modifyInvesterAccount(account, user.getUserId());
+		//accountDao.update(account);
+		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+		accountSumDao.update(EnumAccountSumProperty.AWARD.getValue(), super.money, super.user.getUserId());
+		AccountSum sum = accountSumDao.findByUserId(super.user.getUserId());
+		AccountSumLog sumLog = new AccountSumLog(super.user, accountLogType, super.toUser);
+		this.setAccountSumLogRemarkTemplate(logAwardRemarkTemplate);
+		sumLog.setBeforeMoney(sum.getAccumulativeAward());
+		sumLog.setAfterMoney(BigDecimalUtil.add(sum.getAccumulativeAward(), super.money));
+		sumLog.setRemark(getAccountSumLogRemark());
+		accountSumLogDao.save(sumLog);
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		//BaseMsg msg = new BaseMsg(NoticeConstant.RECEIVE_TENDER_AWARD);
+		//.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+		//调用接口给予投资人奖励
+		if (BaseTPPWay.isOpenApi()) {
+			/*if(BaseTPPWay.apiCode().equals("1")){
+				YjfService apiService = new YjfServiceImpl();
+				List<Object> taskList = new ArrayList<Object>();
+				Borrow borrow = (Borrow) Global.getTransfer().get("borrow");
+				BorrowTender tender = (BorrowTender) Global.getTransfer().get("tender");
+				apiService.fullSuccessAward(borrow, tender, borrow.getUser(), super.user, taskList, money);
+				apiService.doApiTask(taskList);
+			}else if(BaseTPPWay.apiCode().equals("2")){
+				
+			}else */if(BaseTPPWay.apiCode().equals("3")){
+				/*Borrow borrow = (Borrow) Global.getTransfer().get("borrow");
+				String award = (String) Global.getTransfer().get("award");
+				User u=(User) Global.getTransfer().get("user");
+				YmdTPPWay.transfer(YmdConstant.YMD_TYPE_1,YmdConstant.YMD_TRADE_TENDER_AWARD, OrderNoUtils.getSerialNumber(), award, borrow.getUser().getUserName(), u.getUserName());*/
+			}
+			
+		}
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+}

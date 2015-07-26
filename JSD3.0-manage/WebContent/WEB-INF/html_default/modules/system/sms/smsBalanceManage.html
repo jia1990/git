@@ -1,0 +1,38 @@
+
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>短信通道名：</span>
+		${sms.name!}
+	</div>
+	<div class="showItem">
+		<span>短信通道简称：</span>
+		${sms.nid!}
+	</div>
+	<div class="showItem">
+		<span>短信通道状态：</span>
+		<#if sms.status=="11">
+			开启状态
+		<#elseif sms.status=="22">
+			关闭状态
+		<#else>
+			错误状态
+		</#if>
+	</div>
+	
+	<#if result??&&result="ok">
+		<div class="showItem">
+			<span>短信产品ID：</span>
+			${productID!}
+		</div>
+		<div class="showItem">
+			<span>短信余额：</span>
+			${remainNum!}
+		</div>		
+	<#else>
+		<div class="showItem">
+			<span>异常信息：</span>
+			${result!}
+		</div>
+	</#if>
+	
+</div>

@@ -1,0 +1,96 @@
+package com.ddtkj.p2psys.account.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * @描述: 积分抽奖executer
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-12   
+ */
+public class ScoreAwardSuccessExecuter extends BaseExecuter {
+
+		private String accountLogType = Constant.SCORE_AWARD_SUCCESS;
+
+		@Override
+		public String getAccountLogType() {
+			return accountLogType;
+		}
+
+		@Override
+		public void addAccountLog() {
+			Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+			AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+			// 账户操作金额
+			log.setAwardMoney(awardMoney);
+			// 账户总额
+			log.setAccountTotal(account.getAccountTotal());
+			// 账户多种可用
+			log.setRechargeUsable(account.getRechargeUsable());
+			log.setAwardUsable(account.getAwardUsable());
+			log.setInterestUsable(account.getInterestUsable());
+			log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+			// 账户多种冻结
+			log.setFreezeUseAward(account.getFreezeUseAward());
+			log.setFreezeUseInterest(account.getFreezeUseInterest());
+			log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+			log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+			// 账户待收总额
+			log.setCollectionTotal(account.getCollectionTotal());
+			log.setRemark(this.getLogRemark());
+			log.setPaymentsType((byte)1);
+			accountLogDao.save(log);
+		}
+
+		@Override
+		public void handleAccount() {	
+			Account account = accountDao.getAccountByUserId(user.getUserId());
+		    // 账户各类可用金额
+		    account.setAwardUsable(BigDecimalUtil.add(account.getAwardUsable(), awardMoney));
+	        // 账户总额
+		    account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(), awardMoney));
+		  //JSDP-164 wcw 20150527 start
+			accountDao.modifyInvesterAccount(account, user.getUserId());
+			//accountDao.update(account);
+			//JSDP-164 wcw 20150527 end
+		}
+
+		@Override
+		public void handleAccountSum() {
+			super.handleAccountSum();
+
+		}
+
+		@Override
+		public void handlePoints() {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void handleNotice() {
+		
+		}
+
+		@Override
+		public void addOperateLog() {
+			
+		}
+
+		@Override
+		public void handleInterface() {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void extend() {
+			// TODO Auto-generated method stub
+
+		}
+
+}

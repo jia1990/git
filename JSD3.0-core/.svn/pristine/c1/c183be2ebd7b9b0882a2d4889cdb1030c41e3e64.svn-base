@@ -1,0 +1,90 @@
+package com.ddtkj.p2psys.core.quartz.goods;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.BeanUtil;
+/**
+ * 分期宝业务处理
+ * @author wcw
+ */
+public class GoodsTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(GoodsTask.class);
+
+	@Resource
+	private GoodsOrderService goodsOrderService;
+	
+	
+
+
+	public GoodsOrderService getGoodsOrderService() {
+		return goodsOrderService;
+	}
+
+	public void setGoodsOrderService(GoodsOrderService goodsOrderService) {
+		this.goodsOrderService = goodsOrderService;
+	}
+
+	public GoodsTask(GoodsOrderService goodsOrderService) {
+		super();
+		task.setName("goods.Task");
+		this.goodsOrderService = goodsOrderService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (GoodsJobQueue.GOODS!=null && GoodsJobQueue.GOODS.size() > 0) {
+			GoodsBean tb = GoodsJobQueue.GOODS.peek();
+			if (tb != null) {
+				String result="success";
+				try {
+					if("goodsBuySuccess".equals(tb.getType())){
+						GoodsOrderService goodsOrderService = (GoodsOrderService)BeanUtil.getBean("goodsOrderSerive");
+						goodsOrderService.addByNoBorrowSuccess(tb.getUser(), tb.getGoodsOrder());
+						result="分期宝直接购买";
+					}else if("goodsBuyOneSuccess".equals(tb.getType())){
+						GoodsOrderService goodsOrderService = (GoodsOrderService)BeanUtil.getBean("goodsOrderSerive");
+						goodsOrderService.addOneSuccess(tb.getUser(), tb.getGoodsOrder(), tb.getGoodsModel(), tb.getBorrow());
+						result="分期宝分期购买";
+					}
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					GoodsJobQueue.GOODS.remove(tb);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				    if(tb.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(tb.getResultFlag(), result);
+			            }
+			        }
+				}
+		}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return GoodsTask.GOODS_STATUS;
+	}
+
+}

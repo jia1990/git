@@ -1,0 +1,1259 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+
+/**
+ * 前台暂时数据
+ * @author guojunhui@ddtkj.com
+ *
+ */
+public class DataShowRuleCheck extends RuleCheck{
+
+
+	public InvestTotal invest_total;
+	public UserInvestTotal user_invest_total;
+	public UserIncome user_income;
+	public PayUserCapital pay_user_capital;
+	public PayUserInterest pay_user_interest;
+	public PersonHighestInvest person_highest_invest;
+	public JsdAvgInvest jsd_avg_invest;
+	public InvestScale invest_scale;
+	public InvestNumberTimes invest_number_times;
+	public PersonHighestInvestTimes person_highest_invest_times;
+	public JsdReinvestScale jsd_reinvest_scale;
+	public JsdInvestDistribute jsd_invest_distribute;
+	public MonthTop month_top;
+	public JsdInvestSum jsd_invest_sum;
+	public UltimoData ultimo_data;
+	public PersonMap person_map;
+
+	// 20150706
+	// 年龄分布
+	public UserAgeDistribute user_age_distribute;
+	// 查询性别分布
+	public UserSexDistribute user_sex_distribute;
+	// 查询职业分布
+	public UserJobDistribute user_job_distribute;
+	// 查询收益对比
+	public EarnContrast earn_contrast;
+	// 查询项目期限
+	public ProjectDeadline project_deadline;
+	// 查询投资者经验值
+	public UserTenderExp user_tender_exp;
+
+	//设定10组累计投资金额数值(单位亿)，用于前台直接显示
+	public static class InvestTotal implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -4655950921521404885L;
+		private String remark;
+		private double[] value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public double[] getValue() {
+			return value;
+		}
+		public void setValue(double[] investTotalVal) {
+			this.value = investTotalVal;
+		}
+	}
+	//用户投资总额
+	public static class UserInvestTotal implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -2557878831137967068L;
+		private String remark;
+		private double value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public double getValue() {
+			return value;
+		}
+		public void setValue(double value) {
+			this.value = value;
+		}
+		
+	}
+	//用户赚取总收益金额
+	public static class UserIncome implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 8807607821670992876L;
+		private String remark;
+		private double value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public double getValue() {
+			return value;
+		}
+		public void setValue(double value) {
+			this.value = value;
+		}
+	}
+	//已经支付用户本金
+	public static class PayUserCapital implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -2163519861938735626L;
+		private String remark;
+		private double value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public double getValue() {
+			return value;
+		}
+		public void setValue(double value) {
+			this.value = value;
+		}
+	}
+	//已经支付用户利息
+	public static class PayUserInterest implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -8754774770489421873L;
+		private String remark;
+		private double value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public double getValue() {
+			return value;
+		}
+		public void setValue(double value) {
+			this.value = value;
+		}
+	}
+	//个人最高投资额
+	public static class PersonHighestInvest implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 8014242479084468872L;
+		private String remark;
+		private double value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public double getValue() {
+			return value;
+		}
+		public void setValue(double value) {
+			this.value = value;
+		}
+	}
+	//晋商贷平均投资额
+	public static class JsdAvgInvest implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1532950182860210953L;
+		private String remark;
+		private double value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public double getValue() {
+			return value;
+		}
+		public void setValue(double value) {
+			this.value = value;
+		}
+	}
+	//投资金额占比,共5个范围由小到大，值为百分比。
+	public static class InvestScale implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -8962376825791313797L;
+		private String remark;
+		private Values v1;
+		private Values v2;
+		private Values v3;
+		private Values v4;
+		private Values v5;
+		
+		public static class Values implements java.io.Serializable{
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -4433109189857264636L;
+			private String remark;
+			private int value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public int getValue() {
+				return value;
+			}
+			public void setValue(int value) {
+				this.value = value;
+			}
+			
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Values getV1() {
+			return v1;
+		}
+
+		public void setV1(Values v1) {
+			this.v1 = v1;
+		}
+
+		public Values getV2() {
+			return v2;
+		}
+
+		public void setV2(Values v2) {
+			this.v2 = v2;
+		}
+
+		public Values getV3() {
+			return v3;
+		}
+
+		public void setV3(Values v3) {
+			this.v3 = v3;
+		}
+
+		public Values getV4() {
+			return v4;
+		}
+
+		public void setV4(Values v4) {
+			this.v4 = v4;
+		}
+
+		public Values getV5() {
+			return v5;
+		}
+
+		public void setV5(Values v5) {
+			this.v5 = v5;
+		}
+
+		
+	}
+	//投资笔数占比
+	public static class InvestNumberTimes implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -9206311682080376167L;
+		private String remark;
+		private Values v1;
+		private Values v2;
+		private Values v3;
+		private Values v4;
+		
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Values getV1() {
+			return v1;
+		}
+
+		public void setV1(Values v1) {
+			this.v1 = v1;
+		}
+
+		public Values getV2() {
+			return v2;
+		}
+
+		public void setV2(Values v2) {
+			this.v2 = v2;
+		}
+
+		public Values getV3() {
+			return v3;
+		}
+
+		public void setV3(Values v3) {
+			this.v3 = v3;
+		}
+
+		public Values getV4() {
+			return v4;
+		}
+
+		public void setV4(Values v4) {
+			this.v4 = v4;
+		}
+
+	}
+	
+	public static class Values implements java.io.Serializable{
+		private static final long serialVersionUID = 930721454515595370L;
+		private String remark;
+		private int value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public int getValue() {
+			return value;
+		}
+		public void setValue(int value) {
+			this.value = value;
+		}
+		
+	}
+	
+	//个人最高投资笔数
+	public static class PersonHighestInvestTimes implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -4646937198882379094L;
+		private String remark;
+		private int value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public int getValue() {
+			return value;
+		}
+		public void setValue(int value) {
+			this.value = value;
+		}
+	}
+	//晋商贷重复投资率(百分比)
+	public static class JsdReinvestScale implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -540981538587536855L;
+		private String remark;
+		private int value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public int getValue() {
+			return value;
+		}
+		public void setValue(int value) {
+			this.value = value;
+		}
+	}
+	//jsd投资人分布
+	public static class JsdInvestDistribute implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 4667573283466429793L;
+		private String remark;
+		private Values total;
+		private Values financing_company;
+		
+		public static class Values implements java.io.Serializable{
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -6603287716374769325L;
+			private String remark;
+			private int value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public int getValue() {
+				return value;
+			}
+			public void setValue(int value) {
+				this.value = value;
+			}
+			
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Values getTotal() {
+			return total;
+		}
+
+		public void setTotal(Values total) {
+			this.total = total;
+		}
+
+		public Values getFinancing_company() {
+			return financing_company;
+		}
+
+		public void setFinancing_company(Values financing_company) {
+			this.financing_company = financing_company;
+		}
+		
+	}
+	//本月投资排名
+	public static class MonthTop implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -6047137465673158435L;
+		private String remark;
+		private Values[] list;
+		
+		public static class Values implements java.io.Serializable{
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 3246162571441411486L;
+			private String top;
+			private String name;
+			private double money;
+			public String getTop() {
+				return top;
+			}
+			public void setTop(String top) {
+				this.top = top;
+			}
+			public String getName() {
+				return name;
+			}
+			public void setName(String name) {
+				this.name = name;
+			}
+			public double getMoney() {
+				return money;
+			}
+			public void setMoney(double money) {
+				this.money = money;
+			}
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Values[] getList() {
+			return list;
+		}
+
+		public void setList(Values[] list) {
+			this.list = list;
+		}
+		
+	}
+	//地图
+	public static class PersonMap implements java.io.Serializable{
+		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 8076546435834608976L;
+		private String remark;
+		private Values[] list;
+		
+		public static class Values implements java.io.Serializable{
+			
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1436416107579199647L;
+			private String name;
+			private double value;
+			public String getName() {
+				return name;
+			}
+			public void setName(String name) {
+				this.name = name;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double value) {
+				this.value = value;
+			}
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+		
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		
+		public Values[] getList() {
+			return list;
+		}
+		
+		public void setList(Values[] list) {
+			this.list = list;
+		}
+		
+	}
+	//成功交易笔数
+	public static class JsdInvestSum implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 4640439379282406680L;
+		private String remark;
+		private int value;
+		public String getRemark() {
+			return remark;
+		}
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		public int getValue() {
+			return value;
+		}
+		public void setValue(int value) {
+			this.value = value;
+		}
+		
+	}
+	public static class UltimoData implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -6602563141891013442L;
+		private String remark;
+		private Value tender_count;
+		private Value invest_people_num;
+		private Value invest_money_sum;
+		
+		public static class Value implements java.io.Serializable{
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -5248330596822934437L;
+			private String remark;
+			private double value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double ultimoTenderAccount) {
+				this.value = ultimoTenderAccount;
+			}
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Value getTender_count() {
+			return tender_count;
+		}
+
+		public void setTender_count(Value tender_count) {
+			this.tender_count = tender_count;
+		}
+
+		public Value getInvest_people_num() {
+			return invest_people_num;
+		}
+
+		public void setInvest_people_num(Value invest_people_num) {
+			this.invest_people_num = invest_people_num;
+		}
+
+		public Value getInvest_money_sum() {
+			return invest_money_sum;
+		}
+
+		public void setInvest_money_sum(Value invest_money_sum) {
+			this.invest_money_sum = invest_money_sum;
+		}
+		
+	}
+	
+	@Override
+	public boolean checkRule() {
+		
+		return false;
+	}
+	
+	public static void main(String[] args) throws Exception {
+		// 测试使用
+		InputStream in = DataShowRuleCheck.class
+				.getResourceAsStream("前台数据展示.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<DataShowRuleCheck> clazz = DataShowRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		DataShowRuleCheck test = (DataShowRuleCheck) jsonObj;
+		System.out.println(test.getMonth_top().getList()[1].getName());
+	}
+
+	public InvestTotal getInvest_total() {
+		return invest_total;
+	}
+
+	public void setInvest_total(InvestTotal invest_total) {
+		this.invest_total = invest_total;
+	}
+
+	public UserInvestTotal getUser_invest_total() {
+		return user_invest_total;
+	}
+
+	public void setUser_invest_total(UserInvestTotal user_invest_total) {
+		this.user_invest_total = user_invest_total;
+	}
+
+	public UserIncome getUser_income() {
+		return user_income;
+	}
+
+	public void setUser_income(UserIncome user_income) {
+		this.user_income = user_income;
+	}
+
+	public PayUserCapital getPay_user_capital() {
+		return pay_user_capital;
+	}
+
+	public void setPay_user_capital(PayUserCapital pay_user_capital) {
+		this.pay_user_capital = pay_user_capital;
+	}
+
+	public PayUserInterest getPay_user_interest() {
+		return pay_user_interest;
+	}
+
+	public void setPay_user_interest(PayUserInterest pay_user_interest) {
+		this.pay_user_interest = pay_user_interest;
+	}
+
+	public PersonHighestInvest getPerson_highest_invest() {
+		return person_highest_invest;
+	}
+
+	public void setPerson_highest_invest(PersonHighestInvest person_highest_invest) {
+		this.person_highest_invest = person_highest_invest;
+	}
+
+	public JsdAvgInvest getJsd_avg_invest() {
+		return jsd_avg_invest;
+	}
+
+	public void setJsd_avg_invest(JsdAvgInvest jsd_avg_invest) {
+		this.jsd_avg_invest = jsd_avg_invest;
+	}
+
+	public InvestScale getInvest_scale() {
+		return invest_scale;
+	}
+
+	public void setInvest_scale(InvestScale invest_scale) {
+		this.invest_scale = invest_scale;
+	}
+
+	public InvestNumberTimes getInvest_number_times() {
+		return invest_number_times;
+	}
+
+	public void setInvest_number_times(InvestNumberTimes invest_number_times) {
+		this.invest_number_times = invest_number_times;
+	}
+
+	public PersonHighestInvestTimes getPerson_highest_invest_times() {
+		return person_highest_invest_times;
+	}
+
+	public void setPerson_highest_invest_times(
+			PersonHighestInvestTimes person_highest_invest_times) {
+		this.person_highest_invest_times = person_highest_invest_times;
+	}
+
+	public JsdReinvestScale getJsd_reinvest_scale() {
+		return jsd_reinvest_scale;
+	}
+
+	public void setJsd_reinvest_scale(JsdReinvestScale jsd_reinvest_scale) {
+		this.jsd_reinvest_scale = jsd_reinvest_scale;
+	}
+
+	public JsdInvestDistribute getJsd_invest_distribute() {
+		return jsd_invest_distribute;
+	}
+
+	public void setJsd_invest_distribute(JsdInvestDistribute jsd_invest_distribute) {
+		this.jsd_invest_distribute = jsd_invest_distribute;
+	}
+
+	public MonthTop getMonth_top() {
+		return month_top;
+	}
+
+	public void setMonth_top(MonthTop month_top) {
+		this.month_top = month_top;
+	}
+
+	public JsdInvestSum getJsd_invest_sum() {
+		return jsd_invest_sum;
+	}
+
+	public void setJsd_invest_sum(JsdInvestSum jsd_invest_sum) {
+		this.jsd_invest_sum = jsd_invest_sum;
+	}
+
+	public UltimoData getUltimo_data() {
+		return ultimo_data;
+	}
+
+	public void setUltimo_data(UltimoData ultimo_data) {
+		this.ultimo_data = ultimo_data;
+	}
+
+	public PersonMap getPerson_map() {
+		return person_map;
+	}
+
+	public void setPerson_map(PersonMap person_map) {
+		this.person_map = person_map;
+	}
+	
+	
+	public UserAgeDistribute getUser_age_distribute() {
+		return user_age_distribute;
+	}
+
+	public void setUser_age_distribute(UserAgeDistribute user_age_distribute) {
+		this.user_age_distribute = user_age_distribute;
+	}
+
+	public UserSexDistribute getUser_sex_distribute() {
+		return user_sex_distribute;
+	}
+
+	public void setUser_sex_distribute(UserSexDistribute user_sex_distribute) {
+		this.user_sex_distribute = user_sex_distribute;
+	}
+
+	public UserJobDistribute getUser_job_distribute() {
+		return user_job_distribute;
+	}
+
+	public void setUser_job_distribute(UserJobDistribute user_job_distribute) {
+		this.user_job_distribute = user_job_distribute;
+	}
+
+	public EarnContrast getEarn_contrast() {
+		return earn_contrast;
+	}
+
+	public void setEarn_contrast(EarnContrast earn_contrast) {
+		this.earn_contrast = earn_contrast;
+	}
+
+	public ProjectDeadline getProject_deadline() {
+		return project_deadline;
+	}
+
+	public void setProject_deadline(ProjectDeadline project_deadline) {
+		this.project_deadline = project_deadline;
+	}
+
+	public UserTenderExp getUser_tender_exp() {
+		return user_tender_exp;
+	}
+
+	public void setUser_tender_exp(UserTenderExp user_tender_exp) {
+		this.user_tender_exp = user_tender_exp;
+	}
+
+
+	// 20150706
+	// 用户年龄分布
+	public static class UserAgeDistribute implements java.io.Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -6602563141891013442L;
+		private String remark;
+		private Value age1;
+		private Value age2;
+		private Value age3;
+		private Value age4;
+		
+		public static class Value implements java.io.Serializable{
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -5248330596822934437L;
+			private String remark;
+			private double value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double ultimoTenderAccount) {
+				this.value = ultimoTenderAccount;
+			}
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Value getAge1() {
+			return age1;
+		}
+
+		public void setAge1(Value age1) {
+			this.age1 = age1;
+		}
+
+		public Value getAge2() {
+			return age2;
+		}
+
+		public void setAge2(Value age2) {
+			this.age2 = age2;
+		}
+
+		public Value getAge3() {
+			return age3;
+		}
+
+		public void setAge3(Value age3) {
+			this.age3 = age3;
+		}
+		
+		public Value getAge4() {
+			return age4;
+		}
+		
+		public void setAge4(Value age4) {
+			this.age4 = age4;
+		}
+		
+	}
+	// 用户性别分布
+	public static class UserSexDistribute implements java.io.Serializable{
+
+		private static final long serialVersionUID = -6602563141891013442L;
+		private String remark;
+		private Value man;
+		private Value women;
+		
+		public static class Value implements java.io.Serializable{
+			
+			private static final long serialVersionUID = -5248330596822934437L;
+			private String remark;
+			private double value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double ultimoTenderAccount) {
+				this.value = ultimoTenderAccount;
+			}
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+		
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Value getMan() {
+			return man;
+		}
+
+		public void setMan(Value man) {
+			this.man = man;
+		}
+
+		public Value getWomen() {
+			return women;
+		}
+
+		public void setWomen(Value women) {
+			this.women = women;
+		}
+	}
+	// 用户职业分布
+	public static class UserJobDistribute implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -6602563141891013442L;
+		private String remark;
+		private Value job1;
+		private Value job2;
+		private Value job3;
+		private Value job4;
+		
+		public static class Value implements java.io.Serializable{
+			
+			private static final long serialVersionUID = -5248330596822934437L;
+			private String remark;
+			private double value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double ultimoTenderAccount) {
+				this.value = ultimoTenderAccount;
+			}
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+		
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Value getJob1() {
+			return job1;
+		}
+
+		public void setJob1(Value job1) {
+			this.job1 = job1;
+		}
+
+		public Value getJob2() {
+			return job2;
+		}
+
+		public void setJob2(Value job2) {
+			this.job2 = job2;
+		}
+
+		public Value getJob3() {
+			return job3;
+		}
+
+		public void setJob3(Value job3) {
+			this.job3 = job3;
+		}
+
+		public Value getJob4() {
+			return job4;
+		}
+
+		public void setJob4(Value job4) {
+			this.job4 = job4;
+		}
+		
+		
+	}
+	// 收益对比
+	public static class EarnContrast implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -6602563141891013442L;
+		private String remark;
+		private Value bank_enter_one_lowest;
+		private Value bank_enter_one_highest;
+		private Value baobaos_lowest;
+		private Value baobaos_highest;
+		
+		public static class Value implements java.io.Serializable{
+			
+			private static final long serialVersionUID = -5248330596822934437L;
+			private String remark;
+			private double value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double ultimoTenderAccount) {
+				this.value = ultimoTenderAccount;
+			}
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+		
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Value getBank_enter_one_lowest() {
+			return bank_enter_one_lowest;
+		}
+
+		public void setBank_enter_one_lowest(Value bank_enter_one_lowest) {
+			this.bank_enter_one_lowest = bank_enter_one_lowest;
+		}
+
+		public Value getBank_enter_one_highest() {
+			return bank_enter_one_highest;
+		}
+
+		public void setBank_enter_one_highest(Value bank_enter_one_highest) {
+			this.bank_enter_one_highest = bank_enter_one_highest;
+		}
+
+		public Value getBaobaos_lowest() {
+			return baobaos_lowest;
+		}
+
+		public void setBaobaos_lowest(Value baobaos_lowest) {
+			this.baobaos_lowest = baobaos_lowest;
+		}
+
+		public Value getBaobaos_highest() {
+			return baobaos_highest;
+		}
+
+		public void setBaobaos_highest(Value baobaos_highest) {
+			this.baobaos_highest = baobaos_highest;
+		}
+		
+	}
+	// 项目期限
+	public static class ProjectDeadline implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -6602563141891013442L;
+		private String remark;
+		private Value time1;
+		private Value time2;
+		private Value time3;
+		private Value time4;
+		
+		public static class Value implements java.io.Serializable{
+			
+			private static final long serialVersionUID = -5248330596822934437L;
+			private String remark;
+			private double value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double ultimoTenderAccount) {
+				this.value = ultimoTenderAccount;
+			}
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+		
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public Value getTime1() {
+			return time1;
+		}
+
+		public void setTime1(Value time1) {
+			this.time1 = time1;
+		}
+
+		public Value getTime2() {
+			return time2;
+		}
+
+		public void setTime2(Value time2) {
+			this.time2 = time2;
+		}
+
+		public Value getTime3() {
+			return time3;
+		}
+
+		public void setTime3(Value time3) {
+			this.time3 = time3;
+		}
+
+		public Value getTime4() {
+			return time4;
+		}
+
+		public void setTime4(Value time4) {
+			this.time4 = time4;
+		}
+		
+		
+	}
+	// 投资经验者
+	public static class UserTenderExp implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -6602563141891013442L;
+		private String remark;
+		private Value time1;
+		private Value time2;
+		private Value time3;
+		private Value time4;
+		
+		public static class Value implements java.io.Serializable{
+			
+			private static final long serialVersionUID = -5248330596822934437L;
+			private String remark;
+			private double value;
+			public String getRemark() {
+				return remark;
+			}
+			public void setRemark(String remark) {
+				this.remark = remark;
+			}
+			public double getValue() {
+				return value;
+			}
+			public void setValue(double ultimoTenderAccount) {
+				this.value = ultimoTenderAccount;
+			}
+		}
+		
+		public String getRemark() {
+			return remark;
+		}
+		
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+		
+		public Value getTime1() {
+			return time1;
+		}
+		
+		public void setTime1(Value time1) {
+			this.time1 = time1;
+		}
+		
+		public Value getTime2() {
+			return time2;
+		}
+		
+		public void setTime2(Value time2) {
+			this.time2 = time2;
+		}
+		
+		public Value getTime3() {
+			return time3;
+		}
+		
+		public void setTime3(Value time3) {
+			this.time3 = time3;
+		}
+		
+		public Value getTime4() {
+			return time4;
+		}
+		
+		public void setTime4(Value time4) {
+			this.time4 = time4;
+		}
+		
+		
+	}
+	
+	
+}

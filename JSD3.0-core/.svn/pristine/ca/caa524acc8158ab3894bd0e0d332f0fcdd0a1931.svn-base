@@ -1,0 +1,407 @@
+package com.ddtkj.p2psys.borrow.dao;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.core.model.RankModel;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+public interface BorrowTenderDao extends BaseDao<BorrowTender>{
+	/**
+	 * 获得我的投资列表
+	 * 
+	 * @param borrowModel
+	 * @return
+	 */
+	PageDataList<BorrowTenderModel> list(BorrowTenderModel borrowTenderModel);
+
+	/**
+	 * 修改tender的待收本金和待收利息
+	 * 
+	 * @param capital
+	 * @param interest
+	 * @param id
+	 */
+	void updateRepayTender(double capital, double interest, long id);
+
+	/**
+	 * 查改用户是否已经投资此借款标
+	 * 
+	 * @param borrowId
+	 * @param userId
+	 * @return
+	 */
+	double hasTenderTotalPerBorrowByUserid(long borrowId, long userId);
+
+	/**
+	 * 根据borrowId获取tender的列表
+	 * 
+	 * @param borrowId
+	 * @return
+	 */
+	PageDataList<BorrowTenderModel> list(long borrowId, int page, int size);
+
+	/**
+	 * 修改借款标
+	 * 
+	 * @param tender
+	 * @return
+	 */
+	BorrowTender modifyBorrowTender(BorrowTender tender);
+
+	/**
+	 * 最新借款
+	 * 
+	 * @return
+	 */
+	List<BorrowTender> getNewTenderList();
+
+	/**
+	 * 投资排行榜
+	 * 
+	 * @return
+	 */
+	List<RankModel> getRankList();
+
+	/**
+	 * @param tender
+	 * @return
+	 */
+	BorrowTender addBorrowTender(BorrowTender tender);
+
+	/**
+	 * @param id
+	 * @param start
+	 * @param pernum
+	 * @return
+	 */
+	PageDataList<BorrowTenderModel> getTenderListByBorrowid(long id, int start, int pernum);
+
+	/**
+	 * 当前用户秒标投标次数
+	 * 
+	 * @param userid
+	 * @param beginDate
+	 * @param endDate
+	 * @return
+	 */
+	double getUserTenderNum(long userid, Date beginDate, Date endDate);
+
+	/**
+	 * 得到投标的次数
+	 * 
+	 * @param borrowId ,userId
+	 * @return int
+	 */
+	public int getBorrowTenderTimes(long borrowId, long userId);
+
+	/**
+	 * 投标次数
+	 * @param userId
+	 * @return
+	 */
+	public int getBorrowTenderTimes(long userId);
+	/**
+	 * 得到借出总额
+	 */
+	double sumTenderAccount(long userId);
+
+	/**
+	 * 更新状态
+	 * 
+	 * @param borrowId
+	 * @param status
+	 * @param preStatus
+	 */
+	void updateStatus(long borrowId, int status, int preStatus);
+	
+	/**
+     * 更新状态
+     * 
+     * @param borrowId
+     * @param status
+     */
+    void updateStatus(long id, int status);
+	/**
+	 * 自动投标判断一个标一个人只能投一次
+	 * @param userId
+	 * @param tenderType
+	 * @param borrowId
+	 * @param status
+	 * @return
+	 */
+	public int getAutoTenderByUserId(long userId, byte tenderType, long borrowId, int status);
+	/**
+	 * 修改投标时候登记债权人时候的订单号
+	 * @param id 标ID
+	 * @param tenderBilNo 登记债权人订单号
+	 */
+	void modifyTenderBilNo(long id, String tenderBilNo);
+	/**
+	 * 通过投标订单号查询投标记录
+	 * @param tenderBillNo 投标订单号
+	 * @return 投标记录
+	 */
+	BorrowTender getTenderByBillNo(String tenderBillNo);
+	/**
+     * 通过标ID查询投标集合
+     * @param id 标ID
+     * @return 投标集合
+     */
+    List<BorrowTender> getTenderByBorrowId(long id);
+    /**
+     * 通过标ID、投标状态查询投标集合
+     * @param id
+     * @param status
+     * @return
+     */
+    public List<BorrowTender> getTenderByBorrowIdAndStatus(long id,int status) ;
+    /**
+     * 我投资的 标列表
+     * @param BorrowTenderModel
+     * @return
+     */
+    PageDataList<Borrow> getBorrowlist(BorrowTenderModel model);
+
+    /**
+     * 根据时间查询投资人个数
+     * @param i
+     * @return 投资人个数
+     */
+    int getInvestCountByDate(int i);
+    /**
+     * 根据时间查询投资人个数
+     * @param date
+     * @return 投资人个数
+     */
+    int getInvestCountByDate(String date);
+    
+    /**
+     * 累计投资金额
+     * @return
+     */
+    double tenderAccount();
+    
+    /**
+     * 上月累计投资金额
+     * @return
+     */
+    double ultimoTenderAccount();
+    /**
+     * 指定日期内的投资成功金额总和
+     * @param startTime
+     * @param endTime
+     * @param userId
+     * @return
+     */
+    double tenderSumAccount(Date startTime,Date endTime,long userId);
+    
+    /**
+     * 投资用户数个数(表未更新，无投资成功判断)
+     * @param date
+     */
+    int getInvestUserCount();
+    
+    /**
+     * 累计投资利息
+     * @return
+     */
+    double tenderAllInterest();
+
+	/**
+	 * 今日投标总额
+	 * @return
+	 */
+	double tenderTodayAccount();    
+    
+    /**
+     * 成功投资一次以上的用户数——投资人
+     * @author 孙晓勇
+     */
+    int getTenderInvestUserCount();
+    
+    /**
+     * 累计成功投资金额总和——投资人
+     * @author 孙晓勇
+     */
+    double tenderInvestAccount();
+    
+    /**
+     * @author guojunhui@ddtkj.com
+     * 当月投资top10
+     * @return
+     */
+    List<Object[]> investTop10In();
+    
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取最高投资金额（累计）
+     * @return
+     */
+    double investAccountMax();
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取个人最高笔数（累计）
+     * @return
+     */
+    int investNumberMax();
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取投资总笔数
+     * @return
+     */
+    int investNumberSum();
+
+    /**
+     * 根据日期查询交易金额
+     * @param dates
+     * @return
+     */
+    double tenderedAccountsByDate(String dates);
+
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取上个月投标成功人数
+     * @return
+     */
+    int ultimoTenderSum();
+    
+    /**
+     * 获取 当前用户 未完成还款标的投资
+     * @author yujunfei@ddtkj.com  于俊斐
+     * @param user
+     * @return
+     */
+    PageDataList<BorrowTender> getSwingOutTender(User user,int page,int size);
+    
+    List<BorrowTender> getSwingOutTender(User user);
+    /**
+     * 获取 当前用户 某个未完成还款标的投资
+     * @author yujunfei@ddtkj.com  于俊斐
+     * @param user
+     * @return
+     */
+    BorrowTender getSwingOutTenderByOne(User user,long id);
+      
+    /**
+     * @author 李建云
+     * 
+     * 投资人上一个月投资总额
+     * */
+    double getInvesterTenderAccount(long userId,Date startTime,Date endTime);
+    
+    
+    /** 
+     *@author 李建云
+     *创建时间 2015-02-28
+     *截止某个时间点 累计投资总额 
+     * */
+    double getInvesterTenderAccount(long userId,Date endTime);
+  //JSDP-158  wcw 2015-05-23 start
+    /**
+     *@author 李建云
+     *投资人 某个标的投标金额总和 
+     *@param
+     * */
+    double getInvesterTenderAccountByUserAndBorrowType(long userId,int type,int status);
+  //JSDP-158  wcw 2015-05-23 end
+    /**
+     * @author 李建云
+     * 
+     * 投资人上一个月投资笔数
+     * */
+    int getInvesterTenderSum(long userId,Date startTime,Date endTime);
+    
+    /**
+     * @author 李建云
+     * 回款续投金额
+     * */
+    double  getUserReturnedMoneySum(long userId,Date startTime,Date endTime);
+
+    /**
+     * @author guojunhui@ddtkj.com
+     * 查询用户投标记录中在投标
+     * @param userId
+     * @return
+     */
+    List<BorrowTender> getUserOngoingBorrow(User user);
+    
+
+	/**
+	 * 根据日期查询昨日成交总额和成交笔数（新站）
+	 * @return
+	 */
+	Map<String,Double> getTenderMoneySum();
+	
+	/**
+	 * 投资信息列表导出
+	 * 
+	 * //JSDP-116 sxy 2015-05-15 start
+	 * @param borrowModel
+	 * @return
+	 */
+	List<BorrowTender> excelTenderDatalist(BorrowTenderModel borrowTenderModel);
+	
+	// JSDP-BUG99 20150527 sxy start
+	/**
+	 * 投资列表
+	 * 
+	 * @param borrowModel
+	 * @return
+	 */
+	PageDataList<BorrowTender> tenderMoneyStatisticsListForSQL(BorrowTenderModel model, int page, int size);
+	// JSDP-BUG99 20150527 sxy start
+	
+	/**
+	  * 投标金额的汇总
+	  * @param model
+	  * @return
+	  */
+	 List<BorrowTenderModel> tenderMoneyDataTotal(BorrowTenderModel model);
+	 
+	// JSDP-180 SXY 20150611
+	 /**
+	  * 投标金额的汇总——状态
+	  * @param model
+	  * @return
+	  */
+	 double tenderMoneyDataTotalOfStatus(BorrowTenderModel model);
+	//JSDP-184 xingjia 20150618 start
+	 /**
+	  * 查询此表在活动期间的成功投标记录
+	  * @param id
+	  * @param startTime
+	  * @param endTime
+	  * @return
+	  */
+	int getTenderByBorrowIdAndAddTimeCount(long id,Date startTime,Date endTime);
+	public List<BorrowTender> getTenderByBorrowIdAndAddTime(long id,Date startTime,Date endTime);
+	 /**
+	  * 查询指定条件的投标记录
+	  * @param startTime
+	  * @param endTime
+	  * @param borrowType
+	  * @param validTime
+	  * @return
+	  */
+	 List borrowTenderRpActivity(Date startTime,Date endTime, int borrowType, int validTime);
+	 /**
+	  * 根据borrowid查询投标最多的用户
+	  * @param borrowId
+	  * @return
+	  */
+	 Map<String,Object> findMostMoneyByBorrowId(long borrowId,Date startTime,Date endTime);
+	//JSDP-184 xingjia 20150618 end
+}

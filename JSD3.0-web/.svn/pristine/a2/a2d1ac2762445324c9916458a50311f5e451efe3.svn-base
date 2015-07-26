@@ -1,0 +1,47 @@
+package com.ddtkj.mobile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+public class Constants {
+	
+	//移动端APPKEY
+	public static final String APPKEY_ANDROID = "AA438B55FCA9A106CCF88A36CB26DC5C";
+	public static final String APPKEY_IOS = "1546C93354D4F790F456B8AAA84E622B";
+	public static final String APPSECRET_ANDROID = "6A1A65A6D4EF833D";
+	public static final String APPSECRET_IOS = "6A1A65A6D4EF833D";
+	public static final Map<String, String> APPKEY_MAP = new HashMap<String, String>();
+	static {
+		APPKEY_MAP.put(APPKEY_ANDROID, APPSECRET_ANDROID);
+		APPKEY_MAP.put(APPKEY_IOS, APPSECRET_IOS);
+	}
+	
+	//jpush推送地址
+	public static final String HOST_NAME_SSL = "https://api.jpush.cn";
+	public static final String PUSH_PATH = "/v3/push";
+	public static final String JPUSH_URL = HOST_NAME_SSL + PUSH_PATH;
+	
+	public static final String JPUSH_APPKEY_ANDROID = "cff0163f4a780c25e2eebca6"; 
+	public static final String JPUSH_MASTER_SECRET_ANDROID = "db48573c3c8c9cb8b786e1ae"; 
+	
+	public static final String JPUSH_APPKEY_IOS = "9e6ff20aaf673088b379a9a1"; 
+	public static final String JPUSH_MASTER_SECRET_IOS = "2e812957d1f5b40b8f14429e"; 
+																					
+    //配置文件加载
+	public static final String ZMOBILE_PROPERTIES_FILENAME = "zmobile.properties";
+	public static Properties getPropertyFile() {
+		String filePath = Constants.ZMOBILE_PROPERTIES_FILENAME;
+		InputStream in = Constants.class.getClassLoader().getResourceAsStream(filePath);
+		Properties p = new Properties();
+		try {
+			p.load(in);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return new Properties();
+		}
+		return p;
+	}
+}

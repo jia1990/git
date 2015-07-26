@@ -1,0 +1,223 @@
+package com.rongdu.p2psys.core.sms;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.NameValuePair;
+import org.apache.commons.httpclient.URI;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.sms.domain.SmsInterface;
+import com.rongdu.p2psys.core.constant.Constant;
+
+/**
+ * @描述: 上海创蓝短信接口
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间: 2015-2-9
+ */
+public class SHLCSmsPortal {
+
+	private static Logger logger = Logger.getLogger(SHLCSmsPortal.class);
+
+	public SHLCSmsPortal() {
+	}
+
+	/**
+	 * 普通方式发送短信：使用get请求
+	 * 
+	 * @param mobile
+	 *            手机号，号码间逗号隔开
+	 * @param msg
+	 *            短信内容
+	 * @param needstatus
+	 *            是否需要状态报告
+	 * @param product
+	 *            用户订购的产品id，不填写（针对老用户）系统采用用户的默认产品，用户订购多个产品时必填，否则会发生计费错误。
+	 * @param extno
+	 *            扩展码，用户定义扩展码，3位
+	 * @param sms
+	 *            短信接口信息
+	 * @return String 返回结果集
+	 * @throws Exception
+	 */
+	public static String sendMsgGet(String mobile, String msg, boolean needstatus,
+			String product, String extno, SmsInterface sms) {
+		String username = sms.getSmsUsername();
+		String pwd = sms.getSmsPassword();
+		String smsUrl = sms.getSmsNoticeUrl();
+		HttpClient client = new HttpClient();
+		GetMethod method = new GetMethod();
+        StringBuffer response = new StringBuffer(); 
+		try {
+			URI base = new URI(smsUrl, false);
+			method.setURI(new URI(base, "", false));
+			method.setQueryString(new NameValuePair[] {
+					new NameValuePair("account", username),
+					new NameValuePair("pswd", pwd),
+					new NameValuePair("mobile", mobile),
+					new NameValuePair("needstatus", String.valueOf(needstatus)),
+					new NameValuePair("msg", msg),
+					new NameValuePair("product", product),
+					new NameValuePair("extno", extno) });
+
+			int responseCode = client.executeMethod(method);
+			if (responseCode == Constant.HTTP_STATUS_CODE_OK) {
+			    BufferedReader reader = new BufferedReader(new InputStreamReader(method.getResponseBodyAsStream(), "UTF-8")); 
+			    String line; 
+			    while ((line = reader.readLine()) != null) { 
+                     response.append(line).append(System.getProperty("line.separator")); 
+			    } 
+             	reader.close(); 
+             	method.releaseConnection();
+			}   
+		} catch (Exception e) {
+			response.append("9999");
+			logger.error("执行HTTP Get请求【" + smsUrl + "】时，发生异常！errorMsg:"+e.getMessage()+",cause:"+e.getCause());
+		} finally {
+			method.releaseConnection();
+		}
+		return response.toString();
+	}
+	
+	/**
+	 * 普通方式发送短信：使用post请求
+	 * 
+	 * @param mobile
+	 *            手机号，号码间逗号隔开
+	 * @param msg
+	 *            短信内容
+	 * @param needstatus
+	 *            是否需要状态报告
+	 * @param product
+	 *            用户订购的产品id，不填写（针对老用户）系统采用用户的默认产品，用户订购多个产品时必填，否则会发生计费错误。
+	 * @param extno
+	 *            扩展码，用户定义扩展码，3位
+	 * @param sms
+	 *            短信接口信息
+	 * @return String 返回结果集
+	 * @throws Exception
+	 */
+	public static String sendMsgPost(String mobile, String msg, boolean needstatus,
+			String product, String extno, SmsInterface sms) {
+		String username = sms.getSmsUsername();
+		String pwd = sms.getSmsPassword();
+		String smsUrl = sms.getSmsNoticeUrl();
+		HttpClient client = new HttpClient();
+		PostMethod method = new UTF8PostMethod();
+        StringBuffer response = new StringBuffer(); 
+		try {
+			URI base = new URI(smsUrl, false);
+			method.setURI(new URI(base, "", false));
+			method.setRequestBody(new NameValuePair[] {
+					new NameValuePair("account", username),
+					new NameValuePair("pswd", pwd),
+					new NameValuePair("mobile", mobile),
+					new NameValuePair("needstatus", String.valueOf(needstatus)),
+					new NameValuePair("msg", msg),
+					new NameValuePair("product", product),
+					new NameValuePair("extno", extno) });
+
+			int responseCode = client.executeMethod(method);
+			if (responseCode == Constant.HTTP_STATUS_CODE_OK) {
+			    BufferedReader reader = new BufferedReader(new InputStreamReader(method.getResponseBodyAsStream(), "UTF-8")); 
+			    String line; 
+			    while ((line = reader.readLine()) != null) { 									
+			    	response.append(line).append(System.getProperty("line.separator")); 
+			    } 
+             	reader.close(); 
+             	method.releaseConnection();
+			}   
+		} catch (Exception e) {
+			response.append("9999");
+			logger.error("执行HTTP Post请求【" + smsUrl + "】时，发生异常！errorMsg:"+e.getMessage()+",cause:"+e.getCause()
+					+"。HTTP ERROR Status:"+ method.getStatusCode()+ ",StatusText:" + method.getStatusText()); 
+		} finally {
+			method.releaseConnection();
+		}
+		return response.toString();
+	}
+
+	public static class UTF8PostMethod extends PostMethod{     
+	    public UTF8PostMethod(){     
+	    	super();     
+	    }     
+	    @Override     
+	    public String getRequestCharSet() {     
+	        return "UTF-8";     
+	    }  
+	}  
+	
+	/**
+	 * 查询短信余额
+	 * @param  sms
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	public static String queryBalance(SmsInterface sms) {
+		String username = sms.getSmsUsername();
+		String pwd = sms.getSmsPassword();
+		String balanceUrl = sms.getSmsBalanceUrl();
+		HttpClient client = new HttpClient();
+		GetMethod method = new GetMethod();
+        StringBuffer response = new StringBuffer(); 
+		try {
+			URI base = new URI(balanceUrl, false);
+			method.setURI(new URI(base, "", false));
+			method.setQueryString(new NameValuePair[] {
+					new NameValuePair("account", username),
+					new NameValuePair("pswd", pwd) });
+
+			int responseCode = client.executeMethod(method);
+			if (responseCode == Constant.HTTP_STATUS_CODE_OK) {
+			    BufferedReader reader = new BufferedReader(new InputStreamReader(method.getResponseBodyAsStream(), "UTF-8")); 
+			    String line; 
+			    while ((line = reader.readLine()) != null) { 
+			    	response.append(line).append(System.getProperty("line.separator")); 
+			    } 
+             	reader.close(); 
+             	method.releaseConnection();
+			}  
+		} catch (Exception e) {
+			response.append("9999");
+			logger.error("执行HTTP Get请求【" + balanceUrl + "】时，发生异常！errorMsg:"+e.getMessage()+",cause:"+e.getCause());
+		} finally {
+			method.releaseConnection();
+		}
+		return response.toString();
+	}
+	
+	
+	/*
+	 * 方法名称：getMD5 功 能：字符串MD5加密 参 数：待转换字符串 返 回 值：加密之后字符串
+	 */
+	public String getMD5(String sourceStr) throws UnsupportedEncodingException {
+		String resultStr = "";
+		try {
+			byte[] temp = sourceStr.getBytes();
+			MessageDigest md5 = MessageDigest.getInstance("MD5");
+			md5.update(temp);
+			// resultStr = new String(md5.digest());
+			byte[] b = md5.digest();
+			for (int i = 0; i < b.length; i++) {
+				char[] digit = { '0', '1', '2', '3', '4', '5', '6', '7', '8',
+						'9', 'A', 'B', 'C', 'D', 'E', 'F' };
+				char[] ob = new char[2];
+				ob[0] = digit[(b[i] >>> 4) & 0X0F];
+				ob[1] = digit[b[i] & 0X0F];
+				resultStr += new String(ob);
+			}
+			return resultStr;
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+
+}

@@ -1,0 +1,48 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.weixin.util;
+
+import java.io.IOException;
+import java.util.Properties;
+
+import org.apache.log4j.Logger;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年6月17日 
+ */
+public class WxUtil {
+	/** 日志 */
+	private static Logger log = Logger.getLogger(WxUtil.class);
+
+	/** 资源属性 */
+	private static Properties properties;
+
+	static {
+		properties = new Properties();
+		try {
+			// 读取配置文件
+			properties.load(WxUtil.class.getResourceAsStream(WxConstants.WX_CONFIG_NAME));
+		} catch (IOException e) {
+			e.printStackTrace();
+			log.error("读取配置文件出错，请确认message/config.properties文件已经放到src目录下。");
+		}
+	}
+
+	/**
+	 * 获取配置信息
+	 * 
+	 * @param configKey
+	 * @return
+	 */
+	public static  String getConfigValue(String configKey) {
+		String configValue = null;
+		configValue = properties.getProperty(configKey);
+		if (null == configValue || "".equals(configValue)) {
+			log.info("没有获取指定key的值，请确认资源文件中是否存在【" + configKey + "】");
+		}
+		return configValue;
+	}
+}

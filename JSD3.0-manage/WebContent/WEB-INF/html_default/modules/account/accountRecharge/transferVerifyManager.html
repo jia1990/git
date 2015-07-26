@@ -1,0 +1,69 @@
+<script type="text/javascript">
+	$(function() {
+		$.fn.dataGridOptions.formSubFun("#form",'/modules/account/accountRecharge/transferVerify.html');
+
+	});
+</script>
+<style>
+#form b{color: #ff0000;}
+</style>
+<div class="popShow">
+	
+	<div class="showItem">
+		<span>用户名：</span>
+		${user.userName!}
+	</div>
+	<div class="showItem">
+		<span>真实姓名：</span>
+		${user.realName!}
+	</div>
+	
+	<div class="showItem">
+		<span>是否开户：</span>
+		<#if user.thirdPartyIsOpen=="Y">
+			已开通第三方
+		<#else>
+			未开通第三方
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>云购订单号：</span>
+		${recharge.tradeNo!}
+	</div>
+
+	<div class="showItem">
+		<span>转账金额：</span>
+		${recharge.rechargeAmount!}
+	</div>
+	
+</div>
+<div class="popForm" style="padding-top:0;">
+<form id="form" method="post">
+	<div class="formitm">
+		<label class="lab">是否通过：</label>
+		<div class="ipt">
+		   	<label><input type="radio" name="passVerify" class="easyui-validatebox" value="Y" data-options="required: true" checked="checked" id="pass"/>通过</label>
+			<label><input type="radio" name="passVerify" class="easyui-validatebox" value="N" data-options="required: true" id="noPass"/>不通过</label>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">备注：</label>
+		<div class="ipt">
+		   <textarea name="remark" class="w400 easyui-validatebox" data-options="required: true"></textarea>
+		</div>
+	</div>
+	
+    <input name="transferNo" value="${recharge.tradeNo!}" type="hidden"/>
+    <input name="userName" value="${user.userName!}" type="hidden"/>
+    <input name="transferAmount" value="${recharge.rechargeAmount!}" type="hidden"/>
+    <input name="transferType" value="01" type="hidden"/>
+    <input name="transferVerify" value="${transferVerify!}" type="hidden" />
+    
+    
+</form>
+</div>
+
+
+
+
+

@@ -1,0 +1,381 @@
+package com.ddtkj.p2psys.borrow.service;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.model.RankModel;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+public interface BorrowTenderService {
+	/**
+	 * 我的投资列表
+	 * 
+	 * @param borrowModel
+	 * @return
+	 */
+	PageDataList<BorrowTenderModel> list(BorrowTenderModel borrowTenderModel);
+	
+	// JSDP-BUG106 20150504 sxy start
+	/**
+	 * 投资列表
+	 * 
+	 * @param borrowModel
+	 * @return
+	 */
+	PageDataList<BorrowTenderModel> tenderlist(BorrowTenderModel model);
+	// JSDP-BUG106 20150504 sxy start
+	// JSDP-BUG99 20150527 sxy start
+	/**
+	 * 投资列表
+	 * 
+	 * @param borrowModel
+	 * @return
+	 */
+	PageDataList<BorrowTender> tenderMoneyStatisticsListForSQL(BorrowTenderModel model,int page,int size);
+	// JSDP-BUG99 20150527 sxy start
+	
+	/**
+	 * 查改用户是否已经投资此借款标
+	 * 
+	 * @param borrowId
+	 * @param userId
+	 * @return
+	 */
+	double hasTenderTotalPerBorrowByUserid(long borrowId, long userId);
+
+	/**
+	 * 根据borrowId获取tender的列表
+	 * 
+	 * @param borrowId
+	 * @return
+	 */
+	PageDataList<BorrowTenderModel> list(long borrowId, int page, int size);
+
+	/**
+	 * 投标
+	 * 
+	 * @param tender
+	 * @param user
+	 * @return
+	 */
+	//BorrowTender addTender(User user, Borrow borrow, double money, int flowCount,String addIp);
+	public BorrowTender addTender(User user, Borrow borrow, double money,String addIp)throws Exception ;
+	/**
+	 * 投标前校验
+	 * @param user
+	 * @param borrow
+	 * @param tender
+	 * @param bmodel
+	 * @return
+	 */
+	public BorrowTender validTender(User user, Borrow borrow, BorrowTender tender,BorrowModel bmodel);
+	/**
+	 * 投标
+	 * 
+	 * @param tender
+	 * @param user
+	 * @return
+	 */
+	//BorrowTender addTender(User user, Borrow borrow, double money, int flowCount,String addIp);
+	//public BorrowTender addTender(User user, Borrow borrow, double money,String addIp,double mdAccount)throws Exception ;
+	BorrowTender addTender(User user, Borrow borrow, BorrowTender tender,BorrowModel bmodel)throws Exception;
+	
+	//JSDP-53  wcw 2015-4-20 start
+	/**
+	 * 投标（旧） 
+	 * @param user
+	 * @param borrow
+	 * @param tender
+	 * @param bmodel
+	 * @return
+	 * @throws Exception
+	 */
+	BorrowTender oldAddTender(User user, Borrow borrow, BorrowTender tender,BorrowModel bmodel)throws Exception;
+	//JSDP-53  wcw 2015-4-20 end
+	/**
+	 * 首页显示最新借款
+	 * 
+	 * @return
+	 */
+	List<BorrowTender> getNewTenderList();
+
+	/**
+	 * 首页投资排行榜
+	 * 
+	 * @return
+	 */
+	List<RankModel> getRankList();
+
+	/**
+	 * @param borrowId
+	 * @param page
+	 * @return
+	 */
+	PageDataList<BorrowTenderModel> getTenderList(long borrowId, int page);
+
+	/**
+	 * @param userid
+	 * @param beginDate
+	 * @param endDate
+	 * @return
+	 */
+	double getUserTenderNum(long userid, Date beginDate, Date endDate);
+
+	/**
+	 * @param borrowId
+	 * @return
+	 */
+	List<BorrowTenderModel> getTenderList(long borrowId);
+
+	/**
+	 * 根据borrowId查询tenderList
+	 * 
+	 * @param borrowId
+	 * @return
+	 */
+	List<BorrowTender> getTenderListByBorrowId(long borrowId);
+
+	/**
+	 * 根据id查询
+	 * 
+	 * @param tenderId
+	 * @return
+	 */
+	BorrowTender getTenderById(long tenderId);
+
+	/**
+	 * 投资用户汇总
+	 * @return
+	 */
+    List<Integer> getInvestCount();
+    
+    /**
+     * 我投资的 标列表
+     * @param borrowModel
+     * @return
+     */
+    PageDataList<BorrowModel> getBorrowlist(BorrowTenderModel model);
+
+    /**
+     * 根据时间获取投资用户个数
+     * @param date
+     */
+    int getInvestCountByDate(String date);
+    
+    /**
+     * @author guojunhui@ddtkj.com
+     * 累计投资金额
+     * @return
+     */
+    double tenderAccount();
+    /**
+     * @author guojunhui@ddtkj.com
+     * 上月累计投资金额
+     * @return
+     */
+    double ultimoTenderAccount();
+    /**
+     * 今日累计投资金额
+     * @return
+     */
+    double tenderTodayAccount();
+    /**
+	 * 得到借出总额
+	 */
+	double sumTenderAccount(long userId);
+    
+    /**
+     * 投资用户数个数
+     * @param date
+     */
+    int getInvestUserCount();
+    
+    /**
+     * 累计投资利息
+     * @return
+     */
+    double tenderAllInterest();
+    
+    /**
+     * 成功投资一次以上的用户数——投资人
+     * @author 孙晓勇
+     */
+    int getTenderInvestUserCount();
+    
+    /**
+     * 累计成功投资金额总和——投资人
+     * @author 孙晓勇
+     */
+    double tenderInvestAccount();
+    
+    /**
+     * @author guojunhui@ddtkj.com
+     * 当月投资top10
+     * @return
+     */
+    List<Object[]> investTop10In();
+    
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取最高投资金额（累计）
+     * @return
+     */
+    double investAccountMax();
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取个人最高笔数（累计）
+     * @return
+     */
+    int investNumberMax();
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取投资总笔数
+     * @return
+     */
+    int investNumberSum();
+
+    
+    /**
+     * 根据日期查询交易金额
+     * @param dates
+     * @return
+     */
+    double tenderedAccountsByDate(String dates);
+
+    /**
+     * @author guojunhui@ddtkj.com
+     * 获取上个月投标成功人数
+     * @return
+     */
+    int ultimoTenderSum();
+    
+    /**
+     * 获取 当前用户 未完成还款标的投资
+     * @author yujunfei@ddtkj.com  于俊斐
+     * @param user
+     * @return
+     */
+    PageDataList<BorrowTender> getSwingOutTender(User user,int page,int size);
+    
+    /**
+     * @author 李建云
+     * 
+     * 投资人上一个月投资总额
+     * */
+    double getInvesterTenderAccount(long userId,Date startTime,Date endTime);
+    
+    /** 
+     *@author 李建云
+     *创建时间 2015-02-28
+     *截止某个时间点 累计投资总额 
+     * */
+    double getInvesterTenderAccount(long userId,Date endTime);
+    
+    /**
+     * @author 李建云
+     * 
+     * 投资人上一个月投资笔数
+     * */
+    int getInvesterTenderSum(long userId,Date startTime,Date endTime);
+    
+    /**
+     * @author 李建云
+     * 回款续投金额
+     * */
+    double  getUserReturnedMoneySum(long userId,Date startTime,Date endTime);
+    
+  //JSDP-158  wcw 2015-05-23 start
+    /**
+     *@time 2015-02-27 
+     *@author 李建云
+     *投资人 某个标的投标金额总和 
+     *@param
+     * */
+    double getInvesterTenderAccountByUserAndBorrowType(long userId,int type,int status);
+  //JSDP-158  wcw 2015-05-23 end
+    /**
+     * @author guojunhui@ddtkj.com
+     * 查询用户投标记录中在投标
+     * @param userId
+     * @return
+     */
+    List<BorrowTender> getUserOngoingBorrow(User user);
+    
+
+	/**
+	 * @param t
+	 * @return
+	 */
+	BorrowTender update(BorrowTender t);
+	//JSDP-53 wcw 2015-4-20 start
+	void compaireBorrowTenderList(int borrow_id)throws Exception;
+	//JSDP-53 wcw 2015-4-20 end
+
+	/**
+	 * 根据日期查询昨日成交总额和成交笔数（新站）
+	 * @return
+	 */
+	Map<String,Double> getTenderMoneySum();
+	
+	/**
+	 * 投资信息列表导出
+	 * 
+	 * //JSDP-116 sxy 2015-05-15 start
+	 * @param borrowModel
+	 * @return
+	 */
+	List<BorrowTender> excelTenderDatalist(BorrowTenderModel borrowTenderModel);
+
+	 /**
+	  * 投标金额的汇总
+	  * @param model
+	  * @return
+	  */
+	 List<BorrowTenderModel> tenderMoneyDataTotal(BorrowTenderModel model);
+	 // JSDP-180 SXY 20150611
+	 /**
+	  * 投标金额的汇总——状态
+	  * @param model
+	  * @return
+	  */
+	 double tenderMoneyDataTotalOfStatus(BorrowTenderModel model);
+	//JSDP-184 xingjia 20160618 start
+	 /**
+	  * 查询投标
+	  * @param borrowId
+	  * @return
+	  */
+	 BorrowTenderModel findFirstTender(long borrowId);
+	
+	 /**
+	  * 查询符合的标的投标记录
+	  * @return
+	  */
+	 List borrowTenderRpActivity(Date startTime,Date endTime,int borrowType,int validTime);
+	 /**
+	  * 根据borrowid查询用户投资最多的人
+	  * @return
+	  */
+	 Map<String,Object> findMostMoneyByBorrowId(long borrowId,Date startTime,Date endTime);
+	 /**
+	  * 查询投标记录
+	  * @param id
+	  * @param startTime
+	  * @param endTime
+	  * @return
+	  */
+	 List<BorrowTender> getTenderByBorrowIdAndAddTime(long id,Date startTime,Date endTime);
+	//JSDP-184 xingjia 20160618 end
+}

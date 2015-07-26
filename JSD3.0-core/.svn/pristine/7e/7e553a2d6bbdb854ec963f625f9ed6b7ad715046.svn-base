@@ -1,0 +1,340 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.model;
+
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Date;
+import java.util.Map;
+
+import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.codec.digest.DigestUtils;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransferDetails;
+import com.ddtkj.p2psys.transfer.dao.AccountTransferDao;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.executer.AccountTransferExecuter;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月31日 
+ */
+public class AccountTransferModel extends AccountTransfer{
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+
+
+	/** 每页总数 **/
+	private int rows;
+	private String signInfo; //签名
+	
+	private Date startTime;//开始时间
+	private Date endTime;//结束时间
+	private String userName;//转入人用户名
+	private String transferStatusStr;
+	private String passVerify;//初审是否通过 Y(通过) 、N(不通过)
+	private String remark;//备注信息
+	//JSDP-55 gjh 2015-04-23 start
+	private String popUserName;//转出人用户名
+	private int mend;//是否补单   0 否  1是
+	private int mendType;//补单类型    1 本地  2第三方
+	//JSDP-55 gjh 2015-04-23 end
+	
+	//JSDP-156 xingjia 2015-05-22 start
+	private String transferStatus;//转账状态
+	private int transferType;//转账类型
+	
+	private String payPwd;//交易密码
+	
+	private int time;//前台时间查询
+	//JSDP-156 xingjia 2015-05-22 start
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+	/**
+	 * @return the time
+	 */
+	public int getTime() {
+		return time;
+	}
+
+	/**
+	 * @param time the time to set
+	 */
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	/**
+	 * @return the payPwd
+	 */
+	public String getPayPwd() {
+		return payPwd;
+	}
+
+	/**
+	 * @param payPwd the payPwd to set
+	 */
+	public void setPayPwd(String payPwd) {
+		this.payPwd = payPwd;
+	}
+
+	/**
+	 * @return the transferStatus
+	 */
+	public String getTransferStatus() {
+		return transferStatus;
+	}
+
+	/**
+	 * @param transferStatus the transferStatus to set
+	 */
+	public void setTransferStatus(String transferStatus) {
+		this.transferStatus = transferStatus;
+	}
+
+	
+	/**
+	 * @return the transferType
+	 */
+	public int getTransferType() {
+		return transferType;
+	}
+
+	/**
+	 * @param transferType the transferType to set
+	 */
+	public void setTransferType(int transferType) {
+		this.transferType = transferType;
+	}
+
+	public String getTransferStatusStr() {
+		return transferStatusStr;
+	}
+
+	public void setTransferStatusStr(String transferStatusStr) {
+		this.transferStatusStr = transferStatusStr;
+	}
+
+	/**
+	 * model转实体
+	 * @param transferModel
+	 * @return
+	 */
+	public static AccountTransfer instance(AccountTransferModel transferModel) {
+		AccountTransfer transfer = new AccountTransfer();
+		try {
+			BeanUtils.copyProperties(transferModel, transfer);
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return transfer;
+	}
+
+	public static AccountTransferModel instance(AccountTransfer transfer){
+		AccountTransferModel transferModel = new AccountTransferModel();
+		try {
+			BeanUtils.copyProperties(transferModel, transfer);
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return transferModel;
+	}
+	
+	public Date getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+
+	public Date getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getSignInfo() {
+		return signInfo;
+	}
+
+	public void setSignInfo(String signInfo) {
+		this.signInfo = signInfo;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+	
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	/**
+	 * 
+	 */
+	public AccountTransferModel() {
+		
+	}
+	
+	
+	
+	public String getPassVerify() {
+		return passVerify;
+	}
+
+	public void setPassVerify(String passVerify) {
+		this.passVerify = passVerify;
+	}
+	
+	
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public void init(){
+	     String signInfoStr=this.getTransferNo()+this.getUser().getUserName()+this.getUser().getRealName()+this.getUser().getCardNO()+this.getTransferAmount();
+	     System.out.println(signInfoStr);
+	     try {
+			signInfo = DigestUtils.md5Hex(signInfoStr.getBytes("UTF-8"));
+		 } catch (UnsupportedEncodingException e) {
+		 	signInfo=null;
+		 }
+	     this.setSignInfo(signInfo);
+	}
+	
+	
+	/**
+	 * 一麻袋转账
+	 * @param newUser
+	 * @param accountTransfer
+	 * @param map
+	 * @return
+	 */
+	public void ymdTransfer(User newUser,AccountTransfer accountTransfer){
+		//处理汇潮第三方转账
+		YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));
+		ymdTransfer.setTradeType(AccountTradeConstant.TRADE_YMD_TRADE);
+		YmdTransferDetails ymdTransferDetails=new YmdTransferDetails();
+		ymdTransferDetails.setAmount(BigDecimalUtil.decimal(accountTransfer.getTransferAmount(),2)+"");
+		ymdTransferDetails.setInName(newUser.getUserName()); //收款人 :投资人
+		ymdTransferDetails.setOutName(ymdTransfer.getNumberId()); //付款人：平台
+		ymdTransfer=YmdTPPWay.transfer(ymdTransfer.getTradeType(), ymdTransfer.getTradeNo(), accountTransfer.getTransferNo(), ymdTransferDetails.getAmount(), ymdTransferDetails.getOutName(), ymdTransferDetails.getInName());
+		if(!"0000".equals(ymdTransfer.getErrCode())){
+			throw new BussinessException(YmdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+		}
+	}
+	/**
+	 * 本地处理
+	 * @param newUser
+	 * @param accountTransfer
+	 * @param map
+	 * @return
+	 */
+	public Map<String, Object> localTransfer(User newUser,AccountTransfer accountTransfer,Map<String, Object> map){
+    	//处理本地3.0账户资金
+		map.put("returnCapitalMoney", accountTransfer.getTransferAmount());
+		Global.setTransfer("transferAmount", accountTransfer.getTransferAmount());
+		Global.setTransfer("transferNo", accountTransfer.getTransferNo());
+    	AccountTransferExecuter atExecuter = (AccountTransferExecuter) ExecuterHelper.doExecuter("accountTransferExecuter");
+    	atExecuter.execute(map, newUser);
+    	//处理汇潮转账状态
+    	accountTransfer.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_SUCCESS);
+    	accountTransfer.setTransferMsg("汇潮转账成功");
+    	AccountTransferDao accountTransferDao = (AccountTransferDao) BeanUtil.getBean("accountTransferDao");
+    	map.put("transfer_status", AccountTransfer.ACCOUNT_TRANSFER_SUCCESS);
+    	map.put("transfer_msg", "3.0转账成功");
+    	accountTransferDao.save(accountTransfer);//转账记录添加
+	    return map;
+	}
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+	//JSDP-55 gjh 2015-04-23 start
+	public String getPopUserName() {
+		return popUserName;
+	}
+	
+	public void setPopUserName(String popUserName) {
+		this.popUserName = popUserName;
+	}
+
+	public int getMend() {
+		return mend;
+	}
+
+	public void setMend(int mend) {
+		this.mend = mend;
+	}
+
+	public int getMendType() {
+		return mendType;
+	}
+
+	public void setMendType(int mendType) {
+		this.mendType = mendType;
+	}
+	//JSDP-55 gjh 2015-04-23 end
+	
+	
+}

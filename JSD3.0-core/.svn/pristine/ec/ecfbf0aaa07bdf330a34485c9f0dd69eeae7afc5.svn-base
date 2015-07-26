@@ -1,0 +1,443 @@
+package com.ddtkj.p2psys.tpp.ymd.model;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.http.HttpEntity;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.apache.log4j.Logger;
+
+import com.alibaba.fastjson.JSONObject;
+import com.ddtkj.common.http.HttpClientUtils;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.common.util.ReflectUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+/**
+ * 汇潮托管工具类
+ * @author wcw
+ *
+ */
+public class YmdModel {
+	private static Logger logger = Logger.getLogger(YmdModel.class);
+    /**
+     * 网关提交url(仅限于提交地址),如：www.baidu.com
+     */
+    private String  submitUrl;
+    
+    private String queryUrl; //汇潮查询url
+    /**
+     *  网关提交url(仅限于提交地址),如：www.baidu.com/image/open
+     */
+    private String WS_URL;
+    /**
+     * 商户数字账号(商户一麻袋数字账号)
+     */
+    private String numberId;
+    /**
+     * 商户key（商户一麻袋生成商户key）
+     */
+    private String merchantKey;
+   
+    /**
+     * 备注(该备注会显示为用户托管账户名称)
+     */
+    private String remark;
+    /**
+     * 签名(签名信息：number_id=a&mode=personal&account_name=b&real_name=c&card_no=d&nick_name=e&advice_url=f&return_url=r&remark=r&merchantKey=j，MD5加密后，进行小写转换，为空的参数不要参与加密)
+     */
+    private String signInfo;
+    
+    //回调
+    /**
+     * 处理返回状态
+     */
+    private String errCode;
+    /**
+     * 返回信息
+     */
+    private String errMsg;
+    /**
+     * 类型
+     */
+    private String mode;
+    /**
+     * 订单号
+     */
+    private String outTradeNo;
+    /**
+     * 操作金额
+     */
+    private String amount;
+    /**
+     * 手续费
+     */
+    private String fee;
+    
+    private String nickName;
+    /**
+     * xml
+     */
+    private String transData;
+    
+    
+    private String[] paramNames=new String[]{};
+
+    public YmdModel() {
+      init();
+    }
+    public void init(){
+        if(BaseTPPWay.isOnlineConfig()){
+            this.numberId=Global.getValue("ymd_merchant_id");
+            this.submitUrl =Global.getValue("ymd_submit_url");
+            this.merchantKey=Global.getValue("ymd_key");
+            this.queryUrl=Global.getValue("query_url");
+        }else{
+            this.numberId=Global.getValue("ymd_merchant_id");
+            this.submitUrl = Global.getValue("ymd_submit_test_url");
+            this.merchantKey=Global.getValue("ymd_key");
+            this.queryUrl=Global.getValue("query_url");
+        }
+    }
+    public static String getErrMsg(String errCode, String defaultMsg){
+		String errMsg = MessageUtil.getMessage(errCode);
+		if(!StringUtil.isBlank(errMsg)){
+			return errMsg;
+		}else{
+			return defaultMsg;
+		}
+	}
+    /**
+     * content内容转义
+     * @param content
+     * @return
+     */
+    public String urlEncoder(String content){
+        try {
+            content=URLEncoder.encode(content,"UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            //need do nothing
+        }
+        return content;
+    }
+    /**
+     * content内容转义解密
+     * @param content
+     * @return
+     */
+    public String urlDecoder(String content){
+    	 try {
+			content = URLDecoder.decode(content, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+    	return content;
+    }
+    
+    public void createSign() {
+       
+    }
+    public String submitReturnStatus(String url) throws Exception{
+    	//httpClient4.3 
+    	String resCode="";
+    	//CloseableHttpClient httpClient = HttpClients.createDefault();
+    	CloseableHttpClient httpClient=null;
+    	HttpGet  httpGet = new HttpGet(url);
+    	if (url.startsWith("https")) {  
+            // 执行 Https 请求.  
+    		httpClient = HttpClientUtils.createSSLInsecureClient();
+        }else{
+        	httpClient=HttpClients.createDefault();
+        }
+    	RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(120000).setConnectTimeout(120000).build();//设置请求和传输超时时间
+    	httpGet.setConfig(requestConfig);
+    	CloseableHttpResponse  response =null;
+		try {
+			response = httpClient.execute(httpGet);
+			int statusCode = response.getStatusLine().getStatusCode();
+			if(statusCode>=200&&statusCode<300){
+				HttpEntity entity = response.getEntity();
+				logger.info("entity==="+entity);
+				if (entity != null) {
+					resCode = EntityUtils.toString(entity);
+					logger.info("请求结果===="+resCode);
+					JSONObject node = JSONObject.parseObject(resCode);
+					resCode=(String) node.get("resCode");
+					//关闭httpEntity的流
+					EntityUtils.consume(entity);
+				}
+			}else{
+				//释放资源
+				httpGet.abort();
+				logger.info("status code error==="+statusCode);
+				resCode="error";
+			}
+		}catch (Exception e) {
+			//释放资源
+			logger.info("httpClient  request exception =="+e.getMessage());
+			httpGet.abort();
+			resCode="error";
+		}finally{
+			//资源关闭
+			if(response!=null){
+			    response.close();
+			}
+			httpClient.close();
+		}
+		return resCode;
+    }
+    public String submitReturnStatus(String url,List<NameValuePair> list) throws Exception{
+    	//httpClient4.3 
+    	String resCode="";
+    	//CloseableHttpClient httpClient = HttpClients.createDefault();
+    	CloseableHttpClient httpClient=null;
+    	HttpPost  httpPost = new HttpPost(url);
+    	if (url.startsWith("https")) {  
+            // 执行 Https 请求.  
+    		httpClient = HttpClientUtils.createSSLInsecureClient();
+        }else{
+        	httpClient=HttpClients.createDefault();
+        }
+    	RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(1200000).setConnectTimeout(1200000).build();//设置请求和传输超时时间
+    	httpPost.setConfig(requestConfig);
+    	CloseableHttpResponse  response =null;
+		try {
+			UrlEncodedFormEntity uefEntity = new UrlEncodedFormEntity(list, "UTF-8");  
+			httpPost.setEntity(uefEntity);
+			response = httpClient.execute(httpPost);
+			int statusCode = response.getStatusLine().getStatusCode();
+			if(statusCode>=200&&statusCode<300){
+				HttpEntity entity = response.getEntity();
+				logger.info("entity==="+entity);
+				if (entity != null) {
+					resCode = EntityUtils.toString(entity);
+					logger.info("请求结果===="+resCode);
+					JSONObject node = JSONObject.parseObject(resCode);
+					resCode=(String) node.get("resCode");
+					//关闭httpEntity的流
+					EntityUtils.consume(entity);
+				}
+			}else{
+				//释放资源
+				httpPost.abort();
+				logger.info("status code error==="+statusCode);
+				resCode="error";
+			}
+		}catch (Exception e) {
+			//释放资源
+			logger.info("httpClient  request exception =="+e.getMessage());
+			httpPost.abort();
+			resCode="error";
+		}finally{
+			//资源关闭
+			if(response!=null){
+			    response.close();
+			}
+			httpClient.close();
+		}
+		return resCode;
+    }
+    public List<NameValuePair> getHttpPostParams(){
+    	List<NameValuePair> formparams = new ArrayList<NameValuePair>();
+    	if (StringUtil.isNotBlank(this.getNumberId())) {
+            formparams.add(new BasicNameValuePair("transData", this.getTransData()));  
+        }
+        return formparams;
+    }
+    public String submitReturnXml(String submiturl,List<NameValuePair> list) throws Exception{
+    	//httpClient4.3 
+    	//CloseableHttpClient httpClient = HttpClients.createDefault();
+    	CloseableHttpClient httpClient=null;
+    	HttpPost  httpPost = new HttpPost(submiturl);
+    	if (submiturl.startsWith("https")) {  
+            // 执行 Https 请求.  
+    		httpClient = HttpClientUtils.createSSLInsecureClient();
+        }else{
+        	httpClient=HttpClients.createDefault();
+        }
+    	RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(1200000).setConnectTimeout(1200000).build();//设置请求和传输超时时间
+    	httpPost.setConfig(requestConfig);
+		String returnXml = "";
+		CloseableHttpResponse  response =null;
+		try {
+			UrlEncodedFormEntity uefEntity = new UrlEncodedFormEntity(list, "UTF-8");  
+			httpPost.setEntity(uefEntity);
+			response = httpClient.execute(httpPost);
+			HttpEntity entity = response.getEntity();
+			if (entity != null) {
+				returnXml = EntityUtils.toString(entity);
+				logger.info("请求结果===="+returnXml);
+				//关闭httpEntity的流
+				EntityUtils.consume(entity);
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}finally{
+			if(response!=null){
+				response.close();
+			}
+			httpClient.close();
+		}
+		return returnXml;
+    }
+    public String allXml(){
+    	String[] paramNames = getParamNames();
+		StringBuffer buf = new StringBuffer();
+		String xml="";
+		if (paramNames.length > 0) {
+			buf.append("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><yimadai>");
+			for (int i=0; i<paramNames.length; i++) {
+				String name = paramNames[i];
+				Object result = ReflectUtil.invokeGetMethod(getClass(), this, name);
+				String value = (result == null ? "" : result.toString());
+				buf.append("<" + name + ">");
+				buf.append(value);
+				buf.append("</"+name+">");
+			}
+			buf.append("</yimadai>");
+			xml = buf.toString();
+			logger.info("xml  :  " + xml);
+		}
+		this.setTransData(xml);
+		Base64 base64 = new Base64();
+		xml = base64.encodeToString(xml.getBytes());
+		return xml;
+    }
+    public static String getUtf8Str(String str){
+    	try {
+			return URLEncoder.encode(str,"utf-8");
+		} catch (UnsupportedEncodingException e) {
+			return str;
+		}
+    }
+    
+    public String getTranXml(String[] paramNames) {
+        StringBuffer buf = new StringBuffer();
+        if (paramNames.length > 0) {
+            buf.append("<tran>");
+            for (int i=0; i<paramNames.length; i++) {
+                String name = paramNames[i];
+                Object result = ReflectUtil.invokeGetMethod(getClass(), this, name);
+                String value = (result == null ? "" : result.toString());
+                buf.append("<" + name + ">");
+                buf.append(value);
+                buf.append("</"+name+">");
+            }
+            buf.append("</tran>");
+        }
+        return buf.toString();
+    }
+    
+    public String getNumberId() {
+		return numberId;
+	}
+	public void setNumberId(String numberId) {
+		this.numberId = numberId;
+	}
+	public String getRemark() {
+        return remark;
+    }
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+    public String getSignInfo() {
+        return signInfo;
+    }
+    public void setSignInfo(String signInfo) {
+        this.signInfo = signInfo;
+    }
+    public String getSubmitUrl() {
+        return submitUrl;
+    }
+    public void setSubmitUrl(String submitUrl) {
+        this.submitUrl = submitUrl;
+    }
+    public String getMerchantKey() {
+        return merchantKey;
+    }
+    public void setMerchantKey(String merchantKey) {
+        this.merchantKey = merchantKey;
+    }
+    public String getWS_URL() {
+        return WS_URL;
+    }
+    public void setWS_URL(String wS_URL) {
+        WS_URL = wS_URL;
+    }
+    public String getErrCode() {
+        return errCode;
+    }
+    public void setErrCode(String errCode) {
+        this.errCode = errCode;
+    }
+    public String getErrMsg() {
+        return errMsg;
+    }
+    public void setErrMsg(String errMsg) {
+        this.errMsg = errMsg;
+    }
+	public String getMode() {
+		return mode;
+	}
+	public void setMode(String mode) {
+		this.mode = mode;
+	}
+	public String getOutTradeNo() {
+		return outTradeNo;
+	}
+	public void setOutTradeNo(String outTradeNo) {
+		this.outTradeNo = outTradeNo;
+	}
+	public String getAmount() {
+		return amount;
+	}
+	public void setAmount(String amount) {
+		this.amount = amount;
+	}
+	public String getFee() {
+		return fee;
+	}
+	public void setFee(String fee) {
+		this.fee = fee;
+	}
+	public String getNickName() {
+		return nickName;
+	}
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
+	}
+	public String[] getParamNames() {
+		return paramNames;
+	}
+	public void setParamNames(String[] paramNames) {
+		this.paramNames = paramNames;
+	}
+	public String getTransData() {
+		return transData;
+	}
+	public void setTransData(String transData) {
+		this.transData = transData;
+	}
+	public String getQueryUrl() {
+		return queryUrl;
+	}
+	public void setQueryUrl(String queryUrl) {
+		this.queryUrl = queryUrl;
+	}
+
+}

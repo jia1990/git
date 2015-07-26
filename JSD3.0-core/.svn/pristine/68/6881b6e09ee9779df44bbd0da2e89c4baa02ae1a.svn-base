@@ -1,0 +1,46 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import java.util.Date;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.domain.ActivityRP;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.ddtkj.p2psys.redpacket.dao.ActivityRPDao;
+
+/**
+ * 
+ * 活动 红包Dao
+ * @author YJF
+ *
+ */
+@Repository("activityRPDao")
+public class ActivityRPDaoImpl extends BaseDaoImpl<ActivityRP> implements ActivityRPDao {
+
+	@Override
+	public PageDataList<ActivityRP> findByRPTypecode(String typecode,int currentPage,int pagenum) {
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pagenum);
+		param.addParam("rp.typeCode",Operators.EQ,typecode);
+		return findPageList(param) ;
+	}
+
+	@Override
+	public ActivityRP getEntityByTimeAndRPTypeCode(Date date, String typeCode) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rp.typeCode",Operators.EQ,typeCode);
+		param.addParam("activity.begintime",Operators.LT,date);
+		param.addParam("activity.endtime", Operators.GT,date) ;
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public PageDataList<ActivityRP> getPageDataList(QueryParam param) {
+		// TODO Auto-generated method stub
+		return this.findPageList(param);
+	}
+
+
+}

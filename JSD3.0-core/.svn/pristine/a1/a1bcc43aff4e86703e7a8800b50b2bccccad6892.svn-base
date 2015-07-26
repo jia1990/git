@@ -1,0 +1,92 @@
+package com.rongdu.p2psys.score.dao.jdbc;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.score.dao.ScoreDao;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.exception.ScoreException;
+import com.rongdu.p2psys.score.model.ScoreModel;
+
+@Repository("scoreDao")
+public class ScoreDaoImpl extends BaseDaoImpl<Score> implements ScoreDao {
+
+	@Override
+	public boolean updateScore(long userId, int totalScore, int validScore, int expenseScore, int freezeScore) {
+		StringBuffer sql = new StringBuffer("UPDATE Score SET total_score = total_score + :totalScore,");
+		sql.append(" valid_score = valid_score + :validScore, expense_score = expense_score + :expenseScore,");
+		sql.append(" freeze_score = freeze_score + :freezeScore WHERE user_id = :userId AND");
+		sql.append(" valid_score + :valid >= 0 AND freeze_score + :freeze >= 0");
+		int result = this.updateByJpql(sql.toString(), 
+				new String[]{"totalScore", "validScore", "expenseScore", "freezeScore", "userId", "valid", "freeze"}, 
+				new Object[] {totalScore, validScore, expenseScore, freezeScore, userId, validScore, freezeScore});
+		if (result < 1) {
+			return false;
+		}
+		// 更新缓存
+		em.refresh(getScoreByUserId(userId));
+		return true;
+	}
+
+	@Override
+	public Score getScoreByUserId(long userId) {
+		return this.findObjByProperty("user.userId", userId);
+	}
+
+	@Override
+	public int editScoreExpenseValue(long userId, int opValue) {
+		String sql = "UPDATE rd_score SET  valid_score = valid_score - :validScore, expense_score = expense_score + :expenseScore WHERE user_id = :userId AND valid_score - :validScore >= 0 ";
+		String[] names = { "userId", "validScore", "expenseScore" };
+		Object[] values = { userId, opValue, opValue };
+		int count = updateBySql(sql, names, values);
+		if(count < 1 ){
+			throw new ScoreException("可用积分不足");
+		}
+		// 更新缓存
+		em.refresh(getScoreByUserId(userId));
+		return count;
+	}
+
+	@Override
+	public List<Score> excelScoreList(ScoreModel model) {
+		//JSDP-116 xingjia 2015-05-15 start
+		StringBuffer  sql = new StringBuffer();
+		sql.append("select s.id,u.user_name,s.total_score,s.valid_score,s.expense_score,s.freeze_score,s.add_time"
+				+ " from rd_score s,t_jsd_user u where 1=1 and u.user_id = s.user_id ");
+		if(model.getUserName() != null && model.getUserName().length() > 0){
+			sql.append(" and u.user_name like '%"+model.getUserName()+"%'");
+		}
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" and s.addTime >=:startTime ");
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" and s.addTime <:endTime ");
+		}
+		
+		sql.append(" order by s.id desc ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			Date start = DateUtil.valueOf(model.getStartTime());
+			query.setParameter("startTime", start);
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			Date end = DateUtil.valueOf(model.getEndTime());
+			query.setParameter("endTime", end);
+		}
+		
+		List scoreList = query.getResultList();
+		//JSDP-116 xingjia 2015-05-15 start
+		return scoreList;
+	}
+	
+	
+}

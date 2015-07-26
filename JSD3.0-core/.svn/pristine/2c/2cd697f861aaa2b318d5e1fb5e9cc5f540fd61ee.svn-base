@@ -1,0 +1,206 @@
+package com.rongdu.p2psys.core.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.exception.ManagerException;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+
+/**
+ * 管理员Model
+ * 
+ * @author zhangyz
+ * @version 1.0
+ * @since 2014-04-03
+ */
+public class OperatorModel extends Operator {
+
+	
+	/** 当前登录角色名  */
+	private String loginRoleId;
+	
+	public String getLoginRoleId() {
+		return loginRoleId;
+	}
+	public void setLoginRoleId(String loginRoleId) {
+		this.loginRoleId = loginRoleId;
+	}
+
+	/** 当前登录用户名  */
+	private String LoginName;
+	
+	public String getLoginName() {
+		return LoginName;
+	}
+	public void setLoginName(String loginName) {
+		LoginName = loginName;
+	}
+
+	/** 原密码 **/
+	private String oldPassword;
+
+	/** 确认新修改密码 **/
+	private String confirmPassword;
+	
+	/** 当前页数 **/
+	private int page;
+	/** 每页总数 **/
+	private int rows = 10;
+	/** 排序 asc/desc **/
+	private String order;
+	/** 排序字段 **/
+	private String sort;
+	private String roleName;//所属角色名称
+
+
+	private long roleId;//所属角色编号
+	
+	private String delOpt;//管理员是否被删除
+	public String getDelOpt() {
+		return delOpt;
+	}
+	public void setDelOpt(String delOpt) {
+		this.delOpt = delOpt;
+	}
+	/**
+	 * 实体转换model
+	 * 
+	 * @param user 实体
+	 * @return model
+	 */
+	public static OperatorModel instance(Operator manager) {
+		OperatorModel userModel = new OperatorModel();
+		BeanUtils.copyProperties(manager, userModel);
+		return userModel;
+	}
+
+	/**
+	 * model转换实体
+	 * 
+	 * @return 实体
+	 */
+	public Operator prototype() {
+		Operator manager = new Operator();
+		BeanUtils.copyProperties(this, manager);
+		return manager;
+	}
+	
+	/**
+	 * 登录 检查提交的数据格式
+	 * 
+	 * @return
+	 */
+	public int validLoginModel() {
+		if (StringUtil.isBlank(getUserName())) {
+			throw new ManagerException("用户名不能为空！", 1);
+		}
+		if (StringUtil.isBlank(getPwd())) {
+			throw new ManagerException("密码不能为空！", 1);
+		}
+		return -1;
+	}
+
+	/**
+	 * 验证用户登录密码
+	 * 
+	 * @param user 用户
+	 * @return
+	 */
+	public String validModifyPwdModel(Operator manager) {
+		if (getOldPassword() == null) {
+			throw new ManagerException("请输入您的原密码！", 1);
+		} else if (!MD5.encode(getOldPassword()).equals(manager.getPwd())) {
+			throw new ManagerException("原密码错误！", 1);
+		} else if (getPwd().equals(getOldPassword())) {
+			throw new ManagerException("新密码不能和原密码相同！", 1);
+		} else if (!getPwd().equals(getConfirmPassword())) {
+			throw new ManagerException("新密码和确认密码不相同！", 1);
+		}
+		return "";
+	}
+
+	/**
+	 * 添加用户 检查提交的数据格式
+	 * 
+	 * @return
+	 */
+	public int validRegModel() {
+		if (!ValidateUtil.isUserName(getUserName())) {
+			throw new ManagerException("用户名格式错误！", 1);
+		}
+		if (StringUtil.isBlank(getPwd())) {
+			throw new ManagerException("密码不能为空！", 1);
+		}
+		if (StringUtil.isBlank(getConfirmPassword())) {
+			throw new ManagerException("确认密码不能为空！");
+		}
+		if (!getPwd().equals(getConfirmPassword())) {
+			throw new ManagerException("两次输入的密码不一致！");
+		}
+		return -1;
+	}
+
+	public String getOldPassword() {
+		return oldPassword;
+	}
+
+	public void setOldPassword(String oldPassword) {
+		this.oldPassword = oldPassword;
+	}
+
+	public String getConfirmPassword() {
+		return confirmPassword;
+	}
+
+	public void setConfirmPassword(String confirmPassword) {
+		this.confirmPassword = confirmPassword;
+	}
+	
+	public String getRoleName() {
+		return roleName;
+	}
+
+	public void setRoleName(String roleName) {
+		this.roleName = roleName;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+	public String getOrder() {
+		return order;
+	}
+
+	public void setOrder(String order) {
+		this.order = order;
+	}
+
+	public String getSort() {
+		return sort;
+	}
+
+	public void setSort(String sort) {
+		this.sort = sort;
+	}
+	public long getRoleId() {
+		return roleId;
+	}
+	public void setRoleId(long roleId) {
+		this.roleId = roleId;
+	}
+}

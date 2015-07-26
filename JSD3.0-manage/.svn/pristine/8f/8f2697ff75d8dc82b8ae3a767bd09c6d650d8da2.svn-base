@@ -1,0 +1,3101 @@
+package com.rongdu.manage.action.loan;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsOrderModel;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.statistics.service.StatisticsDataService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ActionContext;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.domain.BorrowMortgage;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.domain.BorrowUpload;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.BorrowHelper;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.worker.BorrowWorker;
+import com.rongdu.p2psys.borrow.service.BorrowConfigService;
+import com.rongdu.p2psys.borrow.service.BorrowMortgageService;
+import com.rongdu.p2psys.borrow.service.BorrowProtocolService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.borrow.service.BorrowUploadService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.domain.OperationLog;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.protocol.AbstractProtocolBean;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.OperationLogService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.tpp.TPPFactory;
+import com.rongdu.p2psys.tpp.TPPWay;
+import com.rongdu.p2psys.tpp.ips.model.IpsAddBorrow;
+import com.rongdu.p2psys.user.service.UserCreditService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 借款管理-借款管理
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-14
+ */
+public class ManageBorrowAction extends BaseAction<BorrowModel> implements
+		ModelDriven<BorrowModel> {
+	private static Logger logger = Logger.getLogger(ManageBorrowAction.class);
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowConfigService borrowConfigService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	@Resource
+	private OperationLogService operationLogService;
+	@Resource
+	private UserCreditService userCreditService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private BorrowMortgageService borrowMortgageService;
+	@Resource
+	private BorrowUploadService borrowUploadService;
+	@Resource
+	private GoodsOrderService goodsOrderService;
+	@Resource
+	private DictService dictService;
+	// JSDPBUG-99 20150505  sxy
+	@Resource
+	private StatisticsDataService statisticsDataService;
+	// JSDPBUG-99 20150505  sxy
+	/*@Resource
+	private IpsService ipsService;*/
+	@Resource
+	private BorrowProtocolService borrowProtocolService;
+	
+	@Resource
+	private AutoBorrowService autoBorrowService;
+		
+	private Map<String, Object> data = new HashMap<String, Object>();
+	private long[] ids; // 要更新的抵押物ID
+	private long[] delIds; // 删除的图片ID
+	private long[] delMortgageIds; // 删除的抵押物ID
+	private double[] assessPrice;
+	private double[] mortgagePrice;
+	private String[] carNo;
+	private String[] carType;
+
+	public long[] getIds() {
+		return ids;
+	}
+
+	public void setIds(long[] ids) {
+		this.ids = ids;
+	}
+
+	public long[] getDelIds() {
+		return delIds;
+	}
+
+	public void setDelIds(long[] delIds) {
+		this.delIds = delIds;
+	}
+
+	public long[] getDelMortgageIds() {
+		return delMortgageIds;
+	}
+
+	public void setDelMortgageIds(long[] delMortgageIds) {
+		this.delMortgageIds = delMortgageIds;
+	}
+
+	public double[] getAssessPrice() {
+		return assessPrice;
+	}
+
+	public void setAssessPrice(double[] assessPrice) {
+		this.assessPrice = assessPrice;
+	}
+
+	public double[] getMortgagePrice() {
+		return mortgagePrice;
+	}
+
+	public void setMortgagePrice(double[] mortgagePrice) {
+		this.mortgagePrice = mortgagePrice;
+	}
+
+	public String[] getCarNo() {
+		return carNo;
+	}
+
+	public void setCarNo(String[] carNo) {
+		this.carNo = carNo;
+	}
+
+	public String[] getCarType() {
+		return carType;
+	}
+
+	public void setCarType(String[] carType) {
+		this.carType = carType;
+	}
+
+	
+	/**
+	 * 标展示
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowManager")
+	public String borrowManager() throws Exception {
+		List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		
+		List<User> vouchFirms = userService.getVouchFirms();
+		
+		request.setAttribute("vouchFirms", vouchFirms);
+		request.setAttribute("borrowConfigList", borrowConfigList);
+		request.setAttribute("weburl", Global.getString("weburl"));
+		return "borrowManager";
+	}
+
+	/**
+	 * 标列表
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowList")
+	public void borrowList() throws Exception {
+
+		String vouchId = paramString("vouchId");
+		
+		if("0".equals(vouchId) || "".equals(vouchId)){
+			model.setVouchFirmId(0);
+		}else{
+			model.setVouchFirmId(Integer.parseInt(vouchId));	//担保公司编号
+		}
+		
+		model.setSize(paramInt("rows"));
+		String status = request.getParameter("status");
+		if (status != null) {
+			model.setStatus(Integer.parseInt(status));
+		} else {
+			model.setStatus(99);
+		}
+		String borrowTotal = null;
+		PageDataList<BorrowModel> list = borrowService.list(model);
+		//对借款金额汇总
+		borrowTotal = borrowService.borrowTotal(model);
+		List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+		if(null != borrowTotal){
+			Map<String,String> footerMap = new HashMap<String,String>();
+			footerMap.put("accountStr", borrowTotal);
+			footerMap.put("typeName", "借款总额");
+			footerList.add(footerMap);
+		}
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		//data.put("footer", footerList);
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 借款管理中的excel标导出
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/borrowManagerExcel")
+	public void borrowManagerExcel() throws Exception{
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+		String status = request.getParameter("status");
+		if (status != null&& !"undefined".equals(status)) {
+			model.setStatus(Integer.parseInt(status));
+		} else {
+			model.setStatus(99);
+		}
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		PageDataList<BorrowModel> pageDataList = borrowService.list(model);
+		List<BorrowModel> list = pageDataList.getList();
+		List<BorrowModel> newList = new ArrayList<BorrowModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowModel bm = list.get(i);
+			if(bm.getBorrowTimeType()==1){
+				bm.setTimeLimitNew(bm.getTimeLimit()+"天");
+			}else{
+				bm.setTimeLimitNew(bm.getTimeLimit()+"个月");
+			}
+			if(bm.getStatus() == -1){
+				bm.setStatusNew("用户撤回");
+			} else if(bm.getStatus() == 0){
+				bm.setStatusNew("待登记");
+			} else if (bm.getStatus() == 9){
+				bm.setStatusNew("待确认");
+			} else if (bm.getStatus() == 11){
+				bm.setStatusNew("待初审");
+			} else if (bm.getStatus() == 1 && bm.isFlow()){
+				bm.setStatusNew("已流标");
+			} else if (bm.getStatus() == 1 && bm.getAccountYes() == bm.getAccount()){
+				bm.setStatusNew("满标待审");
+			} else if (bm.getStatus() == 1){
+				bm.setStatusNew("初审通过");
+			} else if (bm.getStatus() == 2){
+				bm.setStatusNew("初审未通过");
+			} else if (bm.getStatus() == 3){
+				bm.setStatusNew("复审通过");
+			} else if (bm.getStatus() == 49 || bm.getStatus() == 4){
+				bm.setStatusNew("复审未通过");
+			} else if (bm.getStatus() == -2){
+				bm.setStatusNew("管理员撤回处理中");
+			} else if (bm.getStatus() == 59 || bm.getStatus() == 5){
+				bm.setStatusNew("管理员撤回");
+			} else if (bm.getStatus() == 6){
+				bm.setStatusNew("还款中");
+			} else if (bm.getStatus() == 7){
+				bm.setStatusNew("部分还款");
+			} else if (bm.getStatus() == 8){
+				bm.setStatusNew("还款成功");
+			}  else {
+				bm.setStatusNew("" + bm.getStatus());
+			}
+			if (bm.getStyle() == 1){
+				bm.setStyleNew("等额本息");
+			} else if (bm.getStyle() == 2){
+				bm.setStyleNew("一次性还");
+			} else if (bm.getStyle() == 3){
+				bm.setStyleNew("每月付息");
+			}  else {
+				bm.setStyleNew("" + bm.getStyle());
+			}
+			
+			if ("".equals(bm.getVouchFirmName()) || null == bm.getVouchFirmName() || "X".equals(bm.getVouchFirmName())){
+				bm.setVouchFirmName("该公司不存在");
+			}
+			
+			
+			newList.add(bm);
+		}*/
+		List<BorrowModel> list = borrowService.excelListBorrow(model);
+		String title = "借款管理中的Excel表";
+
+		String[] hearders = new String[] { "编号","借款人邮箱","担保公司","合同号","标名","类型","借款金额","应还款金额","已经还款金额","待还款金额","进度","投标完成笔数","最低投标金额","最高投标金额","有效时间","利率","期限","发标时间","状态","还款方式"};// 表头数组
+		/*String[] fields = new String[] { "id","userName","vouchFirmName","dealNo","name","typeName" ,"accountStr","repaymentAccountStr","repaymentYesAccountStr","waitRepaymentStr","scalesStr","tenderTimes","lowestAccountStr","mostAccountStr","validTime","aprStr","timeLimitNew","addTime","statusNew","styleNew" };// 对象属性数组*/		
+		String[] fields = new String[] {  "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]","object[11]","object[12]","object[13]","object[14]","object[15]","object[16]","object[17]","object[18]","object[19]"};// 对象属性数组
+		/*int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowModel> tdList = new ArrayList<BorrowModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+	}
+
+	/**
+	 * 初审中的借款-页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyBorrowManager")
+	public String verifyBorrowManager() throws Exception {
+		List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		for(int i=0;i<borrowConfigList.size();i++){
+			BorrowConfig bc = borrowConfigList.get(i);
+			if(bc.getId()==105){
+				borrowConfigList.remove(i);
+			}
+		}
+		request.setAttribute("borrowConfigList", borrowConfigList);
+		return "verifyBorrowManager";
+	}
+
+	/**
+	 * 初审中的借款-列表
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyBorrowList")
+	public void verifyBorrowList() throws Exception {
+		model.setSize(paramInt("rows"));
+		model.setStatus(0);
+		PageDataList<BorrowModel> list = borrowService.list(model);
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 发标管理——初审中的excel标导出
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/verifyBorrowExcel")
+	public void verifyBorrowExcel() throws Exception{
+		
+		// 原导出
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+		model.setStatus(0);
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		PageDataList<BorrowModel> pageDataList = borrowService.list(model);
+		List<BorrowModel> list = pageDataList.getList();
+		List<BorrowModel> newList = new ArrayList<BorrowModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowModel bm = list.get(i);
+			if(bm.getBorrowTimeType()==1){
+				bm.setTimeLimitNew(bm.getTimeLimit()+"天");
+			}else{
+				bm.setTimeLimitNew(bm.getTimeLimit()+"个月");
+			}
+			newList.add(bm);
+		}
+		String title = "发标管理的Excel表";
+
+		String[] hearders = new String[] { "编号","借款人邮箱","标名","类型","借款金额","利率","期限","添加时间" };// 表头数组
+		String[] fields = new String[] { "id","userName","name","typeName","accountStr","aprStr","timeLimitNew","addTime"  };// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowModel> tdList = new ArrayList<BorrowModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+*/
+		// 新导出
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if (model.getStatus() == 99) {
+			model.setStatus(0);
+		}
+
+		// JSDP-116 sxy 2015-05-15 start
+		List<Borrow> newList = borrowService.excelNewBorrowList(model);
+		String title = "投资人待收的Excel表";
+		String[] hearders = new String[] { "编号","借款人","标名","合同号","子合同号","类型","借款金额","利率","期限","添加时间" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-116 sxy 2015-05-15 start
+		
+		
+	}
+/*	@Action("/modules/loan/borrow/verifyBorrowList")
+	public void verifyBorrowList() throws Exception {
+		model.setSize(paramInt("rows"));
+		
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		PageDataList<Borrow> borrowList = borrowService.verifyBorrow(BorrowModel.instance(model), pageNumber, pageSize);
+		data.put("total", borrowList.getPage().getTotal());
+		data.put("rows", borrowList.getList());
+		printJson(getStringOfJpaObj(data));
+	}*/
+
+	/**
+	 * 已确认待初审的借款-页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/confirmedBorrowManager")
+	public String confirmedBorrowManager() throws Exception {
+		List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		request.setAttribute("borrowConfigList", borrowConfigList);
+		return "confirmedBorrowManager";
+	}
+
+	/**
+	 * 已确认待初审的借款-列表
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/confirmedBorrowList")
+	public void confirmedBorrowList() throws Exception {
+		model.setSize(paramInt("rows"));
+		model.setStatus(0);
+		PageDataList<BorrowModel> list = borrowService.list(model);
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 发标初审——Excel导出
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/confimedBorrowExcel")
+	public void confimedBorrowExcel() throws Exception{
+
+		// 原导出
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		// 设置借款标类型
+		if(null != paramString("type") && !"".equals(paramString("type"))){
+			model.setType(Integer.parseInt(paramString("type")));
+		}
+		
+		if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+		model.setStatus(0);
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		
+		PageDataList<BorrowModel> confimedList = borrowService.list(model);
+		List<BorrowModel> list = confimedList.getList();
+		List<BorrowModel> newList = new ArrayList<BorrowModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowModel bm = list.get(i);
+			if(bm.getBorrowTimeType()==1){
+				bm.setTimeLimitNew(bm.getTimeLimit()+"天");
+			}else{
+				bm.setTimeLimitNew(bm.getTimeLimit()+"个月");
+			}
+			newList.add(bm);
+		}
+		String title = "发标初审的Excel表";
+
+		String[] hearders = new String[] { "编号","借款人邮箱","标名","类型","借款金额","利率","期限","添加时间"};// 表头数组
+		String[] fields = new String[] { "id","userName","name","typeName" ,"accountStr","aprStr","timeLimitNew","addTime"  };// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowModel> tdList = new ArrayList<BorrowModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		
+		// 新导出
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if (model.getStatus() == 99) {
+			model.setStatus(0);
+		}
+
+		// JSDP-116 sxy 2015-05-15 start
+		List<Borrow> newList = borrowService.excelNewBorrowList(model);
+		String title = "投资人待收的Excel表";
+		String[] hearders = new String[] { "编号", "借款人邮箱", "标名", "合同号", "子合同号",
+				"类型", "借款金额", "利率", "期限", "添加时间" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-116 sxy 2015-05-15 start
+		
+	}
+	
+	/**
+	 * 添加标页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowAddPage")
+	public String borrowAddPage() throws Exception {
+		////initRSAME();
+		List<User> vouchFirms = userService.getVouchFirms();
+		int typeId = paramInt("id");//所发标的类型
+		String contractNo = paramString("contractNo");
+		request.setAttribute("vouchFirms", vouchFirms);
+		request.setAttribute("typeId", paramString("id"));
+		request.setAttribute("contractNo", contractNo);
+		
+		// P-bug22 2015年4月13日 16:21:53 sxy start...
+		// 拼接借款标名称
+		
+		String borrowName = "";
+		if(typeId == Borrow.TYPE_MORTGAGE_ENERGY){
+			borrowName = "能源宝";
+		}else if(typeId == Borrow.TYPE_NETWORK){
+			borrowName = "微商贷";
+		}else if(typeId == Borrow.TYPE_MORTGAGE){
+			borrowName = "车贷宝";
+		}else if(typeId == Borrow.TYPE_AMORTIZE){
+			borrowName = "分期宝";							//暂无，非后台发标
+		}
+		// P-bug22 2015年4月13日 16:21:53 sxy end
+		
+		
+		List<Borrow> borrowList = borrowService.findLoanListByDealParent(contractNo,typeId);
+		if(borrowList.size()!=0){
+			Borrow borrow = borrowList.get(0);
+			List<BorrowUpload> picList = borrowService.findPicByBorrowId(borrow.getId());
+			request.setAttribute("picList", picList);
+			
+			// 借款金额
+			double account = 0;
+			for(int i = 0;i < borrowList.size();i ++){
+				//判断此标是否被截标
+				Borrow borrowForCancle = borrowList.get(i);
+				if(borrowForCancle.getOldAccount()!=0){
+					account += borrowList.get(i).getOldAccount();
+				}else{
+					account += borrowList.get(i).getAccount();
+				}
+			}
+			double surplusAccount = borrow.getAllAccount() - account;
+			
+			request.setAttribute("alreadyAccount", account);// 完成借款金额
+			request.setAttribute("surplusAccount", surplusAccount);// 剩余借款金额
+			request.setAttribute("borrow", borrow);
+			
+			//如果手续费收取方式为固定金额，则除去100
+			double cost = 0;
+			if(borrow.getBorrowManageCostWay().equals("2")){
+				cost = borrow.getBorrowManageRate() / 100;
+			}
+			request.setAttribute("borrowManageCost", cost);
+			
+			
+			
+			request.setAttribute("user", borrow.getUser());
+			BorrowModel model = BorrowModel.instance(borrow);
+			request.setAttribute("borrow", model);
+			
+			List<BorrowMortgage> list = borrowMortgageService.findByBorrowId(borrow.getId(), 1);// 入库
+			
+			
+			
+			request.setAttribute("list", list);
+			List<BorrowUpload> uploadList = borrowUploadService.findByBorrowIdAndType(borrow.getId(),3);
+			List<BorrowUpload> uploadContractList = borrowUploadService.findByBorrowIdAndType(borrow.getId(), 4);//借款合同
+			request.setAttribute("uploadList", uploadList);
+			request.setAttribute("uploadContractList", uploadContractList);
+			
+			// P-bug22 2015年4月13日 16:21:53 sxy start
+			// 该操作仅适用于固定格式的借款标合同（如：NYB20150408001）
+			if(contractNo.length() > 9){
+				// 借款标名称
+				borrowName = borrowName + contractNo.substring(contractNo.length() - 9, contractNo.length());
+			}else{
+				borrowName = borrowName + contractNo;
+			}
+			
+			String num = (borrowList.size() + 1) + "";
+			
+			if((borrowList.size() + 1) < 10){
+				num = "0" + num;
+			}
+			
+			request.setAttribute("borrowName", borrowName + "-" + num);
+			
+			// P-bug22 2015年4月13日 16:21:53 sxy end
+			
+			saveToken("borrowAddPageToken");
+			if(Borrow.TYPE_MORTGAGE == model.getType()){
+				return "borrowAddSubPageC";
+			}else if(Borrow.TYPE_MORTGAGE_ENERGY == model.getType()){
+				return "borrowAddSubPageN";
+			}else if(Borrow.TYPE_NETWORK == model.getType()){
+				return "borrowAddSubPageN";
+			}else{
+				return null;
+			}
+	
+		}else{
+			// 获得借款用途
+			List<Dict> borrowUseList = dictService.list("borrow_use");
+			request.setAttribute("borrowUseList", borrowUseList);
+			
+			// P-bug22 2015年4月13日 16:21:53 sxy start
+			// 该操作仅适用于固定格式的借款标合同（如：NYB20150408001）
+			if(contractNo.length() > 9){
+				// 借款标名称
+				borrowName = borrowName + contractNo.substring((contractNo.length() - 9), contractNo.length());
+			}else{
+				borrowName = borrowName + contractNo;
+			}
+					
+			request.setAttribute("borrowName", borrowName);
+			
+			// P-bug22 2015年4月13日 16:21:53 sxy end...
+			
+			saveToken("borrowAddPageToken");
+			if(Borrow.TYPE_MORTGAGE == typeId){
+				return "borrowAddPageC";
+			}else if(Borrow.TYPE_MORTGAGE_ENERGY == typeId){
+				return "borrowAddPageN";
+			}else if(Borrow.TYPE_NETWORK == typeId){
+				return "borrowAddPageN";
+			}else{
+				return null;
+			}
+		}
+		
+		
+		
+	}
+
+	/**
+	 * 后台添加标
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/addBorrow")
+	public void addBorrow() throws Exception {
+		
+		/*if (borrowService.isExistDealNo(model.getDealParent())) {
+			throw new BussinessException("此合同号已存在", 1);
+		}*/
+		if(model.getIsDB()==0){
+			
+		}else{
+			// 20150617 sxy 若选择有担保公司，则需要选择担保公司
+			if(null == model.getVouchFirm()){
+				throw new BussinessException("担保公司不能为空", 1);
+			}
+			//model.getVouchFirm().getUserId();
+			/*if(model.getVouchFirm().getUserId()==0){
+				new BussinessException("担保公司不能为空",1);
+			}*/
+		}
+		// 20150617 sxy 低于4个月的月标不能设置为可债转
+		// 借款时间类型（0：月标 1：天标）
+		String borrowTimeType = paramString("borrowTimeType");
+		// 借款时间
+		String timeLimit = paramString("timeLimit");
+		// 是否可债转
+		String isSwingout = paramString("isSwingout");
+		if("0".equals(borrowTimeType)){
+			if(Integer.parseInt(timeLimit) < 4 && "1".equals(isSwingout)){
+				throw new BussinessException("借款期限低于4个月，不能设置借款标可债转",1);
+			}
+		}
+		
+		String email = paramString("email");
+		User user = userService.getUserByEmail(email);
+		//借款手续费收取方式
+		String borrowManageCostWay = paramString("borrowManageCostWay");
+		if (user == null  ||  !"11".equals(user.getUserCache().getUserType())) { // || user.getApiStatus() == 0  不在user表中了
+			throw new BussinessException("不存在该企业用户或未开通第三方账户", 1);
+		} else {
+			try {
+				
+				model.validBorrowStyle();
+				// 验证定向标
+				model.validDXB();
+				// 新增奖励设置
+				model.checkAward();
+				
+				if(model.getAccount()>model.getAllAccount()){
+					throw new BussinessException("借款金额不能大于合同金额！", 1);
+				}
+				
+				if (model.getType() == Borrow.TYPE_SECOND) {
+					model.setBorrowTimeType(1);
+				}
+				//0月标1天标
+				//还款方式 1按月分期还款; 2一次性还款;3每月还息到期还本
+				if(model.getBorrowTimeType()==1 || model.getStyle()==2){
+					model.setPeriod(0);
+				}else{
+					model.setPeriod(model.getTimeLimit()-1);
+				}
+				
+				if(model.getMostAccount()!=0){
+					if(model.getLowestAccount()>model.getMostAccount()){
+						throw new BussinessException("最低投标金额不能大于最高投标金额！", 1);
+					}
+				}
+				
+
+				//固定收取  sxy
+				if(null != borrowManageCostWay && !"".equals(borrowManageCostWay)){
+					double cost = model.getBorrowManageRate();
+					if(borrowManageCostWay.equals("2")){
+						model.setBorrowManageRate(cost * 100);	//固定收取
+					}else{
+						model.setBorrowManageRate(cost);		//比例收取
+					}
+				}
+				
+				
+				List<Borrow> borrowList = borrowService.findLoanListByDealParent(model.getDealParent(),model.getType());
+				List<BorrowUpload> list = new ArrayList<BorrowUpload>();
+				
+				if(model.getAccount()==model.getAllAccount() || borrowList.size()==0){
+					if (model.getBorrowMortgageList() != null) {
+						for (int i = 0; i < model.getBorrowMortgageList().size(); i++) {
+							String[] physicalPicPaths = request
+									.getParameterValues("physicalPicPath" + i);
+							
+							/*if (physicalPicPaths == null) {
+								throw new BussinessException("必须上传至少一张实物照！", 1);
+							}*/
+							if(null != physicalPicPaths){
+								for (String physicalPicPath : physicalPicPaths) {
+									BorrowUpload bu = new BorrowUpload();
+									bu.setBorrowMortgage(model.getBorrowMortgageList()
+											.get(i));
+									bu.setPicPath(physicalPicPath);
+									bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+									list.add(bu);
+								}
+							}
+							String[] archivesPicPaths = request
+									.getParameterValues("archivesPicPath" + i);
+							
+							/*if (archivesPicPaths == null) {
+								throw new BussinessException("必须上传至少一张档案照！", 1);
+							}*/
+							if(null != archivesPicPaths){
+								
+								for (String archivesPicPath : archivesPicPaths) {
+									BorrowUpload bu = new BorrowUpload();
+									bu.setBorrowMortgage(model.getBorrowMortgageList()
+											.get(i));
+									bu.setPicPath(archivesPicPath);
+									bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+									list.add(bu);
+								}
+							}
+						}
+					}
+					
+					//担保函
+					String[] guaranteePicPaths = request
+							.getParameterValues("guaranteePicPath");
+					if (guaranteePicPaths != null) {
+						for (String guaranteePicPath : guaranteePicPaths) {
+							BorrowUpload bu = new BorrowUpload();
+							bu.setPicPath(guaranteePicPath);
+							bu.setType(BorrowUpload.GUARANTEE);
+							list.add(bu);
+						}
+					}
+					//借款合同
+					String[] loanContractPicPaths = request.getParameterValues("loanContractPicPath");
+					if(loanContractPicPaths != null){
+						for(String loanContractPicPath:loanContractPicPaths){
+							BorrowUpload bu = new BorrowUpload();
+							bu.setPicPath(loanContractPicPath);
+							bu.setType(BorrowUpload.CONTRACT);
+							list.add(bu);
+						}
+					}
+				}
+				
+				List<BorrowMortgage> borrowMortgageList = model.getBorrowMortgageList();
+
+				if (borrowMortgageList != null && borrowMortgageList.size() > 0) {
+		            // 计算抵押价总和
+		            double prices = 0;
+		            for (int i = 0; i < borrowMortgageList.size(); i++) {
+		                BorrowMortgage borrowMortgage = borrowMortgageList.get(i);
+		                if (borrowMortgage.getAssessPrice() <= borrowMortgage.getMortgagePrice()) {
+		                    throw new BorrowException("评估价必须大于抵押价！", 1);
+		                }
+		                prices += borrowMortgage.getMortgagePrice();
+		            }
+		            if (prices < model.getAllAccount()) {
+		                throw new BorrowException("抵押物总和不能小于借款总额！", 1);
+		            }
+		           
+		        }
+			    //JSDBET-798  wcw 2015-3-10 start
+				model.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));//标批次号（作为第三方转账对账使用）
+				model.setBorrowManageFeeTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_FEE));
+				model.setGuaranteeTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_GUARANTEE_FEE));
+				//JSDBET-798  wcw 2015-3-10 end
+				//根据金额判断是否需要创建父合同，不要的话父合同和子合同是一样的
+				if(model.getAccount()==model.getAllAccount()){
+					model.setDealNo(model.getDealParent());
+					checkToken("borrowAddPageToken");
+					borrowService.save(model, user, list);
+				}else if(model.getAccount() < model.getAllAccount() && borrowList.size()==0){
+
+					
+					String number = "";
+					
+					if(model.getType()==113){// 能源宝
+						number = "-N";
+					}else if(model.getType()==103){//车宝宝
+						number = "-C";
+					}else if(model.getType()==115){//微商贷
+						number = "-W";
+					}
+					int count = 0;
+					
+					String countStr = Integer.toString(count+1);
+					if(count <= 0){
+						count = 1;
+					}
+					if(count < 10){
+						countStr = "0" + countStr;
+					}
+					// 拼接子合同编号
+					String dealNo = model.getDealParent() + number + countStr;
+					
+					model.setDealNo(dealNo);
+					
+					/*model.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));//标批次号（作为第三方转账对账使用）
+					model.setBorrowManageFeeTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_FEE));*/
+					checkToken("borrowAddPageToken");
+					borrowService.save(model, user, list);
+					
+				}else if(model.getAccount() < model.getAllAccount() && borrowList.size()!=0){
+					
+					borrowAddNext(borrowList.get(0),email,user,borrowList.size());
+				}else{
+					throw new BorrowException("无法发标，请联系后台管理员！", 1);
+				}
+				
+				
+				
+				
+				//根据子合同和父合同号判断合同是否存在
+				//TODO
+				
+				printResult("添加成功", true);
+			} catch (Exception e) {
+				throw new RuntimeException(e.getMessage(), e);
+			}
+		}
+	}
+	
+	/**
+	 * 发布子合同时可能修改抵押物
+	 * @param oldBorrow
+	 * @param email
+	 * @param user
+	 * @param borrowSize
+	 * @throws Exception
+	 */
+	public void borrowAddNext(Borrow oldBorrow,String email,User user,int borrowSize) throws Exception{
+		
+		
+		model.setBorrowUpdateOrSave("S");
+		try {
+			
+			List<BorrowUpload> list = new ArrayList<BorrowUpload>();
+			//担保函
+			String[] guaranteePicPaths = request.getParameterValues("guaranteePicPath");
+			if (guaranteePicPaths != null) {
+				for (String guaranteePicPath : guaranteePicPaths) {
+					BorrowUpload bu = new BorrowUpload();
+					bu.setPicPath(guaranteePicPath);
+					bu.setBorrow(oldBorrow);
+					bu.setType(BorrowUpload.GUARANTEE);
+					list.add(bu);
+				}
+			}
+			
+			//借款合同
+			String[] loanContractPicPaths = request.getParameterValues("loanContractPicPath");
+			if(loanContractPicPaths != null){
+				for(String loanContractPicPath:loanContractPicPaths){
+					BorrowUpload bu = new BorrowUpload();
+					bu.setPicPath(loanContractPicPath);
+					bu.setBorrow(oldBorrow);
+					bu.setType(BorrowUpload.CONTRACT);
+					list.add(bu);
+				}
+			}
+			double totalMortgagePrice = 0; 
+			List<BorrowMortgage> mortgageList = borrowMortgageService.findByBorrowId(oldBorrow.getId(), 1);
+			for(int k=0;k<mortgageList.size();k++){
+				BorrowMortgage bm = mortgageList.get(k);
+				totalMortgagePrice  += bm.getMortgagePrice();
+			}
+			// 修改原先的抵押物
+			if (ids != null) {
+				for (int i = 0; i < ids.length; i++) {
+					BorrowMortgage borrowMortgage = borrowMortgageService.findById(ids[i]);
+					if (assessPrice[i] <= mortgagePrice[i]) {
+						throw new BorrowException("评估价必须大于抵押价！", 1);
+					}
+					borrowMortgage.setAssessPrice(assessPrice[i]);
+					borrowMortgage.setMortgagePrice(mortgagePrice[i]);
+					borrowMortgage.setCarNo(carNo[i]);
+					borrowMortgage.setCarType(carType[i]);
+					
+					totalMortgagePrice = BigDecimalUtil.add(totalMortgagePrice,
+							borrowMortgage.getMortgagePrice());
+					String[] physicalPicPaths = request.getParameterValues("physicalPicPath" + i);
+					if (physicalPicPaths != null) {
+						for (String physicalPicPath : physicalPicPaths) {
+							BorrowUpload bu = new BorrowUpload();
+							bu.setBorrowMortgage(borrowMortgage);
+							bu.setPicPath(physicalPicPath);
+							bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+							list.add(bu);
+						}
+					}
+					String[] archivesPicPaths = request.getParameterValues("archivesPicPath" + i);
+					if (archivesPicPaths != null) {
+						for (String archivesPicPath : archivesPicPaths) {
+							BorrowUpload bu = new BorrowUpload();
+							bu.setBorrowMortgage(borrowMortgage);
+							bu.setPicPath(archivesPicPath);
+							bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+							list.add(bu);
+						}
+					}
+				}
+			}
+			//添加新的抵押物
+			List<BorrowMortgage> borrowMortgageList = model.getBorrowMortgageList();
+			if (borrowMortgageList != null) {
+				for (int i = 0; i < borrowMortgageList.size(); i++) {
+					BorrowMortgage borrowMortgage = borrowMortgageList.get(i);
+					totalMortgagePrice = BigDecimalUtil.add(totalMortgagePrice,
+							borrowMortgage.getMortgagePrice());
+					borrowMortgage.setBorrow(oldBorrow);
+					borrowMortgage.setStatus(1);
+					borrowMortgage.setAddIp(Global.getIP());
+					borrowMortgage.setAddTime(new Date());
+					borrowMortgage.setContractNo(model.getDealParent());
+					borrowMortgageList.set(i, borrowMortgage);
+					if (borrowMortgage.getAssessPrice() <= borrowMortgage.getMortgagePrice()) {
+						throw new BorrowException("评估价必须大于抵押价！", 1);
+					}
+					String[] physicalPicPaths = request.getParameterValues("newPhysicalPicPath" + i);
+					if (physicalPicPaths == null) {
+						throw new BussinessException("必须上传至少一张实物照！", 1);
+					}
+					for (String physicalPicPath : physicalPicPaths) {
+						BorrowUpload bu = new BorrowUpload();
+						bu.setBorrow(oldBorrow);
+						bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+						bu.setPicPath(physicalPicPath);
+						bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+						list.add(bu);
+					}
+					String[] archivesPicPaths = request.getParameterValues("newArchivesPicPath" + i);
+					if (archivesPicPaths == null) {
+						throw new BussinessException("必须上传至少一张档案照！", 1);
+					}
+					for (String archivesPicPath : archivesPicPaths) {
+						BorrowUpload bu = new BorrowUpload();
+						bu.setBorrow(oldBorrow);
+						bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+						bu.setPicPath(archivesPicPath);
+						bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+						list.add(bu);
+					}
+				}
+			}
+			double delMortgagePrice = 0;
+			//得到删除的抵押物总抵押物
+			if (delMortgageIds != null) {
+				delMortgagePrice = borrowMortgageService.getTotalMortgagePriceByMortgageIds(delMortgageIds);
+			}
+			if (Borrow.TYPE_MORTGAGE == model.getType() && totalMortgagePrice - delMortgagePrice < oldBorrow.getAccount()) {
+				throw new BorrowException("抵押物总和不能小于借款总额！", 1);
+			}
+			if(model.getMostAccount()!=0){
+				if(model.getLowestAccount()>model.getMostAccount()){
+					throw new BussinessException("最低投标金额不能大于最高投标金额！", 1);
+				}
+			}
+			String number = "";
+			
+			if(model.getType()==113){// 能源宝
+				number = "-N";
+			}else if(model.getType()==103){//车宝宝
+				number = "-C";
+			}else if(model.getType()==115){//微商贷
+				number = "-W";
+			}
+			int count = borrowSize;
+			
+			String countStr = Integer.toString(count+1);
+			if(count <= 0){
+				count = 1;
+			}
+			if(count < 10){
+				countStr = "0" + countStr;
+			}
+			// 拼接子合同编号
+			String dealNo = model.getDealParent() + number + countStr;
+			// 设置子合同号
+			model.setDealNo(dealNo);
+			checkToken("borrowAddPageToken");
+			//根据合同号修改抵押物
+			borrowService.updateLoan(model, user, oldBorrow, list, borrowMortgageList, delIds, delMortgageIds);
+			
+			printResult("添加成功", true);
+			
+		}catch (Exception e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * 根据合同号查询标信息
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * 2015年1月21日 09:58:21——只需要得到借款标信息即可（第一次发标的借款信息）
+	 */
+	@Action("/modules/loan/borrow/borrowByDealParent")
+	public void findLoanByDealNo() throws Exception {
+
+		List<User> vouchFirms = userService.getVouchFirms();
+		request.setAttribute("vouchFirms", vouchFirms);
+		request.setAttribute("typeId", paramString("id"));
+		String dealParent = paramString("dealParent");
+		int borrowType = paramInt("borrowType");
+		List<Borrow> borrowList = borrowService.findLoanListByDealParent(dealParent,borrowType);
+		
+		List<Borrow> borrowListByDealParent = borrowService.findLoanListByDealParent(dealParent);
+		
+		// 借款信息
+		Borrow borrow = new Borrow();
+		
+		if(borrowList.size() > 0){
+			// 完成借款金额
+			double account = 0;
+			for(int i = 0;i < borrowList.size();i ++){
+				// 借款标实体
+				borrow = borrowList.get(0);
+				// 完成借款金额
+				account = account + borrowList.get(i).getAccount();
+			}
+			
+			// 已借款金额
+			data.put("account", account);
+			// 1设置借款标
+			data.put("borrow", borrow);
+			data.put("borrowList", borrowList);
+			data.put("borrowListByDealParent", borrowListByDealParent);
+			printJson(getStringOfJpaObj(data));
+			
+		}else{
+			data.put("borrowListByDealParent", borrowListByDealParent);
+			data.put("borrowList", borrowList);
+			printJson(getStringOfJpaObj(data));
+		}
+		
+	}
+
+	
+	
+	/**
+	 * 修改标页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowUpdatePage")
+	public String borrowUpdatePage() throws Exception {
+		////initRSAME();
+		saveToken("borrowUpdatePageToken");
+		long id = paramLong("id");
+
+		List<BorrowUpload> picList = borrowService.findPicByBorrowId(id);
+		request.setAttribute("picList", picList);
+		List<User> vouchFirms = userService.getVouchFirms();
+		request.setAttribute("vouchFirms", vouchFirms);
+		Borrow borrow = borrowService.getBorrowById(id);
+		
+		//如果手续费收取方式为固定金额，则除去100
+		double cost = 0;
+		if(borrow.getBorrowManageCostWay().equals("2")){
+			cost = borrow.getBorrowManageRate() / 100;
+		}
+		request.setAttribute("borrowManageCost", cost);
+		
+		request.setAttribute("borrow", borrow);
+		
+		request.setAttribute("user", borrow.getUser());
+		BorrowModel model = BorrowModel.instance(borrow);
+		request.setAttribute("borrow", model);
+		
+		List<BorrowMortgage> list = borrowMortgageService.findMortgageByDealNo(borrow.getDealParent());// 入库
+		request.setAttribute("list", list);
+		
+		//借款合同 担保函根据合同号获取第一个标的id来获取
+		List<Borrow> borrowList = borrowService.findLoanListByDealParent(borrow.getDealParent(),borrow.getType());
+		
+		//获取已借款金额
+		// 借款金额
+		double account = 0;
+		for(int i = 0;i < borrowList.size();i ++){
+			account = account + borrowList.get(i).getAccount();
+		}
+		request.setAttribute("alreadyAccount", account);
+		if(borrowList.size()>0){
+			Borrow oldBorrow = borrowList.get(0);
+			//担保函
+			List<BorrowUpload> uploadList = borrowUploadService.findByBorrowIdAndType(oldBorrow.getId(),3);
+			request.setAttribute("uploadList", uploadList);
+			//借款合同
+			List<BorrowUpload> uploadContractList = borrowUploadService.findByBorrowIdAndType(oldBorrow.getId(),4);
+			request.setAttribute("uploadContractList", uploadContractList);
+		}
+		if(Borrow.TYPE_MORTGAGE == model.getType()){
+			return "borrowUpdatePageC";
+		}else if(Borrow.TYPE_MORTGAGE_ENERGY == model.getType()){
+			return "borrowUpdatePageN";
+		}else if(Borrow.TYPE_NETWORK == model.getType()){
+			return "borrowUpdatePageN";
+		}else if(Borrow.TYPE_AMORTIZE == model.getType()){
+			//分期宝查询此标所对应的商品信息
+			//1根据borrow_id查询订单表中的记录
+			//2根据订单表中的记录查询goods_id，找出实体goods
+			//3根据goods实体获取goodsPic中图片的路径并显示
+			//TODO
+			return "borrowUpdatePageF";
+		}else{
+			return null;
+		}
+	}
+
+	/**
+	 * 后台修改标
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/updateBorrow")
+	public void updateBorrow() throws Exception {
+		try {
+			Borrow oldBorrow = borrowService.find(model.getId());
+			User user = oldBorrow.getUser();
+			model.validBorrowStyle();
+			List<BorrowUpload> list = new ArrayList<BorrowUpload>();
+			String[] guaranteePicPaths = request.getParameterValues("guaranteePicPath");
+			if (guaranteePicPaths != null) {
+				for (String guaranteePicPath : guaranteePicPaths) {
+					BorrowUpload bu = new BorrowUpload();
+					bu.setPicPath(guaranteePicPath);
+					bu.setBorrow(oldBorrow);
+					bu.setType(BorrowUpload.GUARANTEE);
+					list.add(bu);
+				}
+			}
+			
+			//借款合同
+			String[] loanContractPicPaths = request.getParameterValues("loanContractPicPath");
+			if(loanContractPicPaths != null){
+				for(String loanContractPicPath:loanContractPicPaths){
+					BorrowUpload bu = new BorrowUpload();
+					bu.setPicPath(loanContractPicPath);
+					bu.setBorrow(oldBorrow);
+					bu.setType(BorrowUpload.CONTRACT);
+					list.add(bu);
+				}
+			}
+			
+			double totalMortgagePrice = 0; 
+			// 修改原先的抵押物
+			if (ids != null) {
+				for (int i = 0; i < ids.length; i++) {
+					BorrowMortgage borrowMortgage = borrowMortgageService.findById(ids[i]);
+					if (assessPrice[i] <= mortgagePrice[i]) {
+						throw new BorrowException("评估价必须大于抵押价！", 1);
+					}
+					totalMortgagePrice = BigDecimalUtil.add(totalMortgagePrice,mortgagePrice[i]);
+					borrowMortgage.setAssessPrice(assessPrice[i]);
+					borrowMortgage.setMortgagePrice(mortgagePrice[i]);
+					borrowMortgage.setCarNo(carNo[i]);
+					borrowMortgage.setCarType(carType[i]);
+					String[] physicalPicPaths = request.getParameterValues("physicalPicPath" + i);
+					if (physicalPicPaths != null) {
+						for (String physicalPicPath : physicalPicPaths) {
+							BorrowUpload bu = new BorrowUpload();
+							bu.setBorrowMortgage(borrowMortgage);
+							bu.setPicPath(physicalPicPath);
+							bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+							list.add(bu);
+						}
+					}
+					String[] archivesPicPaths = request.getParameterValues("archivesPicPath" + i);
+					if (archivesPicPaths != null) {
+						for (String archivesPicPath : archivesPicPaths) {
+							BorrowUpload bu = new BorrowUpload();
+							bu.setBorrowMortgage(borrowMortgage);
+							bu.setPicPath(archivesPicPath);
+							bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+							list.add(bu);
+						}
+					}
+				}
+			}
+			//添加新的抵押物
+			List<BorrowMortgage> borrowMortgageList = model.getBorrowMortgageList();
+			if (borrowMortgageList != null) {
+				for (int i = 0; i < borrowMortgageList.size(); i++) {
+					BorrowMortgage borrowMortgage = borrowMortgageList.get(i);
+					borrowMortgage.setBorrow(oldBorrow);
+					borrowMortgage.setStatus(1);
+					borrowMortgage.setAddIp(Global.getIP());
+					borrowMortgage.setAddTime(new Date());
+					borrowMortgageList.set(i, borrowMortgage);
+					totalMortgagePrice = BigDecimalUtil.add(totalMortgagePrice,
+							borrowMortgage.getMortgagePrice());
+					if (borrowMortgage.getAssessPrice() <= borrowMortgage.getMortgagePrice()) {
+						throw new BorrowException("评估价必须大于抵押价！", 1);
+					}
+					String[] physicalPicPaths = request.getParameterValues("newPhysicalPicPath" + i);
+					if (physicalPicPaths == null) {
+						throw new BussinessException("必须上传至少一张实物照！", 1);
+					}
+					for (String physicalPicPath : physicalPicPaths) {
+						BorrowUpload bu = new BorrowUpload();
+						bu.setBorrow(oldBorrow);
+						bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+						bu.setPicPath(physicalPicPath);
+						bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+						list.add(bu);
+					}
+					String[] archivesPicPaths = request.getParameterValues("newArchivesPicPath" + i);
+					if (archivesPicPaths == null) {
+						throw new BussinessException("必须上传至少一张档案照！", 1);
+					}
+					for (String archivesPicPath : archivesPicPaths) {
+						BorrowUpload bu = new BorrowUpload();
+						bu.setBorrow(oldBorrow);
+						bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+						bu.setPicPath(archivesPicPath);
+						bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+						list.add(bu);
+					}
+				}
+			}
+			double delMortgagePrice = 0;
+			//得到删除的抵押物总抵押物
+			if (delMortgageIds != null) {
+				delMortgagePrice = borrowMortgageService.getTotalMortgagePriceByMortgageIds(delMortgageIds);
+			}
+			if (Borrow.TYPE_MORTGAGE == model.getType() && totalMortgagePrice - delMortgagePrice < oldBorrow.getAccount()) {
+				throw new BussinessException("抵押物总和不能小于借款总额！", 1);
+			}
+			if(model.getMostAccount()!=0){
+				if(model.getLowestAccount()>model.getMostAccount()){
+					throw new BussinessException("最低投标金额不能大于最高投标金额！", 1);
+				}
+			}
+			
+			//0月标1天标
+			//还款方式 1按月分期还款; 2一次性还款;3每月还息到期还本
+			if(model.getBorrowTimeType()==1 || model.getStyle()==2){
+				model.setPeriod(0);
+			}else{
+				model.setPeriod(model.getTimeLimit()-1);
+			}
+			model.setBorrowUpdateOrSave("U");
+
+			if(oldBorrow.getAccount()==oldBorrow.getAllAccount()){
+				model.setAllAccount(model.getAccount());
+			}
+			
+			//借款手续费收取方式
+			String borrowManageCostWay = paramString("borrowManageCostWay");
+			//固定收取  sxy
+			if(null != borrowManageCostWay && !"".equals(borrowManageCostWay)){
+				double cost = model.getBorrowManageRate();
+				if(borrowManageCostWay.equals("2")){
+					model.setBorrowManageRate(cost * 100);	//固定收取
+				}else{
+					model.setBorrowManageRate(cost);		//比例收取
+				}
+			}
+
+			checkToken("borrowUpdatePageToken");
+			borrowService.updateLoan(model, user, oldBorrow, list, borrowMortgageList, delIds, delMortgageIds);
+			printResult("修改成功", true);
+		} catch (Exception e) {
+			throw new BorrowException(e.getMessage(), 1);
+		}
+	}
+
+	/**
+	 * 后台上传
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/uploadBorrowPic")
+	public void uploadBorrowPic() throws Exception {
+		String filePath = imgUpload();
+		data.put("filePath", filePath);
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 删除上传的图片
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/deleteBorrowPic")
+	public void deleteBorrowPic() throws Exception {
+		if (paramInt("id") == 0) {
+			String picPath = paramString("picPath");
+			String realPath = ServletActionContext.getServletContext()
+					.getRealPath(picPath);
+			new File(realPath).delete();
+		}
+	}
+
+	/**
+	 * 标登记
+	 * 
+	 * @return
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action(value = "/modules/loan/borrow/registerBorrow", results = { @Result(name = "ipsBorrow", type = "ftl", location = "/modules/tpp/ipsBorrow.html") })
+	public String registerBorrow() throws Exception {
+		long id = paramLong("id");
+		Borrow borrow = borrowService.find(id);
+		// if(borrow.getStatus()==9 && DateUtil.getNowTime() <
+		// DateUtil.rollMinute(borrow.getRegisterTime(), 60).getTime()/1000){
+		// throw new BussinessException("重新登记失败，请刷新后重新操作","/home.html");
+		// }
+		if (borrow.getStatus() != 9 && borrow.getStatus() != 0) {
+			throw new BussinessException("标状态异常，请刷新后重新操作", "/home.html");
+		}
+		User user = borrow.getUser();
+		String name = Global.getValue("cooperation_interface");
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		TPPWay way = TPPFactory.getTPPWay(null, user, null,
+				worker.getManageFee() + "", borrow);
+		IpsAddBorrow depositBorrow = (IpsAddBorrow) way.doBorrow();
+		borrow.setBidNo(depositBorrow.getBidNo());
+		borrowService.update(borrow);
+		request.setAttribute(name, depositBorrow);
+		return name + "Borrow";
+	}
+
+	/**
+	 * 标结束
+	 * 
+	 * @return
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action(value = "/modules/loan/borrow/cancelBorrowSkip")
+	public String cancelBorrowSkip() throws Exception {
+		long id = paramLong("id");
+		Borrow borrow = borrowService.find(id);
+		OperationLog log = new OperationLog(borrow.getUser(), getOperator(),
+				"stop_flow");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对用户为" + borrow.getUser().getUserName()
+				+ "的借款标（ID:" + borrow.getId() + ",标名为" + borrow.getName()
+				+ "）进行撤标操作");
+		operationLogService.save(log, borrow);
+		User user = borrow.getUser();
+		String name = Global.getValue("cooperation_interface");
+		borrow.setStatus(-1);
+		TPPWay way = TPPFactory.getTPPWay(null, user, null, null, borrow);
+		Object depositBorrow = way.doBorrow();
+		request.setAttribute(name, depositBorrow);
+		return name + "Borrow";
+	}
+	/**
+	 * 撤标时改变标的状态，解冻投资人的冻结资金
+	 */
+	@Action(value="/modules/loan/borrow/removeBorrow")
+	public void removeBorrow(){
+		long id = paramLong("id");
+		Borrow borrow = borrowService.find(id);
+		OperationLog log = new OperationLog(borrow.getUser(), getOperator(),
+				"stop_flow");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对用户为" + borrow.getUser().getUserName()
+				+ "的借款标（ID:" + borrow.getId() + ",标名为" + borrow.getName()
+				+ "）进行撤标操作");
+		
+		try {
+			borrowService.cancel(borrow);
+			operationLogService.save(log, borrow);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/**
+	 * @author guojunhui@ddtkj.com
+	 * 展示标页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowViewPage")
+	public String borrowViewPage() throws Exception {
+		long id = paramLong("id");
+		List<BorrowUpload> picList = borrowService.findPicByBorrowId(id);
+		request.setAttribute("picList", picList);
+		List<User> vouchFirms = userService.getVouchFirms();
+		request.setAttribute("vouchFirms", vouchFirms);
+		Borrow borrow = borrowService.getBorrowById(id);
+
+		// 如果手续费收取方式为固定金额，则除去100
+		double cost = 0;
+		if (borrow.getBorrowManageCostWay().equals("2")) {
+			cost = borrow.getBorrowManageRate() / 100;
+		}
+		request.setAttribute("borrowManageCost", cost);
+	
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("user", borrow.getUser());
+		BorrowModel model = BorrowModel.instance(borrow);
+		
+		Dict dict = dictService.find("borrow_use", model.getBorrowUse());
+		model.setBorrowUse(dict.getName());
+		
+		request.setAttribute("borrow", model);
+//		List<BorrowMortgage> list = borrowMortgageService.findByBorrowId(id, 1);// 入库
+		List<BorrowMortgage> list = borrowMortgageService.findMortgageByDealNo(borrow.getDealParent());// 入库
+		request.setAttribute("list", list);
+		//担保函根据合同号获取第一个标的id来获取
+		List<Borrow> borrowList = borrowService.findLoanListByDealParent(borrow.getDealParent(),borrow.getType());
+		if(borrowList.size()>0){
+			Borrow oldBorrow = borrowList.get(0);
+			List<BorrowUpload> uploadList = borrowUploadService.findByBorrowIdAndType(oldBorrow.getId(),3);
+			request.setAttribute("uploadList", uploadList);
+		}
+//		List<BorrowUpload> uploadList = borrowUploadService.findByBorrowIdAndType(id,3);
+//		request.setAttribute("uploadList", uploadList);
+		
+		if(Borrow.TYPE_MORTGAGE == model.getType()){
+			return "borrowViewPageC";
+		}else if(Borrow.TYPE_MORTGAGE_ENERGY == model.getType()){
+			return "borrowViewPageN";
+		}else if(Borrow.TYPE_NETWORK == model.getType()){
+			return "borrowViewPageN";
+		}else if(Borrow.TYPE_AMORTIZE== model.getType()){
+			return "borrowViewPageF";
+		}else{
+			return null;
+		}
+	}
+
+	/**
+	 * 标登记结果
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/registerBorrowResult")
+	public void registerBorrowResult() throws Exception {
+		try {
+			long id = paramLong("id");
+			Borrow borrow = borrowService.find(id);
+			if (borrow.getStatus() != Borrow.STATUS_PUBLISHING) {
+				printResult("标登记成功", true);
+			} else {
+				printResult("标登记失败！", false);
+			}
+		} catch (Exception e) {
+			printResult("标登记失败！", false);
+		}
+	}
+
+	/**
+	 * 初审中的借款-标初审页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowVerifyPage")
+	public String borrowVerifyPage() throws Exception {
+		//initRSAME();
+		Borrow borrow = borrowService.find(model.getId());
+		if(borrow.getType()==Borrow.TYPE_AMORTIZE){
+			GoodsOrder  goodsOrder = goodsOrderService.findOrderByBorrowId(borrow.getId());
+			GoodsOrderModel gom = new GoodsOrderModel();
+			request.setAttribute("goodsOrder", goodsOrder);
+			request.setAttribute("userName", goodsOrder.getUser().getUserName());
+			request.setAttribute("goodsName", goodsOrder.getGoods().getName());
+			request.setAttribute("goodsCost", goodsOrder.getGoods().getCost());
+			request.setAttribute("goodsColor", goodsOrder.getGoods().getColor());
+			request.setAttribute("goodsSize", goodsOrder.getGoods().getSize());
+			request.setAttribute("goodsVesion", goodsOrder.getGoods().getVesion());
+			request.setAttribute("goodsPayWay", gom.convertOrderPayWay(goodsOrder.getPayWay()));
+			request.setAttribute("goodsOnePay", goodsOrder.getOnePay());
+			request.setAttribute("goodsStagePay", goodsOrder.getStagePay());
+			request.setAttribute("goodsApr", goodsOrder.getGoods().getGoodsApr());
+//			request.setAttribute("orderStatus", model.convertOrderSatus(goodsOrder.getStatus()));
+			request.setAttribute("orderBorrow", goodsOrder.getBorrow().getName());
+			
+		}
+		
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("user", borrow.getUser());
+		saveToken("borrowVerifyToken");
+		return "borrowVerifyPage";
+	}
+
+	/**
+	 * 初审中的借款-标初审操作
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowVerify")
+	public void borrowVerify() throws Exception {
+		checkToken("borrowVerifyToken");
+		borrowService.verify(model, getOperator());
+		printResult(MessageUtil.getMessage("I10009"), true);
+	}
+
+	/**
+	 * 满标待审的招标-页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyFullBorrowManager")
+	public String verifyFullBorrowManager() throws Exception {
+		List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		request.setAttribute("borrowConfigList", borrowConfigList);
+		return "verifyFullBorrowManager";
+	}
+
+	/**
+	 * 满标待审的招标-标列表
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyFullBorrowList")
+	public void verifyFullBorrowList() throws Exception {
+		model.setSize(paramInt("rows"));
+		model.setStatus(1);
+		model.setScales(100);
+		PageDataList<BorrowModel> list = borrowService.list(model);
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 满标复审中的导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/verifyFullBorrowExcel")
+	public void verifyFullBorrowExcel() throws Exception{
+		//JSDP-116 fengguoqin 2015-05-19 start
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		model.setStatus(1);
+		model.setScales(100);
+		PageDataList<BorrowModel> pageDataList = borrowService.list(model);
+		List<BorrowModel> list = pageDataList.getList();
+		List<BorrowModel> newList = new ArrayList<BorrowModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowModel bm = list.get(i);
+			if(bm.getBorrowTimeType()==1){
+				bm.setTimeLimitNew(bm.getTimeLimit()+"天");
+			}else{
+				bm.setTimeLimitNew(bm.getTimeLimit()+"个月");
+			}
+
+			if (bm.getStatus() == -1){
+					bm.setStatusNew("用户撤回");
+				} else if (bm.getStatus() == 0){
+					bm.setStatusNew("等待初审");
+				} else if (bm.getStatus() == 1 && bm.getAccountYes() == bm.getAccount()){
+					bm.setStatusNew("满标待审");
+				} else if (bm.getStatus() == 1){
+					bm.setStatusNew("招标中");
+				} else if (bm.getStatus() == 2){
+					bm.setStatusNew("初审未通过");
+				} else if (bm.getStatus() == 3){
+					bm.setStatusNew("复审通过");
+				} else if (bm.getStatus() == 4||bm.getStatus() == 49){
+					bm.setStatusNew("复审未通过");
+				} else if (bm.getStatus() == 5||bm.getStatus() == 59){
+					bm.setStatusNew("管理员撤回");
+				} else if (bm.getStatus() == 6){
+					bm.setStatusNew("还款中");
+				} else if (bm.getStatus() == 7){
+					bm.setStatusNew("部分还款");
+				} else if (bm.getStatus() == 8){
+					bm.setStatusNew("已结束");
+				}
+			
+			newList.add(bm);
+		}*/
+		String title = "满标复审的Excel表";
+		List<BorrowModel> list = borrowService.excelListFullBorrow(model);
+		String[] hearders = new String[] { "编号","借款人邮箱","标名","类型","借款金额","已借","进度","利率","期限","添加时间","状态"};// 表头数组
+		/*String[] fields = new String[] { "id","userName","name","typeName","accountStr","accountYesStr","scalesStr","aprStr","timeLimitNew","addTime","statusNew"};// 对象属性数组*/
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]"};// 对象属性数组
+	/*	int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowModel> tdList = new ArrayList<BorrowModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 fengguoqin 2015-05-19 end
+	}
+	
+	/**
+	 * 满标复审页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyFullBorrowPage")
+	public String verifyFullBorrowPage() throws Exception {
+		////initRSAME();
+		Borrow borrow = borrowService.find(model.getId());
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("user", borrow.getUser());
+		String resultFlag=System.currentTimeMillis()+""+Math.random()*10000;
+		request.setAttribute("resultFlag", resultFlag);
+		saveToken("verifyFullBorrowToken");
+		return "verifyFullBorrowPage";
+	}
+
+	/**
+	 * 满标复审
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyFullBorrow")
+	public void verifyFullBorrow() throws Exception {
+		
+		model.setStatus(1);
+		model.setResultFlag(paramString("resultFlag"));
+		checkToken("verifyFullBorrowToken");
+		borrowService.verifyFull(model, getOperator());
+		printResult(MessageUtil.getMessage("I10009"), true);
+	}
+	
+	
+	/**
+	 * 满标复审补单
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyFullRepaireBorrow")
+	public void verifyFullRepaireBorrow() throws Exception {
+		model.setId(paramInt("id"));
+		if(model.getId()!=0){
+			model.setStatus(1);
+			autoBorrowService.autoVerifyFullRepairSuccess(model,getOperator());
+			printResult(MessageUtil.getMessage("I10009"), true);
+		}else{
+			printResult("补单异常，标id为0", false);
+		}
+	}
+	
+	
+	/**
+	 * 满标复审不通过页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyFullBorrowFailPage")
+	public String verifyFullBorrowFailPage() throws Exception {
+		////initRSAME();
+		Borrow borrow = borrowService.find(model.getId());
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("user", borrow.getUser());
+		saveToken("verifyFullBorrowFailToken");
+		return "verifyFullBorrowFailPage";
+	}
+
+	/**
+	 * 满标复审不通过
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/verifyFullBorrowFail")
+	public void verifyFullBorrowFail() throws Exception {
+		
+		model.setStatus(0);
+		checkToken("verifyFullBorrowFailToken");
+		borrowService.verifyFull(model, getOperator());
+		printResult(MessageUtil.getMessage("I10009"), true);
+	}
+
+	/**
+	 * 根据标名称获得标的详情
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowDetailPage")
+	public String borrowDetailPage() throws Exception {
+		long id = paramLong("id");
+		Borrow borrow = borrowService.getBorrowById(id);
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("user", borrow.getUser());
+		return "borrowDetailPage";
+	}
+
+	/**
+	 * 招标中的借款
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowBiddingManager")
+	public String borrowBiddingManager() throws Exception {
+		List<BorrowConfig> borrowConfigList = borrowConfigService.findAll(); // 查询所有的标种	
+		request.setAttribute("borrowConfigList", borrowConfigList);
+		return "borrowBiddingManager";
+	}
+
+	/**
+	 * 招标中的借款列表 status=1
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowBiddingList")
+	public void borrowBiddingList() throws Exception {
+		int status = paramInt("status");
+		if(status!=0){
+			model.setStatus(status);
+		}
+		PageDataList<BorrowModel> pageDataList = borrowService.getList(model);
+		data.put("total", pageDataList.getPage().getTotal());
+		data.put("rows", pageDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 投标进度中导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/borrowBiddingExcel")
+	public void borrowBiddingExcel() throws Exception{
+		// 原导出
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		model.setStatus(1);
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		
+		PageDataList<BorrowModel> pageDataList = borrowService.getList(model);
+		List<BorrowModel> list = pageDataList.getList();
+		List<BorrowModel> newList = new ArrayList<BorrowModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowModel bm = list.get(i);
+			if(bm.getBorrowTimeType()==1){
+				bm.setTimeLimitNew(bm.getTimeLimit()+"天");
+			}else{
+				bm.setTimeLimitNew(bm.getTimeLimit()+"个月");
+			}
+			newList.add(bm);
+		}
+		String title = "投标进度的Excel表";
+
+		String[] hearders = new String[] { "编号","借款人邮箱 ","借款标题","类型","借款金额","已借金额","利率","借款期限","发布时间","进度"};// 表头数组
+		String[] fields = new String[] { "id","userName","name","typeName" ,"accountStr","accountYesStr","aprStr","timeLimitNew","addTime","scalesStr"  };// 对象属性数组
+		
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowModel> tdList = new ArrayList<BorrowModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+*/
+		// 新导出(暂无)
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if (model.getStatus() == 99) {
+			model.setStatus(0);
+		}
+
+		// JSDP-116 sxy 2015-05-15 start
+		List<Borrow> newList = borrowService.excelTenderPlanBorrowList(model);
+		String title = "投标进度的Excel表";
+		String[] hearders = new String[] { "编号","借款人 ","借款标题","类型","借款金额","已借金额","利率","借款期限","发布时间","进度" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-116 sxy 2015-05-15 start
+	}
+
+	/**
+	 * 招标中的借款标（投标记录页面）
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/tenderDetailPage")
+	public String tenderDetailPage() throws Exception {
+		request.setAttribute("id", model.getId());
+		return "tenderDetailPage";
+	}
+	
+	
+	
+	/**
+	 *  查看借款标信息的定向密码，可扩展编辑标信息
+	 *  
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/loan/borrow/showBorrowInfoPage")
+	public String showBorrowInfoPage() throws Exception {
+		////initRSAME();
+		
+		Borrow borrow = borrowService.find(paramLong("id"));
+		request.setAttribute("borrow", borrow);
+		saveToken("borrowInfoToken");
+		return "showBorrowInfoPage";
+	}
+	
+	
+	/**
+	 *  编辑借款标信息的定向密码，可扩展编辑标信息
+	 *  
+	 * @return  
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/loan/borrow/editBorrowInfoPage")
+	public void editBorrowInfoPage() throws Exception {
+		
+		Borrow borrow = borrowService.find(model.getId());
+		checkToken("borrowInfoToken");
+		borrow.setPwd(model.getPwd());
+		borrowService.update(borrow);
+		printResult("修改成功！", true);
+	}
+	
+	
+	/**
+	 * 招标中的借款标（投标记录列表）
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/tenderDetailList")
+	public void tenderDetailList() throws Exception {
+		PageDataList<BorrowTenderModel> pageDataList = borrowTenderService
+				.list(model.getBorrowId(), model.getPage(), paramInt("rows"));
+		data.put("total", pageDataList.getPage().getTotal());
+		data.put("rows", pageDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 投标记录导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/showTenderDetailExcel")
+	public void tenderDetailExcel() throws Exception{
+		// 原导出
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		long id = paramLong("borrowId");
+		Borrow borrow = borrowService.find(id);
+		
+		// 投标记录
+		PageDataList<BorrowTenderModel> pageDataList = borrowTenderService
+				.list(id, 1, 99999999);
+		List<BorrowTenderModel> list = pageDataList.getList();
+		
+		for (int i = 0; i < pageDataList.getList().size(); i++) {
+
+			BorrowTenderModel bt = list.get(i);
+
+			if (bt.getTenderType() == 0) {
+				bt.setType("网站投标");
+			} else if (bt.getTenderType() == 1) {
+				bt.setType("自动投标");
+			} else if (bt.getTenderType() == 2) {
+				bt.setType("手机投标");
+			}
+			
+			// 借款类型
+			// 0：月标 1：天标
+			if (bt.getBorrowTimeType() == 0) {
+				bt.setTimeLimitStr(bt.getTimeLimit() + "月");
+			} else if (bt.getBorrowTimeType() == 1) {
+				bt.setTimeLimitStr(bt.getTimeLimit() + "天");
+			}
+			
+			
+		}
+		
+		//String title = "标："+borrow.getName()+"("+borrow.getDealNo()+") 投标记录Excel表";
+		String title = "投标记录Excel表";
+
+		String[] hearders = new String[] {"编号","借款人","借款期限","投标人","真实姓名","投标金额 ","有效投标金额 ","回收本息 ","投标类型","投标时间 ","投标IP "};// 表头数组
+		String[] fields = new String[] {"id","borrowUserName","timeLimitStr","userName","realName","money","account","repaymentAccount","type","addTime","addIp"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = pageDataList.getList().size()/sheetRows;
+		if(pageDataList.getList().size()%sheetRows > 0){
+			sheetPage += 1;
+		}           
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowTenderModel> tdList = new ArrayList<BorrowTenderModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <pageDataList.getList().size(); j++ ){
+				BorrowTenderModel sm = pageDataList.getList().get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		
+		// 新导出(暂无)
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if (model.getStatus() == 99) {
+			model.setStatus(0);
+		}
+
+		// JSDP-116 sxy 2015-05-15 start
+		List<Borrow> newList = borrowService.excelNewBorrowList(model);
+		String title = "投资人待收的Excel表";
+		String[] hearders = new String[] { "编号", "借款人邮箱", "标名", "合同号", "子合同号",
+				"类型", "借款金额", "利率", "期限", "添加时间" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-116 sxy 2015-05-15 start
+
+	}
+	
+	/**
+	 * 投标记录导出excel
+	 * @throws Exception
+	 */
+	/*@Action("/modules/loan/borrow/showTenderDetailExcel")
+	public void tenderDetailExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		long id = paramLong("borrowId");
+		Borrow borrow = borrowService.find(id);
+		
+		// 投标记录
+		PageDataList<BorrowTenderModel> pageDataList = borrowTenderService
+				.list(id, 1, 99999999);
+		List<BorrowTenderModel> list = pageDataList.getList();
+		
+		for (int i = 0; i < pageDataList.getList().size(); i++) {
+
+			BorrowTenderModel bt = list.get(i);
+
+			if (bt.getTenderType() == 0) {
+				bt.setType("网站投标");
+			} else if (bt.getTenderType() == 1) {
+				bt.setType("自动投标");
+			} else if (bt.getTenderType() == 2) {
+				bt.setType("手机投标");
+			}
+			
+		}
+		
+		String title = "标："+borrow.getName()+"("+borrow.getDealNo()+") 投标记录Excel表";
+
+		String[] hearders = new String[] {"投标人","投标金额 ","有效投标金额 ","回收本息 ","投标类型","投标时间 ","投标IP "};// 表头数组
+		String[] fields = new String[] {"userName","money","account","repaymentAccount","type","addTime","addIp"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = pageDataList.getList().size()/sheetRows;
+		if(pageDataList.getList().size()%sheetRows > 0){
+			sheetPage += 1;
+		}           
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowTenderModel> tdList = new ArrayList<BorrowTenderModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <pageDataList.getList().size(); j++ ){
+				BorrowTenderModel sm = pageDataList.getList().get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		
+		
+		
+	}
+	*/
+	/**
+	 *  后台下载平台协议书
+	 * @param @return 
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/loan/borrow/manageProtocol")
+	public String manageProtocol() {
+		Operator operator = getOperator();
+		long borrowId = paramLong("borrowId");
+		AbstractProtocolBean protocolBean = borrowProtocolService.buildWebProtocol(borrowId, operator.getId(), operator.getId());
+		try {
+			generateDownloadFile(protocolBean.getInPdfName(), protocolBean.getDownloadFileName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}		
+		return null;
+	}
+	/**
+	 *  债权转让协议后台下载平台协议书
+	 * @param @return 
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/loan/credit/creditProtocol")
+	public String creditProtocol() {
+		Operator operator = getOperator();
+		long caId = paramLong("caId");
+		AbstractProtocolBean protocolBean = borrowProtocolService.buildCaProtocol(caId, operator.getId());
+		try {
+			generateDownloadFile(protocolBean.getInPdfName(), protocolBean.getDownloadFileName());
+		} catch (FileNotFoundException e) {
+			logger.error("协议pdf文件" + protocolBean.getDownloadFileName() + "未找到！");
+		} catch (IOException e) {
+			logger.error(e.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 *  债权受让协议后台下载平台协议书
+	 * @param @return 
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/loan/credit/buyCreditProtocol")
+	public String buyCreditProtocol() {
+		Operator operator = getOperator();
+		long caId = paramLong("caId");
+		AbstractProtocolBean protocolBean = borrowProtocolService.buildClProtocol(caId,paramLong("clId"),operator.getId());
+		try {
+			generateDownloadFile(protocolBean.getInPdfName(), protocolBean.getDownloadFileName());
+		} catch (FileNotFoundException e) {
+			logger.error("协议pdf文件" + protocolBean.getDownloadFileName() + "未找到！");
+		} catch (IOException e) {
+			logger.error(e.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 *  生成下载文件
+	 * @param @param inFile
+	 * @param @param downloadFile
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	private void generateDownloadFile(String inFile, String downloadFile) throws IOException {
+		InputStream ins = new BufferedInputStream(new FileInputStream(inFile));
+		byte[] buffer = new byte[ins.available()];
+		ins.read(buffer);
+		ins.close();
+		HttpServletResponse response = (HttpServletResponse) ActionContext.getContext().get(
+				ServletActionContext.HTTP_RESPONSE);
+		response.reset();
+		response.addHeader("Content-Disposition", "attachment;filename=" + new String(downloadFile.getBytes()));
+		response.addHeader("Content-Length", "" + new File(inFile).length());
+		OutputStream ous = new BufferedOutputStream(response.getOutputStream());
+		response.setContentType("application/octet-stream");
+		ous.write(buffer);
+		ous.flush();
+		ous.close();
+	}
+	
+	/**
+	 * 招标中的借款 -查看
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/showBorrowDetailPage")
+	public String showBorrowDetailPage() throws Exception {
+		Borrow borrow = borrowService.find(model.getId());
+		
+		Dict dict = dictService.find("borrow_use", borrow.getBorrowUse());
+		borrow.setBorrowUse(dict.getName());
+		
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("borrowUser", borrow.getUser().getUserName());
+		return "showBorrowDetailPage";
+	}
+	/**
+	 * 标初审通过后修改标的借款详情
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/borrowUpdateDesPage")
+	public String updateBorrowDesPage() throws Exception{
+		Borrow borrow = borrowService.find(model.getId());
+		Dict dict = dictService.find("borrow_use", borrow.getBorrowUse());
+		borrow.setBorrowUse(dict.getName());
+		
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("borrowUser", borrow.getUser().getUserName());
+		saveToken("updateBorrowDesToken");
+		return "borrowUpdateDesPage";
+	}
+	
+	/**
+	 * 标初审通过后修改标的借款详情
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/borrowUpdateDes")
+	public void updateBorrowDes() throws Exception{
+		checkToken("updateBorrowDesToken");
+		Borrow borrow = borrowService.find(model.getId());
+		borrow.setContent(model.getContent());
+		borrowService.update(borrow);
+		printResult("修改成功！", true);
+	}
+	
+	
+	/**
+	 * 延长标在前台的显示时间
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/delayBorrowShowPage")
+	public String delayBorrowShowPage() throws Exception {
+		////initRSAME();
+		Borrow borrow = borrowService.find(model.getId());
+		
+		Dict dict = dictService.find("borrow_use", borrow.getBorrowUse());
+		borrow.setBorrowUse(dict.getName());
+		
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("borrowUser", borrow.getUser().getUserName());
+		saveToken("delayBorrowShowToken");
+		return "delayBorrowsShowPage";
+	}
+	/**
+	 * 延长标在前台的显示时间实现
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/delayBorrowShow")
+	public void delayBorrowShow() throws Exception{
+		
+		long id = model.getId();
+		Borrow borrow = borrowService.find(id);
+		
+		borrow.setValidTime(borrow.getValidTime()+model.getValidTime());
+		checkToken("delayBorrowShowToken");
+		try {
+			//JSDP-165 xingjia 2015-05-26 start
+			borrowService.updateDelayBorrow(borrow,model.getValidTime());
+			//JSDP-165 xingjia 2015-05-26 end
+			printResult("修改成功！", true);
+		} catch (Exception e) {
+			// TODO: handle exception
+			printResult("修改失败！", true);
+		}
+	}
+	
+	/**
+	 * 招标中的借款 -推荐
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/recommendBorrow")
+	public void recommendBorrow() throws Exception {
+		Borrow borrow = borrowService.find(model.getId());
+		borrow.setRecommend(true);
+		borrowService.update(borrow);
+		printResult("推荐成功！", true);
+	}
+
+	/**
+	 * 招标中的借款 -截标页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/stopBorrowPage")
+	public String stopBorrowPage() throws Exception {
+		////initRSAME();
+		
+		Borrow borrow = borrowService.find(model.getId());
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("borrowUser", borrow.getUser().getUserName());
+		saveToken("stopBorrowToken");
+		return "stopBorrowPage";
+	}
+
+	/**
+	 * 招标中的借款 -截标（将招标金额改为已招标金额）
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/stopBorrow")
+	public void stopBorrow() throws Exception {
+		
+		Borrow borrow = borrowService.find(model.getId());
+		borrowService.stopBorrow(borrow);
+		OperationLog log = new OperationLog(borrow.getUser(), getOperator(),
+				"stop_borrow");
+		log.setOperationResult("用户名" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对用户为" + borrow.getUser().getUserName()
+				+ "的借款标（ID:" + borrow.getId() + ",标名为" + borrow.getName()
+				+ "）进行截标操作");
+		checkToken("stopBorrowToken");
+		operationLogService.save(log);
+		printResult("截标成功！", true);
+	}
+
+	/**
+	 * 招标中的借款 -停止流转页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/stopFlowPage")
+	public String stopFlowPage() throws Exception {
+		Borrow borrow = borrowService.find(model.getId());
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("borrowUser", borrow.getUser().getUserName());
+		return "stopFlowPage";
+	}
+
+	/**
+	 * 招标中的借款 -流转标停止流转
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/stopFlow")
+	public void stopFlow() throws Exception {
+		Borrow borrow = borrowService.find(model.getId());
+		borrow.setStatus(8);
+		borrowService.update(borrow);
+		OperationLog log = new OperationLog(borrow.getUser(), getOperator(),
+				"stop_flow");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对用户为" + borrow.getUser().getUserName()
+				+ "的借款标（ID:" + borrow.getId() + ",标名为" + borrow.getName()
+				+ "）进行停止流转操作");
+		operationLogService.save(log);
+		printResult("操作成功！", true);
+	}
+
+	/**
+	 * 流标的借款（有效期内为投满的标）-页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/showSpreadBorrowManager")
+	public String showSpreadBorrowManager() throws Exception {
+		List<BorrowConfig> borrowConfigList = borrowConfigService.findAll();
+		request.setAttribute("borrowConfigList", borrowConfigList);
+		return "showSpreadBorrowManager";
+	}
+
+	/**
+	 * 流标的借款（有效期内未投满的标）-列表 过滤流转标
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/showSpreadBorrowList")
+	public void showSpreadBorrowList() throws Exception {
+		model.setSize(paramInt("rows"));
+		List<BorrowModel> list = borrowService.spreadBorrowList(model);
+		int count = borrowService.spreadBorrowCount(model);
+		data.put("total", count);
+		data.put("rows", list);
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 流标管理中的导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/showSpreadBorrowExcel")
+	public void spreadBorrowExcel() throws Exception{
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		
+		//PageDataList<BorrowModel> pageDataList = borrowService.getList(model);
+		List<BorrowModel> list = borrowService.spreadBorrowList(model);
+		List<BorrowModel> newList = new ArrayList<BorrowModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowModel bm = list.get(i);
+			if(bm.getBorrowTimeType()==1){
+				bm.setTimeLimitNew(bm.getTimeLimit()+"天");
+			}else{
+				bm.setTimeLimitNew(bm.getTimeLimit()+"个月");
+			}
+			newList.add(bm);
+		}*/
+		List<BorrowModel> list = borrowService.excelListFlowBorrow(model);
+		String title = "流标管理的Excel表";
+
+		String[] hearders = new String[] {"编号","借款人邮箱","标名 ","类型 ","借款金额 ","利率 ","借款期限 ","发布时间 ","进度"};// 表头数组
+		String[] fields = new String[] {"object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]"};// 对象属性数组
+		/*int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowModel> tdList = new ArrayList<BorrowModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+	}
+	/**
+	 * 已登记待确认--取消
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowCancel")
+	public void borrowCancel() throws Exception {
+		Borrow borrow = borrowService.find(model.getId());
+		borrowService.borrowCancel(borrow);
+		OperationLog log = new OperationLog(borrow.getUser(), getOperator(),
+				"cancel_borrow");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对用户为" + borrow.getUser().getUserName()
+				+ "的借款标（ID:" + borrow.getId() + ",标名为" + borrow.getName()
+				+ "）进行取消操作");
+		operationLogService.save(log);
+		printResult("取消借款标成功！", true);
+	}
+
+	/**
+	 * 招标中的借款-撤回页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/cancelBorrowPage")
+	public String cancelBorrowPage() throws Exception {
+		//initRSAME();
+		Borrow borrow = borrowService.find(model.getId());
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("borrowUser", borrow.getUser().getUserName());
+		saveToken("cancelBorrowToken");
+		return "cancelBorrowPage";
+	}
+
+	/**
+	 * 招标中的借款-撤回操作
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/cancelBorrow")
+	public void cancelBorrow() throws Exception {
+		
+		Borrow borrow = borrowService.find(model.getId());
+		// model.validCancelBorrow(borrow); 已有校验
+		checkToken("cancelBorrowToken");
+		borrowService.cancel(borrow);
+		OperationLog log = new OperationLog(borrow.getUser(), getOperator(),
+				"stop_flow");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对用户为" + borrow.getUser().getUserName()
+				+ "的借款标（ID:" + borrow.getId() + ",标名为" + borrow.getName()
+				+ "）进行撤标操作");
+		operationLogService.save(log);
+		printResult("撤回借款标成功！", true);
+	}
+	
+
+
+	/**
+	 *  取消借款标信息的定向密码
+	 *  
+	 * @return  
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/loan/borrow/cancelBorrowPwd")
+	public void cancelBorrowPwd() throws Exception {
+		Borrow borrow = borrowService.find(model.getId());
+		borrow.setPwd(null);
+		borrowService.update(borrow);
+		OperationLog log = new OperationLog(borrow.getUser(), getOperator(),
+				"stop_flow");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对用户为" + borrow.getUser().getUserName()
+				+ "的借款标（ID:" + borrow.getId() + ",标名为" + borrow.getName()
+				+ "）进行取消定向密码操作");
+		operationLogService.save(log);
+		printResult("取消定向标密码成功！", true);
+	}
+	
+
+	/**
+	 * 添加抵押物页面
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/addMortgagePage")
+	public String addMortgagePage() throws Exception {
+		//initRSAME();
+		request.setAttribute("id", model.getId());
+		saveToken("addMortgage_Token");
+		return "addMortgagePage";
+	}
+
+	/**
+	 * 添加抵押物
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/addMortgage")
+	public void addMortgage() throws Exception {
+		
+		Borrow borrow = borrowService.find(model.getId());
+		int num = borrowMortgageService
+				.getMaxNumByBorrowId(model.getId());
+		List<BorrowUpload> list = new ArrayList<BorrowUpload>();
+		List<BorrowMortgage> borrowMortgageList = model.getBorrowMortgageList();
+		if (borrowMortgageList == null) {
+			throw new BorrowException("至少上传一个抵押物！", 1);
+		}
+		for (int i = 0; i < borrowMortgageList.size(); i++) {
+			BorrowMortgage borrowMortgage = borrowMortgageList.get(i);
+			borrowMortgage.setBorrow(borrow);
+			borrowMortgage.setStatus(1);
+			borrowMortgage.setNum(num + 1);
+			borrowMortgage.setAddIp(Global.getIP());
+			borrowMortgage.setAddTime(new Date());
+			borrowMortgage.setContractNo(borrow.getDealParent());
+			borrowMortgageList.set(i, borrowMortgage);
+			if (borrowMortgage.getAssessPrice() <= borrowMortgage
+					.getMortgagePrice()) {
+				throw new BorrowException("评估价必须大于抵押价！", 1);
+			}
+			String[] physicalPicPaths = request
+					.getParameterValues("physicalPicPath" + i);
+			/*if (physicalPicPaths == null) {
+				throw new BussinessException("必须上传至少一张实物照！", 1);
+			}*/
+			if (physicalPicPaths != null) {
+				
+				for (String physicalPicPath : physicalPicPaths) {
+					BorrowUpload bu = new BorrowUpload();
+					bu.setBorrow(borrow);
+					bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+					bu.setPicPath(physicalPicPath);
+					bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+					list.add(bu);
+				}
+			}
+			String[] archivesPicPaths = request
+					.getParameterValues("archivesPicPath" + i);
+			/*if (archivesPicPaths == null) {
+				throw new BussinessException("必须上传至少一张档案照！", 1);
+			}*/
+			if (archivesPicPaths != null) {
+				for (String archivesPicPath : archivesPicPaths) {
+					BorrowUpload bu = new BorrowUpload();
+					bu.setBorrow(borrow);
+					bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+					bu.setPicPath(archivesPicPath);
+					bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+					list.add(bu);
+				}
+			}
+		}
+		checkToken("addMortgage_Token");
+		borrowMortgageService.addMortgage(borrowMortgageList, list);
+		printResult("添加资产包成功！", true);
+	}
+
+	/**
+	 * 获取要更新的抵押物页面
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/getUpdateMortgageListPage")
+	public String getUpdateMortgageListPage() throws Exception {
+		//initRSAME();
+		request.setAttribute("id", model.getId());
+		List<BorrowMortgage> list = new ArrayList<BorrowMortgage>();
+		for (long id : ids) {
+			BorrowMortgage borrowMortgage = borrowMortgageService.findById(id);
+			if (borrowMortgage.getStatus() != 1) {
+				throw new BorrowException("非入库状态的抵押物不能更新");
+			}
+			list.add(borrowMortgage);
+		}
+		saveToken("updateMortgage_Token");
+		request.setAttribute("list", list);
+		return "getUpdateMortgageListPage";
+	}
+
+	/**
+	 * 更新资产包操作
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/updateBorrowCollateral")
+	public void updateBorrowCollateral() throws Exception {
+		
+		Borrow borrow = borrowService.find(model.getBorrowId());
+		int num = borrowMortgageService
+				.getMaxNumByBorrowId(model.getBorrowId());
+		List<BorrowUpload> list = new ArrayList<BorrowUpload>();
+		List<BorrowMortgage> bms = new ArrayList<BorrowMortgage>();
+		//新增的抵押物
+		List<BorrowMortgage> borrowMortgageList = model.getBorrowMortgageList();
+		if (borrowMortgageList == null) {
+			throw new BorrowException("至少上传一个抵押物！", 1);
+		}
+		double inPrice = 0;
+		for (int i = 0; i < borrowMortgageList.size(); i++) {
+			BorrowMortgage borrowMortgage = borrowMortgageList.get(i);
+			inPrice = BigDecimalUtil.add(inPrice,
+					borrowMortgage.getMortgagePrice());
+			borrowMortgage.setBorrow(borrow);
+			borrowMortgage.setStatus(1);
+			borrowMortgage.setNum(num + 1);
+			borrowMortgage.setAddIp(Global.getIP());
+			borrowMortgage.setAddTime(new Date());
+			borrowMortgageList.set(i, borrowMortgage);
+			if (borrowMortgage.getAssessPrice() <= borrowMortgage
+					.getMortgagePrice()) {
+				throw new BorrowException("评估价必须大于抵押价！", 1);
+			}
+			String[] physicalPicPaths = request
+					.getParameterValues("physicalPicPath" + i);
+			if (physicalPicPaths == null) {
+				throw new BussinessException("必须上传至少一张实物照！", 1);
+			}
+			for (String physicalPicPath : physicalPicPaths) {
+				BorrowUpload bu = new BorrowUpload();
+				bu.setBorrow(borrow);
+				bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+				bu.setPicPath(physicalPicPath);
+				bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+				list.add(bu);
+			}
+			String[] archivesPicPaths = request
+					.getParameterValues("archivesPicPath" + i);
+			if (archivesPicPaths == null) {
+				throw new BussinessException("必须上传至少一张档案照！", 1);
+			}
+			for (String archivesPicPath : archivesPicPaths) {
+				BorrowUpload bu = new BorrowUpload();
+				bu.setBorrow(borrow);
+				bu.setBorrowMortgage(model.getBorrowMortgageList().get(i));
+				bu.setPicPath(archivesPicPath);
+				bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+				list.add(bu);
+			}
+		}
+		double totalMortgagePrice = borrowMortgageService
+				.getTotalMortgagePriceByBorrowId(model.getBorrowId());
+		double outPrice = 0;
+		for (long id : ids) {
+			BorrowMortgage bm = borrowMortgageService.findById(id);
+			bms.add(bm);
+			outPrice = BigDecimalUtil.add(outPrice, bm.getMortgagePrice());
+			BorrowMortgage b = new BorrowMortgage();
+			b.setStatus(2);
+			b.setNum(num + 1);
+			b.setAddIp(Global.getIP());
+			b.setAddTime(new Date());
+			b.setAssessPrice(bm.getAssessPrice());
+			b.setMortgagePrice(bm.getMortgagePrice());
+			b.setBorrow(bm.getBorrow());
+			b.setCarType(bm.getCarType());
+			b.setCarNo(bm.getCarNo());
+			b.setMortgageType(bm.getMortgageType());
+			borrowMortgageList.add(b);
+			List<BorrowUpload> bus = borrowUploadService.findByMortgageId(bm
+					.getId());
+			for (BorrowUpload upload : bus) {
+				BorrowUpload bu = new BorrowUpload();
+				bu.setBorrow(borrow);
+				bu.setBorrowMortgage(b);
+				bu.setPicPath(upload.getPicPath());
+				bu.setType(upload.getType());
+				list.add(bu);
+			}
+		}
+		if (BigDecimalUtil.add(totalMortgagePrice, inPrice, -outPrice) < borrow
+				.getAccount()) {
+			throw new RuntimeException("更新抵押物后抵押总价不能小于借款总额！");
+		}
+		checkToken("updateMortgage_Token");
+		borrowMortgageService.updateBorrowMortgage(borrowMortgageList, bms,
+				list);
+		printResult("更新资产包成功！", true);
+	}
+
+	/**
+	 * 更新抵押物列表页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/getMortgageListPage")
+	public String getMortgageListPage() throws Exception {
+		long id = paramLong("id");
+		Borrow borrow = borrowService.find(id);
+		
+		List<Borrow> borrowList = borrowService.findLoanListByDealParent(borrow.getDealParent(), borrow.getType());
+		if(borrowList.size()>0){
+			Borrow oldBorrow = borrowList.get(0);
+			
+			List<BorrowUpload> list = borrowUploadService.findByMortgageId(oldBorrow.getId());
+			request.setAttribute("borrow", oldBorrow);
+			request.setAttribute("list", list);
+		}
+		return "getMortgageListPage";
+	}
+
+	/**
+	 * 抵押物列表数据
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/getMortgageList")
+	public void getMortgageList() throws Exception {
+		long id = paramLong("id");
+		List<BorrowMortgage> list = borrowMortgageService.findByBorrowId(id, 1);
+		data.put("rows", list);
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 获取要更新的抵押物列表
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/getUpdateMortgageList")
+	public void getUpdateMortgageList() throws Exception {
+		List<BorrowUpload> list = borrowUploadService
+				.findByMortgageId(paramLong("id"));
+		data.put("list", list);
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 获取抵押物图片修改页面
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/getPicPage")
+	public String getPicPage() throws Exception {
+		//initRSAME();
+		
+		request.setAttribute("id", paramString("id"));
+		List<BorrowMortgage> list = new ArrayList<BorrowMortgage>();
+		for (long id : ids) {
+			BorrowMortgage borrowMortgage = borrowMortgageService.findById(id);
+			list.add(borrowMortgage);
+		}
+		request.setAttribute("list", list);
+		saveToken("getPicToken");
+		return "getPicPage";
+	}
+
+	/**
+	 * 更新图片操作
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/updatePic")
+	public void updatePic() throws Exception {
+		
+		Borrow borrow = borrowService.find(model.getBorrowId());
+		List<BorrowUpload> list = new ArrayList<BorrowUpload>();
+		for (int i = 0; i < ids.length; i++) {
+			BorrowMortgage borrowMortgage = borrowMortgageService
+					.findById(ids[i]);
+			String[] physicalPicPaths = request
+					.getParameterValues("physicalPicPath" + i);
+			if (physicalPicPaths != null) {
+				for (String physicalPicPath : physicalPicPaths) {
+					BorrowUpload bu = new BorrowUpload();
+					bu.setBorrow(borrow);
+					bu.setBorrowMortgage(borrowMortgage);
+					bu.setPicPath(physicalPicPath);
+					bu.setType(BorrowUpload.MORTGAGE_PHYSICAL);
+					list.add(bu);
+				}
+			}
+			String[] archivesPicPaths = request
+					.getParameterValues("archivesPicPath" + i);
+			if (archivesPicPaths != null) {
+				for (String archivesPicPath : archivesPicPaths) {
+					BorrowUpload bu = new BorrowUpload();
+					bu.setBorrow(borrow);
+					bu.setBorrowMortgage(borrowMortgage);
+					bu.setPicPath(archivesPicPath);
+					bu.setType(BorrowUpload.MORTGAGE_ARCHIVES);
+					list.add(bu);
+				}
+			}
+		}
+		checkToken("getPicToken");
+		borrowService.updatePic(list, delIds);
+		printResult("更新资产包图片成功！", true);
+	}
+/*
+	*//**
+	 * 获取认证通过的邮箱列表页面
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 *//*
+	@Action("/modules/loan/borrow/getEmailListPage")
+	public String getEmailListPage() throws Exception {
+		String borrowType = request.getParameter("borrowType");
+		request.setAttribute("type", paramString("type"));
+		request.setAttribute("borrowType", borrowType);
+		return "getEmailListPage";
+	}
+*/
+	/**
+	 * 查找已开通第三方支付的企业账户Email集合
+	 */
+	/*@Action("/modules/loan/borrow/getEmailList")
+	public void getEmailList() throws Exception {
+		model.setSize(paramInt("rows"));
+		if (null != paramString("userName") && !paramString("userName").equals("")){
+			model.setUserName((paramString("userName")));
+		}
+
+		if (null != paramString("phone") && !paramString("phone").equals("")){
+			model.setUserPhone(paramString("phone"));
+		}
+		logger.info("判断是企业还是个人借款："+paramInt("type"));
+		
+		model.setType(paramInt("type"));
+		
+		//借款标类型
+ 		if(paramInt("borrowType") == 103){				//车贷宝
+			model.setUserBorrowType("C");
+		}else if(paramInt("borrowType") == 113){		//能源宝
+			model.setUserBorrowType("N");
+		}else if(paramInt("borrowType") == 115){		//微商贷
+			model.setUserBorrowType("W");
+		}
+		
+		model.setUserType("11");
+		PageDataList<User> pageList = userService.findUserList(model);
+		
+		int totalPage = pageList.getPage().getTotal(); // 总页数
+		data.put("total", totalPage);
+		data.put("rows", pageList.getList());
+		printJson(getStringOfJpaObj(data));
+	}*/
+	
+	/**
+	 * 获取认证通过的邮箱列表页面(商户)
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 *//*
+	@Action("/modules/goods/goodsMessage/getUserListPage")
+	public String getUserListPage() throws Exception {
+		request.setAttribute("type", paramString("type"));
+		return "getUserListPage";
+	}
+	
+	*//**
+	 * 查找已开通第三方支付的商户账户
+	 *//*
+	@Action("/modules/loan/borrow/getMerchantList")
+	public void getMerchantList() throws Exception {
+		model.setSize(paramInt("rows"));
+		if (null != paramString("userName") && !paramString("userName").equals("")){
+			model.setUserName((paramString("userName")));
+		}
+
+		if (null != paramString("phone") && !paramString("phone").equals("")){
+			model.setUserPhone(paramString("phone"));
+		}
+		logger.info("判断是企业还是个人："+paramInt("type"));
+		
+		model.setType(paramInt("type"));
+		model.setUserType("13");
+		//model.setType((Integer)request.getAttribute("type"));
+		PageDataList<User> pageList = userService.findUserList(model);
+		
+		int totalPage = pageList.getPage().getTotal(); // 总页数
+		data.put("total", totalPage);
+		data.put("rows", pageList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+*/
+	/**
+	 * 借款人金额统计
+	 * // JSDPBUG-99 20150505  sxy
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/borrowingStatisticsPage")
+	public String borrowingStatisticsPage() throws Exception {
+		return "borrowingStatisticsPage";
+	}
+	
+	
+	
+	/**
+	 * 借款期限对于可债转的限制
+	 * @throws Exception
+	 */
+	/*@Action("/modules/loan/borrow/borrowingStatisticsPage")
+	public String borrowTimeOfCreadit() throws Exception {
+		return null;
+	}*/
+	
+	
+	
+	
+	
+	
+	
+	
+
+}

@@ -1,0 +1,74 @@
+package com.rongdu.p2psys.web.member;
+
+import java.util.Map;
+import java.util.HashMap;
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.activity.model.ActivityPublishModel;
+import com.ddtkj.p2psys.activity.service.ActivityPublishService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 
+ * @描述：活动列表展示
+ * @作者:fenggq@ddtkj.com
+ * @创建时间: 2015年1月12日
+ */
+public class MemberActivityAction extends BaseAction implements
+		ModelDriven<ActivityPublishModel> {
+	private ActivityPublishModel model = new ActivityPublishModel();
+
+	public void setModel(ActivityPublishModel model) {
+		this.model = model;
+	}
+
+	@Resource
+	private ActivityPublishService activityPublishService;
+
+	private Map<String, Object> data = new HashMap<String, Object>();
+
+	public ActivityPublishModel getModel() {
+		return model;
+	}
+
+	/**
+	 * 活动页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/user/activity")
+	public String activitive() throws Exception {
+		String inviteId = paramString("id");
+		if(inviteId !=null &&inviteId !=""){
+			request.setAttribute("inviteId", inviteId);
+			
+		}
+		return "activity";
+	}
+
+	/**
+	 * 活动列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/user/activityList")
+	public void activityList() throws Exception {
+		model.setSize(3);
+		model.setStatus((byte)1);
+		model.setActivityStatus("1");
+		PageDataList<ActivityPublishModel> list = activityPublishService
+				.activityList(model, model.getPage(), model.getSize());
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+}

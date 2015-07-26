@@ -1,0 +1,99 @@
+package com.rongdu.p2psys.web.user;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.domain.CertificationType;
+import com.rongdu.p2psys.user.domain.UserCertification;
+import com.rongdu.p2psys.user.model.UserCertificationModel;
+import com.rongdu.p2psys.user.service.UserCertificationService;
+
+/**
+ * 证明材料
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月20日
+ */
+public class UserCertificationAction extends BaseAction implements ModelDriven<UserCertificationModel> {
+
+	private UserCertificationModel model = new UserCertificationModel();
+
+	@Override
+	public UserCertificationModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private UserCertificationService userCertificationService;
+
+	private File file;
+	private String sep = File.separator;
+	private User user;
+	private Map<String, Object> data;
+
+	/**
+	 * 证明材料
+	 * 
+	 * @return
+	 */
+	@Action("/member/usercertification/files")
+	public String files() throws Exception {
+
+		return "files";
+	}
+
+	/**
+	 * 证明材料 ajax异步获取
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/usercertification/filesList")
+	public void filesList() throws Exception {
+		user = getSessionUser();
+		PageDataList<UserCertificationModel> pageDateList = userCertificationService.list(user.getUserId(),
+				paramInt("page"));
+		data = new HashMap<String, Object>();
+		data.put("data", pageDateList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		
+	}
+
+	/**
+	 * 新增证明材料
+	 */
+	@Action("/member/usercertification/add")
+	public void add() throws Exception {
+		user = getSessionUser();
+		// 验证提交的信息
+		model.validAttestationCommit(file);
+		// 上传图片并保存图片路径
+		String filePath = model.getFilePath(user, sep, file);
+		CertificationType certificationType = userCertificationService.findByTypeId(model.getAttestationType()
+				.getTypeId());
+		UserCertification attestation = model.prototype(user, filePath, certificationType);
+		userCertificationService.add(attestation);
+		printSuccess();
+	}
+
+	public File getFile() {
+		return file;
+	}
+
+	public void setFile(File file) {
+		this.file = file;
+	}
+
+}

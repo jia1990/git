@@ -1,0 +1,113 @@
+package com.ddtkj.p2psys.goods.service.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.goods.dao.GoodsCategoryDao;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsCategory;
+import com.ddtkj.p2psys.goods.model.GoodsCategoryModel;
+import com.ddtkj.p2psys.goods.service.GoodsCategoryService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+
+//ddtkjGoodsSerive
+@Service("goodsCategoryService")
+public class GoodsCategoryServiceImpl implements GoodsCategoryService {
+
+    @Resource
+    private GoodsCategoryDao goodsCategoryDao;
+    
+    @Override
+    public List<DdtkjGoodsCategory> getCategoryAll() {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("isDelete", false);
+        param.addOrder(OrderType.ASC, "sort");
+        return goodsCategoryDao.findByCriteria(param);
+    }
+    
+    /**
+     * 查询顶级分类信息
+     * 
+     */
+    @Override
+    public List<DdtkjGoodsCategory> getCategoryParent(int parentId) {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("isDelete", false);
+        param.addParam("parentId", parentId);
+        param.addOrder(OrderType.ASC, "sort");
+        return goodsCategoryDao.findByCriteria(param);
+    }
+	@Override
+	public List<DdtkjGoodsCategory> getCategorySecond() {
+		// TODO Auto-generated method stub
+		return goodsCategoryDao.getCategorySecond();
+	}
+    @Override
+    public List<DdtkjGoodsCategory> getCategoryList(GoodsCategoryModel model) {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("isDelete", false);
+        if (model.getName() != null && model.getName().length() > 0) {
+            param.addParam("name", Operators.LIKE, model.getName());
+        }
+        /*if (StringUtil.isNotBlank(model.getStartTime())) {
+            //Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+            Date start = DateUtil.valueOf(model.getStartTime());
+            param.addParam("addTime", Operators.GTE, start);
+        }
+        if (StringUtil.isNotBlank(model.getEndTime())) {
+            //Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+            Date end = DateUtil.valueOf(model.getEndTime());
+            param.addParam("addTime", Operators.LTE, end);
+        }*/
+        //param.addOrder(OrderType.ASC, "id");
+        param.addOrder(OrderType.ASC, "sort");
+        return goodsCategoryDao.findByCriteria(param);
+    }
+
+    @Override
+    public Boolean addCategory(GoodsCategoryModel model) {
+        if (model == null || model.getName() == null) {
+            return false;
+        }
+        DdtkjGoodsCategory item = model.prototype();
+        item.setAddTime(new Date());
+        item = goodsCategoryDao.save(item);
+        if (item.getId() > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public DdtkjGoodsCategory getCategoryById(long id) {
+        return goodsCategoryDao.find(id);
+    }
+
+    @Override
+    public Boolean editCategory(GoodsCategoryModel model) {
+        if (model == null || model.getName() == null || model.getId() <= 0) {
+            return false;
+        }
+        DdtkjGoodsCategory item = model.prototype();
+        item = goodsCategoryDao.update(item);
+        return true;
+    }
+    
+    @Override
+	public void update(DdtkjGoodsCategory goodsCategory) {
+		
+    	goodsCategoryDao.merge(goodsCategory);
+	}
+
+	@Override
+	public int getGoodsCategoryId(int goodsCategoryId) {
+		return goodsCategoryDao.getGoodsCategoryId(goodsCategoryId);
+	}
+
+
+}

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>标信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+    var dataGrid;
+   
+    $(function() {
+        dataGrid = $('#tenderListGrid').datagrid({
+            url : '/modules/loan/repayment/repaymentDetailList.html?repaymentId=${id}',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+			showFooter: true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50, fixed:true,sortable:false },              
+              { field: 'investUserName', title: '投资人', width: 80, sortable:false },
+              //{ field: 'borrowId', title: '借款标编号', width: 80, sortable:false },
+              //{ field: 'borrowName', title: '标名', width: 150, sortable:false },
+              
+              { field: 'borrowNa', title: '标名', width: 150, sortable:false,
+  				formatter:function(value, row, index){
+  					if(row.typeName=='待收本息总金额'){
+  						return '';
+  					}else{
+  						
+	  					var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+	  					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+	  					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}" title="预览标">'+row.borrowName+'</a>', row.borrowId, '${theme_dir}/css/images/extjs_icons/link.png');
+  					}
+  					
+  				}
+  			  },
+              
+              //{ field: 'borrowTimeType', title: '借款类型', width: 150, sortable:false},
+              { field: 'timeLimit', title: '借款期限', width: 60, sortable:false,
+            	  formatter: function(value,row,index){
+            		  if(row.borrowTimeType == 0){
+            			  return value + "月";
+            		  }else if(row.borrowTimeType == 1){
+            			  return value + "天";
+            		  }
+                	  
+            	  }
+              },
+              //{ field: 'validTime', title: '有效期限', width: 80, sortable:false },
+              
+              { field: 'period', title: '本期期数', width: 60, sortable:false, 
+            	  	formatter: function(value,row,index){
+            	  		if(row.typeName=='待收本息总金额'){
+            	  			return '';
+            	  		}else{
+	  						return row.period+1;
+            	  		}
+				  	}
+              },
+              { field: 'typeName', title: '标类型', width: 80, sortable:false },
+              
+              { field: 'repaymentAccountStr', title: "<a title='元'>预收金额</a>", width: 80, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+             
+              { field: 'capitalStr', title: "<a title='元'>本金</a>", width: 80, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              { field: 'interestStr', title: "<a title='元'>利息</a>", width: 80, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              }},
+              
+              { field: 'contractNo', title: '合同编号', width: 100, sortable:false },
+              { field: 'repaymentTime', title: '预计收款时间', width: 150, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  	}  
+              }
+            ] ],
+            toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip');
+			}
+        });
+    });
+  //借款管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/loan/borrow/showTenderDetailExcel.html?borrowId=${id}";
+		/* var userName = $("#userName").val();
+		var name = $("#name").val();
+		var dealNo = $("#dealNo").val();
+		var type = $("#type").val();
+		var status = $("#status").val();
+		var startTime = $("#startTime").val();
+		var vouchId = $("#vouchId").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&name=" + name + "&type=" + type + "&dealNo=" + dealNo + "&status=" + status + "&startTime=" + startTime + "&endTime=" + endTime + "&vouchId=" + vouchId;
+		window.location.href = url + sou; */
+		window.location.href = url;
+	}
+</script>
+
+</head>
+<div id="toolbar" >
+		
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		
+	</div>
+<!-- <div class="easyui-layout" data-options="fit : true,border : false">
+	<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+       	<h2 class="searchTitle">查询条件</h2>
+		<form id="searchForm">
+			<ul>
+				
+           		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+           		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a>
+           		<a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+           	</ul>
+		</form>
+	</div>
+	<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px; width:80%"> -->
+		<table id="tenderListGrid"></table>
+	<!-- </div>
+	<div id="toolbar" style="display: none;">
+		
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		
+	</div>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</div>
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html> -->

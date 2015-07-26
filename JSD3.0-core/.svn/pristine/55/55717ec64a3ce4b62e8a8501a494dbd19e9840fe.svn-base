@@ -1,0 +1,681 @@
+package com.ddtkj.p2psys.credit.model.worker;
+
+
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.apache.poi.hssf.util.HSSFColor.GOLD;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.CreditDueInCalculator;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.credit.dao.CollectionCreditDao;
+import com.ddtkj.p2psys.credit.dao.CreditAssignmentDao;
+import com.ddtkj.p2psys.credit.dao.CreditLogDao;
+import com.ddtkj.p2psys.credit.domain.CollectionCredit;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.exception.CreditException;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransferDetails;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.interest.EachPlan;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.enums.EnumRuleNid;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.AutoTenderConfRuleCheck;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+
+/**
+ * @描述：债权转让工作类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+public class CreditWorker {
+
+	protected List<BorrowCollection> collectionList;
+	protected CreditAssignment creditAssignment;
+	protected CreditLog wcreditLog ;
+	private static Logger logger = Logger.getLogger(CreditWorker.class);
+	
+	public CreditWorker(CreditAssignment creditAssignment, CreditLog creditLog) {
+		super();
+		this.creditAssignment = creditAssignment;
+		this.wcreditLog = creditLog;
+	}
+	public CreditWorker(CreditAssignment creditAssignment) {
+		super();
+		this.creditAssignment = creditAssignment;
+	}
+	public CreditWorker(){} ;
+	/**
+	 * 发布债权前验证
+	 * @return
+	 */
+	public boolean validateBeforePublish(){
+		return false ;
+	}
+	/**
+	 * 购买债权前验证
+	 * @return
+	 */
+	public boolean validateBeforeBuy(){
+		User user = wcreditLog.getBuyUser() ;
+		AccountDao accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		UserCacheDao userCacheDao = (UserCacheDao) BeanUtil.getBean("userCacheDao");
+		UserIdentifyDao userIdentifyDao = (UserIdentifyDao) BeanUtil.getBean("userIdentifyDao");
+		//JSDBET-847 wcw 2015-3-25 start
+		CreditAssignmentDao creditAssignmentDao = (CreditAssignmentDao) BeanUtil.getBean("creditAssignmentDao");
+		CreditAssignment ca = creditAssignmentDao.find(wcreditLog.getCreditAssignment().getId());
+		if(ca.getCreditCopies()==ca.getSellCopies()){
+			throw new CreditException("该债权已经购完！",1);
+		}
+		//JSDBET-847 wcw 2015-3-25 end
+		// 获取投标人的账户信息
+		Account act = accountDao.findObjByProperty("user.userId", user.getUserId());
+		//获取账户总可用金额
+		double useMoney=BigDecimalUtil.add(act.getRechargeUsable(),act.getAwardUsable(),act.getInterestUsable(),act.getReturnCapitalUsable());
+		if (wcreditLog.getBuyAccount() > useMoney) {
+			throw new CreditException("可用金额不足，请充值后再次购买！",1) ;
+		}
+		UserIdentify attestation = userIdentifyDao.findByUserId(user.getUserId());
+		//if (userCache.getStatus() == 1) {
+		if ("Y".equals(user.getIsLocked())) {
+			throw new BorrowException("您账号已经被锁定，不能进行债权购买!", 1);
+		}
+		// 用户认证校验
+		validBorrowTender(attestation);
+		if(wcreditLog.getBuyCopies()==0 || wcreditLog.getBuyCopies()<0){
+			throw new BorrowException("购买份数必须大于0！", 1);
+		}
+		if (wcreditLog.getBuyAccount() > act.getUsableAccount()) {
+			throw new BorrowException("购买份数总金额不能大于您的可用余额！", 1);
+		}
+		//验证是否是流标的标
+		long rulbefday = DateUtil.getSubDay(new Date(),creditAssignment.getBuyEndTime()) ;
+		if(creditAssignment.getCreditPrice() > creditAssignment.getSoldAccount() && rulbefday < 0){
+			throw new BorrowException("该债权已过期，不能进行购买！", 1);
+		}
+		return false ;
+	}
+	private void validBorrowTender(UserIdentify attestation) {
+		AutoTenderConfRuleCheck check = (AutoTenderConfRuleCheck) Global.getRuleCheck(EnumRuleNid.AUTO_TENDER_CONF
+				.getValue());
+		if (check != null) {
+			if (check.getTender_valid().getStatus() == 1) {
+				if (check.getTender_valid().getReal_enable() == 1 && !UserConstant.USER_IDENTIFY_REAL_NAME_SUCCESS.equals(attestation.getRealNameStatus())) {
+					throw new BorrowException("您还未通过实名认证，投标失败！", 1);
+				}
+//				if (check.getTender_valid().getEmail_enable() == 1 &&!UserConstant.USER_IDENTIFY_EMAIL_SUCCESS.equals(attestation.getEmailStatus())) {
+//					throw new BorrowException("您还未通过邮箱认证，投标失败！", 1);
+//				}
+				if (check.getTender_valid().getPhone_enable() == 1 &&!UserConstant.USER_IDENTIFY_PHONE_SUCCESS.equals(attestation.getMobilePhoneStatus())) {
+					throw new BorrowException("您还未通过手机认证，投标失败！", 1);
+				}
+			}
+		}
+	}
+	/**
+	 * 
+	 * 购买成功或复审通过后，生成待收
+	 * 
+	 * @param oldCollection
+	 * @param type
+	 * @param creditAssignment
+	 * @param creditLog
+	 * @return
+	 */
+	public List<BorrowCollection> createCollectionList(List<BorrowCollection> oldCollection,int type,CreditAssignment creditAssignment,CreditLog creditLog){
+		List<BorrowCollection> collectList = new ArrayList<BorrowCollection>();
+		CreditDueInCalculator cdic = new CreditDueInCalculator(oldCollection, creditLog, creditAssignment, type);
+		List<EachPlan> eachPlan = cdic.calculator() ;
+		// 拼装Collection对象 批量插入还款表
+		int i = creditAssignment.getCreditStartPeriod() - 1 ;
+		for (EachPlan e : eachPlan) {
+			BorrowCollection c = fillCollection(e, creditLog,creditAssignment);
+			c.setRepaymentTime(oldCollection.get(i).getRepaymentTime());
+			c.setPeriod(i++);
+			collectList.add(c);
+		}
+		this.collectionList = collectList;
+		return collectList;
+	}
+	
+	/**
+	 * 处理债权转让  第三方转账 多笔
+	 * @param clList
+	 */
+	public YmdTransfer handleCreditTranferSuccess(List<CreditLog> clList){
+		List<YmdTransferDetails> list=new ArrayList<YmdTransferDetails>();
+        YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_SALE));
+		ymdTransfer.setTradeType(AccountTradeConstant.TRADE_YMD_TRADE);
+		//债权购买者向债权转让人转账
+		for(CreditLog creditLog:clList){
+			//购买金额转账
+			YmdTransferDetails row=new YmdTransferDetails();
+			if(creditLog.getBuyAccount()>0){
+	    		row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA_BUY_TRANFER));
+	    		//付款者
+	    		row.setOutName(creditLog.getBuyUser().getUserName());
+	    		//接收者
+	    		row.setInName(creditLog.getCreditAssignment().getUser().getUserName());
+	    		logger.info("给转让人赚了"+creditLog.getBuyAccount());
+	    		row.setAmount(creditLog.getBuyAccount()+"");
+	    		row.setRemark("债权复审通过,"+ymdTransfer.getTradeNo()+"从受让人用户"+creditLog.getBuyUser().getUserName()+"给转让人用户"+creditLog.getCreditAssignment().getUser().getUserName()+"转账购买金额"+creditLog.getBuyAccount()+"元");
+	    		list.add(row); 
+			}
+    		//购买支付服务费转账
+			if(creditLog.getBuyFee()>0){
+				row=new YmdTransferDetails();
+	    		row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA_BUYER_FEE));
+	    		//付款者
+	    		row.setOutName(creditLog.getBuyUser().getUserName());
+	    		//接收者
+	    		row.setInName(ymdTransfer.getNumberId());
+	    		row.setAmount(creditLog.getBuyFee()+"");
+	    		row.setRemark("债权复审通过,"+ymdTransfer.getTradeNo()+"从受让人用户"+creditLog.getBuyUser().getUserName()+"给平台用户"+creditLog.getCreditAssignment().getUser().getUserName()+"转账服务费"+creditLog.getBuyFee()+"元");
+	    		list.add(row); 
+    	    }
+		}
+		
+		//债权转让人服务费转账
+		if(creditAssignment.getSellFee()>0){
+			YmdTransferDetails row=new YmdTransferDetails();
+			row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA_SELLER_FEE));
+			//付款者
+			row.setOutName(creditAssignment.getUser().getUserName());
+			//接收者
+			row.setInName(ymdTransfer.getNumberId());
+			logger.info("第三方转账手续费"+creditAssignment.getSellFee());
+			row.setAmount(creditAssignment.getSellFee()+"");
+			row.setRemark("债权复审通过,"+ymdTransfer.getTradeNo()+"从转让人用户"+creditAssignment.getUser().getUserName()+"给平台用户转账服务费金额"+creditAssignment.getSellFee()+"元");
+			list.add(row); 
+		}
+		ymdTransfer =YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, ymdTransfer.getTradeNo(), list);
+		return ymdTransfer;
+	}
+	
+	/**
+	 * 处理债权转让  第三方转账 一笔
+	 * @param clList
+	 */
+	public YmdTransfer handleCreditTranferSuccess(CreditLog creditLog){
+		return null;
+	}
+	/**
+	 * 处理债权转让 购入者
+	 * @param oldCollection
+	 * @param type
+	 * @param creditAssignment
+	 * @param creditLog
+	 */
+	public void handleCreditTenderAfterFullSuccess(List<CreditLog> clList)throws Exception{
+		BorrowCollectionDao borrowCollectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+		CreditLogDao clDao =  (CreditLogDao) BeanUtil.getBean("creditLogDao");
+		CollectionCreditDao collectionCreditDao = (CollectionCreditDao) BeanUtil.getBean("collectionCreditDao");
+		Borrow borrow = borrowDao.find(creditAssignment.getBorrow().getId()) ;
+		// 购买者待收处理
+		if(clList!=null){
+			for (CreditLog creditLog : clList) {
+				CreditWorker cworker = new CreditWorker(creditAssignment, creditLog);
+				// 原投资者或原债权者待收
+				List<BorrowCollection> oldCollectList = null ;
+				CreditAssignment oldCa = null ;
+				CreditAssignment newCa=null;
+				if(creditAssignment.getCaType()==1){
+					oldCollectList = borrowCollectionDao.getMemberCollectionList(creditAssignment.getUser(), borrow,creditAssignment.getTender().getId());
+				}
+				if(creditAssignment.getCaType()==2){
+					// 查关联表  当前购买的债权ID找到发布这条债权的对应购买记录  ，就是这条债权发布人的待收
+					List<CollectionCredit> cclist = collectionCreditDao.findByOldCredit(creditLog.getCreditAssignment().getCreditLog());
+					oldCollectList = new ArrayList<BorrowCollection>() ;
+					for (CollectionCredit collectionCredit : cclist) {
+						//old = collectionCredit.getOldCa() ;
+						CreditLog newCredit=creditLog.getCreditAssignment().getCreditLog();
+						newCa = newCredit.getCreditAssignment();
+						oldCollectList.add(collectionCredit.getBorrowCollection()) ;
+					}
+				}
+				// 购买者待收
+				List<BorrowCollection> collectList = cworker.createCollectionList(oldCollectList,borrow.getStyle(),creditAssignment,creditLog);
+				// 待收管理表生成数据
+				borrowCollectionDao.save(collectList);
+				for (BorrowCollection borrowCollection : collectList) {
+					System.out.println("购买者待收生成 成功,ID:"+borrowCollection.getId());
+					CollectionCredit cc = new CollectionCredit() ;
+					cc.setAddIp("");
+					cc.setAddTime(new Date());
+					cc.setBorrowCollection(borrowCollection);
+					cc.setBuyCa(creditAssignment);
+					cc.setOldCa(oldCa);
+					cc.setNewCa(newCa);
+					cc.setCreditLog(creditLog);
+					collectionCreditDao.save(cc);
+				}
+				Global.setTransfer("creditLog", creditLog);
+				double account = creditLog.getBuyAccount() ;
+				double interest = 0.00;
+				double capitalTotal=0.00;
+				for (BorrowCollection borrowCollection : collectList) {
+					interest = BigDecimalUtil.add(borrowCollection.getInterest(),interest) ;
+					capitalTotal=BigDecimalUtil.add(borrowCollection.getCapital(),capitalTotal);
+				}
+				// 扣除冻结/生产待收本金
+				Global.setTransfer("money", account);
+				Global.setTransfer("creditLog", creditLog);
+				Global.setTransfer("borrow", borrow);
+				Map<String, Object>  map=new HashMap<String, Object>();
+				logger.info("--"+creditLog.getBuyUser().getUserId()+"购买者：rechargeMoney:"+creditLog.getUseRecharge());
+				logger.info("--"+creditLog.getBuyUser().getUserId()+"购买者：awardMoney:"+creditLog.getUseAward());
+				logger.info("--"+creditLog.getBuyUser().getUserId()+"购买者：interestMoney:"+ creditLog.getUseInterest());
+				logger.info("--"+creditLog.getBuyUser().getUserId()+"购买者：returnCapitalMoney:"+creditLog.getUseReturnedMoney());
+				map.put("rechargeMoney", BigDecimalUtil.decimal(creditLog.getUseRecharge(), 2));
+				map.put("awardMoney",  BigDecimalUtil.decimal(creditLog.getUseAward(), 2));
+				map.put("interestMoney",  BigDecimalUtil.decimal(creditLog.getUseInterest(), 2));
+				map.put("returnCapitalMoney",  BigDecimalUtil.decimal(creditLog.getUseReturnedMoney(), 2));
+				AbstractExecuter freeExecuter = ExecuterHelper.doExecuter("creditDecuctFreezeExecuter");
+				//freeExecuter.execute(account, tenderUser, user);
+				freeExecuter.execute(map, creditLog.getBuyUser(), creditAssignment.getUser());
+				// 扣除管理费
+				dudectFee(2,null,creditLog);
+				// 生成待收利息
+				Global.setTransfer("money", interest);
+				Global.setTransfer("creditLog", creditLog);
+				//--------wcw --账户表拆分--start----
+				map=new HashMap<String, Object>();
+				map.put("interestMoney", BigDecimalUtil.decimal(interest,2));
+				logger.info("--"+creditLog.getBuyUser().getUserId()+"购买者：待收利息:"+interest);
+				AbstractExecuter waitExecuter = ExecuterHelper.doExecuter("creditWaitInterestExecuter");
+				//waitExecuter.execute(interest, tenderUser, user);
+				waitExecuter.execute(map,creditLog.getBuyUser(), creditAssignment.getUser());
+				
+				
+				//JSDP-210 wcw 2015-07-4 start
+				//购买债权金额中包含部分利息，但是生成新待收的时候包含了全部利息，因此利息部分重复  需要去重
+				double repeatInterest=BigDecimalUtil.decimal(BigDecimalUtil.sub(creditLog.getBuyAccount(),capitalTotal),2);
+				if(repeatInterest>0){
+					// 扣除重复的待收利息
+					Global.setTransfer("interestMoney", repeatInterest);
+					map=new HashMap<String, Object>();
+					map.put("interestMoney", repeatInterest);
+					AbstractExecuter decuctWaitExecuter = ExecuterHelper.doExecuter("creditDecuctWaitInterestExecuter");
+					//waitExecuter.execute(interest, tenderUser, user);
+					decuctWaitExecuter.execute(map,creditLog.getBuyUser(), creditAssignment.getUser());
+				}
+				//JSDP-210 wcw 2015-07-4 end
+				
+				
+				creditLog.setBuyFeeStatus(1);
+				creditLog.setSellFeeStatus(1);
+				creditLog.setStatus("01");
+				clDao.update(creditLog) ;
+			}
+		}
+	}
+	public void creditReCall(List<CreditLog> clList){
+		CreditLogDao clDao =  (CreditLogDao) BeanUtil.getBean("creditLogDao");
+		CreditAssignmentDao caDao =  (CreditAssignmentDao) BeanUtil.getBean("creditAssignmentDao");
+		BorrowTenderDao btDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		// 购买者冻结资金解冻
+		if(clList!=null){
+			for (CreditLog creditLog : clList) {
+				// 解冻冻结
+				Global.setTransfer("money", creditLog.getBuyAccount());
+				Global.setTransfer("creditLog", creditLog);
+				Global.setTransfer("borrow", creditLog.getCreditAssignment().getBorrow());
+				//JSDP-35 gjh 2015-4-30 start
+				Global.setTransfer("user", creditLog.getBuyUser());
+				//JSDP-35 gjh 2015-4-30 end
+				Map<String, Object>  map=new HashMap<String, Object>();
+				map.put("rechargeMoney", BigDecimalUtil.decimal(creditLog.getUseRecharge(),2));
+				map.put("awardMoney", BigDecimalUtil.decimal(creditLog.getUseAward(),2));
+				map.put("interestMoney", BigDecimalUtil.decimal(creditLog.getUseInterest(),2));
+				map.put("returnCapitalMoney", BigDecimalUtil.decimal(creditLog.getUseReturnedMoney(),2));
+				AbstractExecuter freeExecuter = ExecuterHelper.doExecuter("creditReCallDecuctFreezeExecuter");
+				try{
+					freeExecuter.execute(map, creditLog.getBuyUser());
+				}catch(Exception e){
+					e.printStackTrace(); 
+				}
+			}
+		}
+		// 原债权转出者 待收没有生成，修改原债权或投资的状态   债权申请做相关处理
+		if(creditAssignment.getCaType()==1){
+			BorrowTender tender = creditAssignment.getTender() ;
+			tender.setIscredit(1);
+			btDao.update(tender) ;
+			
+		}
+		if(creditAssignment.getCaType()==2){
+			CreditLog cl = creditAssignment.getCreditLog() ;
+			if(cl!=null){
+				cl.setIsSell(2);
+				cl.setStatus("02");
+			}
+			clDao.update(cl) ;
+		}
+		creditAssignment.setStatus(CreditAssignment.CREDIT_REPEAL);
+		caDao.update(creditAssignment);
+	}
+	
+	public void creditFullVerifyFail(List<CreditLog> clList){
+		CreditLogDao clDao =  (CreditLogDao) BeanUtil.getBean("creditLogDao");
+		CreditAssignmentDao caDao =  (CreditAssignmentDao) BeanUtil.getBean("creditAssignmentDao");
+		BorrowTenderDao btDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		// 购买者冻结资金解冻
+		if(clList != null){
+			for (CreditLog creditLog : clList) {
+				// 扣除冻结/生产待收本金
+				Global.setTransfer("money", creditLog.getBuyAccount());
+				Global.setTransfer("creditLog", creditLog);
+				Global.setTransfer("borrow", creditLog.getCreditAssignment().getBorrow());
+				Map<String, Object>  map = new HashMap<String, Object>();
+				map.put("rechargeMoney", BigDecimalUtil.decimal(creditLog.getUseRecharge(),2));
+				map.put("awardMoney", BigDecimalUtil.decimal(creditLog.getUseAward(),2));
+				map.put("interestMoney", BigDecimalUtil.decimal(creditLog.getUseInterest(),2));
+				map.put("returnCapitalMoney", BigDecimalUtil.decimal(creditLog.getUseReturnedMoney(),2));
+				AbstractExecuter freeExecuter = ExecuterHelper.doExecuter("creditReCallDecuctFreezeExecuter");
+				try{
+					freeExecuter.execute(map, creditLog.getBuyUser());
+				}catch(Exception e){
+					e.printStackTrace(); 
+				}
+			}
+		}
+		// 原债权转出者 待收没有生成，修改原债权或投资的状态   债权申请做相关处理
+		if(creditAssignment.getCaType() == CreditAssignment.CREDIT_TYPE_TENDER){
+			BorrowTender tender = creditAssignment.getTender() ;
+			tender.setIscredit(1);
+			btDao.update(tender);
+			
+		}
+		if(creditAssignment.getCaType() == CreditAssignment.CREDIT_TYPE_BUY){
+			CreditLog cl = creditAssignment.getCreditLog() ;
+			if(cl != null){
+				cl.setIsSell(CreditLog.CRELOG_ISSELL_NO);
+				cl.setStatus(CreditLog.CRELOG_STATUS_RE);
+			}
+			clDao.update(cl);
+		}
+		creditAssignment.setStatus(CreditAssignment.CREDIT_CHECK2_FAIL);
+		caDao.update(creditAssignment);
+	}
+	
+	
+	
+	/**
+	 * 处理债权转让 购入者(即投即生息)
+	 * @param oldCollection
+	 * @param type
+	 * @param creditAssignment
+	 * @param creditLog
+	 */
+	public void handleCreditTenderSuccess(CreditLog creditLog){
+		
+	}
+	/**
+	 * 处理债权转让 转出者
+	 * @param oldCollection
+	 * @param type
+	 * @param creditAssignment
+	 * @param creditLog
+	 */
+	public void handleCreditSellerAfterFullSuccess(List<CreditLog> clList){
+		// 转出者资金入账
+		Global.setTransfer("money", creditAssignment.getCreditPrice());
+		Global.setTransfer("creditAssignment", creditAssignment);
+		User user = creditAssignment.getUser();
+		BorrowCollectionDao borrowCollectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		CollectionCreditDao ccollectionCreditDao = (CollectionCreditDao) BeanUtil.getBean("collectionCreditDao") ;
+		double collectionTotal = 0.00 ;
+		// 原投资类型
+		double collectionIne = 0.0 ;
+		if(creditAssignment.getCaType()==1){
+			double collCapital = borrowCollectionDao.getCapitalTotal(user, creditAssignment.getBorrow(),creditAssignment.getTender().getId()) ; // 剩余待收本金
+			collectionTotal = borrowCollectionDao.getCollectionTotal(user,  creditAssignment.getBorrow(),creditAssignment.getTender().getId()) ;
+			collectionIne = BigDecimalUtil.sub(collectionTotal, collCapital) ;
+		}
+		boolean flag = true ;
+		for (CreditLog creditLog : clList) {
+			if(creditAssignment.getCaType()==2 && flag){
+				collectionTotal = borrowCollectionDao.getCollectionTotalByCredit(creditLog) ;
+				double collCapital2 = borrowCollectionDao.getCapitalTotalByCredit(creditLog) ; // 剩余待收本金
+				collectionIne = BigDecimalUtil.sub(collectionTotal, collCapital2) ;
+				flag = false ;
+			}
+			AbstractExecuter freeExecuter = ExecuterHelper.doExecuter("creditSellerRepayExecuter");
+			Map<String, Object>  map=new HashMap<String, Object>();
+			map.put("interestMoney", BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.mul(BigDecimalUtil.div(creditAssignment.getHaveInsterest(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()), creditAssignment.getCreditDis()), 2));
+			map.put("returnCapitalMoney",BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.mul(BigDecimalUtil.div(creditAssignment.getCreditAccount(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()), creditAssignment.getCreditDis()), 2));
+			logger.info(creditAssignment.getUser().getUserId()+" 入账interestMoney："+map.get("interestMoney"));
+			logger.info(creditAssignment.getUser().getUserId()+" 入账returnCapitalMoney："+map.get("returnCapitalMoney"));
+			freeExecuter.execute(map, creditAssignment.getUser() );
+		}
+		System.out.println("转出者入账成功");
+		//转出者入账成功
+		AbstractExecuter collrepayExecuter = ExecuterHelper.doExecuter("creditSellerCollectionRepayExecuter");
+		//freeExecuter.execute(account, tenderUser, user);
+		Map<String, Object>  map2=new HashMap<String, Object>();
+		if(creditAssignment.getCaType()==1){
+			map2.put("money",creditAssignment.getTender().getRepaymentAccount());
+		}
+		if(creditAssignment.getCaType()==2){
+			QueryParam param = QueryParam.getInstance() ;
+			param.addParam("creditLog.id",creditAssignment.getCreditLog().getId()) ;
+			List<CollectionCredit> cc = ccollectionCreditDao.findByCriteria(param);
+			double total = 0.00 ;
+			for (CollectionCredit collectionCredit : cc) {
+				BorrowCollection bc= collectionCredit.getBorrowCollection() ;
+				if(bc.getStatus()==0){
+					total += bc.getRepaymentAccount() ;
+				}
+			}
+			map2.put("money", total) ;
+		}
+		collrepayExecuter.execute(map2, creditAssignment.getUser() );
+		// 扣除投标的红包
+//		double supRP = 0.00 ; // 记录红包不够扣的时候，需要扣现金的部分
+//		BorrowTender bt = creditAssignment.getTender() ;
+//		if(creditAssignment.getCaType()==1){
+//			double money = bt.getProduceRpDynamic() ;
+//			Global.setTransfer("totalPayRP", money);
+//			AccountDao accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+//			Account acc = accountDao.getAccountByUserId(creditAssignment.getUser().getUserId()) ;
+//			if(acc.getRpDynamicTotal() < money){
+//				supRP = BigDecimalUtil.sub(money , acc.getRpDynamicTotal());
+//				money = acc.getRpDynamicTotal() ;
+//			}
+//			Map<String, Object>  map=new HashMap<String, Object>();
+//			Global.setTransfer("rpDynamicMoney", money);
+//			Global.setTransfer("supRP", supRP);
+//			map.put("rpDynamicMoney", money) ;
+//			AbstractExecuter rpDynamicPayExecuter = ExecuterHelper.doExecuter("creditSellerPayRpDynamicExecuter");
+//			rpDynamicPayExecuter.execute(map, creditAssignment.getUser(),new User(Constant.ADMIN_ID));
+//		}
+//		creditAssignment.setSellFee(BigDecimalUtil.add(creditAssignment.getSellFee(),supRP)); // 不够扣除，说明已经 用掉了部分钱袋子，用掉的部分扣除 等额的现金
+		// 扣除管理费
+		dudectFee(1,creditAssignment,null);
+		// 原投资者待收
+		BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+		Borrow borrow = borrowDao.find(creditAssignment.getBorrow().getId()) ;
+		CollectionCreditDao collectionCreditDao = (CollectionCreditDao) BeanUtil.getBean("collectionCreditDao");
+		// 原债权待收处理
+		if(clList!=null){
+			List<BorrowCollection> oldCollectList = null ;
+			if(creditAssignment.getCaType()==1){
+				oldCollectList = borrowCollectionDao.getMemberCollectionList(creditAssignment.getUser(), borrow,creditAssignment.getTender().getId());
+			}
+			if(creditAssignment.getCaType()==2){
+				// 查关联表  当前购买的债权ID找到发布这条债权的对应购买记录  ，就是这条债权发布人的待收
+				List<CollectionCredit> cclist = collectionCreditDao.findByOldCredit(creditAssignment.getCreditLog());
+				oldCollectList = new ArrayList<BorrowCollection>() ;
+				for (CollectionCredit collectionCredit : cclist) {
+					oldCollectList.add(collectionCredit.getBorrowCollection()) ;
+				}
+			}
+			for (BorrowCollection borrowCollection : oldCollectList) { //  原投资人的待收 为转让状态
+				borrowCollection.setType(2);
+				borrowCollectionDao.update(borrowCollection);
+			}
+			borrowCollectionDao.update(oldCollectList) ;
+		}
+		creditAssignment.setFullVerifyRemark("自动复审成功");
+		creditAssignment.setFullVerifyTime(new Date());
+		CreditAssignmentDao creditAssignmentDao = (CreditAssignmentDao) BeanUtil.getBean("creditAssignmentDao") ;
+		creditAssignment.setStatus(CreditAssignment.CREDIT_FINISH);
+		creditAssignmentDao.update(creditAssignment) ;
+	}
+	/**
+	 * 扣除管理费
+	 * @param account
+	 * @param type
+	 * @param ca
+	 * @param cl
+	 */
+	public void dudectFee(int type ,CreditAssignment ca,CreditLog cl){
+		// 管理费支付
+		logger.info("扣除管理费开始");
+		AccountDao accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		Account act = null;
+		//worker.checkTender(tender);
+		//--------wcw---------------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----start-------
+		double account = 0 ;
+		if(type==1){
+			act = accountDao.findObjByProperty("user.userId",ca.getUser().getUserId()) ;
+			account = ca.getSellFee() ;
+		}
+		if(type==2){
+			act = accountDao.findObjByProperty("user.userId",cl.getBuyUser().getUserId()) ;
+			account = cl.getBuyFee() ;
+		}
+		logger.info("扣除管理费 account"+account);
+		double validAccount = account ;
+    	double currRecharge = 0;
+		double currAward = 0;
+		double currInterest = 0;
+		double currReturnCapital = 0;
+		//充值可用
+		double rechargeUsable=act.getRechargeUsable();
+		//奖励可用
+		double awardUsable=act.getAwardUsable();
+		//回款本金可用
+		double returnCapitalUsable=act.getReturnCapitalUsable();
+		
+		//计算提现金额冻结归属（使用充值、使用奖励、使用利息、使用回款）
+		if(rechargeUsable>=validAccount){
+			currRecharge=validAccount;
+		}else{
+			if((rechargeUsable+awardUsable)>=validAccount){
+				currRecharge=rechargeUsable;
+				currAward=BigDecimalUtil.sub(validAccount,rechargeUsable);
+			}else{
+				double currMoney=BigDecimalUtil.add(rechargeUsable,awardUsable,returnCapitalUsable);
+				if(currMoney>=validAccount){
+					currRecharge=rechargeUsable;
+					currAward=awardUsable;
+					currReturnCapital=BigDecimalUtil.add(validAccount,-rechargeUsable,-awardUsable);
+				}else{
+					currRecharge=rechargeUsable;
+					currAward=awardUsable;
+					currReturnCapital=returnCapitalUsable;
+					currInterest=BigDecimalUtil.sub(validAccount, currMoney);
+				}
+			}
+		}
+		logger.info("扣除管理费rechargeMoney："+currRecharge);
+		logger.info("扣除管理费awardMoney："+currAward);
+		logger.info("扣除管理费interestMoney："+currInterest);
+		logger.info("扣除管理费returnCapitalMoney："+currReturnCapital);
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("rechargeMoney", BigDecimalUtil.decimal(currRecharge, 2));
+		map.put("awardMoney", BigDecimalUtil.decimal(currAward, 2));
+		map.put("interestMoney", BigDecimalUtil.decimal(currInterest, 2));
+		map.put("returnCapitalMoney", BigDecimalUtil.decimal(currReturnCapital, 2));
+		logger.info("扣除管理费rechargeMoney："+map.toString());
+		//JSDBET-838 wcw 2015-3-20 start
+		if(type==1){
+			map.put("creditAssignment", ca);
+			Global.setTransfer("borrow", ca.getBorrow());
+		}
+		if(type==2){
+			map.put("creditAssignment", cl.getCreditAssignment());
+			Global.setTransfer("borrow", cl.getCreditAssignment().getBorrow());
+		}
+		//JSDBET-838 wcw 2015-3-20 end
+		Global.setTransfer("money", account);
+		AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("creditSellerPayFeeExecuter");
+		if(type==1){
+			borrowTenderExecuter.execute(map, ca.getUser(),new User(Constant.ADMIN_ID));
+		}
+		if(type==2){
+			borrowTenderExecuter.execute(map, cl.getBuyUser(),new User(Constant.ADMIN_ID));
+		}
+	}
+	/**
+	 * 处理债权转让 转出者（即投即生息）
+	 * @param oldCollection
+	 * @param type
+	 * @param creditAssignment
+	 * @param creditLog
+	 */
+	public void handleCreditSellerSuccess(CreditLog creditLog){
+
+	}
+	
+	public BorrowCollection fillCollection(EachPlan e, CreditLog t,CreditAssignment creditAssignment) {
+		BorrowCollection c = new BorrowCollection();
+		c.setBorrow(creditAssignment.getBorrow());
+		c.setTender(null);
+		c.setInterest(e.getInterest());
+		c.setCapital(e.getCapital());
+		c.setRepaymentAccount(e.getTotal());
+		c.setAddTime(new Date());
+		c.setAddIp(Global.getIP());
+		c.setStatus(0);
+		c.setRepaymentYesAccount(0.00);
+		c.setLateDays(0);
+		c.setLateInterest(0.00);
+		c.setUser(t.getBuyUser());
+		c.setManageFee(BigDecimalUtil.decimal(BigDecimalUtil.mul(c.getInterest(), Global.getDouble("borrow_fee")),2));
+		/*if(t.getCreditlog()!=null){
+			c.setType(type);
+		}*/
+		//JSDBET-835 wcw 2015-3-20 start
+		c.setRepayCapitalOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA__REPAY));
+		c.setRepayInterestFeeOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA__REPAY));
+		c.setRepayInterestOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA__REPAY));
+		c.setRepayLateInterestOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA__REPAY));
+		c.setRepayTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_SALE));
+		//JSDBET-835 wcw 2015-3-20 end
+		return c;
+	}
+}

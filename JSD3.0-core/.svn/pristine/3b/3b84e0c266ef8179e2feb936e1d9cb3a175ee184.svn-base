@@ -1,0 +1,183 @@
+package com.ddtkj.p2psys.goods.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * @描述：分期宝商品实体
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年1月29日
+ */
+@Entity
+@Table(name = "t_jsd_goods")
+public class DdtkjGoods implements Serializable{
+
+
+	private static final long serialVersionUID = -8656384737605357790L;
+	
+    public static final String SELL_OUT = "out"; //已卖出(用户status字段)
+    public static final String SELL_IN = "in";//未卖出
+    
+    public static final int WAIT_SHELVES = 10; //10待上架 (用于type字段)
+    public static final byte UP_SHELVES = 11;// 11上架 
+    public static final byte DOWN_SHELVES = 12;//12下架
+	
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;//商品自增id
+	@ManyToOne
+    @JoinColumn(name = "category_id")
+	private DdtkjGoodsCategory goodsCategory;
+	
+
+	//用户编号（商户编号） 
+	@ManyToOne
+	@JoinColumn(name = "user_id")
+	private User user;
+	
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	
+	private String name;//商品名称
+	private String goodsNo;//商品编码
+	private int type;//商品类型  类型：10待上架  11上架 12下架
+	private int stock;	//商品库存
+	private String detail;//商品详情
+	private String description;//商品描述
+	private double cost;//商品价格
+	private String size;//商品屏幕尺寸
+	private String color;//商品颜色
+	private String vesion;//商品版本
+	private double goodsApr;//商品利率
+	private String remark;//商品备注
+	private Date addTime;//添加时间
+	private String addUser;//添加人(用户名)
+	private Date updateTime;//修改时间
+	private String updateUser;//修改人(用户名)
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public DdtkjGoodsCategory getGoodsCategory() {
+		return goodsCategory;
+	}
+	public void setGoodsCategory(DdtkjGoodsCategory goodsCategory) {
+		this.goodsCategory = goodsCategory;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getGoodsNo() {
+		return goodsNo;
+	}
+	public void setGoodsNo(String goodsNo) {
+		this.goodsNo = goodsNo;
+	}
+	public int getType() {
+		return type;
+	}
+	public void setType(int type) {
+		this.type = type;
+	}
+	public int getStock() {
+		return stock;
+	}
+	public void setStock(int stock) {
+		this.stock = stock;
+	}
+	public String getDetail() {
+		return detail;
+	}
+	public void setDetail(String detail) {
+		this.detail = detail;
+	}
+	public String getDescription() {
+		return description;
+	}
+	public void setDescription(String description) {
+		this.description = description;
+	}
+	public double getCost() {
+		return cost;
+	}
+	public void setCost(double cost) {
+		this.cost = cost;
+	}
+	public String getSize() {
+		return size;
+	}
+	public void setSize(String size) {
+		this.size = size;
+	}
+	public String getColor() {
+		return color;
+	}
+	public void setColor(String color) {
+		this.color = color;
+	}
+	public String getVesion() {
+		return vesion;
+	}
+	public void setVesion(String vesion) {
+		this.vesion = vesion;
+	}
+
+	public double getGoodsApr() {
+		return goodsApr;
+	}
+	public void setGoodsApr(double goodsApr) {
+		this.goodsApr = goodsApr;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddUser() {
+		return addUser;
+	}
+	public void setAddUser(String addUser) {
+		this.addUser = addUser;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getUpdateUser() {
+		return updateUser;
+	}
+	public void setUpdateUser(String updateUser) {
+		this.updateUser = updateUser;
+	}
+	
+}

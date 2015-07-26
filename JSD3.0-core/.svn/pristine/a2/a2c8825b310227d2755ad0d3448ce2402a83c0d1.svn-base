@@ -1,0 +1,128 @@
+package com.ddtkj.p2psys.core.tool;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
+import org.apache.log4j.Logger;
+
+import com.ddtkj.common.util.ID5Decode;
+import com.ddtkj.common.util.QueryValidatorServices;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.user.domain.User;
+import com.itextpdf.text.pdf.codec.Base64;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.p2psys.core.rule.ID5RuleCheck;
+
+/**
+ * v1.6.7.2 中诚信源 zza
+ * 中诚信源实名认证
+ * 
+ * @author zza
+ * @version 1.0
+ * @since 2014年6月20日
+ */
+public class ZcxyId5Helper {
+	private static final Logger logger = Logger.getLogger(ZcxyId5Helper.class);
+	public static List<Map<String, Object>> ID5Result(User user) {
+		List<Map<String, Object>> list =null;
+		try {
+			ID5RuleCheck rc=(ID5RuleCheck) GlobalCache.getRuleCheck("ID5");
+			String userName="";
+			String password="";
+			if(rc==null){
+				JaxWsProxyFactoryBean svr = new JaxWsProxyFactoryBean();
+				svr.setServiceClass(QueryValidatorServices.class);
+				svr.setAddress("http://211.147.7.47/zcxy/services/QueryValidatorServices?wsdl"); // 这个地址有可能调整，请根据实际需要配置
+				QueryValidatorServices service = (QueryValidatorServices) svr.create();
+				userName = "sxxjsdzsw";//用户名
+				password = "wzm8y9a7gc";//密码
+				System.setProperty("javax.net.ssl.trustStore", "");
+				String resultXML = "";
+				String datasource = "1A020202";//
+				//单条
+				String param = user.getRealName() + "," + user.getCardNO(); //输入参数 
+				list = new ArrayList<Map<String,Object>>();
+			
+				// 数据类型1A020202=身份证信息查询
+				String encodeUserName = ID5Decode.encode("12345678", userName.getBytes("UTF-8")).toString();
+				String encodePassword = ID5Decode.encode("12345678", password.getBytes("UTF-8")).toString();
+				String encodeDatasource = ID5Decode.encode("12345678", datasource.getBytes("UTF-8")).toString();
+				String encodeParam = ID5Decode.encode("12345678", param.getBytes("GBK")).toString();
+				resultXML = service.querySingle(encodeUserName, encodePassword, encodeDatasource, encodeParam);
+				String result = new String(ID5Decode.decode("12345678", Base64.decode(resultXML)), "GBK");
+					list = ID5Decode.parse(result);
+				
+			}else{
+				int status=rc.getZcxy().getStatus();
+				if(status==1){
+					JaxWsProxyFactoryBean svr = new JaxWsProxyFactoryBean();
+					svr.setServiceClass(QueryValidatorServices.class);
+					String url = rc.getZcxy().getUrl();
+					svr.setAddress(url); // 这个地址有可能调整，请根据实际需要配置
+					QueryValidatorServices service = (QueryValidatorServices) svr.create();
+					userName = rc.getZcxy().getUserName();// 用户名（系统分配）
+					password =  rc.getZcxy().getPassword();// 密码（系统分配）
+					System.setProperty("javax.net.ssl.trustStore", "");
+					String resultXML = "";
+					String datasource = "1A020202";//
+					//单条
+					String param = user.getRealName() + "," + user.getCardNO(); //输入参数 
+					list = new ArrayList<Map<String,Object>>();
+				
+					// 数据类型1A020202=身份证信息查询
+					String encodeUserName = ID5Decode.encode("12345678", userName.getBytes("UTF-8")).toString();
+					String encodePassword = ID5Decode.encode("12345678", password.getBytes("UTF-8")).toString();
+					String encodeDatasource = ID5Decode.encode("12345678", datasource.getBytes("UTF-8")).toString();
+					String encodeParam = ID5Decode.encode("12345678", param.getBytes("GBK")).toString();
+					resultXML = service.querySingle(encodeUserName, encodePassword, encodeDatasource, encodeParam);
+					String result = new String(ID5Decode.decode("12345678", Base64.decode(resultXML)), "GBK");
+						list = ID5Decode.parse(result);
+					
+				}else{
+					throw new BussinessException("ID5规则未启用！",1);
+				}
+			}
+		} catch (Exception e) {
+			logger.info("ID5实名认证异常====="+e.getMessage());
+			throw new BussinessException("数据异常",1);
+		}
+		return list;
+	}
+	public static List<Map<String, Object>> ID5ResultTwo(User user) {
+		List<Map<String, Object>> list =null;
+		try {
+				JaxWsProxyFactoryBean svr = new JaxWsProxyFactoryBean();
+				svr.setServiceClass(QueryValidatorServices.class);
+				String url = "http://211.147.7.47/zcxy/services/QueryValidatorServices?wsdl";
+				svr.setAddress(url); // 这个地址有可能调整，请根据实际需要配置
+				QueryValidatorServices service = (QueryValidatorServices) svr.create();
+				String userName ="sxxjsdzsw";// 用户名（系统分配）
+				String password =  "wzm8y9a7gc";// 密码（系统分配）
+				System.setProperty("javax.net.ssl.trustStore", "");
+				String resultXML = "";
+				String datasource = "1A020202";//
+				//单条
+				String param = "蒋潘" + "," + "450881198902211176"; //输入参数 
+				list = new ArrayList<Map<String,Object>>();
+			
+				// 数据类型1A020202=身份证信息查询
+				String encodeUserName = ID5Decode.encode("12345678", userName.getBytes("UTF-8")).toString();
+				String encodePassword = ID5Decode.encode("12345678", password.getBytes("UTF-8")).toString();
+				String encodeDatasource = ID5Decode.encode("12345678", datasource.getBytes("UTF-8")).toString();
+				String encodeParam = ID5Decode.encode("12345678", param.getBytes("GBK")).toString();
+				resultXML = service.querySingle(encodeUserName, encodePassword, encodeDatasource, encodeParam);
+				String result = new String(ID5Decode.decode("12345678", Base64.decode(resultXML)), "GBK");
+					list = ID5Decode.parse(result);
+				
+		} catch (Exception e) {
+			throw new BussinessException(e.getMessage(),1);
+		}
+		return list;
+	}
+	public static void main(String[] args) {
+		List<Map<String, Object>> list =ID5Result(null);
+		System.out.println(list);
+	}
+}

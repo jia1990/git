@@ -1,0 +1,97 @@
+package com.ddtkj.p2psys.phone.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.phone.dao.PhoneActivityDao;
+import com.ddtkj.p2psys.phone.domain.PhoneActivity;
+import com.ddtkj.p2psys.phone.model.PhoneActivityModel;
+import com.ddtkj.p2psys.phone.service.PhoneActivityService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.p2psys.core.Global;
+
+
+@Service("PhoneActivityService")
+public class PhoneActivityServiceImpl implements PhoneActivityService {
+
+	@Resource
+	private PhoneActivityDao phoneActivityDao;
+
+	@Override
+	public List<PhoneActivityModel> listBySize(String type, int size) {
+		return phoneActivityDao.listBySize(type, size);
+	}
+
+	@Override
+	public PageDataList<PhoneActivityModel> list(String type, int page) {
+		return phoneActivityDao.list(type, page);
+	}
+	
+	@Override
+	public PageDataList<PhoneActivityModel> list(PhoneActivityModel model) {
+	    QueryParam param = QueryParam.getInstance();
+        param.addParam("type", model.getType());
+        param.addParam("status", 1);
+        param.addOrder(OrderType.DESC, "isTop");
+        param.addOrder(OrderType.DESC, "isRecommend");
+        param.addOrder(OrderType.ASC, "sort");
+        param.addOrder(OrderType.DESC, "id");
+        param.addPage(model.getPage(), model.getSize());
+        PageDataList<PhoneActivity> pageDataList = phoneActivityDao.findPageList(param);
+        PageDataList<PhoneActivityModel> pageDataList_ = new PageDataList<PhoneActivityModel>();
+        List<PhoneActivityModel> list = new ArrayList<PhoneActivityModel>();
+        List<PhoneActivity> Activitys =  pageDataList.getList();
+        pageDataList_.setPage(pageDataList.getPage());
+        if (Activitys.size() > 0) {
+            for (int i = 0; i < Activitys.size(); i++) {
+            	PhoneActivity an = Activitys.get(i);
+            	PhoneActivityModel anm = PhoneActivityModel.instance(an);
+                anm.setPicPath(Global.getValue("adminurl") + an.getPicPath());
+                
+                list.add(anm);
+            }
+        }
+        pageDataList_.setList(list);
+        return pageDataList_;
+	}
+
+	@Override
+	public PageDataList<PhoneActivityModel> activityList(PhoneActivityModel model, int pageNumber, int pageSize) {
+		return phoneActivityDao.activityList(model, pageNumber, pageSize);
+	}
+	
+	@Override
+	public PageDataList<PhoneActivityModel> phoneActivityList(PhoneActivityModel model, int pageNumber, int pageSize) {
+		return phoneActivityDao.phoneActivityList(model, pageNumber, pageSize);
+	}
+	
+	@Override
+	public void activityAdd(PhoneActivity activity) {
+		phoneActivityDao.save(activity);
+	}
+
+	@Override
+	public PhoneActivity find(long id) {
+		return phoneActivityDao.find(id);
+	}
+
+	@Override
+	public void activityEdit(PhoneActivity phoneActivity) {
+		phoneActivityDao.activityEdit(phoneActivity);
+	}
+
+	@Override
+	public void update(PhoneActivity phoneActivity) {
+		
+		phoneActivityDao.merge(phoneActivity);
+	}
+
+	
+
+}

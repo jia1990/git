@@ -1,0 +1,30 @@
+package com.ddtkj.p2psys.member.dao.impl;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.member.dao.MemberVipDao;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+@Repository("memberVipDao")
+public class MemberVipDaoImpl extends BaseDaoImpl<MemberVip> implements MemberVipDao{
+
+
+	@Override
+	public MemberVip findMemberVip(long userId) {
+		String sql = " FROM MemberVip where user.userId = :userId and usable = 'Y' ";
+		Query query = em.createQuery(sql).setParameter("userId", userId);
+		List<MemberVip> list = query.getResultList();
+		if (list.size() > 0) {
+			return list.get(0);
+		} else {
+			return null;
+		}
+	}
+	
+
+}

@@ -1,0 +1,83 @@
+package com.rongdu.p2psys.account.model.payment;
+
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.rongdu.p2psys.account.constant.RechargeConstant;
+import com.rongdu.p2psys.account.domain.Pay;
+import com.rongdu.p2psys.account.service.PayService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+public class BasePayment implements Payment {
+
+	protected Pay pay;
+	protected AccountRecharge recharge;
+	protected String payname;
+	protected String orderPrefix;
+	protected String sign;
+	protected String encryptSign;
+	protected String tranNo;
+	protected String localReturnSign;
+	protected String remoteReturnSign;
+
+	@Override
+	public String payname() {
+		return payname;
+	}
+
+	@Override
+	public String orderPrefix() {
+		return null;
+	}
+
+	@Override
+	public void sign() {
+
+	}
+
+	@Override
+	public String encryptSign() {
+		return null;
+	}
+
+	@Override
+	public String localReturnSign() {
+		return null;
+	}
+
+	@Override
+	public String encryptLocalReturnSign() {
+		return null;
+	}
+
+	@Override
+	public String remoteReturnSin() {
+		return null;
+	}
+
+	@Override
+	public Object protype() {
+		return null;
+	}
+
+	@Override
+	public String tranNo() {
+		return null;
+	}
+
+	@Override
+	public String encrypt(String sign) {
+		return null;
+	}
+
+	@Override
+	public boolean reponseSuccess() {
+		return false;
+	}
+
+	@Override
+	public void init(AccountRecharge recharge, long userId) {
+		this.recharge = recharge;
+		PayService payService = (PayService) BeanUtil.getBean("payService");
+		this.pay = payService.findByNid(RechargeConstant.GOPAY);
+	}
+
+}

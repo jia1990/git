@@ -1,0 +1,96 @@
+package com.ddtkj.p2psys.article.model;
+
+import java.util.Date;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.article.domain.ArticlePic;
+
+/**
+ * 文章图片Model
+ * 
+ * @author sxy
+ * @version 3.0
+ * @since 2015年5月21日 孙晓勇    JSDP131
+ */
+public class ArticlePicModel extends ArticlePic {
+
+	/**
+	 * 序列号
+	 */
+	private static final long serialVersionUID = 1L;
+
+	/** 当前页码 */
+	private int page;
+	/** 上一篇ID */
+	private long prevId;
+	/** 下一篇ID*/
+	private long nextId;
+	
+	private String title;
+	private Date addTime;
+
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public long getPrevId() {
+		return prevId;
+	}
+
+	public void setPrevId(long prevId) {
+		this.prevId = prevId;
+	}
+
+	public long getNextId() {
+		return nextId;
+	}
+
+	public void setNextId(long nextId) {
+		this.nextId = nextId;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	/**
+	 * 
+	 * @param article
+	 * @return
+	 */
+	public static ArticlePicModel instance(ArticlePic articlePic) {
+		ArticlePicModel articlePicModel = new ArticlePicModel();
+		BeanUtils.copyProperties(articlePic, articlePicModel);
+		return articlePicModel;
+	}
+
+	public ArticlePic prototype() {
+		ArticlePic articlePic = new ArticlePic();
+		BeanUtils.copyProperties(this, articlePic);
+		return articlePic;
+	}
+	
+	
+	
+	
+	
+	
+}

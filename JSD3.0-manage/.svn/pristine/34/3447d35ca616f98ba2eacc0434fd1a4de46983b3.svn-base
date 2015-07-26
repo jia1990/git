@@ -1,0 +1,681 @@
+package com.rongdu.manage.action.account;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.ddtkj.p2psys.fillorder.service.FillOrderLogService;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.transfer.service.AccountTransferService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.domain.OperationLog;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.OperationLogService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 线下充值管理
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-4-22
+ */
+public class ManageAccountRechargeAction extends BaseAction implements ModelDriven<AccountRechargeModel> {
+
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	@Resource
+	private DictService dictService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private VerifyLogService verifyLogService;
+	@Resource
+	private OperationLogService operationLogService;
+	@Resource
+	private AccountTransferService accountTransferService;
+	@Resource
+	private FillOrderLogService fillOrderLogService;
+	
+	private Map<String, Object> data;
+	
+	
+	private AccountRechargeModel model = new AccountRechargeModel();
+	private Map<String, Object> map = new HashMap<String, Object>();
+
+	/**
+	 * 充值记录列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/accountRechargeManager")
+	public String accountRechargeManager() throws Exception {
+		return "accountRechargeManager";
+	}
+
+	/**
+	 * 充值记录
+	 * 
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unused")
+	@Action("/modules/account/accountRecharge/accountRechargeList")
+	public void accountRechargeList() throws Exception {
+		
+		String userType = paramString("userType");
+		if(null != userType && !"".equals(userType)){
+			model.setUserType(userType);
+		}
+		//JSDP-175 xingjia 20150610 start
+		model.setRechargeType("00");
+		//JSDP-175 xingjia 20150610 end
+		List<AccountRechargeModel> rechargeTotal = new ArrayList<AccountRechargeModel>();
+		PageDataList<AccountRechargeModel> pageList = new PageDataList<AccountRechargeModel>();
+		if(StringUtil.isNotBlank(model.getUserName()) || StringUtil.isNotBlank(model.getUserType()) ||StringUtil.isNotBlank(model.getRealName())
+				// JSDP-208 sxy 20150703 start
+				|| StringUtil.isNotBlank(model.getStartTime()) ||StringUtil.isNotBlank(model.getTradeStatus()) ||StringUtil.isNotBlank(model.getRechargeWay())
+				||StringUtil.isNotBlank(model.getTradeNo())){
+			
+			pageList = accountRechargeService.list(model);
+			rechargeTotal = accountRechargeService.rechargeTotal(model); 
+			
+			int totalPage = pageList.getPage().getTotal();
+			map.put("total", totalPage);
+			map.put("rows", pageList.getList());
+		}
+		
+		//获取汇总数据
+		List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+		DecimalFormat df =new DecimalFormat("#0.00");
+		if(null != rechargeTotal && rechargeTotal.size()!=0){
+    		Map<String,String> footerMap = new HashMap<String,String>();
+    		for(int i=0;i<rechargeTotal.size();i++){
+    			//JSDP-175 xingjia 20150610 start
+    			footerMap.put("userName", "补单成功金额："+df.format(rechargeTotal.get(i).getSupplyRechargeSucSum()));
+    			//JSDP-175 xingjia 20150610 end
+    			footerMap.put("realName", "充值成功金额："+df.format(rechargeTotal.get(i).getRechargeSucSum()));
+    			footerMap.put("inAccountamountStr", "充值中金额："+df.format(rechargeTotal.get(i).getRechargeIngSum()));
+    			footerMap.put("accountFeeStr", "充值失败金额："+df.format(rechargeTotal.get(i).getRechargeFailSum()));
+    			footerMap.put("userType", "充值总金额");
+    			
+    		}
+    		
+    		footerList.add(footerMap);
+		}
+		
+		map.put("footer", footerList);
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	
+	
+	/**
+	 * 充值转账查询页面
+	 */
+	@Action("/modules/account/accountRecharge/transferRechargeManager")
+	public String transferRechargeManager() throws Exception{
+		return "transferRechargeManager";
+	}
+
+	/**
+	 * 充值转账查询
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/transferRechargeList")
+	public void transferRechargeList() throws Exception{
+		String userType = paramString("userType");
+		if(null != userType && !"".equals(userType)){
+			model.setUserType(userType);
+		}
+		model.setRechargeType("1");
+		//String rechargeTotal = null;
+		PageDataList<AccountRechargeModel> pageList = new PageDataList<AccountRechargeModel>();
+		if(StringUtil.isNotBlank(model.getUserName()) || StringUtil.isNotBlank(model.getUserType()) ||StringUtil.isNotBlank(model.getRealName())
+				|| StringUtil.isNotBlank(model.getStartTime()) ||StringUtil.isNotBlank(model.getTradeStatus())
+				||StringUtil.isNotBlank(model.getTradeNo())){
+			
+			pageList = accountRechargeService.list(model);
+			//rechargeTotal = accountRechargeService.rechargeTotal(model); 
+			
+			int totalPage = pageList.getPage().getTotal();
+			map.put("total", totalPage);
+			map.put("rows", pageList.getList());
+		}
+		
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	
+	//JSDP-171 xingjia 20150609 start
+	/**
+	 * 新版晋商贷储值卡充值
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/transferRechargeManagerSec")
+	public String transferRechargeSecManager() throws Exception{
+		return "transferRechargeSecManager";
+	}
+	
+	/**
+	 * 用于晋商贷体验卡查询充值  
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/transferRechargeSecList")
+	public void transferRechargeSecList() throws Exception{
+		String userType = paramString("userType");
+		if(null != userType && !"".equals(userType)){
+			model.setUserType(userType);
+		}
+		model.setRechargeType("01");
+		PageDataList<AccountRechargeModel> pageList = new PageDataList<AccountRechargeModel>();
+		if(StringUtil.isNotBlank(model.getUserName()) || StringUtil.isNotBlank(model.getUserType()) ||StringUtil.isNotBlank(model.getRealName())
+				|| StringUtil.isNotBlank(model.getStartTime()) ||StringUtil.isNotBlank(model.getTradeStatus())
+				||StringUtil.isNotBlank(model.getTradeNo())){
+			
+			pageList = accountRechargeService.petCardRechargeList(model);
+			
+			int totalPage = pageList.getPage().getTotal();
+			map.put("total", totalPage);
+			map.put("rows", pageList.getList());
+		}
+		
+		printJson(getStringOfJpaObj(map));
+	}
+	//JSDP-171 xingjia 20150609 end
+	/**
+	 * 添加线下充值页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/accountRechargeAddPage")
+	public String accountRechargeAddPage() throws Exception {
+		saveToken("rechargeToken");
+		List<Dict> dictList = dictService.list("offline_recharge_type");
+		request.setAttribute("dictList", dictList);
+		return "accountRechargeAddPage";
+	}
+
+	/**
+	 * 添加线下充值
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/accountRechargeAdd")
+	public void accountRechargeAdd() throws Exception {
+//		model.validAccountRecharge();
+//		checkToken("rechargeToken");
+//		User user = userService.getUserByUserName(model.getUserName());
+//		if (user == null) {
+//			printResult("该用户名不存在！", false);
+//		} else {
+//			AccountRecharge recharge = new AccountRecharge(user, model.getMoney(),
+//					"back_recharge", model.getType(), model.getRemark());
+//			recharge = accountRechargeService.add(recharge);
+//			VerifyLog verifyLog = new VerifyLog("accountRecharge", recharge.getId());
+//			verifyLog.setRemark(getOperator().getUserName() + "（" + this.getRequestIp() + "）" + "的操作员申请后台线下充值"
+//					+ user.getUserName() + " " + model.getMoney() + "元成功，等待审核");
+//			verifyLogService.save(verifyLog);
+//			printResult("充值成功，等待审核！", true);
+//		}
+	}
+
+	/**
+	 * 充值管理-审核操作页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/accountRechargeEditPage")
+	public String accountRechargeEditPage() throws Exception {
+		AccountRecharge accountRecharge = accountRechargeService.findRechargeByOrderTradeNo(model.getTradeNo());
+		saveToken("verifyRechargeToken");
+		request.setAttribute("accountRecharge", accountRecharge);
+		request.setAttribute("user", accountRecharge.getUser());
+		return "accountRechargeEditPage";
+	}
+
+	/**
+	 * 充值管理-审核操作
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/accountRechargeEdit")
+	public void accountRechargeEdit() throws Exception {
+		
+		model.validVerifyAccountRecharge();
+		checkToken("verifyRechargeToken");
+		accountRechargeService.verifyAccountRecharge(model, getOperator());
+		printResult("操作成功！", true);
+	}
+
+	public AccountRechargeModel getModel() {
+		return model;
+	}
+	
+	/**
+	 * 导出报表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/exportExcelRecharge")
+	public void exportExcelRecharge() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("status");
+//		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setRows(99999999);
+		model.setTradeStatus(status);
+		// 记录取得
+		
+		model.setRechargeType("00");
+//		List<AccountRechargeModel> list = accountRechargeService.list(model).getList();
+		List newList = accountRechargeService.excelRechargeList(model);
+
+//		for(int i=0;i<list.size();i++){
+//			AccountRechargeModel recharge = list.get(i);
+//			
+//			
+//			if("10".equals(recharge.getUserType())){
+//				recharge.setUserType("投资人");
+//			}else if("11".equals(recharge.getUserType())){
+//				recharge.setUserType("借款人");
+//			}else if("12".equals(recharge.getUserType())){
+//				recharge.setUserType("担保公司");
+//			}else if("13".equals(recharge.getUserType())){
+//				recharge.setUserType("商户");
+//			}else{
+//				recharge.setUserType("其他");
+//			}
+//
+//			
+//			newList.add(recharge);
+//		}
+		String title = "充值Excel表";
+		
+		String[] hearders = new String[] {"流水号","用户类型","用户名","真实姓名","到账金额","手续费金额","充值时间","状态" };// 表头数组
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountRechargeModel> tdList = new ArrayList<AccountRechargeModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				AccountRechargeModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	}	
+	
+	/**
+	 * 取消充值
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/cancelRecharge")
+	public void cancelRecharge() throws Exception {
+//		AccountRecharge ar=accountRechargeService.find(model.getId());
+//		accountRechargeService.cancelCash(ar);
+//		OperationLog log = new OperationLog(ar.getUser(), getOperator(), "cancel_cash");
+//		log.setOperationResult("用户名为" + getOperator().getUserName() + "（" + Global.getIP() + "）的操作员对用户为"
+//				+ar.getUser().getUserName()+"的充值ID为"+ar.getId()+"）进行取消充值操作");
+//		operationLogService.save(log);
+//		printResult("取消充值操作成功！", true);
+	}
+	/**
+	 * 设置充值成功
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/verifyRecharge")
+	public void verifyRecharge() throws Exception {
+		AccountRecharge ar=accountRechargeService.findRechargeByOrderTradeNo(model.getTradeNo());
+		RechargeModel reModel = new RechargeModel(); // 对通用javabean进行参数封装
+		reModel.setOrderAmount(ar.getInAccountAmount()+"");
+		reModel.setOrderId(model.getTradeNo());
+		reModel.setResultMsg("成功");
+		reModel.setResult(AccountRecharge.RECHARGE_SUCCESS_STATUS);
+		reModel.setSerialNo(model.getTradeNo());
+		accountRechargeService.newRecharge(reModel,AccountRecharge.RECHARGE_SUCCESS_STATUS,null);
+		OperationLog log = new OperationLog(ar.getUser(), getOperator(), "cancel_cash");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（" + Global.getIP() + "）的操作员对用户为"
+				+ar.getUser().getUserName()+"的充值流水号ID为"+ar.getTradeNo()+"）进行充值确认操作");
+		operationLogService.save(log);
+		printResult("确认充值成功操作成功！", true);
+	}
+	/**
+	 * 充值与第三方比对
+	 * @return
+	 */
+	@Action("/modules/account/accountRecharge/rechargeCompareManage")
+	public String rechargeCompareManage()throws Exception{
+		String tradeNo =paramString("id");
+		if(StringUtil.isNotBlank(tradeNo)){
+			Map<String, Object> map=accountRechargeService.repairRecharge(tradeNo);
+			AccountRecharge recharge=(AccountRecharge) map.get("recharge");
+			YmdQueryReturn ymdQueryReturn=(YmdQueryReturn) map.get("ymdQueryReturn");
+			YmdQueryReturnDetails ymdQueryReturnDetails=(YmdQueryReturnDetails) map.get("ymdQueryReturnDetails");
+			
+			// BUG JSDP32 2015年4月17日   孙晓勇  start
+			// 补单记录
+			FillOrderLog fillOrderLog = fillOrderLogService.findByType(recharge.getTradeNo(), FillOrderLog.ORDER_RECHARGE);
+			
+			if(fillOrderLog!=null){
+				request.setAttribute("fillOrderLog", fillOrderLog);
+			}
+			// BUG JSDP32 2015年4月17日   孙晓勇  end
+			
+			
+			if(recharge!=null){
+				request.setAttribute("recharge", recharge);
+			}
+			if(ymdQueryReturn!=null){
+				request.setAttribute("ymdQueryReturn", ymdQueryReturn);
+			}
+			if(ymdQueryReturnDetails!=null){
+				request.setAttribute("ymdQueryReturnDetails", ymdQueryReturnDetails);
+			}
+			saveToken("repairRecharge");
+		}
+		return "rechargeCompareManage";
+	}
+	/**
+	 * 充值补单
+	 */
+	@Action("/modules/account/accountRecharge/repairRecharge")
+	public void repairRecharge()throws Exception{
+		Map<String, Object> data = new HashMap<String, Object>();
+		String outTradeNo=paramString("outTradeNo");
+		String ymdOutTradeNo=paramString("ymdOutTradeNo");
+		String resultCode=paramString("resultCode");
+		String ymdAmount=paramString("ymdAmount");
+		String tradeStatus=paramString("tradeStatus");
+		String ymdTradeStatus=paramString("ymdTradeStatus");
+		
+		
+		// 补单备注（暂无,若需要，则页面传参即可）
+		String fillOrderRemark = paramString("fillOrderRemark");
+		String remark = null;
+		if(StringUtil.isNotBlank(fillOrderRemark) || !"".equals(fillOrderRemark)){
+			remark = fillOrderRemark;
+		}else{
+			remark = null;
+		}
+		
+		
+	    checkToken("repairRecharge");
+	    if(outTradeNo.equals(ymdOutTradeNo)&&outTradeNo!=null&ymdOutTradeNo!=null){
+    		//本地与第三方订单号一致
+			if("00".equals(resultCode)&&"00".equals(ymdTradeStatus)&&"55".equals(tradeStatus)){
+				//返回状态为成功   一麻袋交易状态为成功  且本地还在处理中才符合补单要求
+				RechargeModel rem=new RechargeModel();
+				rem.setOrderId(outTradeNo);
+				rem.setOrderAmount(ymdAmount);
+				rem.setFeeAmt(0);
+
+				// BUG JSDP32 2015年4月17日   孙晓勇  start
+				AccountRecharge existRecharge = accountRechargeService.findRechargeByTradeNo(rem.getOrderId());
+				
+				FillOrderLog fillOrderLog = new FillOrderLog();
+				
+				// 充值订单号
+				fillOrderLog.setFid(existRecharge.getTradeNo());
+				// 订单类型：充值
+				fillOrderLog.setType(FillOrderLog.ORDER_RECHARGE);
+				// 1：成功
+				fillOrderLog.setResult(1);
+				// 补单人
+				fillOrderLog.setOptUser((int)getOperator().getId());
+				// 补单时间
+				fillOrderLog.setOptTime(new Date());
+				// 补单备注
+				fillOrderLog.setRemark(remark);
+				// 补单IP
+				fillOrderLog.setIp(Global.getIP());
+				
+				// BUG JSDP32 2015年4月17日   孙晓勇  end
+				
+				accountRechargeService.newRecharge(rem,AccountRecharge.RECHARGE_REPAIR_SUCCESS_STATUS, fillOrderLog);
+				
+				
+				data.put("result", true);
+				data.put("msg", "补单成功");
+			}else{
+				data.put("result", false);
+				data.put("msg", "该充值记录不符合补单要求");
+			}
+		}
+    	printJson(getStringOfJpaObj(data));
+	}
+	
+
+	/**
+	 * 明细——充值金额明细页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeMoneyStatisticsListPage")
+	public String registerStatisticsListPage() throws Exception {
+	
+		String timeType = paramString("timeType");
+		String rechargeType = paramString("rechargeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			request.setAttribute("startTime", startTime);
+			request.setAttribute("endTime", endTime);
+		}
+		
+		if(StringUtil.isNotBlank(rechargeType)){
+			request.setAttribute("rechargeType", rechargeType);
+		}
+		
+		request.setAttribute("timeType", timeType);
+	
+		return "rechargeMoneyStatisticsListPage";
+	}
+	
+	
+	// JSDPBUG-99 20150505  sxy
+	/**
+	 * 明细——充值金额明细列表
+	 * 
+	 * @author sxy   2015年4月24日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/dataStatistics/rechargeMoneyStatisticsList")
+	public void registerStatisticsList() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			//model.setStartTime(fmt.parse(startTime));
+			//model.setEndTime(fmt.parse(endTime));
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+			
+		}
+		
+		// 充值方式
+		String rechargeType = paramString("rechargeType");
+		// 充值状态
+		String tradeStatus = paramString("tradeStatus");
+		
+		if(StringUtil.isNotBlank(rechargeType)){
+			model.setRechargeType(rechargeType);
+		}
+		
+		if(StringUtil.isNotBlank(tradeStatus)){
+			model.setRechargeType(tradeStatus);
+		}else{
+			model.setTradeStatus("00");
+		}
+		
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		
+		
+		map.put("model", model);
+	
+		model.setUserType("10");
+		// 原model查询
+		//PageDataList<AccountRechargeModel> pagaDataList = accountRechargeService.rechargeMoneyStatisticsList(model, pageNumber, pageSize);
+		// 新SQL查询
+		PageDataList<AccountRecharge> pagaDataList = accountRechargeService.rechargeMoneyStatisticsListForSQL(model, pageNumber, pageSize);
+		
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	// JSDPBUG-99 20150505  sxy
+	/**
+	 * 充值统计导出报表(暂不使用)
+	 * 
+	 * @throws Exception
+	 */
+	/*@Action("/modules/dataStatistics/exportExcelRechargeStatistics")
+	public void exportExcelRechargeStatistics() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("status");
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		// 充值方式
+		String rechargeType = paramString("rechargeType");
+		// 充值状态
+		String tradeStatus = paramString("tradeStatus");
+
+		if (StringUtil.isNotBlank(rechargeType)) {
+			model.setRechargeType(rechargeType);
+		}
+
+		if (StringUtil.isNotBlank(tradeStatus)) {
+			model.setRechargeType(tradeStatus);
+		} else {
+			model.setTradeStatus("00");
+		}
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			//model.setStartTime(fmt.parse(startTime));
+			//model.setEndTime(fmt.parse(endTime));
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+			
+		}
+		
+		
+		// 第一页开始
+		model.setPage(1);
+		// 最多出99999999条记录
+		model.setRows(99999999);
+		// 记录取得
+		
+		PageDataList<AccountRechargeModel> pagaDataList = accountRechargeService.rechargeMoneyStatisticsList(model,1,99999999);
+		List<AccountRechargeModel> list = pagaDataList.getList();
+		List<AccountRechargeModel> newList = new ArrayList<AccountRechargeModel>();
+		
+		
+		for(int i=0;i<list.size();i++){
+			AccountRechargeModel recharge = list.get(i);
+			
+			
+			if("10".equals(recharge.getUserType())){
+				recharge.setUserType("投资人");
+			}else if("11".equals(recharge.getUserType())){
+				recharge.setUserType("借款人");
+			}else if("12".equals(recharge.getUserType())){
+				recharge.setUserType("担保公司");
+			}else if("13".equals(recharge.getUserType())){
+				recharge.setUserType("商户");
+			}else{
+				recharge.setUserType("其他");
+			}
+
+			
+			newList.add(recharge);
+		}
+		String title = "充值Excel表";
+		
+		String[] hearders = new String[] {"流水号","用户类型","用户名","真实姓名","到账金额","手续费金额","充值时间","状态" };// 表头数组
+		String[] fields = new String[] { "tradeNo","userType","userName","realName","inAccountamountStr","accountFeeStr","addTime","statusStr"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<AccountRechargeModel> tdList = new ArrayList<AccountRechargeModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				AccountRechargeModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+	}	
+	// JSDPBUG-99 20150505  sxy
+	*/
+	
+	
+}

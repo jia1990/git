@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户通知配置</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../include/resources.html">
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>用户名：<input type="text" name="userName" autocomplete="off"/></li>
+            		<!--<li>信息名称：<input type="text" name="noticeName" autocomplete="off"/></li>
+            		--><li>信息标识：<input type="text" name="nid" autocomplete="off"/></li>
+            		<!-- <li>时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		-->
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>	
+</html>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+    var winWidth =  800;
+    var winHeight = 500;
+    var addTitle = "回款续投审核";
+	var addUrl =  "/modules/return/returnAuditManage.html";
+    var verifyTitle = "初审";
+    var verifyWinParmeters = "'{0}','"+verifyTitle+"',700,530,'"+1+"','确定'";
+    var detailTitle = "回款续投审核";
+    var detailUrl = "/modules/return/auditReturnView.html";
+    var detailWinParmeters = "'{0}','" + detailTitle + "',800,500,'" + detailUrl + "','确定'";
+    $(function() {
+    	$("#status").change(function(){
+    		$("#a").attr("onclick","$.fn.dataGridOptions.addFun("+$(this).val()+",addTitle,winWidth,winHeight,addUrl);");
+    	});
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'userNoticeConfigList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50,fixed:true, sortable:false },              
+              { field: 'userName', title: '用户名', width: 150,fixed:true, sortable:false },
+              { field: 'noticeName', title: '信息名称', width: 200,fixed:true, sortable:false },
+              { field: 'nid', title: '信息标识', width: 200,fixed:true, sortable:false },
+              { field: 'sms', title: '发送短信', width: 100, sortable:false ,formatter: function(value,row,index){
+                  if(value == 1){
+					return "开启";
+                  }else{
+	            	return "未开启";
+                  }
+              } },   
+              { field: 'email', title: '发送邮箱', width: 100, sortable:false,formatter: function(value,row,index){
+            	  if(value == 1){
+  					return "开启";
+                    }else{
+  	            	return "未开启";
+                    }
+              } },
+              { field: 'message', title: '发送站内信', width: 50, sortable:false,formatter: function(value,row,index){
+            	  if(value == 1){
+  					return "开启";
+                    }else{
+  	            	return "未开启";
+                    }
+              } } ] ],
+            toolbar : '#toolbar'
+        });
+    });
+</script>
+

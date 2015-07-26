@@ -1,0 +1,532 @@
+package com.ddtkj.p2psys.credit.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+import javax.persistence.criteria.CriteriaBuilder.In;
+
+import org.apache.commons.lang.time.DateUtils;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.dao.CreditAssignmentDao;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.sun.tools.internal.ws.processor.model.Model;
+
+/**
+ * @描述：债权转让DAO实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+@Repository("creditAssignmentDao")
+public class CreditAssignmentDaoImpl extends  BaseDaoImpl<CreditAssignment> implements CreditAssignmentDao  {
+
+	@Override
+	public PageDataList<CreditAssignment> getAll(QueryParam param) {
+		return findPageList(param);
+	}
+
+	@Override
+	public PageDataList<CreditAssignment> getDateByUser(UserModel user) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("User", user.prototype()) ;
+		param.addPage(user.getPage()) ;
+		return findPageList(param);
+	}
+	@Override
+	public PageDataList<CreditAssignment> getDateByUserAndStatus(UserModel user, List<String> status) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("user.userId", user.getUserId()) ;
+		param.addParam("status",Operators.IN, status) ;
+		param.addPage(user.getPage(),user.getSize());
+		return findPageList(param);
+	}
+	@Override
+	public List<CreditAssignment> getDateByUserAndStatusList(UserModel user, List<String> status) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("user.userId", user.getUserId()) ;
+		param.addParam("status",Operators.IN,status) ;
+		return findByCriteria(param);
+	}
+	@Override
+	public Boolean getRepealById(long id) {
+		return null;
+	}
+
+	@Override
+	public boolean Repeal(CreditAssignment ca) {
+		return false;
+	}
+	@Override
+	public int isPublish(User user, Borrow borrow, BorrowTender tender) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("user", user) ;
+		param.addParam("borrow", borrow) ;
+		param.addParam("tender", tender) ;
+		param.addParam("status", CreditAssignment.CREDIT_PUBLISH) ;
+		return findByCriteria(param).size() ;
+	}
+
+	@Override
+	public PageDataList<CreditAssignment> getDateByUserAndStatus( UserModel user, String status) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("user.userId", user.getUserId()) ;
+		param.addParam("status",status) ;
+		param.addPage(user.getPage());
+		return findPageList(param);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.credit.dao.CreditAssignmentDao#getDateStatus(java.lang.String)
+	 */
+	@Override
+	public PageDataList<CreditAssignmentModel> getDateStatus(List<String> status,int page,int size,CreditAssignmentModel camodel) {
+		QueryParam param = QueryParam.getInstance() ;
+		// status
+		if("99".equals(camodel.getStatus())){
+			status = new ArrayList<String>() ;
+			status.add("01") ;
+			status.add("03") ;
+			status.add("05") ;
+			status.add("07") ;
+		}else if(camodel.getStatus()!=null){
+			status = new ArrayList<String>() ;
+			status.add(camodel.getStatus());
+		}
+		param.addParam("status", Operators.IN, status) ;
+		if(-1 != camodel.getTimeSearch() && camodel.getTimeSearch() !=0 ){
+			if(camodel.getTimeSearch()==2){
+				param.addParam("buyEndTime",Operators.GT,new Date()) ;
+				param.addParam("buyEndTime",Operators.LTE,DateUtil.rollDay(new Date(),5)) ;
+			}
+			if(camodel.getTimeSearch()==3){
+				param.addParam("buyEndTime",Operators.GT, DateUtil.rollDay(new Date(),5)) ;
+				param.addParam("buyEndTime",Operators.LTE,DateUtil.rollDay(new Date(),15)) ;
+			}
+			if(camodel.getTimeSearch()==4){
+				param.addParam("buyEndTime",Operators.GT, DateUtil.rollDay(new Date(),15)) ;
+				param.addParam("buyEndTime",Operators.LTE,DateUtil.rollDay(new Date(),20)) ;
+			}
+			if(camodel.getTimeSearch()==5){
+				param.addParam("buyEndTime",Operators.GT, DateUtil.rollDay(new Date(),20)) ;
+				param.addParam("buyEndTime",Operators.LTE,DateUtil.rollDay(new Date(),30)) ;
+			}
+			if(camodel.getTimeSearch()==6){
+				param.addParam("buyEndTime",Operators.GT, DateUtil.rollDay(new Date(),30)) ;
+			}
+		}
+		if(camodel.getStyle()!=-1 && camodel.getStyle()!=0){
+			param.addParam("borrow.style", camodel.getStyle()) ;
+		}
+		if(camodel.getAprSearch()!= -1 && camodel.getAprSearch()!=0){
+			if(camodel.getAprSearch()==1){
+				param.addParam("borrow.apr",Operators.GT, 0) ;
+				param.addParam("borrow.apr",Operators.LTE,6) ;
+			}
+			if(camodel.getAprSearch()==2){
+				param.addParam("borrow.apr",Operators.GT, 6) ;
+				param.addParam("borrow.apr",Operators.LTE,12) ;	
+			}
+			if(camodel.getAprSearch()==3){
+				param.addParam("borrow.apr",Operators.GT, 12) ;
+				param.addParam("borrow.apr",Operators.LTE,15) ;
+			}
+			if(camodel.getAprSearch()==4){
+				param.addParam("borrow.apr",Operators.GT, 15) ;
+			}
+			
+		}
+		param.addOrder(OrderType.ASC, "status") ;
+		param.addOrder(OrderType.DESC, "addTime") ;
+		param.addPage(page,size);
+		PageDataList<CreditAssignment> cp = findPageList(param);
+		PageDataList<CreditAssignmentModel> cmp = new PageDataList<CreditAssignmentModel>(cp.getPage(),new ArrayList<CreditAssignmentModel>());
+		for (CreditAssignment c : cp.getList()) {
+			CreditAssignmentModel cam = CreditAssignmentModel.instance(c) ;
+			cmp.getList().add(cam) ;
+		}
+		
+		return cmp ;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.credit.dao.CreditAssignmentDao#isPublishByCredit(com.ddtkj.p2psys.user.domain.User, com.ddtkj.p2psys.credit.domain.CreditLog)
+	 */
+	@Override
+	public int isPublishByCredit(User user, CreditLog creditlog) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("user", user) ;
+		param.addParam("creditLog", creditlog) ;
+		param.addParam("status", CreditAssignment.CREDIT_PUBLISH) ;
+		return findByCriteria(param).size() ;
+	}
+	@Override
+	public List<CreditAssignment> getList(String status){
+		String sql="select a.* from t_jsd_credit_assignment a ,rd_borrow  b where a.borrow_id=b.id and a.status=:status and b.type in(113,115)";
+		Query query = em.createNativeQuery(sql, CreditAssignment.class);
+		query.setParameter("status", status);
+		List<CreditAssignment> list = (List<CreditAssignment>) query.getResultList();
+		return list;
+	}
+
+
+	@Override
+	public double getCreditAssignmentSum(User user, String status) {
+		String jpql = "SELECT SUM(credit.sold_account) FROM t_jsd_credit_assignment credit "+
+        		"WHERE sell_user_id = :userId AND status = :status ";
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+	
+	@Override
+	public double getCreditAssignmentSum(User user, String status, int type) {
+		String jpql = "SELECT SUM(credit.sold_account) FROM t_jsd_credit_assignment credit,rd_borrow b "+
+        		"WHERE b.id= credit.borrow_id AND credit.sell_user_id = :userId AND credit.status = :status  "+
+				" AND b.type= :type ";
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        query.setParameter("type", type);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public int getCreditAssignmentCount(User user, String status) {
+		QueryParam param  = QueryParam.getInstance();
+		param.addParam("user.userId", user.getUserId());
+		param.addParam("status", status);
+		return countByCriteria(param);
+	}
+	
+	@Override
+	public int getCreditAssignmentCount(User user, String status,
+			Date startTime, Date endTime) {
+		QueryParam param  = QueryParam.getInstance();
+		param.addParam("user.userId", user.getUserId());
+		param.addParam("status", status);
+		Date start = DateUtil.valueOf(DateUtil.dateStr2(startTime) + " 00:00:00");
+		Date end = DateUtil.valueOf(DateUtil.dateStr2(endTime) + " 23:59:59");
+		param.addParam("addTime", Operators.GTE, start);
+		param.addParam("addTime",  Operators.LTE, end);
+		
+	
+		return countByCriteria(param);
+	}
+
+	
+	@Override
+	public int getCreditAssignmentCopiesCount(User user, String status) {
+		String jpql = "SELECT SUM(credit.sell_copies) FROM t_jsd_credit_assignment credit "+
+        		"WHERE sell_user_id = :userId AND status = :status ";
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        int total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Integer.parseInt(obj.toString());
+        }
+        return total;
+	}
+	
+	@Override
+	public double calcProfitAndLoss(User user, String status) {
+		String jpql = "SELECT SUM(credit.credit_price - credit.credit_value - sell_fee) FROM t_jsd_credit_assignment credit " +
+				"WHERE sell_user_id = :userId AND status = :status ";
+		Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+	
+	@Override
+	public double calcCreditSellFee(User user, String status, Date startTime,
+			Date endTime) {
+		String jpql = "SELECT SUM(sell_fee) FROM t_jsd_credit_assignment credit " +
+				"WHERE sell_user_id = :userId AND status = :status AND add_time >= :start AND add_time <= :end ";
+		Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        Date start = DateUtil.valueOf(DateUtil.dateStr2(startTime) + " 00:00:00");
+		Date end = DateUtil.valueOf(DateUtil.dateStr2(endTime) + " 23:59:59");
+		query.setParameter("start", start);
+		query.setParameter("end",end);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+	
+	@Override
+	public double calcCreditSoldAccount(User user, String status,
+			Date startTime, Date endTime) {
+		String jpql = "SELECT SUM(sold_account) FROM t_jsd_credit_assignment credit " +
+				"WHERE sell_user_id = :userId AND status = :status AND add_time >= :start AND add_time <= :end ";
+		Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        Date start = DateUtil.valueOf(DateUtil.dateStr2(startTime) + " 00:00:00");
+		Date end = DateUtil.valueOf(DateUtil.dateStr2(endTime) + " 23:59:59");
+		query.setParameter("start", start);
+		query.setParameter("end",end);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public List<CreditAssignment> getListByBorrowId(long borrowId) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("borrow.id",borrowId) ;
+		param.addParam("status", "01") ;
+		List<CreditAssignment> list = findByCriteria(param) ;
+ 		return list;
+	}
+
+
+	@Override
+	public List<CreditAssignment> getListByTimeOver(String status) {
+		String sql="select a.* from t_jsd_credit_assignment a where a.status=:status AND DATE(a.buy_end_time) = CURDATE()";
+		Query query = em.createNativeQuery(sql, CreditAssignment.class);
+		query.setParameter("status", status);
+		List<CreditAssignment> list = (List<CreditAssignment>) query.getResultList();
+		return list;
+	}
+
+	@Override
+	public List excelCreditList(CreditAssignmentModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT ca.id,u.user_name,b.name,"
+				+ "case ca.ca_type when 1 then '投资转出' when 2 then '购买转出' else '无' end ,"
+				+" CASE ca.level WHEN 00 THEN '还未初审' WHEN 1 THEN '普通' WHEN 2 THEN '优质' else '未指定的债权转让等级' END,"
+				+" ca.credit_value,ca.credit_price,ca.credit_dis,ca.credit_copies,ca.sold_account,ca.sell_copies,"
+				+" CASE ca.status"
+				+" WHEN 00 THEN '发布'"
+				+" WHEN 01 THEN '初审通过'"
+				+" WHEN 02 THEN '初审未通过'"
+				+" WHEN 03 THEN '复审通过'"
+				+" WHEN 04 THEN '复审未通过'"
+				+" WHEN 05 THEN '撤回'"
+				+" ELSE '无'"
+				+" END caStatus"
+				+" ,(ca.sell_copies/ca.credit_copies)*100 scales,"
+				+" CASE ca.is_breach"
+				+" WHEN 1 THEN '是，违约金:'+ca.breach_account"
+				+" ELSE '否' "
+				+" END isBreach,"
+				+" ca.buy_end_time,ca.add_time,ca.add_ip"
+				+" FROM  t_jsd_credit_assignment ca,t_jsd_user u,rd_borrow b"
+				+" WHERE u.user_id=ca.sell_user_id AND b.id=ca.borrow_id ");
+		
+		if (StringUtil.isNotBlank(model.getSellUserName())){
+			sql.append(" AND u.user_name like '%"+model.getSellUserName()+"%'");
+		}
+		if (StringUtil.isNotBlank(model.getCaName())){
+			sql.append(" AND b.name LIKE '%"+model.getCaName()+"%'");
+		}
+		
+		if (model.getLevel() > 0 && model.getLevel() != CreditAssignment.CREDIT_LEVEL_ALL){
+			sql.append(" AND ca.level =:caLevel");
+		}
+		
+		if (model.getCaType() > 0 && model.getCaType() != CreditAssignment.CREDIT_TYPE_ALL){
+			sql.append(" AND ca.ca_type=:caType");
+		}
+		if (StringUtil.isNotBlank(model.getStatus()) && !CreditAssignment.CREDIT_ALL.equals(model.getStatus()) && !"0".equals(model.getStatus())){
+			sql.append(" AND ca.status=:caStatus");
+		}
+		
+		if (model.getCaScales() == 100){
+			sql.append(" AND scales =:scales");
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" AND ca.add_time >=:startTime");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" AND ca.add_time<:endTime");
+		}
+
+		
+		Query query = em.createNativeQuery(sql.toString());
+
+		if (StringUtil.isNotBlank(model.getStatus()) && !CreditAssignment.CREDIT_ALL.equals(model.getStatus()) && !"0".equals(model.getStatus())){
+			query.setParameter("caStatus", model.getStatus());
+		}
+		if (model.getLevel() > 0 && model.getLevel() != CreditAssignment.CREDIT_LEVEL_ALL){
+			query.setParameter("caLevel", model.getLevel());
+		}
+		if (model.getCaType() > 0 && model.getCaType() != CreditAssignment.CREDIT_TYPE_ALL){
+			query.setParameter("caType", model.getCaType());
+		}
+		if (model.getCaScales() == 100){
+			query.setParameter("scales", 100);
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		
+		List list = query.getResultList();
+		return list;
+	}
+
+	@Override
+	public PageDataList<CreditAssignment> getCreditOutAssignmentListForSQL(
+			CreditAssignmentModel model, int page, int size) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT b.name,u.user_name, "
+				+ " ca.ca_type, "
+				+ " ca.level, "
+				+ " TRUNCATE(COALESCE(ca.credit_value,0.00),2),TRUNCATE(COALESCE(ca.credit_price,0.00),2),ca.credit_dis,ca.credit_copies,ca.sold_account,ca.sell_copies, "
+				+ " ca.status, "
+				//+ " (ca.sell_copies/ca.credit_copies)*100 scales, "
+				//+ " COALESCE(((ca.sell_copies/ca.credit_copies)*100),0.00) scales, "
+				+ " (ca.sell_copies/ca.credit_copies)*100 scales, "
+				/*+ " CASE ca.is_breach"
+				+ " WHEN 1 THEN '是，违约金:'+ca.breach_account"
+				+ " ELSE '否' "
+				+ " END isBreach,"*/
+				+ " ca.buy_end_time,ca.add_time "
+				+ " FROM  t_jsd_credit_assignment ca,t_jsd_user u,rd_borrow b "
+				+ " WHERE u.user_id=ca.sell_user_id AND b.id=ca.borrow_id ");
+		
+		// 时间类型
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+			
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(ca.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(ca.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+			
+		}
+		
+		// 状态为：复审通过
+		sql.append("  AND ca.status = '03' ");
+		
+		//sql.append("  AND u.islocked != 'FF' ");
+		sql.append("  ORDER BY ca.add_time DESC ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		Page pages = new Page(query.getResultList().size(), size, page);
+		PageDataList<CreditAssignment> pageList = new PageDataList<CreditAssignment>();
+		query.setFirstResult((page - 1) * size);
+		query.setMaxResults(size);
+		List queryList = query.getResultList();
+		List<CreditAssignment> dataList = new ArrayList<CreditAssignment>();
+		Object[] object = new Object[13];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			CreditAssignmentModel obj = new CreditAssignmentModel();
+//			userM.setUserId((Long) object[0]);
+			// 债权名
+			obj.setCaName((String.valueOf((object[0]))));
+			// 出售债权用户
+			obj.setSellUserName(String.valueOf((object[1])));
+			// 债权转让类型
+			obj.setCaType(Integer.valueOf(String.valueOf((object[2]))));
+			// 债权等级
+			obj.setLevel(Integer.valueOf(String.valueOf((object[3]))));
+			// 债权预期价值
+			obj.setCreditValue(Double.valueOf(String.valueOf((object[4]))));
+			// 债权发布价格
+			obj.setCreditPrice(Double.valueOf(String.valueOf(object[5])));
+			// 债权转让费率
+			obj.setCreditDis(Double.valueOf(String.valueOf(object[6])));
+			// 债权转让份数
+			obj.setCreditCopies(Double.valueOf(String.valueOf(object[7])));
+			// 已售金额
+			obj.setSoldAccount(Double.valueOf(String.valueOf(object[8])));
+			// 已售份数
+			obj.setSellCopies(Integer.valueOf(String.valueOf(object[9])));
+			// 债权状态
+			obj.setStatus(String.valueOf(object[10]));
+			// 进度
+			obj.setCaScales(Double.valueOf(String.valueOf(object[11])));
+			// 债权截止时间
+			obj.setBuyEndTime((Date)object[12]);
+			// 添加时间
+			obj.setAddTime((Date)object[13]);
+			
+			
+			dataList.add(obj);
+		}
+		
+		
+		pageList.setList(dataList);
+		pageList.setPage(pages);
+
+		return pageList;
+		
+	}
+
+	
+
+	
+
+}

@@ -1,0 +1,228 @@
+package com.rongdu.p2psys.web.member;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoSetService;
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.member.model.MemberVipSubModel;
+import com.ddtkj.p2psys.member.service.MemberVipHistoryService;
+import com.ddtkj.p2psys.member.service.MemberVipService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.VipRuleCheck;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.BuyVIP;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.BuyVIP.VipLevel;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.BuyVIP.VipLevel.VipPrice;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.service.ScoreLogService;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.user.service.UserService;
+/**
+ * 
+ * @描述：会员服务
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2014年12月23日
+ */
+public class MemberVipAction extends BaseAction<MemberVipSubModel> implements ModelDriven<MemberVipSubModel>{
+	private MemberVipSubModel model = new MemberVipSubModel();
+	
+	public MemberVipSubModel getModel(){
+		return model;
+	}
+	
+	public void setModel(MemberVipSubModel model) {
+		this.model = model;
+	}
+
+	@Resource
+	private MemberVipService memberVipService;
+	@Resource
+	private MemberVipHistoryService memberVipHistoryService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private ScoreService scoreService;
+	@Resource
+	private ScoreLogService scoreLogService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private BorrowAutoSetService borrowAutoSetService;
+	
+	private VipRuleCheck vipRule= (VipRuleCheck) Global.getRuleCheck("vip");
+	
+	private User user;
+	private Map<String, Object> data;
+	
+	
+	/**
+	 * 会员服务购买VIP服务用于跳转页面
+	 * @author xingjia
+	 * @return
+	 * @throws Exception 
+	 */
+	@Action("/member/member/memberService")
+	public String memberService() throws Exception{
+		
+		this.saveToken("memberService");
+		user = this.getSessionUser();
+		Account account = accountService.findByUser(this.getSessionUserId());
+		MemberVip member = memberVipService.findMemberByUserId(getSessionUserId());
+		request.setAttribute("account", account);
+		request.setAttribute("memberLevel", user.getMemberLevel());
+		request.setAttribute("member", member);
+		//并发随机标识
+		String resultFlag=System.currentTimeMillis()+""+Math.random()*10000;
+		request.setAttribute("resultFlag", resultFlag);
+		return "memberService";
+	}
+	
+	/**
+	 *@author 李建云 
+	 * 会员升级规则显示
+	 * */
+	@Action("/member/member/vipBuyRule")
+	public void vipBuyRule() throws Exception{
+		data = new HashMap<String, Object>();
+		
+		String vipLevel = this.paramString("vipLevel");
+		
+		BuyVIP buyVipRule= vipRule.getBuy_vip();
+		List<VipPrice> vipPriceList = null;
+		if(buyVipRule != null &&buyVipRule.getStatus() ==1){
+			
+			if(vipLevel != null &&!"".equals(vipLevel)){
+				VipLevel  vipLevelRule = null;
+				if("V1".equals(vipLevel)){	
+					vipLevelRule = buyVipRule.getV1();
+				}else if("V2".equals(vipLevel)){
+					vipLevelRule = buyVipRule.getV2();
+				}else if("V3".equals(vipLevel)){
+					vipLevelRule = buyVipRule.getV3();
+				}else if("V4".equals(vipLevel)){
+					vipLevelRule = buyVipRule.getV4();
+				} 
+				if(vipLevelRule.getType() ==1){
+				//按固定金额计算 
+				vipPriceList = Arrays.asList(vipLevelRule.getList());
+				}else if(vipLevelRule.getType() ==2){
+				//按费率计算	
+				double perPrice = 	vipLevelRule.getVip_rate().getPrice();
+				double rate = 	vipLevelRule.getVip_rate().getRate();
+				vipPriceList = new ArrayList<VipPrice>();
+					for(int i=1;i<5;i++){
+						VipPrice vipPrice= new VipPrice();
+						vipPrice.setMonth(12*i);
+						vipPrice.setPrice(BigDecimalUtil.mul(BigDecimalUtil.mul(perPrice, 12*i), rate));
+						vipPriceList.add(vipPrice);
+					}
+				}
+				data.put("success", true);		
+			}else {
+				data.put("success", false);		
+			}
+		}else{
+			data.put("success", false);	
+		}
+
+		data.put("vipPriceList", vipPriceList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 *@author 李建云 
+	 *获得实际支付金额
+	 * @throws Exception 
+	 * */
+	@Action("/member/member/getMemberMoney")
+	public void getMemberMoney() throws Exception{
+		data = new HashMap<String, Object>();
+		
+		model.setUser(this.getSessionUser());
+		try{
+		double transferVipFee = memberVipService.calculateBuyVipMoney(model);
+		data.put("transferVipFee", transferVipFee);
+		data.put("result", true) ;	
+		}catch(Exception e){
+		data.put("result", false) ;	
+		data.put("msg", e.getMessage());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 投资人购买会员
+	 * @author 李建云
+	 */
+	@Action("/member/member/memberBuyVip")
+	public void memberBuyVip() throws Exception{
+		
+		data = new HashMap<String, Object>();
+		user = this.getSessionUser();
+		UserModel userModel = UserModel.instance(user);
+		try{
+			
+			model.setUser(userModel);
+			model.validPaypwdModel(userModel);
+			
+			this.checkToken("memberService");
+			User userSess = getSessionUser();
+			
+			
+			//JSDBET-802 wcw 2015-3-12 start
+			//本地账户余额与一麻袋账户余额对账
+			accountService.accountCompare(this.getSessionUserId());
+			//JSDBET-802 wcw 2015-3-12 end
+			
+		
+			String resultFlag=paramString("resultFlag");
+			// JSDP-161  wcw 20150525 start
+			//DisruptorUtils.buyVipTransfer(model, resultFlag);
+			DisruptorUtils.vipBuy(model, resultFlag);
+			// JSDP-161  wcw 20150525 end
+			data.put("result", true) ;	
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		}catch(Exception e){
+			data.put("msg", e.getMessage());
+			data.put("result", false) ;	
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	private int convertMemberLevel(User user){
+		int vipLevle = 1;
+		String memberLevel = user.getMemberLevel();
+		if(memberLevel != null && memberLevel.length() > 1){
+			vipLevle = StringUtil.toInt(memberLevel.substring(memberLevel.length()-1, memberLevel.length()));
+		}
+		return vipLevle;	
+	}
+
+}

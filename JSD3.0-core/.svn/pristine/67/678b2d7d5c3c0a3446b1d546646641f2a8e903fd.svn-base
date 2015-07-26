@@ -1,0 +1,160 @@
+package com.ddtkj.p2psys.core.util;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.interest.EachPlan;
+
+
+/**
+ * @描述：购入者待收计划
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月9日 
+ */
+public class CreditDueInCalculator {
+	
+	/** 还款方式 :等额本息（按月分期还款） */
+	public static final int DUEIN_INSTALLMENT_REPAYMENT = 1;
+	/** 还款方式 :利随本清（一次性还款） */
+	public static final int DUEIN_ONETIME_REPAYMENT = 2;
+	/** 还款方式 :每月还息到期还本 */
+	public static final int DUEIN_MONTHLY_INTEREST = 3;
+	
+	private List<BorrowCollection> collectionList ; // 原代收记录
+	private CreditLog creditLog ;  // 债权够买记录
+	private CreditAssignment  creditAssignment ;  // 债权转让信息
+	private List<EachPlan> eachPlan;  // 转让者 待收计划
+	private int type ;
+	
+	public CreditDueInCalculator(List<BorrowCollection> collectionList,
+			CreditLog creditLog, CreditAssignment creditAssignment, int type) {
+		super();
+		this.collectionList = collectionList;
+		this.creditLog = creditLog;
+		this.creditAssignment = creditAssignment;
+		this.type = type;
+	}
+
+	public List<EachPlan> calculator(){
+		//  一次性还款 计算购买者待收
+		if(DUEIN_ONETIME_REPAYMENT==type){
+			return ontimeEp() ;
+		}
+		// 每月还息  
+		if(DUEIN_MONTHLY_INTEREST==type){
+			return monthEp() ;
+		}
+		// 等额本息
+		if(DUEIN_INSTALLMENT_REPAYMENT==type){
+			return instalEp() ;
+		}
+		return eachPlan ;
+	}
+	
+	private List<EachPlan> ontimeEp(){
+		eachPlan = new ArrayList<EachPlan>() ;
+		//  获得一次性收益
+		if(collectionList.size()>2){
+			throw new BorrowException("不是一次性还记录");
+		}
+		if(collectionList!=null&&collectionList.size()>0){
+			BorrowCollection bc = collectionList.get(0) ;
+			EachPlan ep = new EachPlan() ;
+			// 获取总份数 creditAssignment.getCreditCopies() 购买份数 creditLog.getBuyCopies()
+			// 所占利息比率  BigDecimalUtil.div(cobuy, cototal, 2)
+			// double cofee = BigDecimalUtil.div(creditLog.getBuyCopies(), creditAssignment.getCreditCopies(), 2) ;
+			// 收入者的待收
+			ep.setCapital(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(bc.getCapital(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));
+			//ep.setCapital(BigDecimalUtil.mul(bc.getCapital(),cofee));
+			// 一次性还款  能够转让，说明没有还款 ，计算利息收益
+			//ep.setInterest(BigDecimalUtil.mul(creditAssignment.getCopiesInsterest(), cofee));
+			ep.setInterest(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(bc.getInterest(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));
+			ep.setInterestTime(new Date());
+			ep.setNeedRepay(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+			// TODO 于俊斐  这儿需要确定收不收利息管理费
+			ep.setNetInterest(ep.getInterest());
+			ep.setNetTotal(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+			
+			ep.setRepayTime(bc.getRepaymentTime());
+			ep.setTotal(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+			eachPlan.add(ep) ;
+		}
+		return eachPlan ;
+	}
+	private List<EachPlan> monthEp(){
+		eachPlan = new ArrayList<EachPlan>() ;
+		//  获得一次性收益
+		if(collectionList.size()>0){
+			// 从转让期开始到结束期
+			for(int i= creditAssignment.getCreditStartPeriod()-1;i<collectionList.size(); i++) {
+				BorrowCollection bc =  collectionList.get(i) ;
+				EachPlan ep = new EachPlan() ;
+				// 获取总份数 creditAssignment.getCreditCopies() 购买份数 creditLog.getBuyCopies()
+				// 所占利息比率  BigDecimalUtil.div(cobuy, cototal, 2)
+				// double cofee = BigDecimalUtil.div(creditLog.getBuyCopies(), creditAssignment.getCreditCopies(), 2) ;
+				// 收入者的待收
+				//ep.setCapital(BigDecimalUtil.mul(bc.getCapital(),cofee));
+				ep.setCapital(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(bc.getCapital(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));
+				//系统修复债权转让利息计算异常 wcw 2015-06-24 start
+				/*if(i==creditAssignment.getCreditStartPeriod()-1){  // 本期的利息需要处理
+					//ep.setInterest(BigDecimalUtil.mul(creditAssignment.getCopiesInsterest(), cofee));  // 本期应得利息应该是转让利息分出来的
+					ep.setInterest(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(creditAssignment.getCopiesInsterest(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));  // 本期应得利息应该是转让利息分出来的
+				}else{*/
+					//ep.setInterest(BigDecimalUtil.mul(bc.getInterest(), cofee));
+					ep.setInterest(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(bc.getInterest(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));
+				/*}*/
+				//系统修复债权转让利息计算异常 wcw 2015-06-24 end
+				ep.setInterestTime(new Date());
+				ep.setNeedRepay(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+				ep.setNetInterest(ep.getInterest());
+				ep.setNetTotal(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+				ep.setRepayTime(bc.getRepaymentTime());
+				ep.setTotal(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+				eachPlan.add(ep) ;
+			}
+		}
+		return eachPlan ;
+	}
+	private List<EachPlan> instalEp(){ // 等额本息
+		eachPlan = new ArrayList<EachPlan>() ;
+		//  获得一次性收益
+		if(collectionList.size()>0){
+			// 从转让期开始到结束期
+			for(int i= creditAssignment.getCreditStartPeriod()-1;i<collectionList.size(); i++) {
+				BorrowCollection bc =  collectionList.get(i) ;
+				EachPlan ep = new EachPlan() ;
+				// 获取总份数 creditAssignment.getCreditCopies() 购买份数 creditLog.getBuyCopies()
+				// 所占利息比率  BigDecimalUtil.div(cobuy, cototal, 2)
+				double cofee = BigDecimalUtil.div(creditLog.getBuyCopies(), creditAssignment.getCreditCopies(), 2) ;
+				// 收入者的待收
+				//ep.setCapital(BigDecimalUtil.mul(bc.getCapital(),cofee));
+				ep.setCapital(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(bc.getCapital(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));
+				/*if(i==creditAssignment.getCreditStartPeriod()-1){  // 本期的利息需要处理
+					//ep.setInterest(BigDecimalUtil.mul(creditAssignment.getCopiesInsterest(), cofee));  // 本期应得利息应该是转让利息分出来的
+					ep.setInterest(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(creditAssignment.getCopiesInsterest(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));  // 本期应得利息应该是转让利息分出来的
+				}else{*/
+					//ep.setInterest(BigDecimalUtil.mul(bc.getInterest(), cofee));
+					ep.setInterest(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(bc.getInterest(),creditAssignment.getCreditCopies()),creditLog.getBuyCopies()),2));
+				/*}*/
+				ep.setInterestTime(new Date());
+				ep.setNeedRepay(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+				// TODO 于俊斐  这儿需要确定收不收利息管理费
+				ep.setNetInterest(ep.getInterest());
+				ep.setNetTotal(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+				ep.setRepayTime(bc.getRepaymentTime());
+				ep.setTotal(BigDecimalUtil.add(ep.getCapital(),ep.getInterest()));
+				eachPlan.add(ep) ;
+			}
+		}
+		return eachPlan ;
+	}
+	public static void main(String[] args) {
+		System.out.println(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(18000,180),80),2));
+	}
+}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>投资人账户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = false;
+</script>
+<script type="text/javascript">
+	$.canGrant = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	
+	var tppAutoRechargeTitle = "自动代扣充值";
+    var tppAutoRechargeUrl =  "/modules/account/account/autoRecharge.html";
+    var tppAutoRechargeWinParmeters = "'{0}','"+tppAutoRechargeTitle+"',460,420,'"+tppAutoRechargeUrl+"'";
+    
+    var viewAccountTitle = "查看账户详情";
+    var viewAccountUrl = "/modules/account/account/accountDetailPage.html"
+    var viewAccountWinParmeters = "'{0}','" + viewAccountTitle + "',800,500,'" + viewAccountUrl + "'";
+    
+    
+    var viewCompairAccountTitle = "对账";
+    var viewCompairAccountUrl = "/modules/account/account/compairAccountDetailPage.html"
+    var viewCompairAccountWinParmeters = "'{0}','" + viewCompairAccountTitle + "',800,500,'" + viewCompairAccountUrl + "'";
+    
+    
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'accountList.html?userType='+${userType!},
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect : true,
+			showFooter : true,	//显示页脚
+			
+			columns : [ [ 			
+			{ field: 'username', title: '用户名', width: 70},
+			{ field: 'realname', title: '真实姓名', width: 70},
+			{ field: 'usableMoneyTotal', title: "<a title='元'>可用总额</a>", width: 80,formatter:function(value, row, index){
+				return value;
+			}},
+			
+			{ field: 'collectionTotalStr', title: "<a title='元'>待收总额</a>", width: 80, formatter:function(value, row, index){
+				//return value+"元";
+				return value;
+			}},
+			{ field: 'freezeUseMoneyTotal', title: "<a title='元'>冻结总额</a>", width: 80, formatter:function(value, row, index){
+				//return value+"元";
+				return value;
+			}},
+			{ field: 'accountTotalStr', title: '账户总额(不包含钱袋子)', width: 100},
+			{ field: 'result', title: "结果（冻结+可用+待收）", width: 80, formatter:function(value, row, index){
+				//return value+"元";
+				return value;
+			}},
+			{ field: 'compareResult', title: "第三方对账结果", width: 80, formatter:function(value, row, index){
+				//return value+"元";
+				//JSDP-169 xingjia 20150529 start
+				if(row.userName=="汇总信息"){
+					return "";
+				}
+				//JSDP-169 xingjia 20150529 end
+				if(value=='ok'){
+					return "正常";
+				}else{
+					return "异常";
+				}
+			}},
+			{ field: 'action',title : '操作',width :60,fixed:true, formatter:function(value, row, index){
+				var str = '';
+				//JSDP-169 xingjia 20150529 start
+				if(row.userName=="汇总信息"){
+					str += "";
+				}else{
+					str += '&nbsp;';
+	                <@secAuthorizeUrl value='/account/accountInvestDetailBtn.html'>
+	                str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewAccountWinParmeters + ');" src="{1}" title="查看账户信息"/>', row.userId, '${theme_dir}/css/images/extjs_icons/book_open.png');
+	                </@secAuthorizeUrl>
+	                str += '&nbsp;';
+	                <@secAuthorizeUrl value='/account/accountInvestCompairBtn.html'>
+	                str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewCompairAccountWinParmeters + ');" src="{1}" title="对账"/>', row.userId, '${theme_dir}/css/images/extjs_icons/zoom/zoom.png');
+	                </@secAuthorizeUrl>
+	                str += '&nbsp;';
+				}
+                //JSDP-169 xingjia 20150529 end
+                return str;
+			}}
+			 ] ],
+	            toolbar : '#toolbar'
+		});
+		
+	});
+	function exportExcel(){
+		var url = "/modules/account/account/exportExcelAccount.html";
+		var userName = $("#username").val();
+		var realName = $("#realname").val();
+		//JSDP-116 xingjia 2015-05-18 start
+		var collectionTotal = $("#collectionTotal").val();
+		var compareResult = $("#compareResult").val();
+		var sou = "?userType=" + 10 + "&username=" + userName + "&realname=" + realName+"&collectionTotal="+collectionTotal+"&compareResult="+compareResult;
+		//JSDP-116 xingjia 2015-05-18 start
+		window.location.href = url + sou;
+	}
+	function compareAccount(){
+		var url = "/modules/account/account/compareAccountList.html";
+		var userName = $("#username").val();
+		var realName = $("#realname").val();
+		var collectionTotal = $("#collectionTotal").val();
+		var compareResult = $("#compareResult").val();
+		var sou = "?userType=" + 10 + "&username=" + userName + "&realname=" + realName+"&collectionTotal="+collectionTotal+"&compareResult="+compareResult;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="username" id="username" autocomplete="off"/></li>
+            		<li>真实姓名：<input type="text" name="realname" id="realname" autocomplete="off"/></li>
+            		<li>待收金额大于<input type="text" name="collectionTotal" id="collectionTotal" autocomplete="off"/></li>
+            		<li>对账结果：<select name="compareResult" id="compareResult" class="type">
+            			<!-- JSDP-100 gjh 2015-5-12 start -->
+            			<option value="all">全部</option>
+            		<!-- JSDP-100 gjh 2015-5-12 end -->
+            			<option value="ok">正常</option>
+            			<option value="error">异常</option>
+            		</select></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+<!--             	    <li><a href="javascript:void(0);" class="searchBtn" onclick="compareAccount()">对账</a></li>
+ -->            	
+  <li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.compareSearchFun('/modules/account/account/compareAccountList.html','#username','#realname','#collectionTotal','#compareResult','10',this);">对账</a></li>
+ </ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">
+		
+		<@secAuthorizeUrl value='/accountInvestListExcel.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+</body>
+</html>

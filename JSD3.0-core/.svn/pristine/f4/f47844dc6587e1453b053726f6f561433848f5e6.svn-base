@@ -1,0 +1,179 @@
+package com.ddtkj.p2psys.account.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * 
+ * @描述：用户资金合计实体类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月15日
+ */
+@Entity
+@Table(name = "t_jsd_account_sum")
+public class AccountSum implements Serializable {
+	
+	private static final long serialVersionUID = 7007299755866941286L;
+	@Id
+	private long userId ; // 用户ID
+	/*
+	 * 用户资金合计实体一对一关联用户信息实体
+	 * */
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private User user ;  // 用户
+	private double accumulativeRecharge ; // '累计充值总额'
+	private double accumulativeCash  ;    // '累计提现总额'
+	private double accumulativeCashFee ;  // '累计提现手续费总额'
+	private double accumulativeInterest ;  // '累计利息总额=投资人回款利息+平台的利息管理费'
+	private double accumulativeReturnMoneyInterest ;  // '累计回款利息总额'
+	private double accumulativeInterestManageFee ;  // '累计利息管理费总额'
+	private double accumulativeAward ;    // '累计奖励总额'
+	private double accumulativeDeduct ;   // '累计扣款总额:平台针对用户交易的所有扣款总和(先扣可用充值、可用奖励、可用利息、可用回款本金)'
+	private double accumulativeUsedRecharge ;  // '累计已使用充值总额'
+	private double accumulativeUsedInterest ;  // '已使用利息'
+	private double accumulativeUsedAward  ; // '已使用奖励'
+	private double accumulativeReturnedMoney ;  // '回款统计'
+	private double accumulativeUsedReturnedMoney ;  // '使用的回款'
+	private double accumulativeUsedReturnMoneyInterest ;  // '使用的回款利息'
+	private double accumulativeBorrowCash  ; // '借款入账金额'
+	private double accumulativeUsedBorrowCash ;   // '已使用借款入账金额'
+	private double accumulativeRepayCash  ; // '已还款合计'
+	
+	
+	public AccountSum() {
+		super();
+	}
+	public AccountSum(User user){
+		this.userId = user.getUserId() ;
+		this.user = user ;
+	}
+	public long getUserId() {
+		return userId;
+	}
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public double getAccumulativeRecharge() {
+		return accumulativeRecharge;
+	}
+	public void setAccumulativeRecharge(double accumulativeRecharge) {
+		this.accumulativeRecharge = accumulativeRecharge;
+	}
+	public double getAccumulativeCash() {
+		return accumulativeCash;
+	}
+	public void setAccumulativeCash(double accumulativeCash) {
+		this.accumulativeCash = accumulativeCash;
+	}
+	public double getAccumulativeCashFee() {
+		return accumulativeCashFee;
+	}
+	public void setAccumulativeCashFee(double accumulativeCashFee) {
+		this.accumulativeCashFee = accumulativeCashFee;
+	}
+	public double getAccumulativeInterest() {
+		return accumulativeInterest;
+	}
+	public void setAccumulativeInterest(double accumulativeInterest) {
+		this.accumulativeInterest = accumulativeInterest;
+	}
+	public double getAccumulativeReturnMoneyInterest() {
+		return accumulativeReturnMoneyInterest;
+	}
+	public void setAccumulativeReturnMoneyInterest(
+			double accumulativeReturnMoneyInterest) {
+		this.accumulativeReturnMoneyInterest = accumulativeReturnMoneyInterest;
+	}
+	public double getAccumulativeInterestManageFee() {
+		return accumulativeInterestManageFee;
+	}
+	public void setAccumulativeInterestManageFee(
+			double accumulativeInterestManageFee) {
+		this.accumulativeInterestManageFee = accumulativeInterestManageFee;
+	}
+	public double getAccumulativeAward() {
+		return accumulativeAward;
+	}
+	public void setAccumulativeAward(double accumulativeAward) {
+		this.accumulativeAward = accumulativeAward;
+	}
+	public double getAccumulativeDeduct() {
+		return accumulativeDeduct;
+	}
+	public void setAccumulativeDeduct(double accumulativeDeduct) {
+		this.accumulativeDeduct = accumulativeDeduct;
+	}
+	public double getAccumulativeUsedRecharge() {
+		return accumulativeUsedRecharge;
+	}
+	public void setAccumulativeUsedRecharge(double accumulativeUsedRecharge) {
+		this.accumulativeUsedRecharge = accumulativeUsedRecharge;
+	}
+	public double getAccumulativeUsedInterest() {
+		return accumulativeUsedInterest;
+	}
+	public void setAccumulativeUsedInterest(double accumulativeUsedInterest) {
+		this.accumulativeUsedInterest = accumulativeUsedInterest;
+	}
+	public double getAccumulativeUsedAward() {
+		return accumulativeUsedAward;
+	}
+	public void setAccumulativeUsedAward(double accumulativeUsedAward) {
+		this.accumulativeUsedAward = accumulativeUsedAward;
+	}
+	public double getAccumulativeReturnedMoney() {
+		return accumulativeReturnedMoney;
+	}
+	public void setAccumulativeReturnedMoney(double accumulativeReturnedMoney) {
+		this.accumulativeReturnedMoney = accumulativeReturnedMoney;
+	}
+	public double getAccumulativeUsedReturnedMoney() {
+		return accumulativeUsedReturnedMoney;
+	}
+	public void setAccumulativeUsedReturnedMoney(
+			double accumulativeUsedReturnedMoney) {
+		this.accumulativeUsedReturnedMoney = accumulativeUsedReturnedMoney;
+	}
+	public double getAccumulativeUsedReturnMoneyInterest() {
+		return accumulativeUsedReturnMoneyInterest;
+	}
+	public void setAccumulativeUsedReturnMoneyInterest(
+			double accumulativeUsedReturnMoneyInterest) {
+		this.accumulativeUsedReturnMoneyInterest = accumulativeUsedReturnMoneyInterest;
+	}
+	public double getAccumulativeBorrowCash() {
+		return accumulativeBorrowCash;
+	}
+	public void setAccumulativeBorrowCash(double accumulativeBorrowCash) {
+		this.accumulativeBorrowCash = accumulativeBorrowCash;
+	}
+	public double getAccumulativeRepayCash() {
+		return accumulativeRepayCash;
+	}
+	public void setAccumulativeRepayCash(double accumulativeRepayCash) {
+		this.accumulativeRepayCash = accumulativeRepayCash;
+	}
+	public double getAccumulativeUsedBorrowCash() {
+		return accumulativeUsedBorrowCash;
+	}
+	public void setAccumulativeUsedBorrowCash(double accumulativeUsedBorrowCash) {
+		this.accumulativeUsedBorrowCash = accumulativeUsedBorrowCash;
+	}
+	
+}

@@ -1,0 +1,144 @@
+
+package com.ddtkj.manage.action.scoreaward;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.model.UserScoreAwardModel;
+import com.ddtkj.p2psys.score.service.ScoreAwardService;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 后台用户积分抽奖记录查询
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-4   
+ */
+public class ManageUserScoreAwardAction extends BaseAction implements ModelDriven<UserScoreAwardModel> {
+	
+	@Resource
+	private ScoreRuleAwardService soreRuleAwardService;
+	@Resource
+	private ScoreAwardService soreAwardService;
+	@Resource
+	private UserScoreAwardService userSoreAwardService;
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	private UserScoreAwardModel model = new UserScoreAwardModel();
+
+	public UserScoreAwardModel getModel() {
+		return model;
+	}
+
+
+	/**
+	 * 用户积分抽奖记录
+	 * @return String
+	 * @throws Exception
+	 */
+	@Action("/modules/user/score/userScoreAwardManager")
+	public String userScoreAwardManager() throws Exception {
+		return "userScoreAwardManager";
+	}
+	
+	/**
+	 * 取得积分抽奖列表
+	 * @return 跳转页面
+	 * @throws Exception 异常
+	 */
+	@Action("/modules/user/score/userScoreAwardList")
+	public void userScoreAwardList() throws Exception {
+		PageDataList<UserScoreAwardModel> pageList = new PageDataList<UserScoreAwardModel>();
+		if (StringUtil.isNotBlank(model.getUserName()) || StringUtil.isNotBlank(model.getRealName()) || StringUtil.isNotBlank(model.getStartTime()) || StringUtil.isNotBlank(model.getTransNo())
+				|| StringUtil.isNotBlank(model.getAwardTypeStr()) || StringUtil.isNotBlank(model.getStatus()) || StringUtil.isNotBlank(model.getReceiveStatus()) || StringUtil.isNotBlank(model.getCardNo())){
+			pageList = userSoreAwardService.getUserScoreAwardList(model);
+			int totalPage = pageList.getPage().getTotal();
+			map.put("rows", pageList.getList());
+			map.put("total", totalPage);
+		}
+		printJson(getStringOfJpaObj(map));					
+ 	}
+	
+	/**
+	 * 导出积分抽奖列表
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/score/exportUserScoreAward")
+	public void exportUserScoreAward() throws Exception{
+		//JSDP-116 fengguoqin 2015-05-19 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("status");
+		/*
+		// 第一页开始
+		model.setPage(1);
+		// 最多出99999999条记录
+		model.setSize(99999999);
+		// 记录取得
+		List<UserScoreAwardModel> list = userSoreAwardService.getUserScoreAwardList(model).getList();
+		List<UserScoreAwardModel> newList = new ArrayList<UserScoreAwardModel>();		
+		for(int i=0;i<list.size();i++){
+			UserScoreAwardModel userScoreAward = list.get(i);
+			userScoreAward.setStatus(model.convertAwardStatus(userScoreAward.getStatus()));
+			userScoreAward.setReceiveStatus(model.convertReceiveStatus(userScoreAward.getReceiveStatus()));
+			userScoreAward.setAwardTypeStr(model.convertAwardType(userScoreAward.getAwardType()));
+			newList.add(userScoreAward);
+		}*/
+		List<UserScoreAwardModel> list = userSoreAwardService.excelListOrder(model);
+		String title = "";
+		if (UserScoreAward.SCORE_AWARD_STATUS_ALL.equals(status)) {
+			title = "抽奖所有用户Excel表";
+		}else if (UserScoreAward.SCORE_AWARD_STATUS_SUCCESS.equals(status)) {
+			title = "抽奖中奖用户Excel表";
+		}else if (UserScoreAward.SCORE_AWARD_STATUS_FAIL.equals(status)){
+			title = "抽奖未中奖用户Excel表";
+		}
+		String[] hearders = new String[] {"编号","用户名","真实姓名","规则名","奖品等级","奖品类型","奖品名称","奖品属性值","订单号","是否中奖","是否发放奖励","抽奖时间","抽奖IP" };// 表头数组
+		/*String[] fields = new String[] { "id","userName","realName","ruleName","awardLevel","awardTypeStr","awardName","awardValue","transNo","status","receiveStatus","addTime","addIp"};// 对象属性数组*/
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]","object[11]","object[12]"};// 对象属性数组
+		/*int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserScoreAwardModel> tdList = new ArrayList<UserScoreAwardModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserScoreAwardModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 fengguoqin 2015-05-19 end
+	}
+	
+}

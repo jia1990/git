@@ -1,0 +1,121 @@
+package com.ddtkj.p2psys.borrow.service;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.domain.Operator;
+
+public interface AutoBorrowService {
+
+	/**
+	 * 还款
+	 * 
+	 * @param borrowRepayment
+	 * @throws Exception 
+	 */
+	void autoBorrowRepay(BorrowRepayment borrowRepayment) throws Exception;
+	//JSDP-85 gjh 2015-5-4 start
+	/**
+	 * 还款补单
+	 * 
+	 * @param borrowRepayment
+	 * @throws Exception 
+	 */
+	void autoBorrowRepayPatch(BorrowCollection collection) throws Exception;
+	//JSDP-85 gjh 2015-5-4 end
+	
+	/**
+	 * 后台逾期垫付
+	 * @param borrowRepayment
+	 */
+	public void overdue(BorrowRepayment borrowRepayment);
+	
+	/**
+	 * 前台逾期垫付
+	 * @param borrowRepayment
+	 */
+	public void overduePayment(BorrowRepayment borrowRepayment);
+	
+	/**
+	 * 提前还款
+	 * @param borrowRepayment
+	 */
+	public void doPriorRepay(BorrowRepayment borrowRepayment);
+
+	/**
+	 * 自动投标
+	 * 
+	 * @param model
+	 * @param auto
+	 * @throws Exception
+	 */
+	void autoDealTender(BorrowModel model) throws Exception;
+	
+	/**
+	 * 满标复审
+	 * 
+	 * @throws Exception
+	 */
+	//void autoVerifyFull(Borrow borrow) throws Exception;
+	void autoVerifyFull(BorrowModel borrow) throws Exception;
+
+	/**
+	 * 复审通过
+	 * 
+	 * @throws Exception
+	 */
+	void autoVerifyFullSuccess(BorrowModel model) throws Exception;
+
+	//JSDP-53  wcw 2015-04-21 start
+	/**
+	 * 复审通过补单操作
+	 * @param model
+	 */
+	void autoVerifyFullRepairSuccess(BorrowModel model,Operator operator)throws Exception;
+	//JSDP-53  wcw 2015-04-21 end
+	/**
+	 * 复审不通过
+	 * 
+	 * @throws Exception
+	 */
+	void autoVerifyFullFail(BorrowModel model) throws Exception;
+	
+	/**
+	 * 撤回标处理
+	 * @param borrow
+	 */
+	public void autoCancel(Borrow borrow);
+	/**
+	 * 代偿还款前校验
+	 * @param repayment
+	 */
+	public void autoCompensate(BorrowRepayment repayment);
+    /**
+     * 代偿还款成功后处理
+     * 
+     * @param borrowRepayment
+     */
+    void autoCompensateSuccess(BorrowRepayment borrowRepayment);     
+    /**
+     * 即投即生息（投标）
+     * @param model
+     * @param tender
+     * @throws Exception 
+     */
+    void autoInstantLive(BorrowModel model,BorrowTender tender) throws Exception;
+    /**
+     * 即投即生息（还款）
+     * @param borrowRepayment
+     */
+    void autoInstantLiveBorrowRepay(BorrowCollection borrowCollection)throws Exception;
+  //JSDP-85 gjh 2015-5-4 start
+    /**
+     * 即投即生息（还款补单）
+     * @param borrowRepayment
+     */
+    void autoInstantLiveBorrowRepayPatch(BorrowCollection borrowCollection);
+    //JSDP-85 gjh 2015-5-4 end
+
+}

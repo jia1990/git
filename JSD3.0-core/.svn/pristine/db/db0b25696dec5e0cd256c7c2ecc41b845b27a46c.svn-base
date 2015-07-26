@@ -1,0 +1,129 @@
+package com.rongdu.p2psys.user.dao.jdbc;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.user.dao.UserCertificationDao;
+import com.rongdu.p2psys.user.domain.CertificationType;
+import com.rongdu.p2psys.user.domain.UserCertification;
+import com.rongdu.p2psys.user.exception.UserException;
+import com.rongdu.p2psys.user.model.UserCertificationModel;
+
+@Repository("attestationDao")
+public class UserCertificationDaoImpl extends BaseDaoImpl<UserCertification> implements UserCertificationDao {
+
+	@Override
+	public int count(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		return countByCriteria(param);
+	}
+
+	@Override
+	public PageDataList<UserCertificationModel> list(long userId, int page) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addOrder(OrderType.DESC, "addTime");
+		param.addPage(page);
+		PageDataList<UserCertification> pageDataList = findPageList(param);
+		PageDataList<UserCertificationModel> pageDataList_ = new PageDataList<UserCertificationModel>();
+		List<UserCertificationModel> list = new ArrayList<UserCertificationModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				UserCertification attestation = (UserCertification) pageDataList.getList().get(i);
+				UserCertificationModel model = UserCertificationModel.instance(attestation);
+				model.setTypeName(attestation.getAttestationType().getName());
+				model.setJifenVal(attestation.getAttestationType().getCredit() + "");
+				list.add(model);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+
+	@Override
+	public List<UserCertificationModel> list(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addOrder(OrderType.DESC, "addTime");
+		List<UserCertification> list = findByCriteria(param);
+		List<UserCertificationModel> modelList = new ArrayList<UserCertificationModel>();
+		if (list != null && list.size() > 0) {
+			for (int i = 0; i < list.size(); i++) {
+				UserCertification attestation = list.get(i);
+				UserCertificationModel model = UserCertificationModel.instance(attestation);
+				model.setTypeName(attestation.getAttestationType().getName());
+				model.setJifenVal(attestation.getAttestationType().getCredit() + "");
+				modelList.add(model);
+			}
+		}
+		return modelList;
+	}
+
+	@Override
+	public PageDataList<UserCertificationModel> findByUserId(long userId, int status, int page) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addParam("status", status);
+		param.addPage(page);
+		PageDataList<UserCertification> pageDataList = findPageList(param);
+		PageDataList<UserCertificationModel> pageDataList_ = new PageDataList<UserCertificationModel>();
+		List<UserCertificationModel> list = new ArrayList<UserCertificationModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				UserCertification attestation = (UserCertification) pageDataList.getList().get(i);
+				UserCertificationModel model = UserCertificationModel.instance(attestation);
+				model.setTypeName(attestation.getAttestationType().getName());
+				list.add(model);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CertificationType> getAllList() {
+		Query query = em.createQuery(" from CertificationType order by typeId ");
+		return query.getResultList();
+	}
+
+	public CertificationType findByTypeId(int typeId) {
+		Query query = em.createQuery("from CertificationType where typeId=:typeId").setParameter("typeId", typeId);
+		return (CertificationType) query.getSingleResult();
+	}
+
+	@Override
+	public void attestationEdit(long id, String verifyRemark, int status, Operator operator) {
+		String jpql = "UPDATE UserCertification SET verifyRemark = :verifyRemark, status = :status, "
+				+ "verifyUser = :verifyUser, verifyTime= :verifyTime WHERE id = :id";
+		Query query = em.createQuery(jpql);
+		query.setParameter("verifyRemark", verifyRemark);
+		query.setParameter("status", status);
+		query.setParameter("verifyUser", operator.getId());
+		query.setParameter("verifyTime", new Date());
+		query.setParameter("id", id);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("审核证明材料失败！");
+		}
+	}
+
+	@Override
+	public int count(int status) {
+		QueryParam param = QueryParam.getInstance().addParam("status", status);
+		return countByCriteria(param);
+	}
+}

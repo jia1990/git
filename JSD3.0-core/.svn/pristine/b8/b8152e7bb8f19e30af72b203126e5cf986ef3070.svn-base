@@ -1,0 +1,30 @@
+package com.ddtkj.p2psys.award.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.award.dao.ActivityRuleDao;
+import com.ddtkj.p2psys.award.domain.ActivityRule;
+import com.ddtkj.p2psys.award.service.ActivityRuleService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+@Repository("activityRuleService")
+public class ActivityRuleServiceImpl implements ActivityRuleService{
+	
+	@Resource
+	private ActivityRuleDao activityRuleDao;
+	
+	/**
+	 * 查询规则
+	 * 
+	 */
+	@Override
+	public PageDataList<ActivityRule> getPageList(ActivityRule activityRule, int currentPage,
+			int pageSize) {
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pageSize);
+		return activityRuleDao.activityRulePageList(param);
+	}
+	
+	
+}

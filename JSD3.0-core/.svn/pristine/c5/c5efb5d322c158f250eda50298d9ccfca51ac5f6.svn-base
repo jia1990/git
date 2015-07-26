@@ -1,0 +1,168 @@
+package com.ddtkj.p2psys.phone.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.phone.dao.PhoneScrollPicDao;
+import com.ddtkj.p2psys.phone.domain.PhoneScrollPic;
+import com.ddtkj.p2psys.phone.model.PhoneScrollPicModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+
+
+@Repository("PhoneScrollPicDao")
+public class PhoneScrollPicDaoImpl extends BaseDaoImpl<PhoneScrollPic> implements PhoneScrollPicDao {
+
+	@Override
+	public List<PhoneScrollPicModel> listBySize(int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", 1);
+		Date date = new Date();
+		param.addAddFilter("onlineTime", Operators.LT, date, "nolineTime",
+				Operators.GT, date);
+		param.addOrder(OrderType.ASC, "sort");
+		param.addOrder(OrderType.DESC, "id");
+		List<PhoneScrollPic> list = super.findByCriteria(param, 0, size);
+		List<PhoneScrollPicModel> mlist = new ArrayList<PhoneScrollPicModel>();
+		for (PhoneScrollPic phoneScrollPic : list) {
+			PhoneScrollPicModel anm = PhoneScrollPicModel.instance(phoneScrollPic);
+			
+			anm.setPicPath(Global.getValue("adminurl")
+					+ phoneScrollPic.getPicPath());
+			
+			mlist.add(anm);
+		}
+		return mlist;
+	}
+
+	/**
+	 * 
+	 * 分页查询
+	 * 
+	 */
+	@Override
+	public PageDataList<PhoneScrollPicModel> list(int page) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", 1);
+		param.addOrder(OrderType.ASC, "sort");
+		param.addOrder(OrderType.DESC, "id");
+		param.addPage(page);
+		PageDataList<PhoneScrollPic> pageDataList = super.findPageList(param);
+		PageDataList<PhoneScrollPicModel> pageDataList_ = new PageDataList<PhoneScrollPicModel>();
+		List<PhoneScrollPicModel> list = new ArrayList<PhoneScrollPicModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				PhoneScrollPic an = (PhoneScrollPic) pageDataList.getList().get(i);
+				PhoneScrollPicModel anm = PhoneScrollPicModel.instance(an);
+				
+				list.add(anm);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+
+	/**
+	 * 
+	 * 更新活动信息
+	 * 
+	 */
+	/*@Override
+	public void addClick(long id) throws Exception {
+		PhoneScrollPic phoneScrollPic = super.find(id);
+		phoneScrollPic.setClicks(phoneScrollPic.getClicks() + 1);
+		super.update(phoneScrollPic);
+	}
+
+	*/
+	/**
+	 * 查询所有活动信息
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * 
+	 */
+	//@Override
+	public PageDataList<PhoneScrollPicModel> phoneScrollPicList(PhoneScrollPicModel model, int pageNumber, int pageSize) {
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber,
+				pageSize);
+		if (model.getStatus() != -1 && model.getStatus() != 0) {
+			if (model.getStatus() == 2) {
+				param.addParam("status", 2);
+			} else {
+				param.addParam("status", model.getStatus());
+			}
+		}
+		
+		if (!StringUtil.isBlank(model.getTitle())) {
+			param.addParam("title", Operators.LIKE, model.getTitle());
+		}
+		
+		
+		param.addParam("isDelete", false);
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<PhoneScrollPic> pageDataList = super.findPageList(param);
+		PageDataList<PhoneScrollPicModel> pageDataList_ = new PageDataList<PhoneScrollPicModel>();
+		List<PhoneScrollPicModel> list = new ArrayList<PhoneScrollPicModel>();
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				PhoneScrollPic activity = (PhoneScrollPic) pageDataList.getList().get(i);
+
+				PhoneScrollPicModel phoneScrollPicModel = PhoneScrollPicModel.instance(activity);
+				
+				Date nowDate = new Date();
+				
+				Date onlineTime = phoneScrollPicModel.getOnlineTime();
+				Date nolineTime = phoneScrollPicModel.getNolineTime();
+				
+				if (nowDate.before(onlineTime)){
+					phoneScrollPicModel.setStatusStr("待上线");
+				}
+				if (nowDate.after(nolineTime)) {
+					phoneScrollPicModel.setStatusStr("已下线");
+				}
+				if ((onlineTime.before(nowDate) || onlineTime.compareTo(nowDate) == 0) && (nolineTime.after(nowDate) || onlineTime.compareTo(nowDate)==0)) {
+					phoneScrollPicModel.setStatusStr("已上线");
+				}
+				
+				phoneScrollPicModel.setPicPath(Global.getValue("adminurl")
+						+ activity.getPicPath());
+				
+				list.add(phoneScrollPicModel);
+			}
+		}
+
+		pageDataList_.setList(list);
+		pageDataList_.setPage(pageDataList.getPage());
+		return pageDataList_;
+	}
+	
+	/**
+	 * 
+	 * 更新活动信息
+	 * 
+	 */
+	@Override
+	public void phoneScrollPicEdit(PhoneScrollPic phoneScrollPic) {
+		String jpql = "Update PhoneScrollPic set title = :title,status = :status,sort = :sort,"
+				+ "introduction = :introduction,content = :content where id = :id";
+		String[] names = new String[] { "type", "title", "status", "sort",
+				"isRecommend", "isTop", "introduction", "linkPith", "id" };
+		Object[] values = new Object[] { 
+				phoneScrollPic.getTitle(), phoneScrollPic.getStatus(),
+				phoneScrollPic.getSort(),  phoneScrollPic.getIntroduction(),
+				phoneScrollPic.getLinkPath(), phoneScrollPic.getId() };
+		super.updateByJpql(jpql, names, values);
+
+	}
+
+
+}

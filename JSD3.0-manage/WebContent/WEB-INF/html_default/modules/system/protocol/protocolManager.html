@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>角色管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  1000;
+	var winHeight = 600;
+	var editTitle = "编辑";
+	var editUrl =  "/modules/system/protocol/protocolEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'protocolList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 60, fixed:true,checkbox : false},
+			{ field: 'nid', title: '协议类型', width: 100, fixed:true,sortable:false},
+			{ field: 'content', title: '协议内容', width: 100,sortable:false}
+			] ]
+		});
+	});	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		 
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">		
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>				
+	</div>
+</body>
+</html>

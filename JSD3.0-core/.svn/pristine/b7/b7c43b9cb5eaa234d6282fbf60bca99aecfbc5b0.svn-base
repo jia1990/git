@@ -1,0 +1,118 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.returnmoney.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2014年12月30日 
+ */
+public class ReturnMoneyModel extends ReturnMoneyUse{
+
+	private static final long serialVersionUID = -4262941932718184748L;
+	/** 当前页码 */
+	private int page;
+	/** 每页总数 **/
+	private int rows;
+	private String userName; //用户名称
+	private String startTime; //开始时间
+	private String endTime; //结束时间
+	private String operUserName; //审核人用户名
+	private int time;
+	
+	//用于导出
+	private String continuedInvestMoneyStr;//回款续投金额
+	private String continuedInvestAwardStr; //回款续投奖励金额
+	
+	
+	public String getContinuedInvestMoneyStr() {
+		return continuedInvestMoneyStr;
+	}
+
+
+	public void setContinuedInvestMoneyStr(String continuedInvestMoneyStr) {
+		this.continuedInvestMoneyStr = continuedInvestMoneyStr;
+	}
+
+
+	public String getContinuedInvestAwardStr() {
+		return continuedInvestAwardStr;
+	}
+
+
+	public void setContinuedInvestAwardStr(String continuedInvestAwardStr) {
+		this.continuedInvestAwardStr = continuedInvestAwardStr;
+	}
+
+
+	public static ReturnMoneyModel instance(ReturnMoneyUse r) {
+		ReturnMoneyModel rmodel = new ReturnMoneyModel();
+		BeanUtils.copyProperties(r, rmodel);
+		return rmodel;
+	}
+
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+
+	public String getOperUserName() {
+		return operUserName;
+	}
+
+
+	public void setOperUserName(String operUserName) {
+		this.operUserName = operUserName;
+	}
+	
+}

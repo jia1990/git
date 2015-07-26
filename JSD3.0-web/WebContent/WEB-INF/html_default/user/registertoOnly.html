@@ -1,0 +1,51 @@
+﻿<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+<#include "../include/header.html">
+<#include "../include/resource1.html"> 
+<title>注册人数统计</title>
+<style>
+body{font-family:"Microsoft YaHei";}
+.register_success1{padding-left: 39px;background: url(${webroot}${theme_dir}/images/subject/regi_success.jpg) no-repeat 0px 19px;color: #008ed7;font-size: 22px;line-height: 60px;}
+.register_success{width: 260px;height: 230px;margin: 140px auto 200px;}
+.register_success3,.register_success2{color: #666;font-size: 16px;line-height: 40px;text-align: center;}
+.register_success3 span{color: #fd0101;font-size: 24px;}
+.register_success a{color: #fff;font-size: 16px;width: 150px;height: 38px;display: block;background: #039ee8;line-height: 38px;text-align: center;box-shadow: 2px 1px 3px #b3b3b3;border-radius: 3px;margin: 28px auto 0;}
+</style>
+
+<script type="text/javascript">
+	 	var second=5;
+		var timer;
+		function change()
+		{
+		  second--;
+		 
+		 if(second>0)
+		 {
+		   document.getElementById("second").innerHTML=second; 
+		  timer = setTimeout('change()',1000);//调用自身实现
+		 }
+		 else
+		 {
+		   clearTimeout(timer);
+		   location.href = "/member/main.html";
+		 }
+		}
+		timer = setTimeout('change()',1000);
+		$(function(){
+			
+		}) 
+</script>
+</head>
+ <body  onselectstart ='return false'>
+
+		<!-- <object style="border:0px" type="text/x-scriptlet" data="header.html" width=100% height=132></object> -->
+	<div class="register_success">
+	<p class="register_success1">恭喜，您已注册成功！</p>
+	<p class="register_success2">您已经成为晋商贷会员</p>
+	<p class="register_success3">还有 <span id="second">5</span> 秒自动跳转账户主页......</p>
+	<!-- <a href="/user/login.html">立即登录</a> -->
+	</div>
+	<#include "../include/footer.html"> 
+ </body>
+</html>

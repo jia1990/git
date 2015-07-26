@@ -1,0 +1,314 @@
+package com.ddtkj.p2psys.goods.dao.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.goods.dao.GoodsOrderDao;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsOrderModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+@Repository("goodsOrderDao")
+public class GoodsOrderDaoImpl extends BaseDaoImpl<GoodsOrder> implements
+		GoodsOrderDao {
+
+	@Override
+	public GoodsOrder findOrderByBorrowId(long id) throws Exception {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("borrow.id", id);
+		GoodsOrder goodsOrder = this.findByCriteriaForUnique(param);
+		return goodsOrder;
+	}
+	  /*775 fgq 2015-03-7 start
+       775 fgq 2015-03-7 end
+      */
+	@Override
+	public PageDataList<GoodsOrder> getList(GoodsOrderModel model) {
+
+		QueryParam param = QueryParam.getInstance();
+		StringBuffer selectSql = new StringBuffer(
+				"SELECT  go.*  FROM `t_jsd_user` u,`t_jsd_goods` goods,`t_jsd_goods_order` go,`t_jsd_memeber_logistics_address` mla  "
+						+ "   WHERE  u.`user_id` = go.`user_id` AND  go.`goods_id` = goods.id    AND mla.id= go.`address_id`  ");
+		StringBuffer sql = new StringBuffer();
+		if (model != null) {
+			Date startTime = null;
+            Date endTime = null;
+			if (model.getTimeSearch() == 5) {
+		            if (StringUtil.isNotBlank(model.getEndTimeF())) {
+		                endTime = DateUtil.valueOf(model.getEndTimeF());
+		                sql.append("  AND go.add_time <= :endTime  ");
+		            }
+		            if (StringUtil.isNotBlank(model.getStartTimeF())) {
+		                startTime = DateUtil.valueOf(model.getStartTimeF());
+		                sql.append(" AND go.add_time >= :startTime ");
+		            }
+
+			}
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				sql.append(" AND u.user_id = :userId");
+			}
+			if (model.getStatusSearch() != 5) {
+				switch (model.getStatusSearch()) {
+				case 1:
+					sql.append(" AND go.status = 'cd'  ");
+					break;
+				case 2:
+					sql.append(" AND go.status = 'dd'  ");
+					break;
+				case 3:
+					sql.append(" AND go.status = 'ck'  ");
+					break;
+				case 4:
+					sql.append(" AND go.status = 'dw'  ");
+					break;
+				default:
+					break;
+				}
+			}
+			
+			if (model.getTimeSearch() != 9) {
+				switch (model.getTimeSearch()) {
+				case 7:
+					sql.append(" AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 7 day) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				case 1:
+					sql.append("  AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 1 MONTH) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				case 2:
+					sql.append("  AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 2 MONTH) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				case 3:
+					sql.append("  AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 3 MONTH) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				default:
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				}
+			}
+			
+			
+			param.addPage(model.getPage(), model.getRows());
+			PageDataList<GoodsOrder> pageDataList = new PageDataList<GoodsOrder>();
+			selectSql.append(sql);
+			Query query = em.createNativeQuery(selectSql.toString(),
+					GoodsOrder.class);
+			long userId = model.getUser().getUserId();
+			if (userId > 0) {
+				query.setParameter("userId", userId);
+			}
+			if (model.getTimeSearch() == 5) {
+				if (model.getStartTimeF() != null&&!"".equals(model.getStartTimeF())) {
+					query.setParameter("startTime",startTime);
+				}
+				if (model.getEndTimeF() != null && !"".equals(model.getEndTimeF())) {
+					query.setParameter("endTime",endTime);
+				}
+			}
+			Page page = new Page(query.getResultList().size(), model.getPage(),
+					model.getRows());
+			query.setFirstResult((model.getPage() - 1) * model.getPage());
+	        query.setMaxResults(model.getRows());
+//			List<GoodsOrder> list = query.getResultList();
+			pageDataList.setList(query.getResultList());
+			pageDataList.setPage(page);
+			return pageDataList;
+		}
+		return null;
+
+	}
+
+	@Override
+	public PageDataList<GoodsOrder> getStoreOrderList(GoodsOrderModel model) {
+
+		QueryParam param = QueryParam.getInstance();
+		StringBuffer selectSql = new StringBuffer(
+				" SELECT  go.* FROM  `t_jsd_user` u, `t_jsd_goods` goods,`t_jsd_goods_order` go,`t_jsd_memeber_logistics_address` mla       ");
+		selectSql.append("   WHERE  u.`user_id` = goods.`user_id`AND go.`goods_id`  =  goods.`id`  AND mla.id= go.`address_id`");
+		StringBuffer sql = new StringBuffer();
+		if (model != null) {
+			Date startTime = null;
+            Date endTime = null;
+			if (model.getTimeSearch() == 5) {
+		            if (StringUtil.isNotBlank(model.getEndTimeF())) {
+		                endTime = DateUtil.valueOf(model.getEndTimeF());
+		                sql.append("  AND go.add_time <= :endTime  ");
+		            }
+		            if (StringUtil.isNotBlank(model.getStartTimeF())) {
+		                startTime = DateUtil.valueOf(model.getStartTimeF());
+		                sql.append(" AND go.add_time >= :startTime ");
+		            }
+
+			}
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				sql.append(" AND u.user_id = :userId");
+			}
+			if (model.getStatusSearch() != 5) {
+				switch (model.getStatusSearch()) {
+				case 1:
+					sql.append(" AND go.status = 'cd'  ");
+					break;
+				case 2:
+					sql.append(" AND go.status = 'dd'  ");
+					break;
+				case 3:
+					sql.append(" AND go.status = 'ck'  ");
+					break;
+				case 4:
+					sql.append(" AND go.status = 'dw'  ");
+					break;
+				default:
+					break;
+				}
+			}
+			
+			if (model.getTimeSearch() != 9) {
+				switch (model.getTimeSearch()) {
+				case 7:
+					sql.append(" AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 7 day) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				case 1:
+					sql.append("  AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 1 MONTH) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				case 2:
+					sql.append("  AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 2 MONTH) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				case 3:
+					sql.append("  AND go.add_time BETWEEN  DATE_SUB(NOW(),INTERVAL 3 MONTH) AND NOW() ");
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				default:
+					sql.append("  ORDER  BY go.add_time  DESC ");
+					break;
+				}
+			}
+			
+			
+			param.addPage(model.getPage(), model.getRows());
+			PageDataList<GoodsOrder> pageDataList = new PageDataList<GoodsOrder>();
+			selectSql.append(sql);
+			Query query = em.createNativeQuery(selectSql.toString(),
+					GoodsOrder.class);
+			long userId = model.getUser().getUserId();
+			if (userId > 0) {
+				query.setParameter("userId", userId);
+			}
+			if (model.getTimeSearch() == 5) {
+				if (model.getStartTimeF() != null&&!"".equals(model.getStartTimeF())) {
+					query.setParameter("startTime",startTime);
+				}
+				if (model.getEndTimeF() != null && !"".equals(model.getEndTimeF())) {
+					query.setParameter("endTime",endTime);
+				}
+			}
+			Page page = new Page(query.getResultList().size(), model.getPage(),
+					model.getRows());
+			query.setFirstResult((model.getPage() - 1) * model.getPage());
+	        query.setMaxResults(model.getRows());
+			List<GoodsOrder> list = query.getResultList();
+			pageDataList.setList(list);
+			pageDataList.setPage(page);
+			return pageDataList;
+		}
+		return null;
+
+	}
+	
+	
+	/**
+	 * 查询用户订单完成数
+	 * @author   780 fgq 2015-03-07 start
+                  780 fgq 2015-03-07 end
+   
+	 */
+	@Override
+	public int orderCountByUser(int userId) {
+		
+		//String sql = "SELECT count(*) FROM t_jsd_goods_order t1,t_jsd_user t2 WHERE t1.user_id = t2.user_id AND t1.status = 'cd' AND t2.user_id = :userId";
+		String sql = "SELECT  count(*) FROM  t_jsd_user u, t_jsd_goods goods,t_jsd_goods_order go,t_jsd_memeber_logistics_address mla  "
+				+ "WHERE  u.user_id = goods.user_id AND go.goods_id  =  goods.id   AND mla.id= go.address_id "
+				+ "AND u.user_id = :userId AND go.status = 'cd' ";
+       
+		Query query = em.createNativeQuery(sql);
+        query.setParameter("userId", userId);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return (int) Double.parseDouble(obj.toString());
+        }
+        return 0;
+	}
+	/**
+	 * 查询用户订单完成金额
+	 * @author 孙晓勇 
+	 */
+	@Override
+	public int orderMoneyCountByUser(int userId) {
+		
+		//String sql = "SELECT SUM(t1.one_pay + t1.stage_pay) FROM t_jsd_goods_order t1,t_jsd_user t2 WHERE t1.user_id = t2.user_id AND t1.status = 'dw' AND t2.user_id = :userId";
+		String sql = "SELECT SUM(go.one_pay + go.stage_pay) FROM  t_jsd_user u, t_jsd_goods goods,t_jsd_goods_order go,t_jsd_memeber_logistics_address mla "
+				+ " WHERE  u.user_id = goods.user_id AND go.goods_id  =  goods.id  AND mla.id= go.address_id "
+				+ "AND u.user_id = :userId AND go.status = 'cd' ";
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("userId", userId);
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (int) Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<GoodsOrderModel> excelListOrder(GoodsOrderModel model) {
+		// JSDP-116 fengguoqin 2015-05-15 start
+		StringBuffer sql = new StringBuffer("");
+		sql.append(" SELECT   go.`id`goodsId,u.`user_name`UserName, g.`goods_no`goodsNo,g.name goodsName,");
+		sql.append(" CASE go.`pay_way` WHEN  11 THEN '首付' WHEN  12 THEN '首付+分期'  ELSE '零首付' END AS goodsPW,");
+		sql.append(" go.`borrow_id`,b.`name`,");
+		sql.append(" CASE go.`STATUS` WHEN  'cd' THEN '订单已完成' WHEN  'ck' THEN '订单审核通过(已发标)' WHEN  'dw' THEN '订单未审核'  ELSE '订单被撤销' END AS OrderStatus,");
+		sql.append(" DATE_FORMAT(go.`add_time` ,'%Y-%m-%d %T') orderAddTime  ");
+		sql.append(" FROM `t_jsd_user` u,`t_jsd_goods` g,");
+		sql.append(" `t_jsd_goods_order` go LEFT JOIN `rd_borrow` b  ON go.`borrow_id` = b.`id` ");
+		sql.append(" WHERE go.`user_id`  = u.`user_id`  AND go.`goods_id` = g.id ");
+		if (!StringUtil.isBlank(model.getOrderNo())) {
+			sql.append("  AND go.order_no =" + model.getOrderNo() + "  ");
+		}
+		if (!StringUtil.isBlank(model.getUserName())) {
+			sql.append("  AND u.user_name like '%" + model.getUserName() + "%'  ");
+		}
+		if (!StringUtil.isBlank(model.getStartTime())) {
+			String dateStr = DateUtil.dateStr4(model.getStartTime());
+			sql.append("  AND go.add_time >='" + dateStr + "'  ");
+		}
+		if (!StringUtil.isBlank(model.getEndTime())) {
+			String dateStr = DateUtil.dateStr4(model.getEndTime());
+			sql.append("  AND go.add_time <'" + dateStr + "'  ");
+		}
+
+		sql.append("  order by go.add_time DESC");
+
+		Query query = em.createNativeQuery(sql.toString());
+
+		List orderList = query.getResultList();
+		return orderList;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+	
+
+}

@@ -1,0 +1,157 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.question.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：用户答案实体
+ * @作者：guojunhui@ddtkj.com
+ * @创建时间：2015-7-22 
+ */
+@Entity
+@Table(name = "t_jsd_question_answer")
+public class QuestionAnswer  implements Serializable {
+
+	private static final long serialVersionUID = 5770412857678871904L;
+	
+	public static final int MAX_ANSWER_SUM = 10;
+	public static final double  RIGHT_REWARD = 5;
+	public static final double  ALL_RIGHT_REWARD = 20;
+	
+	public static final String STATUS_SUC = "11";
+	public static final String STATUS_FALL = "00";
+	/** 主键 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	/** 问题 */
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "question_id")
+    private Question question; //问题ID
+	/** 用户 */
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+    private User user; //用户ID
+	/** 状态 */
+	private String status;
+	/** 答案 */
+	private String answer;
+	/** 正确答案 */
+	private String rightAnswer;
+	
+	private Date addTime;
+	
+	private String addIp;
+	/**
+	 * @return the id
+	 */
+	public long getId() {
+		return id;
+	}
+	/**
+	 * @param id the id to set
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+	/**
+	 * @return the question
+	 */
+	public Question getQuestion() {
+		return question;
+	}
+	/**
+	 * @param question the question to set
+	 */
+	public void setQuestion(Question question) {
+		this.question = question;
+	}
+	/**
+	 * @return the user
+	 */
+	public User getUser() {
+		return user;
+	}
+	/**
+	 * @param user the user to set
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
+	/**
+	 * @return the status
+	 */
+	public String getStatus() {
+		return status;
+	}
+	/**
+	 * @param status the status to set
+	 */
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	/**
+	 * @return the answer
+	 */
+	public String getAnswer() {
+		return answer;
+	}
+	/**
+	 * @param answer the answer to set
+	 */
+	public void setAnswer(String answer) {
+		this.answer = answer;
+	}
+	/**
+	 * @return the rightAnswer
+	 */
+	public String getRightAnswer() {
+		return rightAnswer;
+	}
+	/**
+	 * @param rightAnswer the rightAnswer to set
+	 */
+	public void setRightAnswer(String rightAnswer) {
+		this.rightAnswer = rightAnswer;
+	}
+	/**
+	 * @return the addTime
+	 */
+	public Date getAddTime() {
+		return addTime;
+	}
+	/**
+	 * @param addTime the addTime to set
+	 */
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	/**
+	 * @return the addIp
+	 */
+	public String getAddIp() {
+		return addIp;
+	}
+	/**
+	 * @param addIp the addIp to set
+	 */
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	
+	
+}

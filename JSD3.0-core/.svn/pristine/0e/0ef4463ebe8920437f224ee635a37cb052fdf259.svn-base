@@ -1,0 +1,261 @@
+package com.ddtkj.p2psys.core.quartz;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.quartz.autoTender.AutoTenderBean;
+import com.ddtkj.p2psys.core.quartz.autoTender.AutoTenderJobQueue;
+import com.ddtkj.p2psys.core.quartz.creditAssignment.CreditAssignmentBean;
+import com.ddtkj.p2psys.core.quartz.creditAssignment.CreditAssignmentJobQueue;
+import com.ddtkj.p2psys.core.quartz.draw.DrawBean;
+import com.ddtkj.p2psys.core.quartz.draw.DrawJobQueue;
+import com.ddtkj.p2psys.core.quartz.goods.GoodsBean;
+import com.ddtkj.p2psys.core.quartz.goods.GoodsJobQueue;
+import com.ddtkj.p2psys.core.quartz.openAccount.OpenAccountBean;
+import com.ddtkj.p2psys.core.quartz.openAccount.OpenAccountJobQueue;
+import com.ddtkj.p2psys.core.quartz.recharge.RechargeBean;
+import com.ddtkj.p2psys.core.quartz.recharge.RechargeJobQueue;
+import com.ddtkj.p2psys.core.quartz.repay.RepayBean;
+import com.ddtkj.p2psys.core.quartz.repay.RepayJobQueue;
+import com.ddtkj.p2psys.core.quartz.tender.TenderBean;
+import com.ddtkj.p2psys.core.quartz.tender.TenderJobQueue;
+import com.ddtkj.p2psys.core.quartz.verifyFullBorrow.VerifyFullBorrowBean;
+import com.ddtkj.p2psys.core.quartz.verifyFullBorrow.VerifyFullBorrowJobQueue;
+import com.ddtkj.p2psys.core.quartz.vip.VipBean;
+import com.ddtkj.p2psys.core.quartz.vip.VipJobQueue;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.member.model.MemberVipAwardSubModel;
+import com.ddtkj.p2psys.member.model.MemberVipSubModel;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+/**
+ * 并发业务，处理工具类
+ * @author wcw
+ *
+ */
+public class DisruptorUtils {
+	/**
+	 * 投标
+	 * @param borrowParam
+	 * @param user
+	 * @throws Exception
+	 */
+	public static void tender(String resultFlag, User user,Borrow borrow,BorrowModel bm,BorrowTender bt){
+    	TenderBean tenderBean = new TenderBean();
+    	tenderBean.setUser(user);
+    	tenderBean.setResultFlag(resultFlag);
+    	tenderBean.setType("tender");
+    	tenderBean.setBorrow(borrow);
+    	tenderBean.setBorrowModel(bm);
+    	tenderBean.setBorrowTender(bt);
+    	TenderJobQueue.TENDER.offer(tenderBean);
+	}
+	/**
+	 * 满标复审 通过
+	 * @param borrowModel
+	 * @param param
+	 * @throws Exception
+	 */
+	public static void fullSuccess(BorrowModel borrowModel, String resultFlag) throws Exception {
+    	
+    	VerifyFullBorrowBean verifyFullBorrowBean =  new VerifyFullBorrowBean();
+    	verifyFullBorrowBean.setType("fullSuccess");
+    	verifyFullBorrowBean.setBorrowModel(borrowModel);
+    	verifyFullBorrowBean.setResultFlag(resultFlag);
+    	VerifyFullBorrowJobQueue.VERIFY_FULL_BORROW.offer(verifyFullBorrowBean);
+    	
+	}
+	
+	/**
+	 * 满标复审 未通过
+	 * @param borrowModel
+	 * @param param
+	 * @throws Exception
+	 */
+	public static void failBorrow(BorrowModel borrowModel, String resultFlag) throws Exception {
+    	VerifyFullBorrowBean verifyFullBorrowBean =  new VerifyFullBorrowBean();
+    	verifyFullBorrowBean.setType("failBorrow");
+    	verifyFullBorrowBean.setBorrowModel(borrowModel);
+    	verifyFullBorrowBean.setResultFlag(resultFlag);
+    	VerifyFullBorrowJobQueue.VERIFY_FULL_BORROW.offer(verifyFullBorrowBean);
+	}
+	
+	/**
+	 * 还款
+	 * @param borrowRepayment
+	 * @param param
+	 */
+	public static void repay(BorrowRepayment borrowRepayment, String resultFlag){
+    	RepayBean repayBean = new RepayBean();
+    	repayBean.setType("repay");
+    	repayBean.setResultFlag(resultFlag);
+    	repayBean.setBorrowRepayment(borrowRepayment);
+    	RepayJobQueue.REPAY.offer(repayBean);
+	}
+	
+	/**
+	 * 自动投标
+	 * @param borrowModel
+	 * @throws Exception
+	 */
+	public static void autoTender(BorrowModel borrowModel) throws Exception {
+    	AutoTenderBean autoTenderBean = new AutoTenderBean();
+    	autoTenderBean.setType("autoTender");
+    	autoTenderBean.setBorrowModel(borrowModel);
+    	
+    	AutoTenderJobQueue.AUTOTENDER.offer(autoTenderBean);
+	}
+	
+	/**
+	 * 第三方开户接口
+	 */
+	public static void openUserRegister(User user, YmdRegister ymdRegister,String resultFlag){
+    	OpenAccountBean oab = new OpenAccountBean();
+    	oab.setUser(user);
+    	oab.setType("apiUserRegister");
+    	oab.setYmdRegister(ymdRegister);
+    	oab.setResultFlag(resultFlag);
+    	OpenAccountJobQueue.OPEN_ACCOUNT.offer(oab);
+	}
+	/**
+	 * 充值回调接口
+	 * @param rechargeModel
+	 * @throws Exception
+	 */
+	public static void rechargeBack(RechargeModel rechargeModel,String resultFlag){
+		RechargeBean rb=new RechargeBean();
+		rb.setRechargeModel(rechargeModel);
+		rb.setResultFlag(resultFlag);
+		RechargeJobQueue.RECHARGE.offer(rb);
+	}
+	/**
+	 * 提现失败回调接口
+	 * @param rechargeModel
+	 * @throws Exception
+	 */
+	public static void drawFailBack(YmdCash ymdCash){
+		DrawBean rb=new DrawBean();
+		rb.setYmdCash(ymdCash);
+		rb.setType("drawFailBack");
+		DrawJobQueue.DRAW.offer(rb);
+	}
+	
+	/**
+	 * vip购买接口
+	 */
+	public  static void vipBuy(MemberVipSubModel mvm,String resultFlag){
+		VipBean vipBean=new VipBean();
+		vipBean.setMemberVipSubModel(mvm);
+		vipBean.setResultFlag(resultFlag);
+		vipBean.setType("buyVipTransfer");
+		VipJobQueue.VIP.offer(vipBean);
+	}
+	/**
+	 * vip兑换接口
+	 * @param mvs
+	 * @param resultFlag
+	 */
+	public static void convertVip(MemberVipAwardSubModel mvs,String resultFlag){
+		VipBean vipBean=new VipBean();
+		vipBean.setResultFlag(resultFlag);
+		vipBean.setMemberVipAwardSubModel(mvs);
+		vipBean.setType("convertVipForVipAward");
+		VipJobQueue.VIP.offer(vipBean);
+	}
+	/**
+	 * 债权购买接口
+	 * @param creditLog
+	 * @param user
+	 * @param creditAssignment
+	 * @param resultFlag
+	 */
+	public static void creditAssignmentBuy(CreditLog creditLog,User user,CreditAssignment creditAssignment,String resultFlag){
+		CreditAssignmentBean creditAssignmentBean=new CreditAssignmentBean();
+		creditAssignmentBean.setResultFlag(resultFlag);
+		creditAssignmentBean.setType("creditBuySuccess");
+		creditAssignmentBean.setCreditAssignment(creditAssignment);
+		creditAssignmentBean.setCreditLog(creditLog);
+		creditAssignmentBean.setUser(user);
+		CreditAssignmentJobQueue.CREDIT_ASSIGNMENT.offer(creditAssignmentBean);
+	}
+	
+	/**
+	 * 债权撤销接口
+	 * @param creditLog
+	 * @param user
+	 * @param creditAssignment
+	 * @param resultFlag
+	 */
+	public static void cancelCreditAssignment(CreditLog creditLog,String resultFlag){
+		CreditAssignmentBean creditAssignmentBean=new CreditAssignmentBean();
+		creditAssignmentBean.setResultFlag(resultFlag);
+		creditAssignmentBean.setType("creditReCall");
+		creditAssignmentBean.setCreditLog(creditLog);
+		CreditAssignmentJobQueue.CREDIT_ASSIGNMENT.offer(creditAssignmentBean);
+	}
+	/**
+	 * 债权复审成功接口
+	 * @param creditLog
+	 * @param user
+	 * @param creditAssignment
+	 * @param resultFlag
+	 */
+	public static void creditAssignmentVerifyFullSuc(CreditAssignment creditAssignment,String resultFlag){
+		CreditAssignmentBean creditAssignmentBean=new CreditAssignmentBean();
+		creditAssignmentBean.setResultFlag(resultFlag);
+		creditAssignmentBean.setType("creditVerifyFullSuccess");
+		creditAssignmentBean.setCreditAssignment(creditAssignment);
+		CreditAssignmentJobQueue.CREDIT_ASSIGNMENT.offer(creditAssignmentBean);
+	}
+	/**
+	 * 债权复审失败接口
+	 * @param creditLog
+	 * @param user
+	 * @param creditAssignment
+	 * @param resultFlag
+	 */
+	public static void creditAssignmentVerifyFullFail(CreditAssignment creditAssignment,String resultFlag){
+		CreditAssignmentBean creditAssignmentBean=new CreditAssignmentBean();
+		creditAssignmentBean.setResultFlag(resultFlag);
+		creditAssignmentBean.setType("creditVerifyFullFail");
+		creditAssignmentBean.setCreditAssignment(creditAssignment);
+		CreditAssignmentJobQueue.CREDIT_ASSIGNMENT.offer(creditAssignmentBean);
+	}
+	/**
+	 * 分期宝直接购买
+	 * @param goodsOrder
+	 * @param user
+	 * @param resultFlag
+	 */
+	public static void googsBuy(GoodsOrder goodsOrder,User user,String resultFlag){
+		GoodsBean goodsBean=new GoodsBean();
+		goodsBean.setGoodsOrder(goodsOrder);
+		goodsBean.setUser(user);
+		goodsBean.setType("goodsBuySuccess");
+		goodsBean.setResultFlag(resultFlag);
+		GoodsJobQueue.GOODS.offer(goodsBean);
+	}
+	
+	/**
+	 * 分期宝分期购买
+	 * @param goodsOrder
+	 * @param user
+	 * @param resultFlag
+	 */
+	public static void googsStageBuy(GoodsOrder goodsOrder,Borrow borrow,GoodsModel goodsModel,User user,String resultFlag){
+		GoodsBean goodsBean=new GoodsBean();
+		goodsBean.setGoodsOrder(goodsOrder);
+		goodsBean.setUser(user);
+		goodsBean.setType("goodsBuyOneSuccess");
+		goodsBean.setResultFlag(resultFlag);
+		goodsBean.setGoodsModel(goodsModel);
+		goodsBean.setBorrow(borrow);
+		GoodsJobQueue.GOODS.offer(goodsBean);
+	}
+}

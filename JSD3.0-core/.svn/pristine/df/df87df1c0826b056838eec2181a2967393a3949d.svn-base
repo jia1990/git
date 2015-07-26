@@ -1,0 +1,99 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.redpacket.dao.RedPacketDao;
+import com.ddtkj.p2psys.redpacket.domain.RedPacket;
+import com.ddtkj.p2psys.redpacket.service.RedPacketService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+
+
+/**
+ * 红包类型实现类
+ * @author YJF
+ *
+ */
+
+@Service("redPacketService")
+public class RedPacketServiceImpl implements RedPacketService {
+
+	@Resource
+	private RedPacketDao redPacketDao ;
+
+	@Override
+	public RedPacket save(RedPacket rp) {
+		return this.redPacketDao.save(rp);
+	}
+
+	@Override
+	public RedPacket update(RedPacket rp) {
+		// TODO Auto-generated method stub
+		return this.redPacketDao.update(rp);
+	}
+
+	@Override
+	public void delete(RedPacket rp) {
+		this.redPacketDao.delete(rp.getId());
+	}
+
+	@Override
+	public List<RedPacket> getAll() {
+		// TODO Auto-generated method stub
+		return this.redPacketDao.findAll();
+	}
+
+	@Override
+	public RedPacket getEntityById(long id) {
+		return this.redPacketDao.getEntityById(id);
+	}
+
+	@Override
+	public PageDataList<RedPacket> getEntityByIsOpen(String isopen,int currentPage,int pagenum) {
+		// TODO Auto-generated method stub
+		return this.redPacketDao.getEntityByIsOpen(isopen,currentPage,pagenum);
+	}
+
+	@Override
+	public RedPacket getEntityByTypeCode(String typecode) {
+		// TODO Auto-generated method stub
+		return this.redPacketDao.getEntityByTypeCode(typecode);
+	}
+
+	@Override
+	public PageDataList<RedPacket> getEntityList(QueryParam param) {
+		// TODO Auto-generated method stub
+		return this.redPacketDao.getEntityList(param);
+	}
+
+	@Override
+	public PageDataList<RedPacket> getPageRedPacketList(int pageNumber,
+			int pageSize, Map<String, Object> map) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber,pageSize);
+		String isopen = (String) map.get("isopen");
+		String name = (String) map.get("name");
+		if(null == isopen && null == name){
+			param.addParam("isopen", "Y");
+		}
+		if(null != name && !"".equals(name)){
+			param.addParam("name", Operators.LIKE, name);
+		}
+		if(null != isopen && !"".equals(isopen) && !"A".equals(isopen)){
+			param.addParam("isopen",isopen);
+		}
+		
+		return this.getEntityList(param);
+	}
+
+	
+
+	
+	
+}

@@ -1,0 +1,55 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/reward/arEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址		
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+
+		<div class="formitm">
+		     <label class="lab">活动名称： </label>
+		     <div class="ipt">
+		     	<input type="text" name="activity.actName" class="w400 easyui-validatebox" value="${activity.actName!}" data-options="required: true">
+		     </div>
+		</div>
+		<div class="formitm" id="time">
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="activity.begintime" id="startTime" value="${activity.begintime}" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="activity.endtime" id="endTime" value="${activity.endtime}" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		 <div class="formitm">
+		     <label class="lab">添加红包：</label>
+		     <div class="ipt">
+		     	<input type="hidden" id="redId" name="rp.id" value="${rp.id!}">
+		     	<input type="text" id="redPackName" name="rp.name" class="w200 easyui-validatebox" value="${rp.name!}" readonly="readonly" data-options="required: true" />&nbsp;&nbsp;
+		     	<input type="text" id="validtime" name="rp.validtime" class="w50 easyui-validatebox" value="${rp.validtime!}" readonly="readonly" data-options="required: true" />天
+		     	<input type="button" value="选择" onclick="showRedPacket()" class="btnRedPack"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">红包金额：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w200 easyui-validatebox" name="account" value="${redMoney!}" data-options="required: true,validType:'numeric'">
+		     	<input type="hidden" class="w200 easyui-validatebox" name="arId" value="${arId!}" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+   
+    <input name="activity.createtime" value="${activity.createtime}" type="hidden">
+    <input name="activity.operator.id" value="${activity.operator.id}" type="hidden">
+	<input name="activity.id" value="${activity.id!}" type="hidden">
+	<input name="activity_edit_token" value="${activity_edit_token}" type="hidden">
+</form>
+</div>
+
+<style>
+.btnRedPack{
+	margin-left:10px;width:50px;line-height:30px;border:none;font-size:14px;color:#fff;background-color: #4b93cf;font-size: 16px;text-align: center;-moz-border-radius:5px; -webkit-border-radius: 5px; border-radius: 5px;cursor: pointer;
+}
+</style>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>

@@ -1,0 +1,243 @@
+package com.rongdu.manage.action.loan;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowRepaymentModel;
+import com.rongdu.p2psys.borrow.service.BorrowConfigService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 借贷管理-逾期信息管理
+ * 
+ * @author qj
+ * @version 2.0
+ * @since 2014年5月15日
+ */
+public class ManageBorrowLateAction extends BaseAction implements ModelDriven<BorrowRepaymentModel> {
+
+	BorrowRepaymentModel model = new BorrowRepaymentModel();
+
+	public BorrowRepaymentModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private BorrowConfigService borrowConfigService;
+	@Resource
+	private OperatorService operatorService;
+
+	private Map<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * 逾期信息展示
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/borrowLate/borrowLateManager")
+	public String borrowLateManager() throws Exception {
+	    List<BorrowConfig> borrowConfigList = borrowConfigService.findAllNotFlowAndSecond();
+        request.setAttribute("borrowConfigList", borrowConfigList);
+		return "borrowLateManager";
+	}
+
+	/**
+	 * 逾期信息列表
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/borrowLate/borrowLateList")
+	public void borrowLateList() throws Exception {
+		model.setSize(paramInt("rows"));
+        if ("".equals(paramString("status"))) {
+            model.setStatus(99);
+        }
+		// 是否逾期
+		model.setLate(true);
+		PageDataList<BorrowRepaymentModel> list = borrowRepaymentService.list(model);
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 借款人逾期导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrowLate/borrowLateExcel")
+	public void borrowLateExcel() throws Exception {
+		
+		// 原导出
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		model.setLate(true);
+		PageDataList<BorrowRepaymentModel> pageDataList = borrowRepaymentService.list(model);
+		List<BorrowRepaymentModel> list = pageDataList.getList();
+		List<BorrowRepaymentModel> newList = new ArrayList<BorrowRepaymentModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowRepaymentModel brm = list.get(i);
+			int period = brm.getPeriod();
+			brm.setPeriod(period+1);
+			if(brm.getStatus()==0){
+				brm.setStatusName("未还款");
+			}else if(brm.getStatus()==1){
+				brm.setStatusName("已还款");
+			}else if(brm.getStatus()==2){
+				brm.setStatusName("网站垫付");
+			}else{
+				brm.setStatusName("还款处理中");
+			}
+			newList.add(brm);
+		}
+		String title = "借款人逾期的Excel表";
+
+		String[] hearders = new String[] {"编号","借款人","标名","当前期数","总期数","合同编号","预计还款时间","实际还款时间","借款类型","预还金额","已还金额","本金","利息","滞纳金","逾期天数","罚息","状态"};// 表头数组
+		String[] fields = new String[] {"id","userName","borrowName","period", "sumPeriod", "contractNo","repaymentTime", "repaymentYesTime", "typeName","repaymentAccountStr","repaymentYesAccountStr","capitalStr","interestStr","forfeitStr","lateDays","lateInterest","statusName"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+		int sheetPage = newList.size() / sheetRows;
+		if (newList.size() % sheetRows > 0) {
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowRepaymentModel> tdList = new ArrayList<BorrowRepaymentModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowRepaymentModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		
+*/
+		// 新导出
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if (model.getStatus() == 99) {
+			model.setStatus(0);
+		}
+
+		// JSDP-116 sxy 2015-05-15 start
+		List<BorrowRepayment> newList = borrowRepaymentService.excelBorrowOverdueList(model);
+		String title = "借款人逾期的Excel表";
+		String[] hearders = new String[] { "编号","借款人","标名","当前期数","总期数","合同编号","预计还款时间","实际还款时间","借款类型","预还金额","已还金额","本金","利息","滞纳金","逾期天数","罚息","状态"};// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]", "object[3]", "object[4]", "object[5]", "object[6]", "object[7]", "object[8]", "object[9]", "object[10]", "object[11]","object[12]","object[13]","object[14]" ,"object[15]" ,"object[16]" ,"object[17]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-116 sxy 2015-05-15 start
+		
+		
+		
+		
+		
+		
+	}
+	
+	/**
+	 * 逾期信息展示
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/borrowLate/borrowLateEditPage")
+	public String borrowLateEditPage() throws Exception {
+		//initRSAME();
+		saveToken("borrowLateToken");
+		BorrowRepayment borrowRepayment = borrowRepaymentService.findById(model.getId());
+		request.setAttribute("borrowRepayment", borrowRepayment);
+		
+		//计算逾期利息
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+		Date nowTime = null;
+		Date repaymentTime = null;
+		try {
+			nowTime = format.parse(DateUtil.dateStr2(new Date()));
+			repaymentTime = format.parse(DateUtil.dateStr2(borrowRepayment.getRepaymentTime()));
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		long day = nowTime.getTime() - repaymentTime.getTime();
+		int days = (int) (day / (24 * 60 * 60 * 1000));
+		double lateInterest = 0;//计算垫付到还款时逾期的利息
+        if (days > 0 ){ 
+            String overdueFee = Global.getValue("overdue_fee");
+            double overdue = Double.parseDouble(overdueFee);
+            if(days <= 5) {
+                double captial = borrowRepayment.getCapital();
+                lateInterest = BigDecimalUtil.mul(BigDecimalUtil.mul(captial + borrowRepayment.getInterest(), days), overdue); // 计算出逾期利息
+                borrowRepayment.setLateDays(days);
+                borrowRepayment.setLateInterest(lateInterest);
+            }else if(days > 5){
+                double capital = borrowRepaymentService.getRemainderCapital(borrowRepayment.getBorrow().getId());
+                double interest = borrowRepaymentService.getRemainderInterest(borrowRepayment.getBorrow().getId());
+                lateInterest = BigDecimalUtil.mul(BigDecimalUtil.mul(capital + interest, days), overdue); // 计算出逾期利息
+                borrowRepayment.setLateInterest(lateInterest);
+            }
+            borrowRepayment.setLateDays(days);
+        }
+		request.setAttribute("lateInterests", lateInterest);
+		
+		return "borrowLateEditPage";
+	}
+	
+	/**
+	 * 逾期垫付
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrowLate/overdue")
+	public void overdue() throws Exception{
+		
+		BorrowRepayment borrowRepayment = borrowRepaymentService.findById(model.getId());
+		checkToken("borrowLateToken");
+		borrowRepaymentService.overdue(borrowRepayment, getOperator());
+		data.put("result", true);
+		data.put("msg", "操作成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+}

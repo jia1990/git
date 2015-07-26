@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户收货地址查询</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.userLock = true;
+</script>
+
+<script type="text/javascript">
+	var dataGrid;
+	$(function() {
+		
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'otherAddressManageList.html?userId='+${userId},
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 7,
+			pagination:false,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			autoRowHeight : true,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'id', title: '编号', width: 50, fixed :true,checkbox : false},
+			{ field: 'userName', title: '会员名', width: 100, fixed :true,sortable: false },
+			{ field: 'name', title: '收货人姓名', width: 80, fixed :true,sortable: false },
+			{ field: 'provinceName', title: '省', width: 80, fixed :true,sortable: false},
+			{ field: 'cityName', title: '市', width: 80,fixed :true, sortable: false },
+			{ field: 'detailAddress', title: '详细地址',width: 200, sortable: false },
+			{ field: 'phone', title: '电话',fixed :true, width: 100, sortable: false },
+			{ field: 'zipCode', title: '邮编', width: 85, sortable: false }
+			] ],
+			loadFilter: function(data){
+				$.each(data.rows,function(index,row){
+					if(row.userId){
+						row.userId=row.user.userId;
+					}
+				}); 
+				
+				return data;
+			},
+			
+		});
+		
+	});
+</script>
+
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	
+</body>
+</html>

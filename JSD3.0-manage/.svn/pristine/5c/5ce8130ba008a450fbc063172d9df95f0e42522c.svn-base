@@ -1,0 +1,218 @@
+package com.ddtkj.manage.action.order;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsOrderModel;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class ManageOrderAction extends BaseAction<GoodsOrderModel> implements ModelDriven<GoodsOrderModel>{
+	private static Logger logger = Logger.getLogger(ManageOrderAction.class);
+	@Resource
+	private GoodsOrderService goodsOrderService;
+	@Resource
+	private BorrowService borrowService;
+	
+	private Map<String,Object> data = new HashMap<String, Object>();
+	private Map<String,Object> map;
+	
+	/**
+	 * 订单查询展示
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderManager")
+	public String orderManager() throws Exception{
+		return "orderManager";
+	}
+	/**
+	 * 订单查询的方法
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderList")
+	public void orderList() throws Exception{
+		PageDataList<GoodsOrderModel> orderModelPage = goodsOrderService.goodsOrderPageList(model);
+		data.put("total", orderModelPage.getPage().getTotal());
+		data.put("rows", orderModelPage.getList());
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 订单的管理(修改)页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderEditPage")
+	public String orderEditPage() throws Exception{
+		return "orderEditPage";
+	}
+	
+	/**
+	 * 订单的修改实现
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderEdit")
+	public void orderEdit() throws Exception{
+		
+	}
+	
+	/**
+	 * 订单的审核页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderViewPage")
+	public String orderVerifyPage() throws Exception{
+		GoodsOrder goodsOrder = goodsOrderService.findOrderById(model.getId());
+		
+		
+		request.setAttribute("user", goodsOrder.getUser());
+		
+		request.setAttribute("goodsOrder", goodsOrder);
+		request.setAttribute("userName", goodsOrder.getUser().getUserName());
+		request.setAttribute("goodsName", goodsOrder.getGoods().getName());
+		request.setAttribute("goodsCost", goodsOrder.getGoods().getCost());
+		request.setAttribute("goodsColor", goodsOrder.getGoods().getColor());
+		request.setAttribute("goodsSize", goodsOrder.getGoods().getSize());
+		request.setAttribute("goodsVesion", goodsOrder.getGoods().getVesion());
+		request.setAttribute("goodsPayWay", model.convertOrderPayWay(goodsOrder.getPayWay()));
+		request.setAttribute("goodsOnePay", goodsOrder.getOnePay());
+		request.setAttribute("goodsStagePay", goodsOrder.getStagePay());
+		request.setAttribute("goodsApr", goodsOrder.getGoods().getGoodsApr());
+//		request.setAttribute("orderStatus", model.convertOrderSatus(goodsOrder.getStatus()));
+		
+		saveToken("orderVerifyToken");
+		if(null != goodsOrder.getBorrow()){
+			Borrow borrow = borrowService.find(goodsOrder.getBorrow().getId());
+			request.setAttribute("borrow", borrow);
+			request.setAttribute("orderBorrow", goodsOrder.getBorrow().getName());
+			return "orderVerifyPage";
+		}else{
+			return "orderCheckPage";
+		}
+		
+	}
+	
+	
+	/**
+	 * 订单的审核实现方法
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderVerify")
+	public void orderVerify() throws Exception{
+		String passVerify = paramString("passVerify");
+		GoodsOrder goodsOrder = goodsOrderService.findOrderById(model.getId());
+		if("Y".equals(passVerify)){
+			goodsOrder.setStatus(GoodsOrder.VERIFY_ORDER_PASS);
+		}else{
+			goodsOrder.setStatus(GoodsOrder.REVOKE_VERIFY_ORDER);
+		}
+		goodsOrder.setRemark(model.getRemark());
+		goodsOrder.setUpdateTime(Calendar.getInstance().getTime());
+		goodsOrder.setUpdateUser(this.getOperatorUserName());
+		checkToken("orderVerifyToken");
+		goodsOrderService.updateOrder(goodsOrder);
+		printResult("审核成功", true);
+	}
+	
+	
+	/**
+	 * 订单的导出方法
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderExcel")
+	public void orderExcel() throws Exception{
+		//JSDP-116 fengguoqin 2015-05-19 start
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		// 设置借款标类型
+		
+		if(model.getPage()==0){
+    		model.setPage(1);
+    	}
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setRows(99999999);
+		
+		PageDataList<GoodsOrderModel> orderModelPage = goodsOrderService.goodsOrderPageList(model);*/
+		List<GoodsOrderModel> list = goodsOrderService.excelGoodsOrderList(model);
+		
+//		List<GoodsOrderModel> list = orderModelPage.getList();
+	/*	List<GoodsOrderModel> newList = orderModelPage.getList();*/
+		String title = "商品订单的Excel表";
+		String[] hearders = new String[] { "编号","借款人邮箱","商品编号","商品名称","购买方式","分期宝编号","分期宝标题","订单状态","订单生成时间"};// 表头数组
+		/*String[] fields = new String[] { "id","userName","goodsNo","goodsName","payWay","borrowId","borrowName","orderStatus","addTime" };// 对象属性数组*/	
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]"};// 对象属性数组
+		/*int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<GoodsOrderModel> tdList = new ArrayList<GoodsOrderModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				GoodsOrderModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 fengguoqin 2015-05-19 end
+	}
+	/**
+	 * 订单撤销
+	 * @throws Exception
+	 */
+	@Action("/modules/order/order/orderDel")
+	public void orderDel() throws Exception{
+		map = new HashMap<String, Object>();
+		GoodsOrder goodsOrder = goodsOrderService.findOrderById(model.getId());
+		if(goodsOrder.getStatus().equals(GoodsOrder.WAIT_VERIFY_ORDER)){
+			goodsOrder.setStatus(GoodsOrder.REVOKE_VERIFY_ORDER);
+		}
+		if(goodsOrder.getStatus().equals(GoodsOrder.VERIFY_ORDER_PASS)){
+			BorrowModel bm = BorrowModel.instance(goodsOrder.getBorrow());
+			borrowService.verifyFull(bm, this.getOperator());
+			goodsOrder.setStatus(GoodsOrder.REVOKE_VERIFY_ORDER);
+		}
+		
+		
+		goodsOrderService.updateOrder(goodsOrder);
+		map.put("result", true);
+		map.put("msg", "撤销成功！");
+		printJson(getStringOfJpaObj(map));
+	}
+}

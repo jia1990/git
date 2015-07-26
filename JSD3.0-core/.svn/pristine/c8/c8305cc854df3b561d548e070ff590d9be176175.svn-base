@@ -1,0 +1,99 @@
+package com.rongdu.p2psys.core.sms.sendMsg;
+
+import java.util.Date;
+import java.util.Map;
+
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+/**
+ * 债权发送通知相关
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月20日       jira编号：JSDBET-838
+ */
+public class CreditAssignmentMsg extends BaseMsg {
+
+	/** 序列化 */
+	private static final long serialVersionUID = 5750101385895758527L;
+	/** 发送通知service */
+	protected NoticeService noticeService;
+	
+	protected User user ;
+	
+	protected CreditAssignment ca;
+	
+	/** 模块编码 */
+	protected String noticeTypeNid;
+
+	@Override
+	public void doEvent() {
+		// 邮件、短信、站内信
+		sendMsg();
+	}
+
+	/**
+	 * 构造方法
+	 */
+	public CreditAssignmentMsg() {
+		super();
+		noticeService = (NoticeService) BeanUtil.getBean("noticeService");
+	}
+
+	/**
+	 * 构造方法
+	 * 
+	 * @param nid 模块ID
+	 */
+	public CreditAssignmentMsg(String nid,User user,CreditAssignment ca) {
+		this();
+		this.setNoticeTypeNid(nid);
+		this.setUser(user);
+		this.setCa(ca);
+	}
+	@Override
+	public void sendMsg() {
+		if (!"".equals(noticeTypeNid)) {
+			if(user != null){
+				Map<String, Object> map = Global.getTransfer();
+				map.put("userName", getUser().getUserName());
+				map.put("user",getUser());
+				map.put("host", Global.getValue("weburl"));
+				map.put("webname", Global.getValue("webname"));
+				map.put("noticeTime", DateUtil.dateStr(new Date(), "MM月dd日 HH时mm分ss秒"));
+				map.put("mobile", user.getMobilePhone());//将手机号存入map
+				map.put("email", user.getEmail());//将邮箱号存入map
+				map.put("creditAssignment", ca);
+				noticeService.sendNotice(noticeTypeNid, map);
+				Global.removeTransfer();
+			}
+		}
+	}
+
+	public String getNoticeTypeNid() {
+		return noticeTypeNid;
+	}
+
+	public void setNoticeTypeNid(String noticeTypeNid) {
+		this.noticeTypeNid = noticeTypeNid;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public CreditAssignment getCa() {
+		return ca;
+	}
+
+	public void setCa(CreditAssignment ca) {
+		this.ca = ca;
+	}
+}

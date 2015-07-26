@@ -1,0 +1,65 @@
+package com.rongdu.p2psys.user.model;
+
+
+import org.springframework.beans.BeanUtils;
+
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+
+public class UserLogisticsAddressModel extends UserLogisticsAddress{
+	private String userName;//用户名
+	private String provinceName;//省的名称
+	private String cityName;//市的名称
+	private String countyName;//区县的名称
+	
+	
+	
+	
+	
+	public String getCountyName() {
+		return countyName;
+	}
+
+	public void setCountyName(String countyName) {
+		this.countyName = countyName;
+	}
+
+	public String getProvinceName() {
+		return provinceName;
+	}
+
+	public void setProvinceName(String provinceName) {
+		this.provinceName = provinceName;
+	}
+
+	public String getCityName() {
+		return cityName;
+	}
+
+	public void setCityName(String cityName) {
+		this.cityName = cityName;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	/**
+	 * 将model转化为实体
+	 * @return
+	 */
+	public UserLogisticsAddress prototype(){
+		UserLogisticsAddress addr = new UserLogisticsAddress();
+		BeanUtils.copyProperties(this, addr);
+		return addr;
+	}
+	
+	public static UserLogisticsAddressModel instance(UserLogisticsAddress addr){
+		UserLogisticsAddressModel model = new UserLogisticsAddressModel();
+		BeanUtils.copyProperties(addr, model);
+		return model;
+	} 
+}

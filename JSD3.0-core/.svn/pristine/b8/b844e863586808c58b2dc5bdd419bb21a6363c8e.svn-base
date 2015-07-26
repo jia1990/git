@@ -1,0 +1,58 @@
+package com.ddtkj.p2psys.authorize.dao.impl;
+
+import javax.persistence.Query;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.authorize.dao.ClientDao;
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+/**
+ * 授权应用dao层实现
+ * @author sxy
+ * @version 3.0
+ * @date 2015年3月18日
+ *
+ */
+@Repository("clientDao")
+public class ClientDaoImpl extends BaseDaoImpl<Client> implements ClientDao {
+
+	private static Logger logger = Logger.getLogger(ClientDaoImpl.class);
+	
+	/**
+	 * 根据ClientId查找应用
+	 * @param clientId
+	 * @return
+	 */
+	public Client selectByClientId(String clientId) {
+
+		String sql = "SELECT * FROM t_jsd_client_info WHERE client_id = ?";
+		Query query = em.createNativeQuery(sql, Client.class);
+		query.setParameter(1, clientId);
+		return (Client) query.getSingleResult();
+		
+	}
+	
+	
+	/**
+	 * 查询用户注册数——投资人
+	 * @author 孙晓勇 
+	 */
+	@Override
+	public int countByClientId(String clientId) {
+		
+		String sql = "SELECT COUNT(*) FROM t_jsd_client_info t2 WHERE t2.client_id = :clientId and t2.status = :status";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("clientId", clientId);
+        query.setParameter("status", "0");		//开启
+        Object obj = query.getSingleResult();
+        logger.debug("根据应用id查询应用信息是否存在-->"+sql);
+        if (obj != null) {
+            return (int) Double.parseDouble(obj.toString());
+        }
+        return 0;
+	}
+	
+}

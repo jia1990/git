@@ -1,0 +1,134 @@
+package com.ddtkj.p2psys.tpp.ymd.model;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.log4j.Logger;
+
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * 查询账户余额
+ * @author wcw
+ * 2014-12-4
+ */
+public class YmdQueryBalance extends YmdModel{
+	private static Logger logger = Logger.getLogger(YmdQueryBalance.class);
+	
+	/**
+	 * 返回签名
+	 */
+	private String accountNumber;
+	/**
+	 * 返回状态
+	 */
+	private String status;
+	/**
+	 * 返回账户余额
+	 */
+	private String balance;
+	/**
+	 * 返回签名
+	 */
+	private String secureCode;
+	public YmdQueryBalance() {
+		super();
+	}
+
+	/**
+     * 签名方法
+     */
+    public void createSign() {
+        StringBuffer str = new StringBuffer();
+        if (StringUtil.isNotBlank(this.getNumberId())) {
+            str.append("number_id=").append(this.getNumberId()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getNickName())) {
+            str.append("nick_name=").append(this.getNickName()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMerchantKey())) {
+            str.append("merchantKey=").append(this.getMerchantKey());
+        }
+        String signInfo=str.toString();
+        logger.info("需要加密字符串======="+signInfo);
+        try {
+            signInfo = DigestUtils.md5Hex(signInfo.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            logger.info("签名异常信息====" + e.getMessage());
+           // e.printStackTrace();
+        }
+        logger.info("加密后字符串======="+signInfo);
+        this.setSignInfo(signInfo);
+        
+    }
+    /**
+     * 签名方法
+     */
+    public String getParams() {
+        StringBuffer str = new StringBuffer();
+        if (StringUtil.isNotBlank(this.getNumberId())) {
+            str.append("number_id=").append(this.getNumberId()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getNickName())) {
+            str.append("nick_name=").append(this.getNickName()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMerchantKey())) {
+            str.append("sign_info=").append(this.getSignInfo());
+        }
+        return str.toString();
+    }
+    
+    /**
+     * httpPost参数封装
+     */
+    public List<NameValuePair> getHttpPostParams() {
+    	List<NameValuePair> formparams = new ArrayList<NameValuePair>();
+    	if (StringUtil.isNotBlank(this.getNumberId())) {
+            formparams.add(new BasicNameValuePair("number_id", this.getNumberId()));  
+        }
+        if (StringUtil.isNotBlank(this.getNickName())) {
+            formparams.add(new BasicNameValuePair("nick_name", this.getNickName()));  
+        }
+        if (StringUtil.isNotBlank(this.getMerchantKey())) {
+            formparams.add(new BasicNameValuePair("sign_info", this.getSignInfo()));  
+        }
+        return formparams;
+    }
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getBalance() {
+		return balance;
+	}
+
+	public void setBalance(String balance) {
+		this.balance = balance;
+	}
+
+	public String getAccountNumber() {
+		return accountNumber;
+	}
+
+	public void setAccountNumber(String accountNumber) {
+		this.accountNumber = accountNumber;
+	}
+
+	public String getSecureCode() {
+		return secureCode;
+	}
+
+	public void setSecureCode(String secureCode) {
+		this.secureCode = secureCode;
+	}
+    
+}

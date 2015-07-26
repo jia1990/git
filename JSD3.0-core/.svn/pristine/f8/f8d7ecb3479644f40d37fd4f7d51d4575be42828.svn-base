@@ -1,0 +1,57 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import java.util.Calendar;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpActivityDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：红包活动dao层实现 JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+@Repository("rpActivityDao")
+public class RpActivityDaoImpl extends BaseDaoImpl<RpActivity> implements RpActivityDao {
+
+	@Override
+	public RpActivity getActivitingList(String activityType) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("select * from t_jsd_rp_activity where start_time <= :startTime "
+				+ "and end_time >= :endTime and status=:status and activity_type=:activityType ");
+		Query query = em.createNativeQuery(sql.toString(), RpActivity.class);
+		query.setParameter("startTime", Calendar.getInstance().getTime());
+		query.setParameter("endTime", Calendar.getInstance().getTime());
+		query.setParameter("status", RpActivity.ACTIVITY_STATUS_OPEN);
+		if(StringUtil.isNotBlank(activityType)){
+			query.setParameter("activityType", activityType);
+			RpActivity rpActivity=null;
+			try {
+				rpActivity = (RpActivity) query.getSingleResult();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				rpActivity=null;
+			}
+			return rpActivity;
+		}
+		return null;
+	}
+	//fengguoqin@ddtkj.com  JSDP-215  20150709 start
+	@Override
+	public RpActivity getRpActivityByType(String activityType) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("select * from t_jsd_rp_activity where activity_type=:activityType");
+		Query query = em.createNativeQuery(sql.toString(), RpActivity.class);
+		if(StringUtil.isNotBlank(activityType)){
+			query.setParameter("activityType", activityType);
+		}
+		return (RpActivity) query.getSingleResult();
+	}
+	//fengguoqin@ddtkj.com  JSDP-215  20150709 end
+}

@@ -1,0 +1,46 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/siteVerifyUser/userVerifyEdit.html');	
+</script>
+<style>
+.sForm .lab{width:90px;}
+</style>
+<form id="form"  method="post">
+<div class="popForm sForm">
+
+		<div class="formitm">
+			 <label class="lab">用户名： </label>
+			 <div class="ipt">${user.userName}</div>
+		</div>
+		<div class="formitm">
+			 <label class="lab">真实姓名： </label>
+			 <div class="ipt">${user.realName}</div>
+		</div>
+		<div class="formitm">
+			 <label class="lab">身份证号： </label>
+			 <div class="ipt">${user.cardNO}</div>
+		</div>
+		<div class="formitm">
+			 <label class="lab">身份证正面： </label>
+			 <div class="ipt"><#if userCache.cardPositive??><a href="${userCache.cardPositive!}" class="fileshow"><img style="height:100px;" src="${userCache.cardPositive!}"></a></#if></div>
+		</div>
+		<div class="formitm">
+			 <label class="lab">身份证反面： </label>
+			 <div class="ipt" style="width:200px;height:100px"><#if userCache.cardOpposite??><a href="${userCache.cardOpposite!}" class="fileshow"><img style="height:100px;" src="${userCache.cardOpposite!}"></a></#if></div>
+		</div>
+		<div class="formitm">
+			 <label class="lab">审核状态： </label>
+			 <div class="ipt">
+			 	<input type="radio" name="realNameStatus" value="83" checked="checked"/>&nbsp;&nbsp;审核通过  
+			 	<input type="radio" name="realNameStatus" value="84"/>&nbsp;&nbsp;审核不通过
+			 </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">备注：</label>
+		     <div class="ipt">
+		     	<textarea name="remark" class="w300 easyui-validatebox"></textarea>	
+		     </div>
+		</div>
+		<input name="userId" value="${userIdentify.userId!}" type="hidden">
+		<input name="userVerifyEditToken" value="${userVerifyEditToken!}" type="hidden">
+</div>
+</form>

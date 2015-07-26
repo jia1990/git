@@ -1,0 +1,505 @@
+package com.ddtkj.p2psys.cardaward.service.impl;
+
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.springframework.stereotype.Service;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
+import com.ddtkj.common.http.HttpResult;
+import com.ddtkj.common.http.HttpUtils;
+import com.ddtkj.common.util.security.SignUtils;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.cardaward.dao.CardAwardTransferDao;
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.ddtkj.p2psys.cardaward.service.CardAwardTransferService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.score.dao.ScoreRuleAwardDao;
+import com.ddtkj.p2psys.score.dao.UserScoreAwardDao;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.HttpUtil;
+import com.rongdu.common.util.JsonParse;
+import com.rongdu.common.util.MD5Util;
+import com.rongdu.common.util.RechargeUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-31   
+ */
+@Service("cardAwardTransferService")
+public class CardAwardTransferServiceImpl implements CardAwardTransferService {
+	
+	private static Logger logger = Logger.getLogger(CardAwardTransferServiceImpl.class);
+
+	@Resource
+	private CardAwardTransferDao cardAwardTransferDao;
+	@Resource
+	private ScoreRuleAwardDao scoreRuleAwardDao;
+	@Resource
+	private UserScoreAwardDao userScoreAwardDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private PetCardDao petCardDao;
+	
+	@Override
+	public void updateCardTransferStatus(CardAwardTransfer cardTransfer) {
+		cardAwardTransferDao.updateCardTransferStatus(cardTransfer);
+	}
+
+	@Override
+	public void updateCardTransferReceiveStatus(
+			CardAwardTransfer cardAwardTransfer) {
+		cardAwardTransferDao.updateCardTransferReceiveStatus(cardAwardTransfer);
+	}
+	
+	@Override
+	public boolean dealCardTransfer(CardAwardTransfer cardAwardTransfer) {
+		boolean isSuccess = false;
+		CardAwardTransfer cardTransfer = cardAwardTransferDao.save(cardAwardTransfer);
+		if (cardAwardTransfer.getTransMoney() == cardTransfer.getTransMoney()) {
+			isSuccess = true;
+		}
+		return isSuccess;
+	}
+
+	@Override
+	public PageDataList<CardAwardTransferModel> getCardTransferList(
+			CardAwardTransferModel model) {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<CardAwardTransfer> list = cardAwardTransferDao.findPageList(param);
+		logger.info("购物卡转账记录param:"+param.toMap().toString()+",list size:"+list.getList().size());
+		List<CardAwardTransferModel> modelList = new ArrayList<CardAwardTransferModel>();
+		PageDataList<CardAwardTransferModel> pageDataList = new PageDataList<CardAwardTransferModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				CardAwardTransfer cardTransfer = (CardAwardTransfer)list.getList().get(i);
+				CardAwardTransferModel cardTransferModel = CardAwardTransferModel.instance(cardTransfer);
+				User user = cardTransfer.getUser();
+				Operator verifyUser = cardTransfer.getVerifyUser();
+				cardTransferModel.setUserName(user.getUserName());
+				cardTransferModel.setRealName(user.getRealName());
+				if (verifyUser != null) {
+					cardTransferModel.setOperatorUserName(verifyUser.getUserName());
+				}
+				modelList.add(cardTransferModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;	
+	}
+	
+	private QueryParam searchParam(QueryParam param, CardAwardTransferModel model) {
+		if(model != null){
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				param.addParam("user.userId", model.getUser().getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getUserName())){
+				param.addParam("user.userName",  Operators.LIKE, model.getUserName());
+			}
+			if (StringUtil.isNotBlank(model.getRealName())){
+				param.addParam("user.realName",  Operators.EQ, model.getRealName());
+			}
+			if (StringUtil.isNotBlank(model.getStatus()) && !CardAwardTransfer.TRANS_STATUS_ALL.equals(model.getStatus())){
+				param.addParam("status", model.getStatus());
+			}
+			if (StringUtil.isNotBlank(model.getReceiveStatus()) && !CardAwardTransfer.TRANS_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())){
+				param.addParam("receiveStatus", model.getReceiveStatus());
+			}
+			if (StringUtil.isNotBlank(model.getTransNo())) {
+				param.addParam("transNo", model.getTransNo());
+			}
+			if (StringUtil.isNotBlank(model.getOperatorUserName())) {
+				param.addParam("verifyUser.userName", model.getOperatorUserName());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+ 
+	@Override
+	public String transferTotal(CardAwardTransferModel model) {	
+		return cardAwardTransferDao.transferTotal(model);
+	}
+
+	@Override
+	public CardAwardTransfer save(CardAwardTransfer cardAwardTransfer) {
+		return cardAwardTransferDao.save(cardAwardTransfer);
+	}
+
+	@Override
+	public CardAwardTransfer getCardTransferByTransNo(String transNo) {
+		return cardAwardTransferDao.getCardTransferByTransNo(transNo);
+	}
+
+	@Override
+	public void updateCardTransferByTransNo(CardAwardTransfer cardAwardTransfer) {
+		cardAwardTransferDao.updateCardTransferByTransNo(cardAwardTransfer);	
+	}
+
+	@Override
+	public boolean handelCardAwardTransfer(CardAwardTransfer cardAwardTransfer, ClientUserModel userInfo, String reqUrl) {
+		boolean isSuccess = false;
+		ScoreRuleAward ruleAward = scoreRuleAwardDao.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+		double transMoney = cardAwardTransfer.getTransMoney();	
+		User user = userDao.getUserByUserName(userInfo.getUserName());
+		String transNo = RechargeUtil.generateTradeNO(user.getUserId(), "J");
+		cardAwardTransfer.setOpenId(userInfo.getOpenId());
+		cardAwardTransfer.setTransNo(transNo);
+		cardAwardTransfer.setTransMoney(transMoney);
+		cardAwardTransfer = cardAwardTransferDao.save(cardAwardTransfer);
+		if(cardAwardTransfer != null && userInfo != null) {
+			Map<String, Object> transfer = new HashMap<String, Object>();
+			try {
+				transfer.put("trans_no", transNo);
+				transfer.put("open_id", userInfo.getOpenId());
+				transfer.put("mobile", userInfo.getPhone());
+				transfer.put("username", URLEncoder.encode(userInfo.getUserName(), "UTF-8"));
+				transfer.put("trans_money", transMoney + "");
+				transfer.put("trans_type", CardAwardTransfer.TRANS_TYPE_CARDAWARD);
+				transfer.put("trans_ip", Global.getIP());
+				String secretKey = transNo + "|" + userInfo.getOpenId() + "|" + userInfo.getPhone()
+						+ "|" + userInfo.getUserName() + "|" + transMoney + "|" + CardAwardTransfer.TRANS_TYPE_CARDAWARD + "|" + Global.getIP() + "|"+ "jinshangdai";//数字签名
+				transfer.put("sign", MD5Util.MD5Encode(secretKey, "UTF-8").toUpperCase());
+				// 已发送请求，更新转账表请求状态
+				cardAwardTransfer.setStatus(CardAwardTransfer.TRANS_STATUS_SUCC);
+				cardAwardTransferDao.updateCardTransferStatus(cardAwardTransfer);
+				// 更新积分抽奖表订单号 ，标识已兑换
+				List<UserScoreAward> scoreAwardList = userScoreAwardDao.getScoreAwardListByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL,
+						ruleAward.getStartDate(), ruleAward.getEndDate(), user);
+				for (UserScoreAward userScoreAward : scoreAwardList) {
+					userScoreAward.setTransNo(transNo);
+				}
+				userScoreAwardDao.update(scoreAwardList);
+				isSuccess = true;
+				StringBuffer sb = new StringBuffer();
+				sb.append(reqUrl).append("[").append(JSON.toJSONString(transfer)+"]");
+				HttpServletResponse response = ServletActionContext.getResponse();
+				response.sendRedirect(sb.toString());
+			} catch (Exception e) {
+				isSuccess = false;
+				throw new HandleException("云购卡转账失败，异常信息："+e.getMessage()+e.getCause(), "云购卡转账异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+						ErrorLogConstant.CODE_CARDTRANS_SYS, user, ErrorLogConstant.MODULE_SCORE_AWARD, user.getUserId(), 1);
+			}
+		}	
+		return isSuccess;
+	}
+
+	@Override
+	public void callBackTransfer(String tradeNo) {
+		UserScoreAward usAward = userScoreAwardDao.findObjByProperty("transNo", tradeNo);
+		try {
+			//根据流水号更新转账状态
+			CardAwardTransfer cardTransfer = new CardAwardTransfer();
+			cardTransfer.setTransNo(tradeNo);
+			cardAwardTransferDao.updateCardTransferReceiveStatus(cardTransfer);
+			
+			// 更新抽奖记录表发放状态
+			ScoreRuleAward ruleAward = scoreRuleAwardDao.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+			List<UserScoreAward> scoreAwardList = userScoreAwardDao.getScoreAwardListByStatusAndTransNo(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL,
+					ruleAward.getStartDate(), ruleAward.getEndDate(), tradeNo);
+			for (UserScoreAward userScoreAward : scoreAwardList) {
+				userScoreAward.setReceiveStatus(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_SUCCESS);
+				userScoreAward.setReceiveTime(new Date());
+			}
+			userScoreAwardDao.update(scoreAwardList);
+		} catch (Exception e) {
+			throw new HandleException("云购卡转账回调失败，异常信息："+e.getMessage()+e.getCause(), "云购卡转账异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+					ErrorLogConstant.CODE_CARDTRANS_SYS, usAward.getUser(), ErrorLogConstant.MODULE_CARDTRANSFER, usAward.getUser().getUserId(), 1);
+		}
+	}
+
+	@Override
+	public boolean handelCardAwardTransferManage(
+			CardAwardTransfer cardTransferBack, ClientUserModel userInfo,
+			String backReqUrl, Operator operator) {
+		boolean result = false;
+		String tradeNo = cardTransferBack.getTransNo();
+		User user = userDao.getUserByUserName(userInfo.getUserName());
+		try {
+			if(cardTransferBack != null && userInfo != null) {
+				cardAwardTransferDao.updateCardTransferByTransNo(cardTransferBack);
+				// 调用云购接口，传送转账数据
+				Map<String, Object>  transfer = new HashMap<String, Object>();
+				transfer.put("trans_no", cardTransferBack.getTransNo());
+				transfer.put("open_id",userInfo.getOpenId());
+				transfer.put("mobile", userInfo.getPhone());
+				transfer.put("username", URLEncoder.encode(userInfo.getUserName(), "UTF-8"));
+				transfer.put("trans_money", ""+cardTransferBack.getTransMoney()+"");
+				transfer.put("trans_type", cardTransferBack.getTransType());
+				transfer.put("trans_ip", Global.getIP());
+				
+				String secretKey = cardTransferBack.getTransNo()+"|"+userInfo.getOpenId()+"|"+userInfo.getPhone()
+						+"|"+userInfo.getUserName()+"|"+cardTransferBack.getTransMoney()+"|"+cardTransferBack.getTransType()+"|"+ Global.getIP() +"|"+"jinshangdai";//数字签名
+				transfer.put("sign", MD5Util.MD5Encode(secretKey, "UTF-8").toUpperCase());
+				StringBuffer sb = new StringBuffer();
+				sb.append("jsd_money=[").append(JSON.toJSONString(transfer)+"]");
+				String response = HttpUtil.sendGet(backReqUrl, sb.toString());
+				logger.info("cardAward transfer manage response:"+response);
+				if (StringUtil.isNotBlank(response)&&("Y".equals(response) || response.contains("checkIn"))) {
+					result = true;
+					//根据流水号更新转账状态
+					CardAwardTransfer cardAwardTransfer = cardAwardTransferDao.getCardTransferByTransNo(tradeNo);
+					cardAwardTransfer.setTransNo(tradeNo);
+					cardAwardTransferDao.updateCardTransferReceiveStatus(cardAwardTransfer);
+					// 更新抽奖记录表发放状态
+					ScoreRuleAward ruleAward = scoreRuleAwardDao.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+					List<UserScoreAward> scoreAwardList = userScoreAwardDao.getScoreAwardListByStatusAndTransNo(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL,
+							ruleAward.getStartDate(), ruleAward.getEndDate(), tradeNo);
+					for (UserScoreAward userScoreAward : scoreAwardList) {
+						userScoreAward.setReceiveStatus(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_SUCCESS);
+						userScoreAward.setReceiveTime(new Date());
+					}
+					userScoreAwardDao.update(scoreAwardList);
+				}
+			}
+		} catch (Exception e) {
+			result = false;
+			throw new HandleException("云购卡补单失败，异常信息："+e.getMessage()+e.getCause(), "云购卡补单异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+					ErrorLogConstant.CODE_CARDTRANS_SYS, user, ErrorLogConstant.MODULE_CARDTRANSFER, cardTransferBack.getId(), 1);
+		}
+		return result;
+	}
+
+	@Override
+	public String queryCardAwardTransferResult(
+			CardAwardTransfer cardAwardTransfer, String queryUrl) {
+		String response = "";
+		if(cardAwardTransfer != null) {
+			User user = cardAwardTransfer.getUser();
+			try {
+				// 调用云购接口，传送转账数据
+				Map<String, Object>  transfer = new HashMap<String, Object>();
+				transfer.put("trans_no", cardAwardTransfer.getTransNo());
+				StringBuffer sb = new StringBuffer();
+				sb.append("trans_no=[").append(JSON.toJSONString(transfer)+"]");
+				response = HttpUtil.sendGet(queryUrl, sb.toString());
+			} catch (Exception e) {
+				throw new HandleException("云购卡转账查询失败，异常信息："+e.getMessage()+e.getCause(), "云购卡转账查询异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+						ErrorLogConstant.CODE_CARDTRANS_SYS, user, ErrorLogConstant.MODULE_CARDTRANSFER, cardAwardTransfer.getId(), 1);
+			}
+		}
+		return response;
+	}
+
+	@Override
+	public void updateCardAwardTransferByTransNo(
+			CardAwardTransfer cardAwardTransfer) {
+		cardAwardTransferDao.update(cardAwardTransfer);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List excelTransferList(CardAwardTransferModel model) {
+		return cardAwardTransferDao.excelTransferList(model);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+
+	@Override
+	public boolean handelCardAwardTransferYg(
+			CardAwardTransfer cardAwardTransfer, User user,
+			String reqUrl, String sign) {
+		boolean isSuccess = false;
+		ScoreRuleAward ruleAward = scoreRuleAwardDao.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+		double transMoney = cardAwardTransfer.getTransMoney();	
+		String transNo = RechargeUtil.generateTradeNO(user.getUserId(), "K");
+		cardAwardTransfer.setOpenId(user.getOpenId());
+		cardAwardTransfer.setTransNo(transNo);
+		cardAwardTransfer.setTransMoney(transMoney);
+		cardAwardTransfer = cardAwardTransferDao.save(cardAwardTransfer);
+		if(cardAwardTransfer != null && user != null) {
+			Map<String, Object> transfer = new HashMap<String, Object>();
+			try {
+				transfer.put("trans_no", transNo);
+				transfer.put("open_id", user.getOpenId());
+				transfer.put("mobile", user.getMobilePhone());
+				transfer.put("username", URLEncoder.encode(user.getUserName(), "UTF-8"));
+				transfer.put("trans_money", transMoney + "");
+				transfer.put("trans_type", CardAwardTransfer.TRANS_TYPE_CARDAWARD_TOJYG);
+				transfer.put("trans_ip", Global.getIP());
+				transfer.put("sign", SignUtils.signMap(transfer, sign));
+				// 已发送请求，更新转账表请求状态
+				cardAwardTransfer.setStatus(CardAwardTransfer.TRANS_STATUS_SUCC);
+				cardAwardTransferDao.updateCardTransferStatus(cardAwardTransfer);
+				// 更新积分抽奖表订单号 ，标识已兑换
+				List<UserScoreAward> scoreAwardList = userScoreAwardDao.getScoreAwardListByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL,
+						ruleAward.getStartDate(), ruleAward.getEndDate(), user);
+				for (UserScoreAward userScoreAward : scoreAwardList) {
+					userScoreAward.setTransNo(transNo);
+				}
+				userScoreAwardDao.update(scoreAwardList);
+				HttpResult response = HttpUtils.sendGet(reqUrl, transfer);
+				logger.info("response statusCode-->"+response.getStatusCode()+",content-->"+response.getContent());
+				if (response != null && StringUtil.isNotBlank(response.getContent())) {
+					//云购java版处理成功
+					if("true".equals(response.getContent())){
+						isSuccess = true;
+						//根据流水号更新转账状态
+						CardAwardTransfer cardAwardTransferYg = cardAwardTransferDao.getCardTransferByTransNo(transNo);
+						cardAwardTransferYg.setTransNo(transNo);
+						cardAwardTransferDao.updateCardTransferReceiveStatus(cardAwardTransferYg);
+						// 更新抽奖记录表发放状态
+						List<UserScoreAward> userScoreAwardList = userScoreAwardDao.getScoreAwardListByStatusAndTransNo(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL,
+								ruleAward.getStartDate(), ruleAward.getEndDate(), transNo);
+						for (UserScoreAward userScoreAward : userScoreAwardList) {
+							userScoreAward.setReceiveStatus(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_SUCCESS);
+							userScoreAward.setReceiveTime(new Date());
+						}
+						userScoreAwardDao.update(scoreAwardList);
+					}
+				}
+			} catch (Exception e) {
+				isSuccess = false;
+				throw new HandleException("抽奖转账到云购新站失败，异常信息："+e.getMessage()+e.getCause(), "抽奖转账到云购新站异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+						ErrorLogConstant.CODE_CARDTRANS_SYS, user, ErrorLogConstant.MODULE_SCORE_AWARD, user.getUserId(), 1);
+			}
+		}	
+		return isSuccess;
+	}
+
+	@Override
+	public boolean handelCardAwardTransferManageYg(
+			CardAwardTransfer cardTransferBack, User user,
+			String reqUrl, String sign, Operator operator) {
+		boolean result = false;
+		String tradeNo = cardTransferBack.getTransNo();
+		try {
+			if(cardTransferBack != null && user != null) {
+				cardAwardTransferDao.updateCardTransferByTransNo(cardTransferBack);
+				// 调用云购接口，传送转账数据
+				Map<String, Object>  transfer = new HashMap<String, Object>();
+				transfer.put("trans_no", cardTransferBack.getTransNo());
+				transfer.put("open_id", user.getOpenId());
+				transfer.put("mobile", user.getMobilePhone());
+				transfer.put("username", URLEncoder.encode(user.getUserName(), "UTF-8"));
+				transfer.put("trans_money", ""+cardTransferBack.getTransMoney()+"");
+				transfer.put("trans_type", cardTransferBack.getTransType());
+				transfer.put("trans_ip", Global.getIP());
+				transfer.put("sign", SignUtils.signMap(transfer, sign));
+				HttpResult response = HttpUtils.sendGet(reqUrl, transfer);
+				logger.info("response statusCode-->"+response.getStatusCode()+",content-->"+response.getContent());
+				if (response != null && StringUtil.isNotBlank(response.getContent())) {
+					//云购java版处理成功
+					if("Y".equals(response.getContent())){
+						result = true;
+						//根据流水号更新转账状态
+						CardAwardTransfer cardAwardTransfer = cardAwardTransferDao.getCardTransferByTransNo(tradeNo);
+						cardAwardTransfer.setTransNo(tradeNo);
+						cardAwardTransferDao.updateCardTransferReceiveStatus(cardAwardTransfer);
+						// 更新抽奖记录表发放状态
+						ScoreRuleAward ruleAward = scoreRuleAwardDao.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+						List<UserScoreAward> scoreAwardList = userScoreAwardDao.getScoreAwardListByStatusAndTransNo(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL,
+								ruleAward.getStartDate(), ruleAward.getEndDate(), tradeNo);
+						for (UserScoreAward userScoreAward : scoreAwardList) {
+							userScoreAward.setReceiveStatus(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_SUCCESS);
+							userScoreAward.setReceiveTime(new Date());
+						}
+						userScoreAwardDao.update(scoreAwardList);
+					}
+				}	
+			}
+		} catch (Exception e) {
+			result = false;
+			throw new HandleException("抽奖转账云购新站补单失败，异常信息："+e.getMessage()+e.getCause(), "抽奖转账云购新站补单异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+					ErrorLogConstant.CODE_CARDTRANS_SYS, user, ErrorLogConstant.MODULE_CARDTRANSFER, cardTransferBack.getId(), 1);
+		}
+		return result;
+	}
+
+	@Override
+	public boolean hasSignInAccountCenter(User user, String memberQueryUrl) {
+		boolean hasSignIn = false;
+		Map<String, Object> member = new HashMap<String, Object>();
+		member.put("mobile", user.getMobilePhone());
+		HttpResult result = HttpUtils.sendGet(memberQueryUrl, member);
+		if (result != null) {
+			String content = result.getContent();
+			Map<String, Object> map = JSON.parseObject(content, new TypeReference<Map<String, Object>>(){});
+			boolean status = (Boolean) map.get("status");
+			if (status) {
+				hasSignIn = true;
+			}
+		}
+		return hasSignIn;
+	}
+
+	@Override
+	public boolean handelYgCardCallBack(User user, PetCard petCard) {
+		boolean result = false;
+		try {
+			//更新云购体验卡记录
+			if (petCard != null) {
+				petCard.setStatus(PetCard.ED_CARD_STATUS);
+				petCardDao.updateYgCardByStatusAndType(petCard);
+				// 更新抽奖记录表发放状态
+				ScoreRuleAward ruleAward = scoreRuleAwardDao.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+				if (ruleAward != null && user != null) {
+					UserScoreAward userScoreAward = userScoreAwardDao.getUserScoreAwardByStatusAndCardNo(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_SUCCESS,
+							ruleAward.getStartDate(), ruleAward.getEndDate(), user, petCard.getCardNo());
+					if (userScoreAward != null) {
+						userScoreAward.setReceiveStatus(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_SUCCESS);
+						userScoreAward.setReceiveTime(new Date());
+						userScoreAwardDao.update(userScoreAward);	
+						result = true;
+					}
+				}
+			}
+		} catch (Exception e) {
+			result = false;	
+			throw new HandleException("云购体验卡激活回调失败，异常信息："+e.getMessage()+e.getCause(), "云购体验卡激活回调失败", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+					ErrorLogConstant.CODE_PETCARD_SYS, user, ErrorLogConstant.MODULE_PETCARD, petCard.getId(), 1);
+		}
+		return result;
+	}
+	
+}

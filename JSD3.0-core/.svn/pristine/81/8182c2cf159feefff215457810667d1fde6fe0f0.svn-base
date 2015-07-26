@@ -1,0 +1,40 @@
+package com.ddtkj.p2psys.analysis.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.analysis.domain.Analysis;
+import com.rongdu.common.util.Page;
+/**
+ * @描述：用户来源收集model
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+public class AnalysisModel extends Analysis {
+	
+	private int page = 1;//当前页面
+	private int size = Page.ROWS;// 每页数据条数
+	/**
+	 * 实体转化为model
+	 * @param analysis
+	 * @return
+	 */
+	public static AnalysisModel instance(Analysis analysis) {
+		AnalysisModel analysisModel = new AnalysisModel();
+		BeanUtils.copyProperties(analysis, analysisModel);
+		return analysisModel;
+	}
+	/**
+	 * model转化为实体
+	 * @return
+	 */
+	public Analysis prototype() {
+		Analysis analysis = new Analysis();
+		BeanUtils.copyProperties(this, analysis);
+		return analysis;
+	}
+	
+	
+	public AnalysisModel() {	
+	}
+
+}

@@ -1,0 +1,482 @@
+package com.rongdu.p2psys.web.user;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.InterceptorRef;
+import org.apache.struts2.convention.annotation.Result;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+import com.rongdu.p2psys.user.exception.UserException;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 用户认证信息
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月20日
+ */
+public class UserIdentifyAction extends BaseAction implements ModelDriven<UserIdentifyModel> {
+
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserService userService;
+	@Autowired
+	private UserCacheService userCacheService;
+
+	private UserIdentifyModel userIdentifyModel = new UserIdentifyModel();
+
+	@Override
+	public UserIdentifyModel getModel() {
+		return userIdentifyModel;
+	}
+
+	private User user;
+
+	private Map<String, Object> data;
+
+	/**
+	 * 显示更改头像页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/head")
+	public String head() throws Exception {
+		return "head";
+	}
+
+	/**
+	 * 投资人账户设置页面
+	 * 
+	 *@author 李建云 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value="/member/useridentify/identify",results = {
+			@Result(name = "identify_memeber", type = "ftl", location = "/member/useridentify/identify.html"),
+			@Result(name = "identify_borrow", type = "ftl", location = "/member_borrow/account/accset.html"),
+			@Result(name = "identify_assure", type = "ftl", location = "/member_guarantee/useridentify/identify.html"),
+			@Result(name = "member_merchant_accset", type = "ftl",location ="/member_merchant/account/accset.html")
+	})
+	public String identify() throws Exception {
+			
+		UserIdentify userIdentify=	userIdentifyService.findByUserId(getSessionUserId());	
+		user = getSessionUser();
+		this.request.setAttribute("user", user);
+		this.request.setAttribute("userIdentify", userIdentify);
+		String flag = paramString("flag") ;
+		if(flag!=null&&flag.equals("findpaypwd")){
+			if(user.getPaypwd()==null){
+				flag = "setpaypwd";
+			}
+		}
+		this.request.setAttribute("flag", flag);
+		
+		if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			//担保公司
+			return "identify_assure";
+		}else if(UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())){
+			//商户
+			return "member_merchant_accset";
+		}else if(UserConstant.USER_SORT_BORROW.equals(user.getUserCache().getUserType())){
+			return "identify_borrow";
+		}
+		return "identify_memeber";
+	}
+	
+	
+	
+	/**
+	 * 账户设置页面动态数据的获取
+	 * 
+	 *@author 李建云 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/identifyData")
+	public void  identifyData() throws Exception {
+		User user = userService.find(getSessionUserId());
+		/*UserCache uc = userCacheService.getUserCache(user.getUserId());*/
+		data = new HashMap<String, Object>();
+		data.put("user", user);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	
+	
+	/**
+	 * 手机认证成功展示页面
+	 *@author 李建云 
+	 * 
+	 * */
+	@Action(value="/member/useridentify/identifedPhoneView",results = {
+			@Result(name = "identify_memeber", type = "ftl", location = "/member/useridentify/identifedPhoneView.html"),
+			@Result(name = "identify_assure", type = "ftl", location = "/member_guarantee/useridentify/identifedPhoneView.html")
+	})
+	public String identifedPhoneView(){
+		
+		User user = userService.find(getSessionUserId());	
+		this.request.setAttribute("user", user);
+		
+		if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			//担保公司
+			return "identify_assure";
+		}
+		
+		return "identify_memeber";
+	}
+	
+	/**
+	 * 邮箱认证成功展示页面
+	 *@author 李建云 
+	 * 
+	 * */
+	@Action(value="/member/useridentify/identifedEmail",results = {
+			@Result(name = "identify_memeber", type = "ftl", location = "/member/useridentify/identifedEmail.html"),
+			@Result(name = "identify_assure", type = "ftl", location = "/member_guarantee/useridentify/identifedEmail.html")
+	})
+	public String identifedEmail(){
+		
+		User user = userService.find(getSessionUserId());	
+		this.request.setAttribute("user", user);
+		if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			//担保公司
+			return "identify_assure";
+		}
+		
+		return "identify_memeber";
+	}
+	
+	/**
+	 * 实名认证认证成功展示页面
+	 *@author 李建云 
+	 * 
+	 * */
+	@Action(value="/member/useridentify/identifedRealName",results = {
+			@Result(name = "identify_memeber", type = "ftl", location = "/member/useridentify/identifedRealName.html"),
+			@Result(name = "identify_assure", type = "ftl", location = "/member_guarantee/useridentify/identifedRealName.html")
+	})
+	public String identifedRealName(){
+		
+		User user = userService.find(getSessionUserId());	
+		this.request.setAttribute("user", user);
+		
+		if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			//担保公司
+			return "identify_assure";
+		}
+		
+		return "identify_memeber";
+	}
+	
+	/**
+	 * 邮箱激活/认证
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/emailActive")
+	public String emailActive() throws Exception {
+		user = getSessionUser();
+		if (StringUtil.isNotBlank(userIdentifyModel.getEmail())
+				&& !user.getEmail().equals(userIdentifyModel.getEmail())) {
+			userService.modifyEmail(user.getUserId(), userIdentifyModel.getEmail());
+		}
+		Global.setTransfer("user", user);
+		Global.setTransfer("activeUrl", "/member/identify/active.html?id=");
+		BaseMsg msg = new BaseMsg(NoticeConstant.NOTICE_EMAIL_ACTIVE);
+		return null;
+	}
+
+	/**
+	 * 提交手机认证申请
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/phoneApply")
+	public String phoneApply() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		if (!user.getMobilePhone().equals(userIdentifyModel.getMobilePhone())) {
+			userService.modifyPhone(user.getUserId(), userIdentifyModel.getMobilePhone(),"87");
+		}
+		data.put("result", true);
+		data.put("real_name", userIdentifyModel.getMobilePhone());
+		data.put("msg", "手机认证正在审核！");
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 进行现场认证
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/doScene")
+	public String doScene() throws Exception {
+		data = new HashMap<String, Object>();
+		data.put("result", true);
+		data.put("msg", "现场认证申请提交成功，等待管理员审核！");
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 进行视频认证
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/doVideo")
+	public String doVideo() throws Exception {
+		data = new HashMap<String, Object>();
+		data.put("result", true);
+		data.put("msg", "视频认证申请提交成功，等待管理员审核！");
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * @author 李建云 
+	 * 用户查询是否已经进行过 实名 认证
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/realNameStatus")
+	public String realNameStatus() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		session.put(Constant.SESSION_USER, user);
+		data = new HashMap<String, Object>();
+		
+		if("83".equals(user.getUserIdentify().getRealNameStatus())){ 
+			data.put("result", true);
+			data.put("msg", "已实名认证");
+		}else{
+			data.put("result", false);
+			data.put("msg", "未实名认证");
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	
+	
+	/**
+	 * @author 李建云 
+	 * @createTime 20141226
+	 * 用户查询第三方账户是否开通
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/thirdPartyIsOpen")
+	public String thirdPartyIsOpen() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		session.put(Constant.SESSION_USER, user);
+		data = new HashMap<String, Object>();
+		
+		if(user.getThirdPartyIsOpen() != null && "Y".equals(user.getThirdPartyIsOpen())){ 
+			data.put("result", true);
+			data.put("msg", "第三方账户已开通");
+		}else{
+			data.put("result", false);
+			data.put("msg", "第三方账户未开通");
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	/**
+	 * @author 于俊斐 
+	 * @createTime 2014 12 29
+	 * 用户查询第三方账户和邮箱是否开通
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/useridentify/thirdPartyIsOpen")
+	public String thirdPartyIsOpenBorrow() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		//811  fgq   2015.3.20 
+		session.put(Constant.SESSION_USER, user);
+		data = new HashMap<String, Object>();
+		if(user.getThirdPartyIsOpen() != null && "Y".equals(user.getThirdPartyIsOpen())){ 
+			data.put("result", true);
+			data.put("code","01");
+			data.put("msg", "第三方账户已开通");
+		}else{
+			data.put("result", false);
+			data.put("code","02");
+			data.put("msg", "第三方账户未开通");
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	/**
+	 * @author 李建云 
+	 * @createTime 20141226
+	 * 判断邮箱是否已经认证通过
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/emailStatus")
+	public String emailStatus() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		session.put(Constant.SESSION_USER, user);
+		data = new HashMap<String, Object>();	
+		if(user.getUserIdentify().getEmailStatus() != null && "81".equals(user.getUserIdentify().getEmailStatus())){ 
+			data.put("user", user);
+			data.put("result", true);
+			data.put("msg", "邮箱认证通过");
+		}else{
+			data.put("user", null);
+			data.put("result", false);
+			data.put("msg", "邮箱未认证");
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	
+	
+	/**
+	 * vip申请页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/vip")
+	public String vip() throws Exception {
+		return "vip";
+	}
+
+	/**
+	 * 用户申请vip
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/useridentify/applyVip")
+	public String applyVip() throws Exception {
+
+		String vipRemark = paramString("vipRemark");
+		if (StringUtil.isNull(vipRemark).length() > 125) {
+			throw new BussinessException("备注字数限制在125内，请重新输入", 1);
+		}
+
+		User user = getSessionUser();
+		UserModel userModel = UserModel.instance(user);
+		userModel.setValidCode(paramString("validCode"));
+		// 校验验证码
+		userModel.validRegRule();
+		// 后台传参
+		Global.setTransfer("vipRemark", vipRemark);
+		UserIdentify userIdentify = userCacheService.applyVip(user);
+
+		// 更新缓存
+		session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+
+		data = new HashMap<String, Object>();
+		data.put("result", true);
+		data.put("msg", "vip申请成功！");
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	
+	/**
+	 * 判断手机号码是否已被使用
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member/useridentify/checkMobilePhone", interceptorRefs = { @InterceptorRef("ajaxSafe"), @InterceptorRef("globalStack") })
+	public String checkMobilePhone() throws Exception {
+		//UserIdentify userIdentify=(UserIdentify) model;
+		int count =userIdentifyService.countByVerifyOkMobilePhone(paramString("mobilePhone"));
+		//int count =userIdentifyService.countByVerifyOkMobilePhone(userIdentify.getUser().getMobilePhone());
+		boolean result = count > 0 ? false : true;
+		printJson(getStringOfJpaObj(result));
+		return null;
+	}
+
+	
+	//JSDP-190  wcw 2015-06-24 start
+	/**
+	 * 判断身份证号是否已被使用
+	 * 
+	 * @return
+	 * @throws Exception
+	 * wcw
+	 * 2014-12-4
+	 */
+	@Action(value = "/member/useridentify/checkVerifyOkCardNo", interceptorRefs = { @InterceptorRef("ajaxSafe"), @InterceptorRef("globalStack") })
+	public String checkVerifyOkCardNo() throws Exception {
+		String cardNo=paramString("cardId");
+		//int count =userIdentifyService.countByVerifyOkCardNo(cardNo);
+		UserDao userDao = (UserDao) BeanUtil.getBean("userDao");
+		UserIdentifyDao userIdentifyDao = (UserIdentifyDao) BeanUtil.getBean("userIdentifyDao");
+        User user=userDao.getUserByUserName(getSessionUserName());
+        int count=0;
+        if (user!=null&&!cardNo.equals(user.getCardNO())&&userIdentifyDao.countByCardNo(cardNo) > 0) {
+        	count=1;
+        }
+        boolean result = count>0 ? false : true;
+		printJson(getStringOfJpaObj(result));
+		return null;
+	}
+	//JSDP-190  wcw 2015-06-24 end
+}

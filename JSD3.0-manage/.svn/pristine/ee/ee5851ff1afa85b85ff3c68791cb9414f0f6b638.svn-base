@@ -1,0 +1,93 @@
+package com.rongdu.manage.action.system;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.reset.global.service.GlobalResetService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.service.ProtocolService;
+import com.rongdu.p2psys.core.domain.Protocol;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 
+ * @描述：借款协议管理
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月11日
+ */
+public class ManageProtocolAction extends BaseAction<Protocol> implements
+		ModelDriven<Protocol> {
+
+
+	@Resource
+	private ProtocolService protocolService;
+	@Resource
+	private GlobalResetService globalResetService;
+	private Map<String, Object> map = new HashMap<String, Object>();
+
+	/**
+	 * 数据字典页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/system/protocol/protocolManager")
+	public String protocolManager() throws Exception {
+		return "protocolManager";
+	}
+
+	/**
+	 * 数据字典列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/system/protocol/protocolList")
+	public void protocolList() throws Exception {
+		// PageDataList<Dict> pageList = dictService.list(model);
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		PageDataList<Protocol> protocolPageList = protocolService.procotolPageList(model, pageNumber, pageSize);
+
+		int totalPage = protocolPageList.getPage().getTotal(); // 总页数
+		map.put("total", totalPage);
+		map.put("rows", protocolPageList.getList());
+		printJson(getStringOfJpaObj(map));
+	}
+
+	/**
+	 * 数据字典修改页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/system/protocol/protocolEditPage")
+	public String protocolEditPage() throws Exception {
+		// Dict dict = dictService.find(this.model.getId());
+		long id = paramLong("id");
+		Protocol protocol = protocolService.findProtocolById(id);
+		request.setAttribute("protocol", protocol);
+
+		return "protocolEditPage";
+	}
+
+	/**
+	 * 修改
+	 * 
+	 * @author xingjia@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action("/modules/system/protocol/protocolEdit")
+	public void protocolEdit() throws Exception {
+
+		Protocol protocol = protocolService.updateProtocol(model);
+		if(null != protocol){
+			map.put("msg", "协议修改成功");
+		}
+		printJson(getStringOfJpaObj(map));
+	}
+}

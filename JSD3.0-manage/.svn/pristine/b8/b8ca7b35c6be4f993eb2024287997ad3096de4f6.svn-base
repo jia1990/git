@@ -1,0 +1,123 @@
+package com.rongdu.manage.action.score;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.model.ScoreLogModel;
+import com.rongdu.p2psys.score.model.ScoreModel;
+import com.rongdu.p2psys.score.service.ScoreLogService;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.user.model.UserFreezeModel;
+
+public class ManageScoreAction extends BaseAction implements ModelDriven<ScoreModel> {
+	
+	private static Logger logger = Logger.getLogger(ManageScoreAction.class);
+
+	private ScoreModel model = new ScoreModel();
+	
+	private Map<String, Object> data;
+	
+	@Override
+	public ScoreModel getModel() {
+		// TODO Auto-generated method stub
+		return model;
+	}
+	
+	@Resource
+	private ScoreService scoreService;
+	@Resource
+	private ScoreLogService scoreLogService;
+	
+	@Action("/modules/user/score/scoreManager")
+	public String scoreManager(){
+		return "scoreManager";
+	}
+
+	/**
+	 * 用户积分分页
+	 * @return
+	 */
+	@Action("/modules/user/score/scoreList")
+	public void scoreList () throws Exception{
+		PageDataList<ScoreModel> page = scoreService.getScorePage(model);
+		data = new HashMap<String, Object>();
+		if(page.getPage() == null){
+			data.put("total", 0); // 总行数
+		}else {
+			data.put("total", page.getPage().getTotal()); // 总行数
+		}
+		data.put("rows", page.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 积分查询信息导出
+	 * @throws Exception
+	 */
+	@Action("/modules/user/score/scoreExcel")
+	public void scoreExcel() throws Exception {
+/*		response.setContentType("application/msexcel;charset=UTF-8");
+		model.setPage(1);
+		model.setRows(99999999);*/
+		//PageDataList<ScoreModel> pagaDataList = scoreService.getScorePage(model);
+		
+//		List<ScoreModel> list = pagaDataList.getList();
+//		List<ScoreModel> newList = new ArrayList<ScoreModel>();		
+//		for(int i=0;i<list.size();i++){
+//			ScoreModel sm = list.get(i);
+//			newList.add(sm);
+//		}
+		
+		//JSDP-116 xingjia 2015-05-15 start
+		List<Score> newList = scoreService.excelListScore(model);
+		String title = "用户积分信息Excel表";
+		String[] hearders = new String[] {"编号","用户名","总积分","有效积分","消费积分","冻结积分","添加时间"};// 表头数组
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List tdList = new ArrayList();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				Object sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		
+		
+		
+		
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-15 start
+	}
+}

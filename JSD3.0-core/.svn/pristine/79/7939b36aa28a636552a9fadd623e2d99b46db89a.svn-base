@@ -1,0 +1,1483 @@
+package com.ddtkj.p2psys.account.service.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.dao.AccountDrawCashDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.fillorder.dao.FillOrderLogDao;
+import com.ddtkj.p2psys.fillorder.domain.FillOrderLog;
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountDrawHistoryDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountDrawHistory;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryBalance;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.tpp.ymd.model.record.draw.AccountDrawHistoryRecord;
+import com.ddtkj.p2psys.tpp.ymd.model.record.draw.AccountDrawHistoryReturnRecord;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.dao.DictDao;
+import com.rongdu.p2psys.core.dao.OperatorDao;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.RedPacketConsumeRuleCheck;
+import com.rongdu.p2psys.core.rule.WithdrawCashRuleCheck;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+/**
+ * @描述：提现核心业务实现类serviceImpl
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月17日 
+ */
+@Service("accountDrawCashService")
+public class AccountDrawCashServiceImpl implements AccountDrawCashService{
+	Logger logger = Logger.getLogger(AccountDrawCashServiceImpl.class);
+    @Resource
+	AccountDrawCashDao drawDao;
+     @Resource
+    OperatorDao operatorDao;
+    @Resource
+    AccountDao accountDao;
+    @Resource
+    AccountDrawHistoryDao accountDrawHistoryDao;
+    @Resource
+    RegionDao regionDao;
+    @Resource
+    RpProduceDao rpProduceDao;
+    @Resource
+    BorrowCollectionDao collectionDao;
+    @Resource
+    FillOrderLogDao fillOrderLogDao;
+    @Resource
+    DictDao dictDao;
+    //JSDP-117  wcw 20150521 start
+    @Override
+    public void saveDrawCash(AccountDraw draw)throws Exception {
+    	drawDao.save(draw);
+    	drawDao.flush();
+    }
+    @Override
+    public void updateDrawCash(AccountDraw draw)throws Exception {
+    	drawDao.update(draw);
+    }
+    //JSDP-117  wcw 20150521 end
+	@Override
+	public void doApplyDrawCash(AccountDraw draw)throws Exception {
+		User u=draw.getUser();
+		RedPacketConsumeRuleCheck rule = (RedPacketConsumeRuleCheck) Global
+				.getRuleCheck("redPacketConsume");
+		
+		//该用户实际待收本金总额
+		double returnMoney=collectionDao.getCollectionSum(0,u.getUserId());
+		//判断是否获得使用静态红包资格
+		boolean flag=rule.cashUsestaticRP(returnMoney);
+		//校验一麻袋余额是否小于提现金额
+		//checkYmdBalance(draw, u);
+		//获取账户各种可用金额
+		Account account=accountDao.getAccountByUserId(u.getUserId());
+		//提现金额
+		double drawAmount=draw.getDrawAmount();
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("drawAmount", drawAmount);
+		map.put("userType", u.getUserCache().getUserType());
+		map.put("memberLevel", u.getMemberLevel());
+		map.put("user", u);
+		//计算平台收取提现人的提现手续费（fee）
+		AccountDrawModel adm=new AccountDrawModel();
+		double useStaticRp=0;
+		if(flag){
+		    useStaticRp=rpProduceDao.sRedPackSumMoney(u.getUserId());
+		}
+		map.put("useStaticRp", useStaticRp);
+		map=adm.drawFee(map);
+		//map=this.drawFee(map);
+		double drawFee=(Double) (map.get("drawFee")==null?"0.0":map.get("drawFee"));
+		draw.setDrawFee(drawFee);
+		draw.setDrawInAccountAmount(BigDecimalUtil.sub(draw.getDrawAmount(), draw.getDrawFee()));
+		draw.setAddTime(new Date());
+		draw.setAddIp(Global.getIP());
+		draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_APPLY);
+		//获取汉字省份
+		Region provinceRegion = regionDao.findById(NumberUtil.getInt(draw.getBankProvince()));
+		if (provinceRegion != null){
+			draw.setBankProvince(provinceRegion.getName());
+		}else{
+			throw new BussinessException("该省份不存在",1);
+		}
+		//获取汉字市区
+		Region cityRegion = regionDao.findById(NumberUtil.getInt(draw.getBankCity()));
+		if (cityRegion != null){
+			draw.setBankCity(cityRegion.getName());
+		}else{
+			throw new BussinessException("该城市不存在",1);
+		}
+		if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+		    //--------投资人处理---
+			//提现静态红包实现转账  平台---提现人
+			if(flag&&useStaticRp>0&&drawAmount>=useStaticRp){
+				//本地提现静态红包处理
+				//提现静态红包实现本地转账  平台---提现人
+			    draw.setUseStaticRp(useStaticRp);
+		    	map=new HashMap<String, Object>();
+		    	map.put("awardMoney",draw.getUseStaticRp());
+		    	Global.setTransfer("money", draw.getUseStaticRp());
+		    	AbstractExecuter a=ExecuterHelper
+						.doExecuter("rpStaticUseExecuter");
+		    	a.execute(map, u);
+		    	
+		    	//更新静态红包状态：从未使用改为冻结
+				List<RpProduce> list=rpProduceDao.list(u.getUserId(), RpProduce.RP_STATIC_RP_NO_USE, RpProduce.RP_STATIC);
+			    for(RpProduce r:list){
+			    	r.setRpStaticStatus(RpProduce.RP_STATIC_RP_FREEZE);
+			    	rpProduceDao.updateStatus(r.getUser().getUserId(),RpProduce.RP_STATIC_RP_NO_USE , RpProduce.RP_STATIC_RP_FREEZE, r.getId());
+			    }
+			}
+			//JSDP-120 wcw 2015-05-15 start
+			double currRecharge = 0;
+			double currAward = 0;
+			double currInterest = 0;
+			double currReturnCapital = 0;
+			//计算提现金额冻结归属（使用充值、使用奖励、使用利息、使用回款）
+			//提现顺序：使用回款、利息、奖励、充值
+			account=accountDao.getAccountByUserId(u.getUserId());
+			//充值可用
+			double rechargeUsable=account.getRechargeUsable();
+			//奖励可用
+			double awardUsable=account.getAwardUsable();
+			//利息可用
+			double interestUsable=account.getInterestUsable();
+			//回款本金可用
+			double returnCapitalUsable=account.getReturnCapitalUsable();
+			//账户可用总额
+			double useMoney=BigDecimalUtil.add(rechargeUsable,awardUsable,interestUsable,returnCapitalUsable);
+			//JSDP-120 wcw 2015-05-15 end
+			//提现金额与账户可用总额校验
+			if(drawAmount>useMoney){
+				throw new BussinessException("提现金额大于账户可用余额，提现失败");
+			}
+			if(returnCapitalUsable>=drawAmount){
+				currReturnCapital=drawAmount;
+			}else{
+				if((BigDecimalUtil.add(returnCapitalUsable,interestUsable))>=drawAmount){
+					currReturnCapital=returnCapitalUsable;
+					currInterest=BigDecimalUtil.sub(drawAmount, returnCapitalUsable);
+				}else{
+					double currMoney=BigDecimalUtil.add(returnCapitalUsable,awardUsable,interestUsable);
+					if(currMoney>drawAmount){
+						currReturnCapital=returnCapitalUsable;
+						 currAward=awardUsable;
+						currInterest=BigDecimalUtil.sub(drawAmount,BigDecimalUtil.add(currReturnCapital,currAward));
+					}else{
+						currReturnCapital=returnCapitalUsable;
+						currAward=awardUsable;
+						currInterest=interestUsable;
+						currRecharge=BigDecimalUtil.sub(drawAmount, currMoney);
+					}
+				}
+			}
+			draw.setUseRecharge(BigDecimalUtil.decimal(currRecharge,2));
+			draw.setUseAward(BigDecimalUtil.decimal(currAward,2));
+			draw.setUseInterest(BigDecimalUtil.decimal(currInterest,2));
+			draw.setUseReturnMoney(BigDecimalUtil.decimal(currReturnCapital,2));
+			//更新账户表、账户资金日志表
+			Global.setTransfer("draw", draw);
+			//JSDBET-782 gjh 2015-3-10 start
+			Global.setTransfer("money", drawAmount);
+			//JSDBET-782 gjh 2015-3-10 end
+			Global.setTransfer("user", draw.getUser());
+			map=new HashMap<String, Object>();
+			map.put("rechargeMoney", draw.getUseRecharge());
+			map.put("awardMoney", draw.getUseAward());
+			map.put("interestMoney", draw.getUseInterest());
+			map.put("returnCapitalMoney", draw.getUseReturnMoney());
+			AbstractExecuter executer = ExecuterHelper.doExecuter("drawApplyInvesterExecuter");
+			executer.execute(map, draw.getUser());
+		}else{
+			//------借款人处理
+			//借款入账可用金额
+			double borrowerEnterUsable=account.getBorrowerEnterUsable(); 
+			//借款人充值可用金额
+			double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+			double currRecharge = 0;
+			double currEnter = 0;
+			if(borrowerEnterUsable>=drawAmount){
+				currEnter=drawAmount;
+			}else{
+				double currMoney=borrowerEnterUsable+borrowerRechargeUsable;
+				if(currMoney>=drawAmount){
+					currEnter=borrowerEnterUsable;
+					currRecharge=drawAmount-borrowerEnterUsable;
+				}else{
+					throw new BussinessException("借款人提现金额大于账户可用余额，提现失败");
+				}
+			}
+			draw.setBorrowerUseEnter(currEnter);
+			draw.setBorrowerUseRecharge(currRecharge);
+			map=new HashMap<String, Object>();
+			map.put("borrowerEnterMoney", draw.getBorrowerUseEnter());
+			map.put("borrowerRechargeMoney", draw.getBorrowerUseRecharge());
+			Global.setTransfer("money", draw.getDrawAmount());
+			Global.setTransfer("draw", draw);
+			Global.setTransfer("user", draw.getUser());
+			AbstractExecuter executer = ExecuterHelper.doExecuter("drawApplyBorrowerExecuter");
+			executer.execute(map, draw.getUser());
+		}
+		//draw=accountDrawSec(draw,u);
+		//JSDP-117 wcw 2015-05-15 start
+		drawDao.update(draw);
+		//JSDP-117 wcw 2015-05-15 end
+		//等到提现最后处理   ---防止出现异常   wcw 2015-6-25 start
+		if(flag&&useStaticRp>0&&drawAmount>=useStaticRp){
+			//一麻袋提现静态红包处理
+			YmdTransfer ymd=new YmdTransfer();
+	        ymd.setAmount(useStaticRp+"");
+	        //收款人
+	        ymd.setInName(u.getUserName());
+	        //付款人
+	        ymd.setOutName(ymd.getNumberId());
+	      //JSDP-117 wcw 2015-05-15 start
+	        YmdTransfer ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP), draw.getDrawApplyRpTradeNo(), ymd.getAmount(), ymd.getOutName(), ymd.getInName());
+	      //JSDP-117 wcw 2015-05-15 end
+	        if(!"0000".equals(ymdTransfer.getErrCode())){
+		    	//throw new BussinessException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+		    	//JSDBET-812 gjh 2015-3-14 start
+				throw new HandleException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"),
+						"提现静态红包转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_DRAW,
+						ErrorLogConstant.CODE_DRAW_APPLY_TPOS,u,ErrorLogConstant.MODULE_ACCOUNT_DRAW,
+						draw.getId(),1);
+				//JSDBET-812 gjh 2015-3-14 end 
+		    }
+		}
+		//等到提现最后处理   ---防止出现异常   wcw 2015-6-25 end
+	}
+	@Override
+	public Map<String, Object> drawFee(Map<String, Object> map) {
+		WithdrawCashRuleCheck rule = (WithdrawCashRuleCheck) Global
+				.getRuleCheck("withdrawCash");
+		double fee = 0;
+		double drawAmount=(Double) (map.get("drawAmount")==null?"0.0":map.get("drawAmount"));
+		//最大提现金额  暂时无
+	   User u=(User) (map.get("user")==null?new User():map.get("user"));
+	   Account account=accountDao.getAccountByUserId(u.getUserId());
+	   //JSDP-120 wcw 20150516 start
+ 	   RedPacketConsumeRuleCheck rpRule = (RedPacketConsumeRuleCheck) Global
+				.getRuleCheck("redPacketConsume");
+		//该用户实际待收本金总额
+		BorrowCollectionDao collectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		double returnMoney=collectionDao.getCollectionSum(0,u.getUserId());
+		//判断是否获得使用静态红包资格
+		boolean flag=rpRule.cashUsestaticRP(returnMoney);
+		double useStaticRp=0;
+		if(flag){
+			RpProduceDao rpProduceDao = (RpProduceDao) BeanUtil.getBean("rpProduceDao");
+			useStaticRp=rpProduceDao.sRedPackSumMoney(u.getUserId());
+		}
+		 //JSDP-120 wcw 20150516 end
+	   double rechargeUsable=0;
+	   double otherUsable=0;
+	   if("11".equals(u.getUserCache().getUserType())){
+		   rechargeUsable=account.getBorrowerRechargeUsable();
+		   otherUsable=BigDecimalUtil.sub(account.getBorrowerUsableTotal(),rechargeUsable);
+	   }else{
+		   rechargeUsable=account.getRechargeUsable();
+		   otherUsable=BigDecimalUtil.sub(account.getUsableAccount(),rechargeUsable);
+		   //JSDP-120 wcw 20150516 start
+		   otherUsable=BigDecimalUtil.add(otherUsable,useStaticRp);
+		   //JSDP-120 wcw 20150516 end
+	   }
+	   double currRecharge=0;
+	   double currOther=0;
+	   /*if(rechargeUsable>=drawAmount){
+		   currRecharge=drawAmount;
+	   }else{
+		   currRecharge=rechargeUsable;
+		   currOther=BigDecimalUtil.sub(drawAmount, rechargeUsable);
+	   }*/
+	   if(otherUsable>=drawAmount){
+		   currOther=drawAmount;
+	   }else{
+		   currOther=otherUsable;
+		   currRecharge=BigDecimalUtil.sub(drawAmount, currOther);
+	   }
+	   map.put("rechargeCash", currRecharge);
+	   map.put("incomeCash", currOther);
+	   Map<String, Map<String, Double>> map_=rule.calculateCashFee(map);
+	   Map<String, Double> rechargeMap=new HashMap<String, Double>();
+	   //充值相关
+	   rechargeMap=map_.get("rechargeCash");
+	   Map<String, Object> returnMap=new HashMap<String, Object>();
+	   double rechargeCashFee=0;
+	   double otherCashFee=0;
+	   if(rechargeMap!=null){
+		   double rechargeRequestMoney=rechargeMap.get("requestMoney");
+		   double rechargeFeeRate=rechargeMap.get("feeRate");
+		   rechargeCashFee=rechargeMap.get("cashFee");
+		   double rechargeInAccountMoney=rechargeMap.get("usableMoney");
+		   returnMap.put("rechargeRequestMoney", rechargeRequestMoney);
+		   returnMap.put("rechargeFeeRate", rechargeFeeRate);
+		   returnMap.put("rechargeCashFee", rechargeCashFee);
+		   returnMap.put("rechargeInAccountMoney", rechargeInAccountMoney);
+	   }
+	   //除充值之外的其他
+	   Map<String, Double> otherMap=new HashMap<String, Double>();
+	   otherMap=map_.get("incomeCash");
+	   if(otherMap!=null){
+		   double otherRequestMoney=otherMap.get("requestMoney")==null?0.0:otherMap.get("requestMoney");
+		   double otherFeeRate=otherMap.get("feeRate")==null?0.0:otherMap.get("feeRate");
+		   otherCashFee=otherMap.get("cashFee")==null?0.0:otherMap.get("cashFee");
+		   double otherInAccountMoney=otherMap.get("usableMoney")==null?0.0:otherMap.get("usableMoney");
+		   returnMap.put("otherRequestMoney", otherRequestMoney);
+		   returnMap.put("otherFeeRate", otherFeeRate);
+		   returnMap.put("otherCashFee", otherCashFee);
+		   returnMap.put("otherInAccountMoney", otherInAccountMoney);
+	   }
+	   //本次提现手续费
+	   fee=BigDecimalUtil.add(rechargeCashFee,otherCashFee);
+	   //实际入账金额
+	   double inAccount=BigDecimalUtil.sub(drawAmount, fee);
+	   returnMap.put("drawFee", fee);
+	   returnMap.put("inAccount", inAccount);
+	   //JSDP-120 wcw 20150516 start
+	   returnMap.put("useStaticRp", useStaticRp);
+	   //JSDP-120 wcw 20150516 end
+	   return returnMap;
+	}
+	
+	
+	
+	
+	@Override
+	public void doCancleDrawCash(Map<String, Object> drawMap) {
+		//int id=(Integer) (drawMap.get("id")==null?0:drawMap.get("id"));
+		int id=0;
+		
+		if(drawMap.get("id")==null){	
+			id = 0;
+		}else if(drawMap.get("id")!=null){
+			id= Integer.parseInt(drawMap.get("id").toString());
+		}
+		
+		//通过id查询该次操作提现记录
+		AccountDraw accountDraw=drawDao.find(id);
+		User user = accountDraw.getUser();
+		//long userID = user.getUserId();
+		//String tradeID = accountDraw.getDrawTradeNo();
+		// 用户区分
+		String userType = user.getUserCache().getUserType();
+		//AccountDraw accountDraw = drawDao.queryOne(userID, tradeID);
+		String handerStatus = accountDraw.getDrawHandleStatus();
+		//更新提现状态
+		drawDao.updateStatus(id, AccountDraw.DRAW_CASH_CANCLE, handerStatus);
+		if (UserConstant.USER_SORT_BORROW.equals(userType)|| UserConstant.USER_SORT_ASSURE.equals(userType) ||UserConstant.USER_SORT_MERCHANT.equals(userType)) {
+			//借款人||担保公司||商户
+			if (AccountDraw.DRAW_CASH_APPLY.equals(handerStatus)) {
+				// 操作解冻金额
+				double borrowerUserEnter = accountDraw.getBorrowerUseEnter();
+				double borrowerUserRecharge = accountDraw.getBorrowerUseRecharge();
+				Map<String, Object> map = new HashMap<String, Object>();
+				//JSDBET-796 wcw 2015-3-10 start
+				map.put("borrowerEnterMoney", borrowerUserEnter);
+				map.put("borrowerRechargeMoney", borrowerUserRecharge);
+				//JSDBET-796 wcw 2015-3-10 end
+				//JSDBET-782 gjh 2015-3-10 start
+				Global.setTransfer("money", accountDraw.getDrawAmount());
+				//JSDBET-782 gjh 2015-3-10 end
+				Global.setTransfer("user", user);
+				Global.setTransfer("draw", accountDraw);
+				AbstractExecuter executer = ExecuterHelper
+						.doExecuter("drawCancelBorrowerExecuter");
+				executer.execute(map, user);
+			} else {
+
+				// 提现不能取消，提示信息
+			}
+		} else if (UserConstant.USER_SORT_INVESTOR.equals(userType)) {
+            //投资人
+			if (AccountDraw.DRAW_CASH_APPLY.equals(handerStatus)) {
+				//如果提现使用静态红包
+				if(accountDraw.getUseStaticRp()>0){
+					//静态红包使用优化  wcw 2015-6-25  start
+					//提现静态红包实现本地转账  提现人----平台
+			    	Map<String, Object> map=new HashMap<String, Object>();
+			    	map.put("awardMoney",accountDraw.getUseStaticRp());
+			    	Global.setTransfer("money", accountDraw.getUseStaticRp());
+			    	AbstractExecuter a=ExecuterHelper
+							.doExecuter("rpStaticUseFailExecuter");
+			    	a.execute(map, user);
+			    	//更新静态红包状态：从冻结改为未使用
+		   			List<RpProduce> list=rpProduceDao.list(user.getUserId(), RpProduce.RP_STATIC_RP_FREEZE, RpProduce.RP_STATIC);
+	   			    for(RpProduce r:list){
+	   			    	r.setRpStaticStatus(RpProduce.RP_STATIC_RP_FREEZE);
+	   			    	rpProduceDao.updateStatus(r.getUser().getUserId(),RpProduce.RP_STATIC_RP_FREEZE , RpProduce.RP_STATIC_RP_NO_USE, r.getId());
+	   			    }
+				}
+				
+				// 操作解冻金额
+				double userAward = accountDraw.getUseAward();// 使用奖励
+				double returnMoney = accountDraw.getUseReturnMoney();// 使用回款本金
+				double accountInterest = accountDraw.getUseInterest();// 使用利息
+				double accountRecharge = accountDraw.getUseRecharge();// 使用充值
+				
+				// 操作金额
+				Map<String, Object> map = new HashMap<String, Object>();
+				map.put("returnCapitalMoney", returnMoney);
+				map.put("interestMoney", accountInterest);
+				map.put("awardMoney", userAward);
+				map.put("rechargeMoney", accountRecharge);
+				//JSDBET-782 gjh 2015-3-10 start
+				Global.setTransfer("money", accountDraw.getDrawAmount());
+				//JSDBET-782 gjh 2015-3-10 end
+				Global.setTransfer("user", user);
+				Global.setTransfer("draw", accountDraw);
+				AbstractExecuter executer = ExecuterHelper
+						.doExecuter("drawCancelInvesterExecuter");
+				executer.execute(map, user);
+				
+				//提现取消 静态红包物归原主，从提现人账户转账给平台账户
+				if(accountDraw.getUseStaticRp()>0){
+					YmdTransfer ymd=new YmdTransfer();
+			        ymd.setAmount(accountDraw.getUseStaticRp()+"");
+			        //收款人
+			        ymd.setInName(ymd.getNumberId());
+			        //付款人
+			        ymd.setOutName(user.getUserName());
+			        YmdTransfer ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP), TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER), ymd.getAmount(), ymd.getOutName(), ymd.getInName());
+				    if(!"0000".equals(ymdTransfer.getErrCode())){
+				    	//throw new BussinessException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+				    	//JSDBET-812 gjh 2015-3-14 start
+						throw new HandleException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"),
+								"提现静态红包转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_DRAW,
+								ErrorLogConstant.CODE_DRAW_CANCEL_TPOS,user,ErrorLogConstant.MODULE_ACCOUNT_DRAW,
+								accountDraw.getId(),1);
+						//JSDBET-812 gjh 2015-3-14 end 
+				    }
+			    }
+				//静态红包使用优化  wcw 2015-6-25  end
+			}
+		}
+	}
+	@Override
+	public Map<String, Object> drawCompare(int id) throws Exception{
+		AccountDraw draw=drawDao.find(id);
+		/*if(!"42".equals(draw.getDrawHandleStatus())){
+			throw new BussinessException("该提现记录不能进行对账", 1);
+		}*/
+		YmdQuery ymdQuery=new YmdQuery();
+		ymdQuery.setOutTradeNo(draw.getDrawTradeNo());
+		YmdQueryReturn ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("draw", draw);
+		map.put("ymdQueryReturn", ymdQueryReturn);
+		return map;
+	}
+	@Override
+	public void drawSupplementSingle(int id) throws Exception{
+		AccountDraw draw=drawDao.find(id);
+		/*if(!"42".equals(draw.getDrawHandleStatus())){
+			throw new BussinessException("该提现记录不能进行对账", 1);
+		}*/
+		YmdQuery ymdQuery=new YmdQuery();
+		ymdQuery.setOutTradeNo(draw.getDrawTradeNo());
+		YmdQueryReturn ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+		if(AccountDraw.DRAW_CASH_REQUEST_YMD_SUCCESS.equals(draw.getDrawHandleStatus())&&"00".equals(ymdQueryReturn.getResultCode())&&"00".equals(ymdQueryReturn.getTradeStatus())){
+			
+		}
+	}
+	@Override
+	public void doFailDrawCash(Map<String, Object> drawMap) {
+		AccountDrawModel model= (AccountDrawModel) (drawMap.get("model")==null?new AccountDrawModel():drawMap.get("model"));
+		if(model!=null&&model.getId()>0){
+			//修改前提现状态
+			String upBeforeStatus=(String) (drawMap.get("upBeforeStatus")==null?"0":drawMap.get("upBeforeStatus"));
+			//修改后提现状态
+			String upAfterStatus=(String) (drawMap.get("upAfterStatus")==null?"0":drawMap.get("upAfterStatus"));
+			//本次操作使用executer
+			String drawExecuter=(String) (drawMap.get("drawExecuter")==null?"":drawMap.get("drawExecuter"));
+			
+			//通过id查询该次操作提现记录
+			AccountDraw accountDraw=drawDao.find(model.getId());
+			//提现记录本身状态
+			String handleStatus=accountDraw.getDrawHandleStatus();
+			User user = accountDraw.getUser();
+			// 用户区分
+			String userType = user.getUserCache().getUserType();
+			//更新提现状态
+			drawDao.updateStatus(model.getId(), upAfterStatus, upBeforeStatus);
+			//再修改其他内容
+			accountDraw.setDrawHandleStatus(upAfterStatus);
+			if(model.getFirstTrialOperId()!=0){
+	            accountDraw.setFirstTrialFailRemark(model.getFirstTrialFailRemark());
+	            accountDraw.setFirstTrialOperId(model.getFirstTrialOperId());
+	            accountDraw.setFirstTrialTime(new Date());
+            }
+			if(model.getRecheckOperId()!=0){
+	            accountDraw.setRecheckFailRemark(model.getRecheckFailRemark());
+	            accountDraw.setRecheckOperId(model.getRecheckOperId());
+	            accountDraw.setRecheckTime(new Date());
+            }
+		    drawDao.update(accountDraw);
+		    //JSDBET-782 wcw 2015-3-10 start
+			Global.setTransfer("money", accountDraw.getDrawAmount());
+			//JSDBET-782 wcw 2015-3-10 end
+			if (UserConstant.USER_SORT_BORROW.equals(userType)|| UserConstant.USER_SORT_ASSURE.equals(userType) ||UserConstant.USER_SORT_MERCHANT.equals(userType)) {
+
+				//借款人
+				//本次操作提现记录本身状态是否符合
+				if (handleStatus.equals(upBeforeStatus)|| UserConstant.USER_SORT_ASSURE.equals(userType) ||UserConstant.USER_SORT_MERCHANT.equals(userType)) {
+					// 操作解冻金额
+					double borrowerUserEnter = accountDraw.getBorrowerUseEnter();
+					double borrowerUserRecharge = accountDraw.getBorrowerUseRecharge();
+					Map<String, Object> map = new HashMap<String, Object>();
+					//JSDBET-796 wcw 2015-3-10 start
+					accountDraw.getDrawAmount();
+					map.put("borrowerEnterMoney", borrowerUserEnter);
+					map.put("borrowerRechargeMoney", borrowerUserRecharge);
+					//JSDBET-796 wcw 2015-3-10  end
+					Global.setTransfer("user", user);
+					Global.setTransfer("draw", accountDraw);
+					AbstractExecuter executer = ExecuterHelper
+							.doExecuter(drawExecuter+"BorrowerExecuter");
+					executer.execute(map, user);
+				} else {
+	
+					// 提现不能取消，提示信息
+				}
+			} else if (UserConstant.USER_SORT_INVESTOR.equals(userType)) {
+	            //投资人
+				if (handleStatus.equals(upBeforeStatus)) {
+					//如果提现使用静态红包
+					if(accountDraw.getUseStaticRp()>0){
+						//JSDP-117 wcw 2015-05-15 start
+						//本地处理静态红包
+						//提现静态红包实现本地转账  提现人----平台
+				    	Map<String, Object> map=new HashMap<String, Object>();
+				    	map.put("awardMoney",accountDraw.getUseStaticRp());
+				    	Global.setTransfer("money", accountDraw.getUseStaticRp());
+				    	AbstractExecuter a=ExecuterHelper
+								.doExecuter("rpStaticUseFailExecuter");
+				    	a.execute(map, user);
+						
+				    	 //更新静态红包状态：从冻结改为未使用
+			   			List<RpProduce> list=rpProduceDao.list(user.getUserId(), RpProduce.RP_STATIC_RP_FREEZE, RpProduce.RP_STATIC);
+		   			    for(RpProduce r:list){
+		   			    	r.setRpStaticStatus(RpProduce.RP_STATIC_RP_FREEZE);
+		   			    	rpProduceDao.updateStatus(r.getUser().getUserId(),RpProduce.RP_STATIC_RP_FREEZE , RpProduce.RP_STATIC_RP_NO_USE, r.getId());
+		   			    }
+					}
+					// 操作解冻金额
+					double userAward = accountDraw.getUseAward();// 使用奖励
+					double returnMoney = accountDraw.getUseReturnMoney();// 使用回款本金
+					double accountInterest = accountDraw.getUseInterest();// 使用利息
+					double accountRecharge = accountDraw.getUseRecharge();// 使用充值
+					
+					// 操作金额
+					Map<String, Object> map = new HashMap<String, Object>();
+					map.put("returnCapitalMoney", returnMoney);
+					map.put("interestMoney", accountInterest);
+					map.put("awardMoney", userAward);
+					map.put("rechargeMoney", accountRecharge);
+					Global.setTransfer("user", user);
+					Global.setTransfer("draw", accountDraw);
+					AbstractExecuter executer = ExecuterHelper
+							.doExecuter(drawExecuter+"InvesterExecuter");
+					executer.execute(map, user);
+					
+					//第三方处理静态红包
+	   			    //提现取消 静态红包物归原主，从提现人账户转账给平台账户
+					if(accountDraw.getUseStaticRp()>0){
+						YmdTransfer ymd=new YmdTransfer();
+				        ymd.setAmount(accountDraw.getUseStaticRp()+"");
+				        //收款人
+				        ymd.setInName(ymd.getNumberId());
+				        //付款人
+				        ymd.setOutName(user.getUserName());
+				        YmdTransfer ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP), accountDraw.getDrawVerifyFailRpTradeNo(), ymd.getAmount(), ymd.getOutName(), ymd.getInName());
+					    if(!"0000".equals(ymdTransfer.getErrCode())){
+					    	//throw new BussinessException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+					    	//JSDBET-812 gjh 2015-3-14 start
+							throw new HandleException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"),
+									"提现静态红包转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_DRAW,
+									ErrorLogConstant.CODE_DRAW_CHECKED_NO_TPOS,user,ErrorLogConstant.MODULE_ACCOUNT_DRAW,
+									accountDraw.getId(),1);
+							//JSDBET-812 gjh 2015-3-14 end 
+					    }
+				    }
+				  //JSDP-117 wcw 2015-05-15 end
+				}
+			}
+		}
+	}
+	
+	@Override
+	public void firstTrialSuccessCash(Map<String, Object> drawMap) {
+		AccountDrawModel model= (AccountDrawModel) (drawMap.get("model")==null?new AccountDrawModel():drawMap.get("model"));
+		if(model!=null&&model.getId()>0){
+			//修改前提现状态
+			String upBeforeStatus=(String) (drawMap.get("upBeforeStatus")==null?"0":drawMap.get("upBeforeStatus"));
+			//修改后提现状态
+			String upAfterStatus=(String) (drawMap.get("upAfterStatus")==null?"0":drawMap.get("upAfterStatus"));
+			//通过id查询该次操作提现记录
+			AccountDraw draw=drawDao.find(model.getId());
+			double drawFee = (Double) (drawMap.get("drawFee"));
+			if(draw!=null){
+				User u=draw.getUser();
+				//校验一麻袋余额与提现金额
+				checkYmdBalance(draw, u);
+			    //先修改提现审核状态状态
+		        drawDao.updateStatus(draw.getId(), upAfterStatus, upBeforeStatus);
+		        //再修改其他内容
+		        draw.setDrawHandleStatus(upAfterStatus);
+			    draw.setFirstTrialOperId(model.getFirstTrialOperId());
+			    draw.setFirstTrialFailRemark(model.getFirstTrialFailRemark());
+			    
+			    // 更改到账金额
+			    draw.setDrawInAccountAmount(BigDecimalUtil.sub(draw.getDrawAmount(),drawFee));
+			    // 修改手续费
+			    draw.setDrawFee(drawFee);
+			    
+			    
+			    drawDao.update(draw);
+			    //发送提现审核通知消息
+			    Global.setTransfer("user", u);
+			    Global.setTransfer("draw", draw);
+			    BaseMsg msg = new BaseMsg(NoticeConstant.DRAW_FIRST_CHECK_SUCC);
+			    msg.doEvent();
+	        }
+		}
+	}
+	@Override
+	public Map<String, Object> recheckSuccessCash(Map<String, Object> drawMap)throws Exception {
+		AccountDrawModel adm=new AccountDrawModel();
+		Map<String, Object> map=new HashMap<String, Object>();
+		//提现复审成功
+		adm.recheckDrawSuccess(drawMap);
+		//提现复审二之等待银行转账本地业务处理开始
+		adm.recheckDrawLocalhost(drawMap);
+		//提现复审二之等待银行转账汇潮转账业务处理开始
+		map=adm.recheckDrawYmd(drawMap);
+		return map;
+	}
+	/**
+     * 校验一麻袋账户余额是否大于提现金额
+     * @param draw
+     * @param u
+     */
+	private void checkYmdBalance(AccountDraw draw,User u){
+		YmdQueryBalance ymdQueryBalance=new YmdQueryBalance();
+		if(u!=null){
+			try {
+				ymdQueryBalance=YmdTPPWay.checkBalance(u.getUserName());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if(!"00".equals(ymdQueryBalance.getErrCode())){
+				//throw new BussinessException("汇潮"+ymdQueryBalance.getErrMsg(ymdQueryBalance.getStatus(), "一麻袋托管账户请求失败，请重新请求"),1);
+				//JSDBET-812 gjh 2015-3-14 start
+				throw new HandleException("汇潮"+ymdQueryBalance.getErrMsg(ymdQueryBalance.getStatus(), "一麻袋托管账户请求失败，请重新请求"),
+						"提现静态红包转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_DRAW,
+						ErrorLogConstant.CODE_DRAW_CHECK_TPOS,u,ErrorLogConstant.MODULE_ACCOUNT_DRAW,
+						draw.getId(),1);
+				//JSDBET-812 gjh 2015-3-14 end 
+			}else{
+				if(draw.getDrawAmount()<NumberUtil.getDouble2(ymdQueryBalance.getAmount())){
+					throw new BussinessException("一麻袋余额小于提现金额，提现失败",1);
+				}
+			}
+		}else{
+			throw new BussinessException("用户为空，不能进行一麻袋余额查询","1");
+		}
+	}
+	@Override
+	public PageDataList<AccountDrawModel> list(long userId,AccountDrawModel model) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			//Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+			Date start = DateUtil.valueOf(model.getStartTime());
+			param.addParam("addTime", Operators.GTE, start);  
+		}
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		if (model.getTime() == 7) {
+			param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		} else if (model.getTime()>0 && model.getTime()<4){
+			param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+			Date end = DateUtil.valueOf(model.getEndTime());
+			param.addParam("addTime", Operators.LTE, end);
+		}
+		if (StringUtil.isNotBlank(model.getDrawHandleStatus()) && !"".equals(model.getDrawHandleStatus()) && !"undefined".equals(model.getDrawHandleStatus())) {
+			
+			if("0".equals(model.getDrawHandleStatus())){
+			param.addParam("drawHandleStatus", model.getDrawHandleStatus()+"0");
+			}else{
+			param.addParam("drawHandleStatus", model.getDrawHandleStatus());
+			}
+			
+		}
+		param.addOrder(OrderType.DESC, "id");
+		param.addPage(model.getPage());
+
+		PageDataList<AccountDraw> pageDateList = drawDao.findPageList(param);
+		PageDataList<AccountDrawModel> pageDateList_=new PageDataList<AccountDrawModel>();
+		List<AccountDrawModel> list = new ArrayList<AccountDrawModel>();
+		pageDateList_.setPage(pageDateList.getPage());
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountDraw c = (AccountDraw) pageDateList.getList().get(i);
+				AccountDrawModel cm = AccountDrawModel.instance(c);
+				if (c.getFirstTrialOperId() != 0) {
+					Operator operator=operatorDao.userFind(c.getFirstTrialOperId());
+					if(operator!=null){
+					   cm.setFirstTrialUserName(operator.getName());
+					}
+				} 
+                if(c.getRecheckOperId()!=0){
+                	Operator operator=operatorDao.userFind(c.getRecheckOperId());
+                	if(operator!=null){
+					   cm.setRecheckUserName(operator.getName());
+					}
+                }
+				list.add(cm);
+			}
+		}
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+
+	@Override
+	public double drawTotalMoney(long userId, int startPage,
+			AccountDrawModel model) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public PageDataList<AccountDrawModel> accountDrawCashPageDataList(
+			int startPage, AccountDrawModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			//Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+			Date start = DateUtil.valueOf(model.getStartTime());
+			param.addParam("addTime", Operators.GTE, start);
+		}
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		if (model.getTime() == 7) {
+			param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		} else if (model.getTime()>0 && model.getTime()<4){
+			param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+			Date end = DateUtil.valueOf(model.getEndTime());
+
+			param.addParam("addTime", Operators.LTE, end);
+		}
+		if (StringUtil.isNotBlank(model.getDrawHandleStatus()) && !("0").equals(model.getDrawHandleStatus()) && !"undefined".equals(model.getDrawHandleStatus())) {
+			param.addParam("drawHandleStatus", model.getDrawHandleStatus());
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName", Operators.LIKE,model.getUserName());
+		}
+		if(StringUtil.isNotBlank(model.getUserType())){
+			param.addParam("user.userCache.userType", model.getUserType());
+		}
+		// 提现方式
+		// JSDP-208 sxy 20150703 start
+		if(StringUtil.isNotBlank(model.getDrawWay())){
+			param.addParam("drawWay", model.getDrawWay());
+		}
+		// JSDP-208 sxy 20150703 start
+		if(0!=model.getId()){
+			param.addParam("id", model.getId());
+		}
+		param.addOrder(OrderType.DESC, "addTime");
+		param.addOrder(OrderType.DESC, "firstTrialTime");
+		param.addOrder(OrderType.DESC, "recheckTime");
+		if(StringUtil.isNotBlank(model.getRows()+"")){
+			param.addPage(model.getPage(), model.getRows());
+		}else{
+			param.addPage(model.getPage());
+		}
+		
+		PageDataList<AccountDraw> pageDateList = drawDao.findPageList(param);
+		PageDataList<AccountDrawModel> pageDateList_=new PageDataList<AccountDrawModel>();
+		List<AccountDrawModel> list = new ArrayList<AccountDrawModel>();
+		pageDateList_.setPage(pageDateList.getPage());
+		DecimalFormat df =new DecimalFormat("#0.00");
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountDraw c = (AccountDraw) pageDateList.getList().get(i);
+				AccountDrawModel cm = AccountDrawModel.instance(c);
+				//根据数据库中保存的数字加入省市
+				/*long bankProvince = Long.parseLong(c.getBankProvince());
+				Region regionProvince = regionDao.findById(bankProvince);
+				cm.setBankProvinceName(regionProvince.getName());
+				long bankCity = Long.parseLong(c.getBankCity());
+				Region regionCity = regionDao.findById(bankCity);
+				cm.setBankCityName(regionCity.getName());*/
+				Dict dictBank = dictDao.find("account_bank", cm.getBankName());
+				if(dictBank != null){
+					cm.setBankName(dictBank.getName());
+				}else{
+					cm.setBankName(cm.getBankName());
+				}
+				cm.setBankCityName(c.getBankCity());
+				cm.setBankProvinceName(c.getBankProvince());
+				if (c.getFirstTrialOperId() != 0) {
+					Operator operator=operatorDao.userFind(c.getFirstTrialOperId());
+					if(operator!=null){
+					   cm.setFirstTrialUserName(operator.getName());
+					}
+				} 
+				cm.setUserType(c.getUser().getUserCache().getUserType());
+                if(c.getRecheckOperId()!=0){
+                	Operator operator=operatorDao.userFind(c.getFirstTrialOperId());
+                	if(operator!=null){
+					   cm.setRecheckUserName(operator.getName());
+					}
+                }
+                
+                cm.setDrawAmountStr(df.format(c.getDrawAmount()));
+                cm.setDrawFeeStr(df.format(c.getDrawFee()));
+                cm.setDrawInAccountAmountStr(df.format(c.getDrawInAccountAmount()));
+                
+                cm.setUserName(c.getUser().getUserName());
+                cm.setRealName(c.getUser().getRealName());
+				list.add(cm);
+			}
+		}
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+	/**
+	 * 提现总额
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double accountDrawCashTotal() {
+		
+		return drawDao.accountDrawCashTotal();
+	}
+	/*@Override
+	public double accountDrawCashTotal(int startPage, AccountDrawModel model) {
+		// TODO Auto-generated method stub
+		return 0;
+	}*/
+	@Override
+	public List<AccountDrawModel> accountDrawCashList(AccountDrawModel model) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	public List<AccountDraw> drawListByTradeNo(String out_trade_no) {
+		QueryParam param=new QueryParam();
+		param.addParam("drawHandleStatus", AccountDraw.DRAW_CASH_REQUEST_YMD_SUCCESS);
+		List<AccountDraw> list=drawDao.findByCriteria(param);
+		return list;
+	}
+	@Override
+	public int drawTotalCount(String drawHandleStatus) {
+		QueryParam param=new QueryParam();
+		param.addParam("drawHandleStatus", drawHandleStatus);
+		int count=drawDao.countByCriteria(param);
+		return count;
+	}
+
+	@Override
+	public void drawCashCallBack(YmdCash cash) {
+		logger.info("---提现汇潮回调业务处理开始1----");
+		QueryParam param=new QueryParam();
+		param.addParam("drawTradeNo", cash.getOutTradeNo());
+		AccountDraw draw=(AccountDraw) drawDao.findByCriteriaForUnique(param);
+		User u=draw.getUser();
+		Global.setTransfer("draw", draw);
+		if(AccountDraw.DRAW_CASH_CHECK2_SUCCESS.equals(draw.getDrawHandleStatus())){
+			//JSDBET-795 wcw 2015-3-10 start
+			if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+			    Map<String, Object> map=new HashMap<String, Object>();
+	   			map.put("rechargeMoney", draw.getUseRecharge());
+	   			map.put("awardMoney", draw.getUseAward());
+	   			map.put("interestMoney", draw.getUseInterest());
+	   			map.put("returnCapitalMoney", draw.getUseReturnMoney());
+	   			//0000表示请求汇潮成功，等待银行处理    进行本地提现扣款处理
+	   			if("0000".equals(cash.getErrCode())){
+		   			AbstractExecuter executer = ExecuterHelper.doExecuter("drawYmdRequestSuccInvesterExecuter");
+		   			executer.execute(map, draw.getUser());
+		   			draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_REQUEST_YMD_SUCCESS);
+
+		   		    //更新静态红包状态：从冻结改为已使用
+		   			List<RpProduce> list=rpProduceDao.list(u.getUserId(), RpProduce.RP_STATIC_RP_FREEZE, RpProduce.RP_STATIC);
+	   			    if(list.size()>0){
+			   			for(RpProduce r:list){
+		   			    	rpProduceDao.updateStatus(r.getUser().getUserId(),RpProduce.RP_STATIC_RP_FREEZE , RpProduce.RP_STATIC_RP_ALREADY_USE, r.getId());
+		   			    }
+		   			}
+	   			
+	   			}/*else{
+	   				AbstractExecuter executer = ExecuterHelper.doExecuter("drawYmdRequestFailInvesterExecuter");
+		   			executer.execute(map, draw.getUser());
+		   			draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_FAIL);
+	   				//throw new BussinessException(cash.getErrMsg(cash.getErrCode(), "一麻袋请求失败，请稍后再试"), 1);
+	   			}*/
+	   	    }else{
+	   		    Map<String, Object> map=new HashMap<String, Object>();
+				    map.put("borrowerEnterMoney", draw.getBorrowerUseEnter());
+				    map.put("borrowerRechargeMoney", draw.getBorrowerUseRecharge());
+				  //0000表示请求汇潮成功，等待银行处理
+	   			if("0000".equals(cash.getErrCode())){
+		   			AbstractExecuter executer = ExecuterHelper.doExecuter("drawYmdRequestSuccBorrowerExecuter");
+		   			executer.execute(map, draw.getUser());
+		   			draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_REQUEST_YMD_SUCCESS);
+	   			}/*else{
+	   				AbstractExecuter executer = ExecuterHelper.doExecuter("drawYmdRequestFailBorrowerExecuter");
+		   			executer.execute(map, draw.getUser());
+		   			draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_FAIL);
+	   			    throw new BussinessException(cash.getErrMsg(cash.getErrCode(), "一麻袋请求失败，请稍后再试"), 1);
+	   			}*/
+	   	    }
+		    //draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_REQUEST_YMD_SUCCESS);
+			//JSDBET-795 wcw 2015-3-10 end
+			//更新提现记录表
+			drawDao.update(draw);
+			//新增提现交易历史记录表
+			AbstractYmdEvent<AccountDrawHistory> a=new AccountDrawHistoryRecord(cash, u);
+			a.doEvent();
+	   }
+	   logger.info("---提现汇潮回调业务处理结束2----");
+		
+	}
+
+	/*@Override
+	public void drawCashBankFailCallBack(AccountDrawModel cashModel) {
+		logger.info("---提现银行转账失败业务处理开始1----");
+		//88表示 银行处理失败
+		if(cashModel!=null&&"88".equals(cashModel.getDrawHandleStatus())){
+			logger.info("---提现银行转账失败业务处理fail----");
+			//提现失败 扣掉资金表的总额和可用，记录日志
+			AccountDraw draw=drawDao.findObjByProperty("drawTradeNo", cashModel.getDrawTradeNo());
+			if(draw!=null&&draw.getUser()!=null&!"88".equals(draw.getDrawHandleStatus())){
+				User u=draw.getUser();
+				if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+					//投资人
+					//如果提现使用静态红包
+					if(draw.getIsUseStaticRp()==1){
+						//提现取消 静态红包物归原主，从提现人账户转账给平台账户
+						YmdTransfer ymd=new YmdTransfer();
+				        ymd.setAmount(draw.getUseStaticRp()+"");
+				        //收款人
+				        ymd.setInName(ymd.getNumberId());
+				        //付款人
+				        ymd.setOutName(u.getUserName());
+				        YmdTransfer ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP), TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER), ymd.getAmount(), ymd.getOutName(), ymd.getInName());
+					    if(!"0000".equals(ymdTransfer.getErrCode())){
+					    	throw new BussinessException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+					    }else{
+					    	//提现静态红包实现本地转账  提现人----平台
+					    	Map<String, Object> map=new HashMap<String, Object>();
+					    	map.put("awardMoney",draw.getUseStaticRp());
+					    	AbstractExecuter a=ExecuterHelper
+									.doExecuter("rpStaticUseFailExecuter");
+					    	a.execute(map, u);
+					    }
+					   //更新静态红包状态：从冻结改为未使用
+			   			List<RpProduce> list=rpProduceDao.list(u.getUserId(), RpProduce.RP_STATIC_RP_NO_USE, RpProduce.RP_STATIC);
+		   			    for(RpProduce r:list){
+		   			    	r.setRpStaticStatus(RpProduce.RP_STATIC_RP_FREEZE);
+		   			    	rpProduceDao.updateStatus(r.getUser().getUserId(),RpProduce.RP_STATIC_RP_FREEZE , RpProduce.RP_STATIC_RP_NO_USE, r.getId());
+		   			    }
+					}
+					
+					
+					Map<String, Object> map=new HashMap<String, Object>();
+					map.put("rechargeMoney", draw.getUseRecharge());
+					map.put("awardMoney", draw.getUseAward());
+					map.put("interestMoney", draw.getUseInterest());
+					map.put("returnCapitalMoney", draw.getUseReturnMoney());
+					//更新账户表、账户资金记录表
+					AbstractExecuter executer = ExecuterHelper.doExecuter("drawNotifyBankFailInvesterExecuter");
+					executer.execute(map, draw.getUser());
+				}else{
+					//借款人
+					 Map<String, Object> map=new HashMap<String, Object>();
+					 map.put("money", draw.getDrawAmount());
+					 AbstractExecuter executer = ExecuterHelper.doExecuter("drawNotifyBankFailBorrowerExecuter");
+					 executer.execute(map, draw.getUser());
+				}
+				//更新提现历史记录表、提现表
+				YmdCash y=new YmdCash();
+				y.setErrCode(cashModel.getDrawHandleStatus());
+				y.setMode("withdrawal");
+				y.setFee(draw.getDrawFee()+"");
+				y.setNickName(u.getUserName());
+				AbstractYmdEvent<AccountDrawHistory> abstractYmdEvent=new AccountDrawHistoryReturnRecord(y, u);		
+				abstractYmdEvent.doEvent();
+				//更新提现记录表
+				draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_BANK_FAIL);
+				drawDao.update(draw);
+			}
+			//测试使用
+			YmdCash y=new YmdCash();
+			y.setErrCode(cashModel.getDrawHandleStatus());
+			y.setMode("withdrawal");
+			y.setFee(draw.getDrawFee()+"");
+			y.setNickName(draw.getUser().getUserName());
+			y.setAmount(draw.getDrawInAccountAmount()+"");
+			y.setFee(draw.getDrawFee()+"");
+			y.setOutTradeNo(draw.getDrawTradeNo());
+			AbstractYmdEvent<AccountDrawHistory> abstractYmdEvent=new AccountDrawHistoryReturnRecord(y, draw.getUser());		
+			abstractYmdEvent.doEvent();
+		}
+		
+		logger.info("---提现银行转账失败业务处理结束2----");
+	}*/
+	@Override
+	public void drawCashBankFailCallBack(YmdCash ymdCash,FillOrderLog fillOrderLog) {
+		logger.info("---提现银行转账失败业务处理开始1----");
+		//88表示 银行处理失败
+		if(ymdCash!=null&&"88".equals(ymdCash.getErrCode())){
+			logger.info("---提现银行转账失败业务处理fail----");
+			//提现失败 扣掉资金表的总额和可用，记录日志
+			AccountDraw draw=drawDao.findObjByProperty("drawTradeNo", ymdCash.getOutTradeNo());
+			Global.setTransfer("draw", draw);
+			if(draw!=null&&draw.getUser()!=null&!"88".equals(draw.getDrawHandleStatus())){
+				User u=draw.getUser();
+				if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+					//投资人
+					//如果提现使用静态红包
+					if(draw.getIsUseStaticRp()==1){
+						//提现取消 静态红包物归原主，从提现人账户转账给平台账户
+						YmdTransfer ymd=new YmdTransfer();
+				        ymd.setAmount(draw.getUseStaticRp()+"");
+				        //收款人
+				        ymd.setInName(ymd.getNumberId());
+				        //付款人
+				        ymd.setOutName(u.getUserName());
+				        YmdTransfer ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP), TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER), ymd.getAmount(), ymd.getOutName(), ymd.getInName());
+					    if(!"0000".equals(ymdTransfer.getErrCode())){
+					    	//throw new BussinessException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+					    	//JSDBET-812 gjh 2015-3-14 start
+							throw new HandleException("提现静态红包转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"),
+									"提现静态红包转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_DRAW,
+									ErrorLogConstant.CODE_DRAW_TRANSFER_TPOS,u,ErrorLogConstant.MODULE_ACCOUNT_DRAW,
+									draw.getId(),0);
+							//JSDBET-812 gjh 2015-3-14 end 
+					    }else{
+					    	//提现静态红包实现本地转账  提现人----平台
+					    	Map<String, Object> map=new HashMap<String, Object>();
+					    	map.put("awardMoney",draw.getUseStaticRp());
+					    	AbstractExecuter a=ExecuterHelper
+									.doExecuter("rpStaticUseFailExecuter");
+					    	a.execute(map, u);
+					    }
+					   //更新静态红包状态：从冻结改为未使用
+			   			List<RpProduce> list=rpProduceDao.list(u.getUserId(), RpProduce.RP_STATIC_RP_NO_USE, RpProduce.RP_STATIC);
+		   			    for(RpProduce r:list){
+		   			    	r.setRpStaticStatus(RpProduce.RP_STATIC_RP_FREEZE);
+		   			    	rpProduceDao.updateStatus(r.getUser().getUserId(),RpProduce.RP_STATIC_RP_FREEZE , RpProduce.RP_STATIC_RP_NO_USE, r.getId());
+		   			    }
+					}
+					
+					
+					Map<String, Object> map=new HashMap<String, Object>();
+					map.put("rechargeMoney", draw.getUseRecharge());
+					map.put("awardMoney", draw.getUseAward());
+					map.put("interestMoney", draw.getUseInterest());
+					map.put("returnCapitalMoney", draw.getUseReturnMoney());
+					Global.setTransfer("user", u);
+					Global.setTransfer("draw", draw);
+					//更新账户表、账户资金记录表
+					AbstractExecuter executer = ExecuterHelper.doExecuter("drawNotifyBankFailInvesterExecuter");
+					executer.execute(map, draw.getUser());
+				}else{
+					//借款人
+					 Map<String, Object> map=new HashMap<String, Object>();
+					//JSDBET-796 wcw 2015-3-10 start
+					 map.put("borrowerRechargeMoney", draw.getBorrowerUseRecharge());
+					 map.put("borrowerEnterMoney", draw.getBorrowerUseEnter());
+					//JSDBET-796 wcw 2015-3-10 end
+					 Global.setTransfer("user", u);
+					 Global.setTransfer("draw", draw);
+					 AbstractExecuter executer = ExecuterHelper.doExecuter("drawNotifyBankFailBorrowerExecuter");
+					 executer.execute(map, draw.getUser());
+				}
+				//更新提现历史记录表、提现表
+				AbstractYmdEvent<AccountDrawHistory> abstractYmdEvent=new AccountDrawHistoryReturnRecord(ymdCash, u);		
+				abstractYmdEvent.doEvent();
+				//更新提现记录表
+				draw.setDrawHandleStatus(AccountDraw.DRAW_CASH_BANK_FAIL);
+				drawDao.update(draw);
+				
+				// BUG JSDP32 2015年5月11日   孙晓勇  start
+				// 判断是否是补单操作
+				if(null != fillOrderLog){
+					// 添加补单记录
+					fillOrderLogDao.save(fillOrderLog);
+				}
+				// BUG JSDP32 2015年5月11日   孙晓勇  end
+				
+				
+			}
+		}
+		logger.info("---提现银行转账失败业务处理结束2----");
+	}
+	@Override
+	public void drawCashBankSucCallBack(YmdCash ymdCash,String drawHandleStatus,FillOrderLog fillOrderLog)throws Exception{
+		logger.info("---提现银行转账成功回调业务处理开始1----");
+		QueryParam param=new QueryParam();
+		param.addParam("drawTradeNo", ymdCash.getOutTradeNo());
+		AccountDraw draw=(AccountDraw) drawDao.findByCriteriaForUnique(param);
+		double enterAmount=BigDecimalUtil.sub(draw.getDrawAmount(),draw.getDrawFee());
+		double balance=BigDecimalUtil.sub(NumberUtil.getDouble2(ymdCash.getAmount()),enterAmount);
+		if(balance>=0.1){
+			//throw new BussinessException("提现实际到账金额与一麻袋不符", 1);
+			//JSDBET-812 gjh 2015-3-14 start
+			throw new HandleException("提现实际到账金额与一麻袋不符",
+					"提现实际到账金额与一麻袋不符",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_DRAW,
+					ErrorLogConstant.CODE_DRAW_TRANSFER_TPOS,draw.getUser(),ErrorLogConstant.MODULE_ACCOUNT_DRAW,
+					draw.getId(),1);
+			//JSDBET-812 gjh 2015-3-14 end 
+		}
+		User u=draw.getUser();
+		if(AccountDraw.DRAW_CASH_REQUEST_YMD_SUCCESS.equals(draw.getDrawHandleStatus())){
+			if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+			   /* Map<String, Object> map=new HashMap<String, Object>();
+	   			map.put("rechargeMoney", draw.getUseRecharge());
+	   			map.put("awardMoney", draw.getUseAward());
+	   			map.put("interestMoney", draw.getUseInterest());
+	   			map.put("returnCapitalMoney", draw.getUseReturnMoney());
+	   			map.put("rpStaticMoney", draw.getUseStaticRp());
+	   			map.put("drawId", draw.getId());*/
+	   			//00表示提现银行转账成功
+	   			if("00".equals(ymdCash.getErrCode())){
+	   			   //JSDBET-795 wcw 2015-3-10 start
+		   			/*AbstractExecuter executer = ExecuterHelper.doExecuter("drawBankSuccInvesterExecuter");
+		   			executer.execute(map, draw.getUser());*/
+		   			draw.setDrawHandleStatus(drawHandleStatus);
+		   			
+		   			/*//更新静态红包状态：从冻结改为已使用
+		   			List<RpProduce> list=rpProduceDao.list(u.getUserId(), RpProduce.RP_STATIC_RP_FREEZE, RpProduce.RP_STATIC);
+	   			    if(list.size()>0){
+			   			for(RpProduce r:list){
+		   			    	rpProduceDao.updateStatus(r.getUser().getUserId(),RpProduce.RP_STATIC_RP_FREEZE , RpProduce.RP_STATIC_RP_ALREADY_USE, r.getId());
+		   			    }
+		   			}*/
+		   		//JSDBET-795 wcw 2015-3-10 end 
+	   			}
+	   	    }else{
+	   		    Map<String, Object> map=new HashMap<String, Object>();
+				    //map.put("money", draw.getDrawAmount());
+				  //00表示提现银行转账成功
+	   			if("00".equals(ymdCash.getErrCode())){
+	   			   //JSDBET-795 wcw 2015-3-10 start 
+		   			/*AbstractExecuter executer = ExecuterHelper.doExecuter("drawBankSuccBorrowerExecuter");
+		   			executer.execute(map, draw.getUser());*/
+	   			   //JSDBET-795 wcw 2015-3-10 end 
+		   			draw.setDrawHandleStatus(drawHandleStatus);
+	   			}
+	   	    }
+			//更新提现记录表
+			drawDao.update(draw);
+			
+			// BUG JSDP32 2015年4月17日   孙晓勇  start
+			// 判断是否是补单操作
+			if(null != fillOrderLog){
+				// 添加补单记录
+				fillOrderLogDao.save(fillOrderLog);
+			}
+			// BUG JSDP32 2015年4月17日   孙晓勇  end
+			
+			//更新提现历史记录表、提现表
+			ymdCash.setTransData(ymdCash.getTransData()==null?"空":ymdCash.getTransData());
+			AbstractYmdEvent<AccountDrawHistory> abstractYmdEvent=new AccountDrawHistoryReturnRecord(ymdCash, u);		
+			abstractYmdEvent.doEvent();
+	   }
+	   logger.info("---提现银行转账成功回调业务处理结束2----");
+	}
+	
+	@Override
+	public AccountDraw getDrawById(int id){
+		return drawDao.find(id);
+	}
+
+	@Override
+	public double allDrawCashMomeny(long userId) {
+		return drawDao.allDrawCashMomeny(userId);
+	}
+
+	@Override
+	public double allDrawCashMomenyByUserIdAndEndTime(Date date, long userId) {
+		return drawDao.allDrawCashMomenyByUserIdAndEndTime(date, userId);
+	}
+	
+	@Override
+	public double drawCashMomenyToday(long userId) {
+		return drawDao.drawCashMomenyToday(userId);
+	}
+
+	@Override
+	public double drawCashMoneyMonth(long userId, Date startTime, Date endTime) {
+		return drawDao.drawCashMoneyMonth(userId, startTime, endTime);
+	}
+	@Override
+	public String drawTotal(AccountDrawModel model) {
+		return drawDao.drawCashTotal(model);
+	}
+	@Override
+	public PageDataList<AccountDrawModel> drawHistoryPageList(long userId,
+			AccountDrawModel model) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			param.addParam("addTime", Operators.GTE, model.getAddTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			param.addParam("addTime", Operators.LTE, model.getAddTime());
+		}
+		if(StringUtil.isNotBlank(model.getDrawHandleStatus())){
+			param.addParam("drawHandleStatus", model.getDrawHandleStatus());
+		}else{
+			List<String> drawSuc= new ArrayList<String>();
+			drawSuc.add("30");
+			drawSuc.add("42");
+			param.addParam("drawHandleStatus", Operators.IN,drawSuc);
+		}
+		
+		PageDataList<AccountDraw> drawList = drawDao.findPageList(param);
+		PageDataList<AccountDrawModel> drawPageList = new PageDataList<AccountDrawModel>();
+		List<AccountDrawModel> list = new ArrayList<AccountDrawModel>();
+		
+		DecimalFormat df =new DecimalFormat("#0.00");
+		if (drawList.getList().size() > 0) {
+			for (int i = 0; i < drawList.getList().size(); i++) {
+				AccountDraw c = (AccountDraw) drawList.getList().get(i);
+				AccountDrawModel cm = AccountDrawModel.instance(c);
+				//根据数据库中保存的数字加入省市
+				/*long bankProvince = Long.parseLong(c.getBankProvince());
+				Region regionProvince = regionDao.findById(bankProvince);
+				cm.setBankProvinceName(regionProvince.getName());
+				long bankCity = Long.parseLong(c.getBankCity());
+				Region regionCity = regionDao.findById(bankCity);
+				cm.setBankCityName(regionCity.getName());*/
+				Dict dictBank = dictDao.find("account_bank", cm.getBankName());
+				if(dictBank != null){
+					cm.setBankName(dictBank.getName());
+				}else{
+					cm.setBankName(cm.getBankName());
+				}
+				cm.setBankCityName(c.getBankCity());
+				cm.setBankProvinceName(c.getBankProvince());
+				if (c.getFirstTrialOperId() != 0) {
+					Operator operator=operatorDao.userFind(c.getFirstTrialOperId());
+					cm.setFirstTrialUserName(operator.getName());
+				} 
+				cm.setUserType(c.getUser().getUserCache().getUserType());
+                if(c.getRecheckOperId()!=0){
+                	Operator operator=operatorDao.userFind(c.getFirstTrialOperId());
+                	if(operator!=null){
+					   cm.setRecheckUserName(operator.getName());
+					}
+                }
+                
+                cm.setDrawAmountStr(df.format(c.getDrawAmount()));
+                cm.setDrawFeeStr(df.format(c.getDrawFee()));
+                cm.setDrawInAccountAmountStr(df.format(c.getDrawInAccountAmount()));
+                
+                cm.setUserName(c.getUser().getUserName());
+                cm.setRealName(c.getUser().getRealName());
+				list.add(cm);
+			}
+		}
+		drawPageList.setList(list);
+		drawPageList.setPage(drawList.getPage());
+		
+		return drawPageList;
+	}
+	@Override
+	public String drawStatusTotal(long userId, AccountDrawModel model) {
+		
+		return drawDao.drawStatusTotal(userId, model);
+	}
+
+	//提现订单号查询 wcw 2015-4-8 start
+	@Override
+	public AccountDraw getDrawByOutTradeNo(String outTradeNo){
+		return drawDao.findObjByProperty("drawTradeNo", outTradeNo);
+	}
+	//提现订单号查询 wcw 2015-4-8 end
+	
+	
+	/**
+	 * 
+	 * 时间段提现记录查询
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月5日
+	 * 
+	 */
+	@Override
+	public PageDataList<AccountDrawModel> drawMoneyStatisticsList(
+			AccountDrawModel model, int pageNumber, int pageSize) {
+
+		QueryParam param = QueryParam.getInstance();
+
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis() / 1000 + "");
+			
+			// 时间类型
+			if (null != model.getTimeType() || "".equals(model.getTimeType())) {
+
+				// 昨日记录
+				if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, -1))).substring(0, 10) + " 00:00:00");
+					param.addParam("addTime", Operators.GTE, start);
+					Date end = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+					param.addParam("addTime", Operators.LT, end);
+					/*param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -1));
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10)+ " 00:00:00");
+					param.addParam("addTime", Operators.LT, start);*/
+				}
+				// 今日记录
+				if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+					Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, +1))).substring(0, 10) + " 00:00:00");
+					param.addParam("addTime", Operators.GTE, start);
+					param.addParam("addTime", Operators.LT, end);
+					/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10)+ " 00:00:00");
+					param.addParam("addTime", Operators.GTE, start);
+					param.addParam("addTime", Operators.LT, nowdate);*/
+
+				}
+				// 一周内记录
+				if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+					param.addParam("addTime", Operators.GTE, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, -7)).substring(0, 10) + " 00:00:00")));
+					param.addParam("addTime", Operators.LT, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, 1)).substring(0, 10) + " 00:00:00")));
+					/*param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+					param.addParam("addTime", Operators.LTE, nowdate);*/
+				}
+				// 本月记录
+				if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+					Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+					Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollMon(start, +1))).substring(0, 7) + "-01 00:00:00");
+					param.addParam("addTime", Operators.GTE, start);
+					param.addParam("addTime", Operators.LT, end);
+					/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7)+ "-01 00:00:00");
+					param.addParam("addTime", Operators.GTE, start);
+					param.addParam("addTime", Operators.LT, nowdate);*/
+				}
+				// 时间段
+				if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+					if (StringUtil.isNotBlank(model.getStartTime()) && StringUtil.isNotBlank(model.getStartTime())) {
+						Date start = DateUtil.valueOf(model.getStartTime());
+						Date end = DateUtil.valueOf(model.getEndTime());
+						param.addParam("addTime", Operators.GTE, start);
+						param.addParam("addTime", Operators.LTE, end);
+					}
+				}
+
+				param.addPage(model.getPage(), model.getRows());
+			}
+
+			// param.addOrder(OrderType.DESC, "addTime");
+
+			PageDataList<AccountDraw> pageDataList = drawDao.findPageList(param);
+			PageDataList<AccountDrawModel> pageDataList_ = new PageDataList<AccountDrawModel>();
+			List<AccountDrawModel> list = new ArrayList<AccountDrawModel>();
+			pageDataList_.setPage(pageDataList.getPage());
+		
+			if (pageDataList.getList().size() > 0) {
+				
+				DecimalFormat df = new DecimalFormat("#0.00");
+				
+				for (int i = 0; i < pageDataList.getList().size(); i++) {
+					
+					AccountDraw accountDraw = (AccountDraw) pageDataList.getList().get(i);
+					AccountDrawModel bm = AccountDrawModel.instance(accountDraw);
+
+					bm.setUser(accountDraw.getUser());
+					bm.setUserType(accountDraw.getUser().getUserCache().getUserType());
+					
+					bm.setDrawAmountStr(df.format(accountDraw.getDrawAmount()));
+					bm.setDrawFeeStr(df.format(accountDraw.getDrawFee()));
+					bm.setDrawInAccountAmountStr(df.format(accountDraw.getDrawInAccountAmount()));
+					
+					bm.setUserName(accountDraw.getUser().getUserName());
+					bm.setRealName(accountDraw.getUser().getRealName());
+					
+					bm.setId(accountDraw.getId());
+					
+					// 需要字段继续添加
+					
+					
+					//bm.setUserName(accountDraw.getUser().getUserName());
+
+					//
+					//
+					//
+
+					list.add(bm);
+					
+				}
+			}
+
+			pageDataList_.setList(list);
+
+			return pageDataList_;
+		
+	}
+	@Override
+	public List excelListDraw(AccountDrawModel model) {
+		
+		return drawDao.excelListDraw(model);
+	}
+	@Override
+	public PageDataList<AccountDraw> drawMoneyStatisticsListForSQL(AccountDrawModel model,int page,int size) {
+		return drawDao.drawMoneyStatisticsListForSQL(model,page,size);
+	}
+}

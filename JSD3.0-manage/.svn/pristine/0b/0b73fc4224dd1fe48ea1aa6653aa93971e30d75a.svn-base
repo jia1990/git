@@ -1,0 +1,151 @@
+<!-- 查看体验卡（即已失效或已激活） -->
+<script type="text/javascript">
+$(function(){
+
+	$.fn.dataGridOptions.formSubFun("#form",'/modules/petcard/petcard/editPetCard.html');
+});
+</script>
+
+<style type="text/css">
+	.lab{
+		font-size:15px;
+		color:#393939;
+	}
+</style>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<input type="hidden" value="${petCard.id}" name="id" />
+    	<div class="formitm">
+		     <div class="ipt">
+		     	<#if petCard.type?? && petCard.type =='pt'>
+		     	<span style="font-size:40px;text-align:center;color:#3D9EEF;font-family: '黑体';font-weight: 900px;">晋商贷体验卡</span>
+		     	<#elseif petCard.type?? && petCard.type =='yt'>
+		     	<span style="font-size:45px;text-align:center;color:#3D9EEF;font-family: '华文琥珀';font-weight: 0px;">云购体验卡</span>
+		     	<#else>
+		     	<span style="font-size:40px;text-align:center;color:#3D9EEF;">其他体验卡</span>
+		     	</#if>
+		     </div>
+		</div>
+		<br />
+		<hr width="80%" color="#999"/>
+		<br />
+		<div class="formitm">
+		     <label class="lab" id="title_label">类型：</label>
+		     <div class="ipt">
+		     	<#if petCard.type?? && petCard.type =='pt'>
+		     	晋商贷体验卡&nbsp;
+		     	<#elseif petCard.type?? && petCard.type =='yt'>
+		     	云购体验卡&nbsp;
+		     	<#else>
+		     	其他&nbsp;
+		     	</#if>
+		     </div>
+		</div>
+		<input type="hidden" name="type" value="pt"/>
+		
+		<div class="formitm" >
+		     <label class="lab">批次号：</label>
+		     <div class="ipt">
+		     	${petCard.batchNo!}&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">卡号：</label>
+		     <div class="ipt">
+		     	${petCard.cardNo!}&nbsp;
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="ua" disabled="disabled" <#if petCard.status=='ua'>checked="checked"</#if>/> 未激活&nbsp;&nbsp;
+				<input type="radio" name="status" value="da" disabled="disabled" <#if petCard.status=='da'>checked="checked"</#if>/> 已激活&nbsp;&nbsp;
+				<br/>
+				<input type="radio" name="status" value="dd" disabled="disabled" <#if petCard.status=='dd'>checked="checked"</#if>/> 已失效&nbsp;&nbsp;
+				<input type="radio" name="status" value="dd" disabled="disabled" <#if petCard.status=='ud'>checked="checked"</#if>/> 已使用&未激活&nbsp;&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">金额：</label>
+		     <div class="ipt">
+		     	${petCard.money!} 元&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">消费用户：</label>
+		     <div class="ipt">
+		     	${petCard.userName!}&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">中奖时间：</label>
+		     <div class="ipt">
+		     	<#if  petCard.winTime??   >
+		     		${petCard.winTime?string('yyyy-MM-dd HH:mm:ss')!}&nbsp;
+		     	<#else>
+		     		无
+		     	</#if>
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">激活时间：</label>
+		     <div class="ipt">
+		     	<#if  petCard.activateTime??   >
+		     		${petCard.activateTime?string('yyyy-MM-dd HH:mm:ss')!}&nbsp;
+		     	<#else>
+		     		无
+		     	</#if>
+		     </div>
+		</div>
+		<div class="formitm" id="isValid" >
+		     <label class="lab">有效类型：</label>
+		     <div class="ipt">
+		     	<input type="radio" value="0" name="isValid"  id="yes" disabled="disabled"<#if petCard.isValid==0>checked="checked"</#if>><label for="yes" style="color:#666;"> 短期有效</label>&nbsp;&nbsp;
+				<input type="radio" value="1" name="isValid"  id="no"  disabled="disabled"<#if petCard.isValid==1>checked="checked"</#if>><label for="no" style="color:#666;"> 永久有效</label>
+		     </div>
+		</div>
+		<#if petCard.isValid?? && petCard.isValid ==0>
+		<div class="formitm" id="validTime">
+		     <label class="lab">有效时间：</label>
+		     <div class="ipt">
+		     ${petCard.validTime!} 天&nbsp;
+		     </div>
+		</div>
+		<#else>
+		<div class="formitm" id="validTime" hidden="hidden">
+		     <label class="lab">有效时间：</label>
+		     <div class="ipt">
+		     	${petCard.validTime!} 天&nbsp;
+		     </div>
+		</div>
+		</#if>
+		<div class="formitm" id="cardSize">
+		     <label class="lab">添加时间：</label>
+		     <div class="ipt">
+		     	<#if  petCard.addTime??   >
+		     		${petCard.addTime?string('yyyy-MM-dd HH:mm:ss')!}&nbsp;
+		     	<#else>
+		     		无
+		     	</#if>
+		     </div>
+		</div>
+		
+		<div class="formitm" id="cardSize">
+		     <label class="lab">添加人员：</label>
+		     <div class="ipt">
+		     	${petCard.addUser!}&nbsp;
+		     </div>
+		</div>
+		
+		
+		<div class="formitm" id="remark">
+		     <label class="lab">备注信息：</label>
+		     <div class="ipt">
+		     	${petCard.remark!}
+		     </div>
+		</div>
+		
+	</form>
+</div>
+
+

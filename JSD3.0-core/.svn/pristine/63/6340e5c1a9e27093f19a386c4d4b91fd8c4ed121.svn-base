@@ -1,0 +1,110 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.question.dao.QuestionAnswerDao;
+import com.ddtkj.p2psys.question.domain.QuestionAnswer;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.dao.RpActivitySumDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpActivitySum;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的产生(智力答题)
+ * @作者：guojunhui@ddtkj.com  JSDP-229
+ * @创建时间：2015年7月24日 
+ */
+public class RpActivityRpMoneyQuestionsProduceWorker extends RpActivityBaseWorker{
+	
+	
+	public RpActivityRpMoneyQuestionsProduceWorker(RpActivity rpActivity,BorrowTender tender){
+		super(rpActivity,tender);
+	}
+
+	@Override
+	public void autoHandld() {
+		RpActivityProduceDao rpActivityProduceDao = (RpActivityProduceDao) BeanUtil.getBean("rpActivityProduceDao");
+		RpActivitySumDao rpActivitySumDao = (RpActivitySumDao) BeanUtil.getBean("rpActivitySumDao");
+		QuestionAnswerDao questionAnswerDao = (QuestionAnswerDao) BeanUtil.getBean("QuestionAnawerDao");
+		
+		
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user", tender.getUser());
+		List<QuestionAnswer> answerList = questionAnswerDao.findByCriteria(param);//获取该用户此次回答的问题列表
+		param = QueryParam.getInstance();
+		param.addParam("activityType", RpActivityProduce.RP_RPODUCE_QUEDIONS);
+		param.addParam("awardUser", tender.getUser());
+		List<RpActivityProduce> rpProduceList = rpActivityProduceDao.findByCriteria(param);//获取是否已获取红包
+		if(null !=answerList && answerList.size() >0){//判断是否回答问题
+			int rightAnswerCount = 0;
+			for(QuestionAnswer a:answerList){
+				if(a.getStatus().equals(QuestionAnswer.STATUS_SUC)){
+					rightAnswerCount++;
+				}
+			}
+			if(null == rpProduceList || rpProduceList.size() <= 0){//未获取红包
+				double money = 0.0;
+				if(rightAnswerCount >= 3){//判断回答正确数量
+					money = rightAnswerCount * QuestionAnswer.RIGHT_REWARD;
+					if(rightAnswerCount == QuestionAnswer.MAX_ANSWER_SUM){//全部正确
+						money += QuestionAnswer.ALL_RIGHT_REWARD;
+					}
+					//生成红包产生记录
+					RpActivityProduce rpActivityPro = new RpActivityProduce();
+					rpActivityPro.setActivityType(rpActivity.getActivityType());
+					rpActivityPro.setActivityAward(money);
+					rpActivityPro.setAddTime(Calendar.getInstance().getTime());
+					rpActivityPro.setAwardType(rpActivity.getAwardType());
+					rpActivityPro.setAwardUser(tender.getUser());
+					
+					rpActivityPro.setTenderMoney(0);
+					rpActivityPro.setRemark(RpActivityProduce.RP_RPODUCE_QUEDIONS+"活动:用户"+tender.getUser().getUserId()+"获得奖励金额:"+money);
+					rpActivityPro.setIsEnable(1);//1:可用 0:不可用
+					rpActivityProduceDao.save(rpActivityPro);
+					List<RpActivitySum> rpActivitySumList = rpActivitySumDao.findByProperty("user", tender.getUser());
+					if(null != rpActivitySumList && rpActivitySumList.size() > 0){//更新活动红包汇总记录
+						RpActivitySum rpActivitySum = rpActivitySumList.get(0);
+						rpActivitySum.setProduceTotal(BigDecimalUtil.add(rpActivitySum.getProduceTotal(),money));
+						rpActivitySum.setUseableTotal(BigDecimalUtil.add(rpActivitySum.getUseableTotal(),money));
+						rpActivitySumDao.save(rpActivitySum);
+					}else{//生产活动红包汇总记录
+						RpActivitySum rpActivitySum = new RpActivitySum();
+						rpActivitySum.setConsumeTotal(0);
+						rpActivitySum.setFzenTotal(0);
+						rpActivitySum.setUnvalidTotal(0);
+						rpActivitySum.setProduceTotal(money);
+						rpActivitySum.setUseableTotal(money);
+						rpActivitySum.setUser(tender.getUser());
+						rpActivitySum.setUserName(tender.getUser().getUserName());
+						rpActivitySumDao.save(rpActivitySum);
+					}
+					Global.setTransfer("rpMoney", money);
+					//更新账户资金
+					map=new HashMap<String, Object>();
+					map.put("money", money);
+					map.put("awardMoney", money);
+					map.put("logType", "questionsProduce");
+					Global.setTransfer("rpDynamicProduce", money);
+					AbstractExecuter rpProduceExecuter = ExecuterHelper.doExecuter("rpDynamicProduceIndianaJonesExecuter");
+					rpProduceExecuter.execute(map, tender.getUser(), null);
+				}
+			}
+		}
+
+	}
+	
+
+}

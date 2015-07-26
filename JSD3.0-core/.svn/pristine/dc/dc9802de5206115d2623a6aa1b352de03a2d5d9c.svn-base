@@ -1,0 +1,145 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.returnmoney.service.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.returnmoney.dao.ReturnMoneyDao;
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+import com.ddtkj.p2psys.returnmoney.model.ReturnMoneyModel;
+import com.ddtkj.p2psys.returnmoney.service.ReturnMoneyService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.dao.OperatorDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2014年12月30日 
+ */
+@Service("returnMoneyService")
+public class ReturnMoneyServiceImpl implements ReturnMoneyService{
+
+	@Resource
+	private ReturnMoneyDao returnMoneyDao;
+	@Resource
+	private OperatorDao operatorDao; 
+	@Resource
+	private UserDao userDao;
+	
+	public PageDataList<ReturnMoneyModel>  list(ReturnMoneyModel model){
+		QueryParam param = QueryParam.getInstance();
+		if(StringUtil.isNotBlank(model.getUserName())){
+		    param.addParam("user.userName", model.getUserName());
+		}
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			//Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+			Date start = DateUtil.valueOf(model.getStartTime());
+			param.addParam("addTime", Operators.GTE, start);  
+		}
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		if (model.getTime() == 7) {
+			param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		} else if (model.getTime()>0 && model.getTime()<4){
+			param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+			Date end = DateUtil.valueOf(model.getEndTime());
+			param.addParam("addTime", Operators.LTE, end);
+		}
+		if(model.getStatus()!=0){
+		    param.addParam("status", model.getStatus());
+		}
+		param.addParam("drawId", model.getDrawId());
+		param.addOrder(OrderType.DESC, "id");
+		int page=model.getPage()==0?1:model.getPage();
+		param.addPage(page);
+		PageDataList<ReturnMoneyUse> plist=returnMoneyDao.findPageList(param);
+		PageDataList<ReturnMoneyModel> plist_=new PageDataList<ReturnMoneyModel>();
+		List<ReturnMoneyModel> list = new ArrayList<ReturnMoneyModel>();
+		if (plist.getList().size() > 0) {
+			for (int i = 0; i < plist.getList().size(); i++) {
+				ReturnMoneyUse r = (ReturnMoneyUse) plist.getList().get(i);
+				ReturnMoneyModel rm = ReturnMoneyModel.instance(r);
+				rm.setUserName(r.getUser().getUserName());
+//				if(r.getOperatorId()>0){
+//					Operator operator=operatorDao.findObjByProperty("id", r.getOperatorId());
+//					rm.setOperUserName(operator.getUserName());
+					
+					DecimalFormat df = new DecimalFormat("#0.00");
+					rm.setContinuedInvestMoneyStr(df.format(r.getContinuedInvestMoney()));
+					rm.setContinuedInvestAwardStr(df.format(r.getContinuedInvestAward()));
+//				}
+				list.add(rm);
+			}
+		}
+		plist_.setList(list);
+		plist_.setPage(plist.getPage());
+		return plist_;
+	}
+	public ReturnMoneyUse auditReturnView(int id){
+		ReturnMoneyUse r=returnMoneyDao.findObjByProperty("id", id);
+		return r;
+	}
+	
+	public String auditReturn(ReturnMoneyModel rmodel){
+		ReturnMoneyUse r=returnMoneyDao.findObjByProperty("id", rmodel.getId());
+		r.setStatus(rmodel.getStatus());
+		//r.setAuditRemark(rmodel.getAuditRemark());
+		r.setRemark(rmodel.getRemark());
+		r.setAuditTime(new Date());
+		r.setOperatorId(rmodel.getOperatorId());
+		returnMoneyDao.update(r);
+		
+		//给投资人发送通知
+		BaseMsg msg = null;
+		if(ReturnMoneyUse.CONTINUED_INVEST_AUDIT_SUCCESS_STATUS == rmodel.getStatus()){
+			msg = new BaseMsg(NoticeConstant.RETURN_MONEY_VERIFY_SUCC);
+		}else if(ReturnMoneyUse.COMTINUED_INVEST_AUDIT_FAIL_STATUS == rmodel.getStatus()){
+			msg = new BaseMsg(NoticeConstant.RETURN_MONEY_VERIFY_FAIL);
+		}
+		Global.setTransfer("user", r.getUser());
+		Global.setTransfer("addTime", new Date());
+		Global.setTransfer("money", r.getContinuedInvestMoney());
+		msg.doEvent();
+		return null;
+		
+	}
+	
+	@Override
+	public double getContinueInvestAwardCount(String startDate,String endDate) {
+		
+		return returnMoneyDao.getContinueInvestAwardCount( startDate, endDate);
+	}
+
+	@Override
+	public double getContinueInvestAwardCountByUserId(long userId) {
+		return returnMoneyDao.getContinueInvestAwardCountByUserId(userId);
+	}
+
+	@Override
+	public double getContinuedInvestMoneyCount(long userId, Date startDate,
+			Date endDate) {
+		return returnMoneyDao.getContinuedInvestMoneyCount(userId, startDate, endDate);
+	}
+}

@@ -1,0 +1,120 @@
+package com.ddtkj.p2psys.credit.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * 生成待收利息
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class CreditWaitInterestExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.WAIT_INTEREST;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		//操作金额
+		log.setInterestMoney(interestMoney);
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		/*log.setMoney(super.money);
+		log.setTotal(account.getTotal());
+		log.setUseMoney(account.getUseMoney());
+		log.setNoUseMoney(account.getNoUseMoney());
+		log.setCollection(account.getCollection());*/
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)1);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		//accountDao.modify(super.money, 0, 0, super.money, super.user.getUserId());
+		//扣除冻结，生成待收
+		/*Account account = new Account(user);
+		//账户总额（操作金额）
+		account.setAccountTotal(interestMoney);
+		//账户待收总额（操作金额）
+		account.setCollectionTotal(interestMoney);
+		accountDao.modify(account);*/
+		
+		
+		//扣除冻结，生成待收
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		//账户待收总额
+		account.setCollectionTotal(BigDecimalUtil.add(
+				account.getCollectionTotal(), interestMoney));
+		//账户总额
+		account.setAccountTotal(BigDecimalUtil.add(
+				account.getAccountTotal(), interestMoney));
+		// 更新
+		accountDao.update(account);
+		
+		System.out.println("购买者待收利息生成成功，金额："+interestMoney);
+		
+	}
+
+	@Override
+	public void handleAccountSum() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+}

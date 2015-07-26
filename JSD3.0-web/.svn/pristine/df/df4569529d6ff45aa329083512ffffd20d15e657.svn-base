@@ -1,0 +1,666 @@
+package com.rongdu.p2psys.web.member;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditAssignLogModel;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.model.CreditInfoModel;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.credit.model.CreditShowModel;
+import com.ddtkj.p2psys.credit.model.CreditSwingOutModel;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserCreditService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：债权转让Action
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月12日 
+ */
+public class CreditAction extends BaseAction implements ModelDriven<CreditAssignmentModel>  {
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private UserCreditService userCreditService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private CreditAssignmentService creditAssignmentService ;
+	@Resource
+	private CreditLogService creditLogService ;
+	@Resource
+	private UserService userService ;
+	@Resource
+	private BorrowTenderService tenderService ;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private RegionService regionServcie;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private BorrowCollectionService borrowCollectionService ;
+	@Resource
+	private DictService dictService ;
+	
+	private CreditAssignmentModel model = new CreditAssignmentModel();
+	private CreditLogModel logModel = new CreditLogModel();
+	
+	public CreditAssignmentModel getModel() {
+		return model;
+	}
+	public CreditLogModel getLogModel() {
+		return logModel;
+	}
+
+	private Map<String, Object> data;  // json 返回数据
+	
+	/**
+	 * 进入债权转让页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member/credit/detail")
+	public String index() throws Exception {
+		User user = getSessionUser() ;
+		// 转出中的份额（份）
+		int creditCopiesCount = creditAssignmentService.getCreditAssignmentCopiesCount(user, CreditAssignment.CREDIT_CHECK1_SUCCESS);
+		request.setAttribute("creditCopiesCount", creditCopiesCount);
+		// 转出中的数量（个）
+		int creditCount = creditAssignmentService.getCreditAssignmentCount(user, CreditAssignment.CREDIT_CHECK1_SUCCESS);
+		request.setAttribute("creditCount", creditCount);
+		// 成功转入的金额
+		double buyCreditSum = creditLogService.buyCreditMoneyTotal(user, CreditLog.CRELOG_STATUS_YEW);
+		request.setAttribute("buyCreditSum", buyCreditSum);
+		// 成功转出的金额
+		double creditSum = creditAssignmentService.getCreditAssignmentSum(user, CreditAssignment.CREDIT_CHECK2_SUCCESS);
+		request.setAttribute("creditSum", creditSum);
+		// 债权转入盈亏
+		double buyCreditBalance = creditLogService.calcProfitAndLoss(user, CreditLog.CRELOG_STATUS_YEW);
+		request.setAttribute("buyCreditBalance", buyCreditBalance);
+		// 债权转出盈亏
+		double creditOutBalance = creditAssignmentService.calcProfitAndLoss(user, CreditAssignment.CREDIT_CHECK2_SUCCESS);
+		request.setAttribute("creditOutBalance", creditOutBalance);
+		// 已转入数量 （份）
+		int buyCreditCount = creditLogService.buyCreditCopiesCount(user, CreditLog.CRELOG_STATUS_YEW);
+		request.setAttribute("buyCreditCount", buyCreditCount);
+		// 已转出数量 （份）
+		int creditedCount = creditAssignmentService.getCreditAssignmentCopiesCount(user, CreditAssignment.CREDIT_CHECK2_SUCCESS);
+		request.setAttribute("creditedCount", creditedCount);
+		// 债权转让盈亏
+		double creditBalance = BigDecimalUtil.add(buyCreditBalance + creditOutBalance);
+		request.setAttribute("creditBalance", creditBalance);
+		
+		return "detailCredit";
+	}
+	
+	@Action(value = "/credit/index/detail")
+	public String indexdetail() throws Exception {
+		double tadayTotal = tenderService.tenderTodayAccount() ;
+		getRequest().setAttribute("tadayTotal", tadayTotal);
+		// 累计投资人收益
+		double tenderInv = tenderService.tenderAllInterest() ;
+		getRequest().setAttribute("tenderInv", tenderInv);
+		// 借款人融资
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  start
+		double borrowTotalN = borrowService.getMomenyByStatusType(1,Borrow.TYPE_MORTGAGE_ENERGY);
+		double borrowTotalW = borrowService.getMomenyByStatusType(1,Borrow.TYPE_NETWORK);
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  end
+		double borrowTotal = borrowService.getMomenyByStatus(6);
+		double borrowTotal1 = borrowService.getMomenyByStatus(7);
+		double borrowTotal2 = borrowService.getMomenyByStatus(8);
+		getRequest().setAttribute("borrowTotalM",
+				borrowTotal + borrowTotal1 + borrowTotal2 + borrowTotalN + borrowTotalW);
+		return "detail" ;
+	}
+	
+	@Action(value = "/credit/index/creditDetail")
+	public String creditDetail() throws Exception {
+		getRequest().setAttribute("id",paramLong("id"));
+		getRequest().setAttribute("collectionId",paramLong("collectionId"));
+		//JSDBET-894 gjh 2015-3-30 start
+		saveToken("creditBuyToken");
+		//JSDBET-894 gjh 2015-3-30 end
+		return "creditDetail" ;
+	}
+	
+	/**
+	 * 详情 债权  购买信息
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/creditBuyJson")
+	public void creditBuyJson() throws Exception {
+		User user = userService.find(getSessionUserId()) ;
+		Account account = accountService.findByUser(user.getUserId());
+		data = new HashMap<String, Object>() ;
+		if (user != null ) {
+			if( user.getPaypwd() != null){
+				data.put("IsPayPwdNull", "NO");
+			}
+			
+			CreditAssignment ca = this.creditAssignmentService.getEntityById(paramLong("id"));
+			data.put("id", ca.getId()) ; // 债权ID
+			data.put("cops", paramInt("cops")) ; // 购买份数
+			if(null != account && account.getUsableAccount() <paramInt("cops")*100){
+				data.put("result", false);
+				data.put("msg","账户金额不足!") ;
+			}else{
+				data.put("result",true) ;
+			}
+            /*data.put("thisvalue", BigDecimalUtil.round(BigDecimalUtil.mul(BigDecimalUtil.div(paramDouble("cops"), ca.getCreditCopies()), ca.getCreditValue()),2)); // 价值
+			data.put("thisaccount", BigDecimalUtil.round(BigDecimalUtil.mul(BigDecimalUtil.div(paramDouble("cops"), ca.getCreditCopies()), ca.getCreditPrice()),2)); // 价格
+			data.put("disaccount",BigDecimalUtil.round(BigDecimalUtil.sub(BigDecimalUtil.mul(BigDecimalUtil.div(paramDouble("cops"), ca.getCreditCopies()), ca.getCreditValue()), BigDecimalUtil.mul(BigDecimalUtil.div(paramDouble("cops"), ca.getCreditCopies()), ca.getCreditPrice())), 2)) ;*/
+			data.put("thisvalue", BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(ca.getCreditValue(), ca.getCreditCopies()),paramDouble("cops")),2)); // 价值
+			data.put("thisaccount", BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(ca.getCreditPrice(), ca.getCreditCopies()),paramDouble("cops") ),2)); // 价格
+			data.put("disaccount",BigDecimalUtil.decimal(BigDecimalUtil.sub(BigDecimalUtil.mul(BigDecimalUtil.div(ca.getCreditValue(), ca.getCreditCopies()),paramDouble("cops")), BigDecimalUtil.mul(BigDecimalUtil.div(ca.getCreditPrice(), ca.getCreditCopies()), paramDouble("cops"))), 2)) ;
+			String resultFlag = System.currentTimeMillis() + "" + Math.random()
+					* 10000;
+			data.put("resultFlag", resultFlag);
+			//JSDBET-894 gjh 2015-3-30 start
+			data.put("creditBuyToken", (String) session.get("creditBuyToken"));
+			//JSDBET-894 gjh 2015-3-30 end
+		}else{
+			data.put("result",false) ;
+			data.put("msg","用户不存在或未登录") ;
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 详情 债权 购买
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/creditBuy")
+	public void creditBuy() throws Exception {
+		User user = getSessionUser() ;
+		data = new HashMap<String, Object>() ;
+		CreditAssignment ca = this.creditAssignmentService.getEntityById(paramLong("id"));
+		try {
+			//JSDBET-847 wcw 2015-3-25 start
+			checkToken("creditBuyToken");
+			//JSDBET-847 wcw 2015-3-25 end
+			if(ca.getUser().getUserId()!=user.getUserId()){
+				if(!CreditAssignment.CREDIT_REPEAL.equals(ca.getStatus())){
+					
+					//JSDBET-802 wcw 2015-3-12 start
+					//本地账户余额与一麻袋账户余额对账
+					accountService.accountCompare(this.getSessionUserId());
+					//JSDBET-802 wcw 2015-3-12 end
+					
+					CreditLog cl=new CreditLog();
+					cl.setBuyCopies(paramInt("cops"));
+					cl.setBuyType(1);
+					cl.setBuyAccount(BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.div(ca.getCreditPrice(), ca.getCreditCopies()), paramDouble("cops")), 2));
+					// JSDP-161  wcw 20150525 start
+					//DisruptorUtils.creditBuySuccess(ca, user, cl, paramString("resultFlag"));
+					DisruptorUtils.creditAssignmentBuy(cl, user, ca,  paramString("resultFlag"));
+					// JSDP-161  wcw 20150525 end
+					data.put("result", true) ;
+				}else{
+					throw new Exception("该债权已撤销！");
+				}
+			}else{
+				throw new Exception("自己不能够买自己发的债权！");
+			}
+		}catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		}  catch (Exception e) {
+			data.put("result", false);
+			data.put("msg", e.getMessage());
+		}
+		
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 详情 债权信息
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/creditDetailJson")
+	public void creditDetailJson() throws Exception {
+		User user = getSessionUser() ;
+		data = new HashMap<String, Object>() ;
+		CreditAssignment ca = this.creditAssignmentService.getEntityById(paramLong("id"));
+		CreditSwingOutModel cso = this.creditAssignmentService.getSwingOutCreditByOne(ca.getUser(),ca.getCaType(),ca.getCaType()==1?ca.getTender().getId():ca.getCreditLog().getId(),true) ;
+		if (user != null) {
+			user = userService.find(getSessionUserId()) ;
+			data.put("userType", user.getUserCache().getUserType()) ;
+			data.put("userStates", user.getUserCache().getUserNature());
+			UserIdentify userInvestIdentify = userIdentifyService.findByUserId(user.getUserId());
+			data.put("userInvestIdentify", userInvestIdentify);
+			Account account = accountService.findByUser(user.getUserId());
+			data.put("account", account);
+		}
+		data.put("cso",cso);
+		data.put("ca",ca);
+		data.put("userName", ca.getUser().getUserName());
+		data.put("path",getRequest().getSession().getServletContext().getAttribute("webroot")+""+getRequest().getSession().getServletContext().getAttribute("theme_dir")) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 详情 原标信息
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/borrowdetail")
+	public void borrowdetail() throws Exception {
+		data = new HashMap<String, Object>() ;
+		User user = getSessionUser() ;
+		CreditAssignment c = creditAssignmentService.getEntityById(paramLong("id")) ;
+		Borrow b = c.getBorrow() ;
+		if(user== null){
+			data.put("islogin", null) ;
+		}else{
+			data.put("islogin", 1) ;
+			data.put("IsPayPwdNull", "NO");
+			data.put("nickName", user.getNickname()) ;
+		}
+		data.put("borrowContent", b.getContent()) ;
+		data.put("nickName",userService.find(b.getUser().getUserId()).getNickname()) ;
+		data.put("birthYM", b.getUser().getCardNO().substring(6,10)+"年"+b.getUser().getCardNO().substring(10,12)+"月"+b.getUser().getCardNO().substring(12,14)+"日");
+		Dict list = dictService.find("borrow_use", b.getBorrowUse());
+		if(list!=null){
+			data.put("borrowUse", list.getName()) ; 
+		}
+		UserCache userCache = userCacheService.findByUserId(b.getUser()
+				.getUserId());
+		UserCacheModel uc = UserCacheModel.instance(userCache);
+		uc.setProvinceName(this.regionServcie.getRegionById(
+				Long.parseLong(uc.getProvince())).getName()); 
+		uc.setCityName(this.regionServcie.getRegionById(
+				Long.parseLong(uc.getCity())).getName());
+		uc.setAreaName(this.regionServcie.getRegionById(
+				Long.parseLong(uc.getArea())).getName());
+		uc.setSex("M".equals(uc.getSex())?"男":("F".equals(uc.getSex())?"女":"保密"));
+		uc.setMaritalStatus("1".equals(uc.getMaritalStatus())?"已婚":("2".equals(uc.getMaritalStatus())?"未婚":"保密"));
+		Dict dic2 = dictService.find("professional",uc.getProfessional()) ;
+		if(dic2!=null){
+		uc.setProfessional(dic2.getName());
+		}
+		Dict dic3 = dictService.find("repayment_source",uc.getSourceRepay()) ;
+		if(dic3!=null){
+			uc.setSourceRepay(dic3.getName());
+		}
+		data.put("addTime", b.getUser().getAddTime()) ;
+		uc.setUser(null);
+		String companyName = uc.getCompanyName();
+		if (companyName != null && companyName.length() > 5) {
+			uc.setCompanyName(companyName.substring(0, 2) + "****"
+					+ companyName.substring(companyName.length() - 4));
+		}
+		data.put("uc", uc);
+		data.put("result",true) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 我的投资  债权详情  还款列表
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/creditJsonRepayment")
+	public void creditJsonTend() throws Exception {
+		data = new HashMap<String, Object>() ;
+		CreditAssignment c = creditAssignmentService.getEntityById(paramLong("id")) ;
+		Borrow b = c.getBorrow() ;
+		User user = getSessionUser() ;
+		if(user== null){
+			data.put("islogin", null) ;
+		}else{
+			data.put("islogin", 1) ;
+		}
+		PageDataList<BorrowRepayment> repmentlist = borrowRepaymentService.listByBorrow(b.getId(), paramInt("page"), Page.ROWS);
+		List<BorrowRepayment> relist = borrowRepaymentService.getRepaymentByBorrowId(b.getId());
+		double amortized = 0.00 ;
+		double noamortized = 0.00 ;
+		for (BorrowRepayment borrowRepayment : relist) {
+			if(borrowRepayment.getStatus()==1){
+				amortized = BigDecimalUtil.add(amortized,borrowRepayment.getRepaymentAccount()) ;
+			}
+			if(borrowRepayment.getStatus()==0){
+				noamortized = BigDecimalUtil.add(noamortized,borrowRepayment.getRepaymentAccount()) ;
+			}
+		}
+		data.put("amortized",amortized) ;
+		data.put("noamortized",noamortized) ;
+ 		data.put("data", repmentlist);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 我的投资  债权详情  投资列表
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/creditJsonTend")
+	public void creditJsonRepayment() throws Exception {
+		data = new HashMap<String, Object>() ;
+		CreditAssignment c = creditAssignmentService.getEntityById(paramLong("id")) ;
+		Borrow b = c.getBorrow() ;
+		PageDataList<BorrowTenderModel> list = this.tenderService.list(b.getId(),model.getPage(), 0);
+		data.put("data", list);
+		data.put("ca", c);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 我的投资  债权详情  债权转让记录
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/creditJsonCreditLog")
+	public void creditJsonCreditLog() throws Exception {
+		data = new HashMap<String, Object>() ;
+		CreditAssignment c = creditAssignmentService.getEntityById(paramLong("id")) ;
+		PageDataList<CreditLog> calist = this.creditLogService.getBuyBorrow(c.getBorrow().getId(),model.getPage(),model.getSize()) ;
+		PageDataList<CreditAssignLogModel> calmlist = new PageDataList<CreditAssignLogModel>(calist.getPage(),new ArrayList<CreditAssignLogModel>()) ;
+		for (CreditLog creditLog : calist.getList()) {
+			CreditAssignLogModel calm = new CreditAssignLogModel() ;
+			calm.setAccount(creditLog.getBuyAccount());
+			calm.setBuyUserName(creditLog.getBuyUser().getUserName());
+			calm.setCopise(creditLog.getBuyCopies());
+			calm.setSellUserName(creditLog.getCreditAssignment().getUser().getUserName());
+			calm.setPayTime(creditLog.getAddTime());
+			calmlist.getList().add(calm) ;
+		}
+		data.put("data", calmlist);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 我的投资  债权详情  债权详情
+	 * @throws Exception
+	 */
+	@Action(value = "/credit/index/creditJsonCa")
+	public void creditJsonCa() throws Exception {
+		data = new HashMap<String, Object>() ;
+		PageDataList<CreditInfoModel> cimPl = creditAssignmentService.getCreditInfo(paramLong("id"), model.getPage(), model.getSize()) ;
+		data.put("data",cimPl) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 列表JSON
+	 * @throws Exception
+	 */
+	@Action(value="/credit/index/creditJson")
+	public void creditJson() throws Exception{
+		data = new HashMap<String, Object>() ;
+		List<String> list = new ArrayList<String>();
+		list.add("01") ;
+		int size = paramInt("size");
+		if (size != 0) {
+			model.setSize(size);
+		} else {
+			model.setSize(16);
+		}
+		PageDataList<CreditShowModel> calist = creditAssignmentService.getDateShow(list,model.getPage(),model.getSize(),model) ;
+		data.put("path", getRequest().getSession().getServletContext().getAttribute("webroot")+""+getRequest().getSession().getServletContext().getAttribute("theme_dir")) ;
+		data.put("calist", calist);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	@Action("/member/credit/indexdetail")
+	public void borrowDetail() throws Exception {
+		User user = userService.find(getSessionUserId()) ;
+		data = new HashMap<String, Object>() ;
+		// 转让中的债权
+		// 可转出的债权 
+		// 已转出的债权
+		// 已转入的债权
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	/**
+	 * 成功转出的债权记录
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/member/credit/creditedDetail")
+	public void creditAssignmentedDetail() throws Exception {
+		User user = getSessionUser();
+		model.setUser(user);
+		//JSDP-173 wcw 2015-06-09 start
+		List<String> list = new ArrayList<String>();
+		list.add(CreditAssignment.CREDIT_CHECK2_SUCCESS) ;
+		list.add(CreditAssignment.CREDIT_FINISH) ;
+		data = new HashMap<String, Object>();
+		PageDataList<CreditAssignmentModel> pageDataList = creditAssignmentService.getCreditAssignmentList(model,list);
+		//JSDP-173 wcw 2015-06-09 end
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 可转出数据
+	 * @throws Exception
+	 */
+	@Action("/member/credit/maySwingoutTender")
+	public void maySwingoutTender() throws Exception {
+		User user = userService.find(getSessionUserId());
+		System.out.println(user.getUserId());
+		data = new HashMap<String, Object>() ;
+		PageDataList<CreditSwingOutModel> csomList = creditAssignmentService.getSwingOutCreditTender(user,model.getPage(),model.getSize()) ;  // 可转出债权
+		data.put("data", csomList) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 可转出数据
+	 * @throws Exception
+	 */
+	@Action("/member/credit/maySwingoutCredit")
+	public void maySwingoutCredit() throws Exception {
+		User user = userService.find(getSessionUserId());
+		System.out.println(user.getUserId());
+		data = new HashMap<String, Object>() ;
+		PageDataList<CreditSwingOutModel> csomList = creditAssignmentService.getSwingOutCreditCa(user,model.getPage(),model.getSize()) ;  // 可转出债权
+		data.put("data", csomList) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 转出中数据
+	 * @throws Exception
+	 */
+	@Action("/member/credit/swingout")
+	public void swingout() throws Exception {
+		User user = userService.find(getSessionUserId());
+		data = new HashMap<String, Object>() ;
+		UserModel um = UserModel.instance(user) ;
+		um.setPage(paramInt("page"));
+		um.setSize(5);
+		List<String> list = new ArrayList<String>();
+		list.add("00") ;
+		list.add("01") ;
+		PageDataList<CreditAssignment> calist = creditAssignmentService.getDateByUserAndStatus(um,list ) ;  // 转让中债权
+		//JSDP-35 gjh 2015-4-30 start
+		List<CreditAssignmentModel> newList = new ArrayList<CreditAssignmentModel>();
+		for(CreditAssignment ca:calist.getList()){
+			CreditAssignmentModel cam = CreditAssignmentModel.instance(ca);
+			cam.setBorrowType(ca.getBorrow().getType());
+			newList.add(cam);
+		}
+		PageDataList<CreditAssignmentModel> camlist = new PageDataList<CreditAssignmentModel>(calist.getPage(), newList);
+		String resultFlag = System.currentTimeMillis() + "" + Math.random() * 10000;
+		data.put("resultFlag", resultFlag);
+		data.put("data", camlist) ;
+		//JSDP-35 gjh 2015-4-30 end
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 转出请求 数据
+	 * @throws Exception
+	 */
+	@Action("/member/credit/sellApply")
+	public void sellApply() throws Exception {
+		User user = userService.find(getSessionUserId());
+		System.out.println(user.getUserId());
+		data = new HashMap<String, Object>() ;
+		CreditSwingOutModel csom = creditAssignmentService.getSwingOutCreditByOne(user,paramInt("type"),paramLong("id"),false) ;
+		data.put("csom",csom) ;
+		data.put("path",getRequest().getSession().getServletContext().getAttribute("webroot"));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 撤回
+	 * @throws Exception
+	 */
+	@Action("/member/credit/reCall")
+	public void reCall() throws Exception {
+		data = new HashMap<String, Object>() ;
+		//JSDP-35 gjh 2015-4-30 start
+		int type = paramInt("type");
+		long id = paramLong("id");
+		CreditAssignment c = creditAssignmentService.getEntityById(id) ;
+		if(type == 1){
+			c.setStatus(CreditAssignment.CREDIT_REPEAL);
+			c = creditAssignmentService.update(c) ;
+			if(c.getCaType()==1){
+				BorrowTender bt = c.getTender() ;
+				bt.setIscredit(1);
+				tenderService.update(bt) ;
+			}else{
+				CreditLog cl = c.getCreditLog() ;
+				cl.setIsSell(2);
+				creditLogService.updateCL(cl);
+			}
+			if(c.getStatus().equals(CreditAssignment.CREDIT_REPEAL)){
+				data.put("result", true);
+				data.put("msg","撤回成功！");
+			}
+		}else if(type == 2){//初审通过未复审前撤销债权
+			c.setStatus(CreditAssignment.CREDIT_RECALL_CHECK);
+			c = creditAssignmentService.update(c) ;
+			/*
+			String resultFlag = paramString("resultFlag");
+			DisruptorUtils.creditReCall(c, resultFlag);
+			*/
+			data.put("result", true);
+			data.put("msg","撤销申请中！");
+		}
+		//JSDP-35 gjh 2015-4-30 end
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 转出
+	 * @throws Exception
+	 */
+	@Action("/member/credit/sell")
+	public void sell() throws Exception {
+		User user = userService.find(getSessionUserId());
+		data = new HashMap<String, Object>() ;
+		String validCode = paramString("validCode");
+		// 需要各种的验证
+		try{
+			model.validRegRule(validCode) ;
+			CreditSwingOutModel csom = creditAssignmentService.getSwingOutCreditByOne(user,paramInt("type"),paramLong("id"),false) ;
+			CreditAssignment ca = creditAssignmentService.save(user,csom, paramDouble("fee")) ;
+			if(ca!=null){
+				data.put("result",true) ;
+				data.put("msg","债权转让成功") ;
+				data.put("code","01") ;
+			}else{
+				data.put("result",false) ;
+				data.put("msg","债权转让失败") ;
+				data.put("code","02") ;
+			}
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		}catch(Exception e){
+			data.put("result",false) ;
+			data.put("msg",e.getMessage()) ;
+			data.put("code","03") ;
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	@Action("/member/credit/getCreditProtocol")
+	public String getCreditProtocol() throws Exception {
+		long caId = paramLong("caId");
+		request.setAttribute("caId", caId);
+		return "creditProtocol" ;
+	}
+
+}

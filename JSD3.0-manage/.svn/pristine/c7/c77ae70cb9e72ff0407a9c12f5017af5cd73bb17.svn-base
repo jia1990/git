@@ -1,0 +1,42 @@
+<script type="text/javascript">
+    $(function() {
+    	$.fn.treeGridOptions.formSubFun("#form",'/modules/goods/goodsCategory/editGoodsCategory.html');
+    });
+</script>
+<form id="form"  method="post">
+<div class="popForm sForm">
+	<div class="formitm">
+		<label class="lab">分类名称：</label>
+		<div class="ipt"><input type="text" name="name" value="${category.name}" class="easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/></div>
+	</div>
+	<div class="formitm" >
+		<label class="lab">所属分类：</label>
+		<div class="ipt"><input type="text" name="parentId" class="easyui-validatebox" value="${name}" data-options="required: true" disabled="disabled"onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		<input type="hidden" name="parentId" value="${category.parentId}"/>
+		</div>
+		
+	</div>
+	<div class="formitm">
+		<label class="lab">排序：</label>
+		<div class="ipt"><input type="text" name="sort" maxlength="5"  value="${category.sort}" class="easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/></div>
+	</div>
+	<div class="formitm">
+		<label class="lab">添加人：</label>
+		<div class="ipt">${category.addUser}</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">添加时间：</label>
+		<div class="ipt">${category.addTime?string('yyyy-MM-dd HH:mm:ss')}</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">备注：</label>
+		<div class="ipt"><textarea name="remark" class="easyui-validatebox" maxlength="255"  style="width:400px;height:100px;">${category.remark!}</textarea></div>
+	</div>
+	<input name="id" value="${category.id}" type="hidden">
+    <input name="addTime" value="${category.addTime?string('yyyy-MM-dd HH:mm:ss')}" type="hidden">
+    <input name="addUser" value="${category.addUser}" type="hidden">
+    
+    
+    <input name="editGoodsCategoryPageToken" value="${editGoodsCategoryPageToken!}" type="hidden">
+</div>
+</form>

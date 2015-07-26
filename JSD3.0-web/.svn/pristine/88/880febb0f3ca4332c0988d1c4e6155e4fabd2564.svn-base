@@ -1,0 +1,517 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html"> 
+<head>
+<meta name="robots" content="" />
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords" content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="css/contact.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/alerts.js"></script>
+<script src="${webroot}${theme_dir}/media/js/DatePicker/WdatePicker.js"></script>
+<title>晋商贷-我的交易-自动投标</title>
+</head>
+<body>
+ 
+<style>
+.y_deal_bid{width: 770px;border: 1px solid #e0e0e0;margin-top: 20px;padding-left: 21px;}
+.y_deal_states{font-size: 14px;color: #000000;line-height: 26px;height: 26px;margin:17px 0 15px;}
+.y_deal_states span{color:#0697da;}
+.y_deal_states em{display: inline-block;width: 102px;height: 26px;border-radius: 13px;background: #0697da;color: #fff;margin-left:12px;font-size: 14px;font-style: normal;line-height: 26px;text-align: center;cursor: pointer;}
+.y_labelerrors{font-size: 14px;color: #e86969;}
+.y_deal_title2{font-size: 14px;color: #000000;font-weight: bold;line-height: 52px;}
+.y_deal_title2 span{color: #666666;font-weight: normal;}
+.y_deal_statesul{overflow: hidden;margin-bottom: 8px;}
+/*2015.1.27更改 start*/
+.y_deal_statesul li{width: 160px;height: 194px;margin-right: 17px;padding-left: 14px;border: 1px solid #cdcdcd;background: url(${webroot}${theme_dir}/images/autoInvest/bid4.png) no-repeat 190px 160px;float: left;cursor:pointer;}
+.y_deal_statesul li.y_bid_click{background: url(${webroot}${theme_dir}/images/autoInvest/bid5.png) no-repeat 140px 160px;border: 1px solid #0697da;}
+/*2015.1.27更改 end*/
+.y_deal_statesul li:hover{border: 1px solid #0697da; }
+.y_deal_statesul li p{line-height: 24px;color: #555555;font-size:14px;}
+.y_deal_statesul li p span{color: #0697da;}
+.y_inputuls{overflow: hidden;}
+.y_inputuls li{line-height: 50px;color: #555555;font-size: 14px;border-bottom: 1px solid #e0e0e0;}
+.y_deal_bid input{outline: none;border: 1px solid #dfdfdf;height: 24px;}
+.y_deal_bid input.width54{width: 54px;}
+.y_deal_bid input.width90{width: 90px;}
+.y_deal_bid input.bid_checkbox{margin-left: 10px;position: relative;top:2px;height: 15px;}
+.showHideBid {position: relative;width: 100%;height: 74px;display: none;}
+.showHideBid input,.showHideBid span{width: 86px;height: 32px;color: #fff;text-align: center;line-height: 32px;cursor: pointer;border-radius: 2px;position: absolute;top:6px;right: 128px;background: #0697da;font-size: 14px;border: 0;}
+.y_deal_bid select{outline:none;}
+.showHideBid input.resetsBid{background: #a4a4a4;right:14px;width: 100px;}
+.bid_ul_title{height: 40px;background: #e7e7e7;overflow: hidden;width: 746px;}
+.bid_ul_con{width: 746px;border-bottom: 1px solid #cfcfcf;height: 86px;}
+.bid_ul_con td{border-left: 1px solid #cfcfcf;float: left;text-align: center;color: #555555;font-size: 12px;padding:5px 0;border-bottom: 1px solid #ddd;word-wrap:break-word;vertical-align:middle;height:76px;display: table-cell;line-height:76px;}
+.bid_ul_con td a{color: #555555;font-size: 12px;}
+.bid_ul_title th{height: 40px;border-left: 1px solid #cfcfcf;float: left;line-height: 40px;text-align: center;color: #555555;font-size: 12px;border-bottom: 1px solid #cfcfcf;border-top: 1px solid #cfcfcf;}
+.liwidth110{width: 110px;}
+.liwidth85{width: 85px;}
+.liwidth108{width: 108px;border-right: 1px solid #cfcfcf;}
+.y_bid_explain{border-top: 1px solid #e5e5e5;overflow: hidden;padding: 15px 0 43px;}
+.y_bid_explain li{padding-left: 48px;line-height: 30px;color: #555555;font-size: 14px;}
+.y_bid_explain li span{color: #0697da;}
+.y_alertsBoxCon{text-align:center;margin-top: 10px;}
+.y_alertsBoxCon span{display:block;width: 86px;height: 32px;color: #fff;text-align: center;line-height: 32px;cursor: pointer;border-radius: 2px;position: absolute;top: 136px;right: 114px;background: #0697da;font-size: 14px;}
+
+.c_tender li{float: left;width: 156px;height: 50px;line-height: 50px;text-align: center;border-bottom: 1px solid #ddd;border-right: 1px solid #ddd;cursor: default;font-size: 14px;}
+.c_tender a{display:block;width:100%;height:100%;}
+.c_tender .c_tender_this{border-top: 3px solid #0697DA;border-bottom: none;height: 48px;}
+</style>
+
+ 	<#include "../../include/headerMemberCenter.html">
+	<!--  -->
+	<div class="c_deal">
+		<div class="c_deal_content">
+		<#assign mid="m_invest">
+		<#include "../trade_menu.html"></div>
+		
+			<div class="c_deal_record" style="border:1px solid #E0E0E0;position: relative;top: -50px;">  
+				<ul class="c_tender">
+					<li class="c_tender_this"><a href="javascript:void(0);">自动投标设置</a></li>
+					<li><a href="${webroot}/member/autoInvest/autoInvestDetail.html">自动投标记录明细</a></li>
+					<div class="c_clear"></div>
+				</ul>
+				
+				<!--  <div class="c_deal_title">自动投标</div>-->
+				<form class="y_deal_bid" method="post" id="autoForm" style="border:none;" action="/member/autoInvest/modify.html" onsubmit="return check()">
+					<div class="y_deal_states">自动投资状态：
+					<span><#if auto.status?? && auto.status=="11">开启状态<#else>关闭状态<em>开启自动投资</em></#if></span>
+					</div>
+					<p class="y_deal_title2">选择投资产品<span>（可多选）</span></p>
+					<ul class="y_deal_statesul">
+					 	
+						<!-- 2015.1.27 更改 start -->
+						<li class="<#if auto.energyEnable>y_bid_click<#else></#if>">
+							<input type="checkbox" style="display:block;width:0px;height:0px;opacity:0;" name="productEnable" value="<#if auto.energyEnable>1<#else>0</#if>" id="energyEnable"/>
+							<img src="${webroot}${theme_dir}/images/autoInvest/bidenergy.png" style="margin: 14px 0 8px;"><!-- 行内样式margin、图片更改 -->
+								<p>投资期限：<span>10 ~ 90</span> 天</p>
+								<p>年化收益 :<span>10 ~ 18%</span></p>
+								<p>起投金额 : 100 元</p>
+						</li>
+						<li class="<#if auto.carEnable>y_bid_click<#else></#if>">
+							<input type="checkbox" style="display:block;width:0px;height:0px;opacity:0;" name="productEnable" value="<#if auto.carEnable>1<#else>0</#if>" id="carEnable"/>
+							<img src="${webroot}${theme_dir}/images/autoInvest/bidcar.png" style="margin: 14px 0 8px;"><!-- 行内样式margin、图片更改 -->
+								<p>投资期限：<span>10 ~ 90</span> 天</p>
+								<p>年化收益 :<span>10 ~ 18%</span></p>
+								<p>起投金额 : 100 元</p>
+						</li>
+						<li class="<#if auto.networkEnable>y_bid_click<#else></#if>">
+							<input type="checkbox" style="display:block;width:0px;height:0px;opacity:0;" name="productEnable" value="<#if auto.networkEnable>1<#else>0</#if>" id="networkEnable"/>
+							<img src="${webroot}${theme_dir}/images/autoInvest/bidinternet.png" style="margin: 14px 0 8px;"><!-- 行内样式margin、图片更改 -->
+								<p>投资期限：<span>10 ~ 90</span> 天</p>
+								<p>年化收益 :<span>10 ~ 18%</span></p>
+								<p>起投金额 : 100 元</p>
+						</li>
+						<!-- 新增分期宝 start -->
+						<li class="<#if auto.amortizeEnable>y_bid_click<#else></#if>" style="margin-right:0;">
+							<input type="checkbox" style="display:block;width:0px;height:0px;opacity:0;" name="productEnable" value="<#if auto.amortizeEnable>1<#else>0</#if>" id="amortizeEnable"/>
+							<img src="${webroot}${theme_dir}/images/autoInvest/bidperiod.png" style="margin: 14px 0 8px;"><!-- 新增分期宝 -->
+								<p>投资期限：<span>10 ~ 90</span> 天</p>
+								<p>年化收益 :<span>10 ~ 18%</span></p>
+								<p>起投金额 : 1 元</p>
+						</li>
+						<!-- 新增分期宝 end -->
+						<!-- 2015.1.27 更改 end -->	
+	
+					</ul>
+					<p class="y_deal_title2">设置投资方式</p>
+					<ul class="y_inputuls">
+						<li>
+							<label>投标金额 </label>
+							<input class="width54 textnull <#if auto.status=="11"><#else>disabled</#if>" type="text" name="tenderAccount" value="${auto.tenderAccount!}" onkeyup="value=value.replace(/\D/g,'')"  />                
+							<label>元(每次投标不小于100元且必须是100的整数，分期宝除外)；</label>
+							<span class="y_labelerrors"></span>
+						</li>
+						<li>
+							<label>还款方式 </label>
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="borrowStyleEnable" <#if !auto.borrowStyleEnable>checked="checked"</#if> value="0"
+							 id="choose1" class="choose1 <#if auto.status=="11"><#else>disabled</#if> " />
+							<label for="choose1" >无限制</label>
+							
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="borrowStyleEnable" <#if auto.borrowStyleEnable>checked="checked"</#if>  value="1"
+							 id="choose2" class="choose2 <#if auto.status=="11"><#else>disabled</#if> "/>
+							<label for="choose2" >有限制</label>
+							<div style="display: none;padding-left: 62px;" class="choose_hidden1 <#if auto.borrowStyleEnable>showsdisplay<#else></#if>">
+								<select name="borrowStyle" class="<#if auto.status=="11"><#else>disabled</#if>" style="margin-bottom:10px;outline:none;margin-left: 54px;">
+	                                <option value="1" <#if auto.borrowStyle==1>selected="selected"</#if>>等额本息</option>
+	                                <option value="2" <#if auto.borrowStyle==2>selected="selected"</#if>>一次性还</option>
+	                                <option value="3" <#if auto.borrowStyle==3>selected="selected"</#if>>每月付息</option>
+	                            </select>
+                            </div>
+						</li>
+						
+						<li>
+							<label>月标投资期限 </label>
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="timelimitMonthEnable" <#if !auto.timelimitMonthEnable>checked="checked"</#if> value="0"
+							 id="radio1" class="radios1 <#if auto.status=="11"><#else>disabled</#if> " />
+							<label for="radio1">无期限限制</label>
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="timelimitMonthEnable" <#if auto.timelimitMonthEnable>checked="checked"</#if> value="1"
+							 id="radio2" class="radios2 <#if auto.status=="11"><#else>disabled</#if> " />
+							<label for="radio2">有期限限制</label>
+							<div style="display: none;" class="radio_hidden <#if auto.timelimitMonthEnable>showsdisplay<#else></#if>">
+							<label style="padding-left: 70px;">月标：</label>
+							<span class="<#if auto.status=="11"><#else>disabled</#if>">
+				 			<#if auto.timelimitMonthDown??>
+				              	<@linkage name="timelimitMonthDown" id="timelimitMonthDown" nid="borrow_time_limit" default=auto.timelimitMonthDown type="value"/>  
+				             <#else>
+				              	<@linkage name="timelimitMonthDown" id="timelimitMonthDown" nid="borrow_time_limit" type="value"/>  
+				            </#if>     
+							<label> - </label>
+							<#if auto.timelimitMonthUp??>
+				              	<@linkage name="timelimitMonthUp" id="timelimitMonthUp" nid="borrow_time_limit" default=auto.timelimitMonthUp type="value"/>  
+				             <#else>
+				              	<@linkage name="timelimitMonthUp" id="timelimitMonthUp" nid="borrow_time_limit" type="value"/>  
+				             </#if>   
+				             </span>
+						</div>
+						</li>
+
+						<li>
+							<label>天标投资期限 </label>
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="timelimitDayEnable" <#if !auto.timelimitDayEnable>checked="checked"</#if> value="0"
+							 id="radio3" class="dayradios1 <#if auto.status=="11"><#else>disabled</#if> " />
+							<label for="radio3">无期限限制</label>
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="timelimitDayEnable" <#if auto.timelimitDayEnable>checked="checked"</#if> value="1"
+							 id="radio4" class="dayradios2 <#if auto.status=="11"><#else>disabled</#if> " />
+							<label for="radio4">有期限限制</label>
+							<div style="display: none;" class="dayradio_hidden1 <#if auto.timelimitDayEnable>showsdisplay<#else></#if>">
+							<label style="padding-left: 70px;">天标：</label>  
+							<span class="<#if auto.status=="11"><#else>disabled</#if>">
+							<#if auto.timelimitDayDown??>
+				              	<@linkage name="timelimitDayDown" id="timelimitDayDown" nid="borrow_time_limit_day" default=auto.timelimitDayDown type="value" />  
+				             <#else>
+				              	<@linkage name="timelimitDayDown" id="timelimitDayDown" nid="borrow_time_limit_day" type="value" />  
+				            </#if>     
+							<label> - </label>
+							<#if auto.timelimitDayUp??>
+				              	<@linkage name="timelimitDayUp" id="timelimitDayUp" nid="borrow_time_limit_day" default=auto.timelimitDayUp type="value"/>  
+				             <#else>
+				              	<@linkage name="timelimitDayUp" id="timelimitDayUp" nid="borrow_time_limit_day" type="value"/>  
+				             </#if>   
+				             </span>
+						</div>
+						</li>
+						
+						<li>
+							<label>年化利率 </label>
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="aprEnable"  <#if !auto.aprEnable>checked="checked"</#if> value="0"
+								id="choose5" class="aprchoose1 <#if auto.status=="11"><#else>disabled</#if> "  />
+							<label for="choose5">无限制</label>
+							<input type="radio" style="margin-left: 10px;position: relative;top: 7px;" name="aprEnable"  <#if auto.aprEnable>checked="checked"</#if> value="1"
+								id="choose6" class="aprchoose2 <#if auto.status=="11"><#else>disabled</#if> "  />
+							<label for="choose6">有限制</label>
+							<div style="display: none;padding-left: 72px;" class="choose_hidden2 <#if auto.aprEnable>showsdisplay<#else></#if>">
+								<label>利率范围 :</label>
+								<span class="<#if auto.status=="11"><#else>disabled</#if>">
+								<#if auto.aprDown??>
+					              <@linkage name="aprDown" id="aprDown" class="aprDown" nid="borrow_auto_apr_first" default=auto.aprDown type="value"/>  
+					              <#else>
+					              <@linkage name="aprDown" id="aprDown" class="aprDown" nid="borrow_auto_apr_first" type="value"/>  
+				                </#if>																																																							             
+								<label> - </label>
+								<#if auto.aprUp??>
+					              <@linkage name="aprUp" id="aprUp" class="aprUp" nid="borrow_auto_apr_last" default=auto.aprUp type="value"/>  
+					              <#else>
+					              <@linkage name="aprUp" id="aprUp" class="aprUp" nid="borrow_auto_apr_last" type="value"/>  
+				                </#if>
+				                </span>
+							</div>
+						</li>
+					</ul>
+					
+					<div class="showHideBid <#if auto.status=="11">showsdisplay<#else></#if>">
+						<input type="submit" class="truesBid" value="确定"/>
+						<input type="button" class="resetsBid" value="关闭自动投标"/>
+						<input type="hidden" name="id" value="${auto.id!}"/>	
+						<input type="hidden" name="status" value="${auto.status!}"/>
+					</div>
+					</form>	
+					
+					<p style="line-height:64px;height:64px;color:#555555;font-size:14px;padding-left:10px;">您当前的自动投标设置为：</p>
+					<table cellpadding="0" cellspacing="0" style="margin-left:10px;">
+						<tr class="bid_ul_title">
+							<th class="liwidth110">类型</th>
+							<th class="liwidth110">投标金额</th>
+							<th class="liwidth110">还款方式</th>
+							<th class="liwidth110">投资期限</th>
+							<th class="liwidth110">年化利率</th>		
+							<th class="liwidth110">当前排名</th>					
+							<th class="liwidth108">状态</th>
+						<!--<th class="liwidth85">操作</th>-->	
+						</tr>
+						<tr class="bid_ul_con">
+							<td class="liwidth110" style="line-height:16px;"><#if auto.energyEnable>能源宝</#if><br/>
+							<#if auto.carEnable>车贷宝</#if><br/>
+							<#if auto.networkEnable>微商贷</#if><br/>
+							<#if auto.amortizeEnable>分期宝</#if><br/>
+							</td>
+							<td class="liwidth110"><#if auto.tenderAccount??>${auto.tenderAccount!}元</#if></td>
+							<td class="liwidth110"><#if auto.borrowStyleEnable>
+							<#if auto.borrowStyle==1>按月分期还款/等额本息
+							<#elseif auto.borrowStyle==2>一次性还
+							<#elseif auto.borrowStyle==3>每月付息<#else>其他类型还款方式</#if>
+							<#else>无限制</#if></td>
+							<td class="liwidth110" style="line-height:16px;padding-top:27px; height:54px;">月标：<#if auto.timelimitMonthEnable>${auto.timelimitMonthDown!}-${auto.timelimitMonthUp!}个月<#else>无限制</#if><br/>
+							天标：<#if auto.timelimitDayEnable>${auto.timelimitDayDown!}-${auto.timelimitDayUp!}天<#else>无限制</#if>
+							</td>
+							<td class="liwidth110"><#if auto.aprEnable>${auto.aprDown!}%-${auto.aprUp!}%<#else>无限制</#if></td>
+							<td class="liwidth110"><#if auto.status??&&auto.status=="22">自动投标关闭中<#else>${(auto.totalRank+1)!}</#if></td>
+							<td class="liwidth108" style="color:#0697da;"><#if auto.status??>
+							<#if auto.status=="11">已启用<#elseif auto.status=="22">已关闭</#if>
+							</#if></td>
+						<!--<td class="liwidth85">
+								<a href="javascript:void(0);" class="y_bid_edits">修改</a>
+								<a href="javascript:void(0);" class="y_bid_deletes">删除</a>
+							</td>-->
+						</tr>
+					</table>
+
+					<p class="y_deal_title2" style="padding-left:10px;">自动投资说明</p>
+					<ul class="y_bid_explain">
+						<li>1. 用户开启此工具，并完成条件设置后，自动投标功能将在10分钟内生效。</li>
+						<li>2. 自动投标最多允许添加1个规则。</li>
+						<li>3. 满足用户自动投标规则设置时才为用户开启自动投标。目前债权不能使用自动投标工具进行债权购买。</li>
+						<li>4. 用户开通自动投标功能即视为委托晋商贷平台与达到用户指定标准的借款人签署借款合同，并承担该<br/>
+						合同项下的一切权利及义务。</li>
+						<li>5. 自动投标成交后，用户的自动投标功能不会自动关闭，如果需要关闭，需进行手工设置。</li>
+						<li>6. 自动投标根据会员等级排序，高级别会员优先排序，同级会员按第7条规则排序。</li>
+						<li>7. 用户依开通自动投标功能时间先后形成队列，平台项目在此队列依次进行匹配，自动投标成功后，该用户将会被自动排到队尾。
+						若用户账户余额小于其设置的最小金额，在自动投标运行到该用户时，该用户将会被自动排到队尾。若项目不符合用户设置的规则，则用户保持在原有队列中位置。</li>
+						<li>8. 如有疑问需要解答，请联系晋商贷客服： <span>400-080-3000</span></li>
+					</ul>
+				
+			</div>
+			<div class="c_clear"></div>
+		</div>
+	</div>
+<p class="bigboxp" style="display:none">请至少选择一种投资产品<span>确认</span><p>
+<p class="bigboxAccount" style="display:none">自动投标金额不能小于100<span>确认</span><p>
+<p class="bigboxApr" style="display:none">年化利率的下限不能高于上限<span>确认</span><p>
+<p class="bigboxMonth" style="display:none">月标借款期限的下限不能高于上限<span>确认</span><p>
+<p class="bigboxDay" style="display:none">天标借款期限的下限不能高于上限<span>确认</span><p>	
+<script>
+
+$(document).ready(function() { 
+	$(".y_deal_statesul li").find("input").prop("checked",true);
+}); 
+
+function check(){
+	if(!($(".y_deal_statesul li").hasClass("y_bid_click"))){
+		alerts("提示",$(".bigboxp").html(),"300","200");
+		$(".y_alertsBoxCon span").click(function(){
+		 	$(".alertsBox").hide();
+			$(".alertsbg").hide(); 
+		})
+		return false;
+	}
+	var amortize = document.getElementsByName("productEnable");
+
+	if(((parseInt($(".textnull").val())<100||($(".textnull").val()==""))&& 
+			(amortize[0].value == 1||amortize[1].value == 1||amortize[2].value == 1))){	
+		alerts("提示",$(".bigboxAccount").html(),"300","200");
+		$(".y_alertsBoxCon span").click(function(){
+		 	$(".alertsBox").hide();
+			$(".alertsbg").hide(); 
+		})
+		return false;
+	}
+	
+	var monthDownVal= $("#timelimitMonthDown").find("option:selected").text();
+	var monthUpVal= $("#timelimitMonthUp").find("option:selected").text();
+	
+	var dayDownVal= $("#timelimitDayDown").find("option:selected").text();
+	var dayUpVal= $("#timelimitDayUp").find("option:selected").text();
+	
+	var aprDownVal= $("#aprDown").find("option:selected").text();
+	var aprUpVal= $("#aprUp").find("option:selected").text();
+	
+	var monthDownValue = parseInt(monthDownVal.substring(0,monthDownVal.indexOf("个")));
+	var monthUpValue = parseInt(monthUpVal.substring(0,monthUpVal.indexOf("个")));
+	var dayDownValue = parseInt(dayDownVal.substring(0,dayDownVal.indexOf("天")));
+	var dayUpValue = parseInt(dayUpVal.substring(0,dayUpVal.indexOf("天")));
+	var aprDownValue = parseInt(aprDownVal.substring(0,aprDownVal.indexOf("%")));
+	var aprUpValue = parseInt(aprUpVal.substring(0,aprUpVal.indexOf("%")));
+	
+	if(monthDownValue > monthUpValue){
+		alerts("提示",$(".bigboxMonth").html(),"300","200");
+		$(".y_alertsBoxCon span").click(function(){
+		 	$(".alertsBox").hide();
+			$(".alertsbg").hide(); 
+		})
+		return false;
+	}	
+	
+	if(dayDownValue > dayUpValue){
+		alerts("提示",$(".bigboxDay").html(),"300","200");
+		$(".y_alertsBoxCon span").click(function(){
+		 	$(".alertsBox").hide();
+			$(".alertsbg").hide(); 
+		})
+		return false;
+	}
+
+	if(aprDownValue > aprUpValue){
+		alerts("提示",$(".bigboxApr").html(),"300","200");
+		$(".y_alertsBoxCon span").click(function(){
+		 	$(".alertsBox").hide();
+			$(".alertsbg").hide(); 
+		})
+		return false;
+	}	
+	
+	return true;
+}	
+
+// 选择投资产品 start
+$(function(){
+	
+	$(".y_deal_statesul li").toggle(
+  function () {
+	  var that=$(this);
+	  if(!$(this).hasClass("y_bid_click")){
+		  $(this).addClass("y_bid_click"); 
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(1);
+	  }else{
+		  $(this).removeClass("y_bid_click");
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(0);
+	  }
+  },
+  function () {
+	  if(!$(this).hasClass("y_bid_click")){
+		  $(this).addClass("y_bid_click"); 
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(1);
+	  }else{
+		  $(this).removeClass("y_bid_click");
+		  $(this).find("input").prop("checked",true);
+		  $(this).find("input").val(0);
+	  }
+    }
+);
+	// 选择投资产品  end
+	
+	// 开启状态  start
+	$(".showsdisplay").css("display","block");
+	$(".disabled").attr("disabled","true");
+	$(".disabled select").attr("disabled","true");
+	$(".y_deal_states em").click(function(){
+		location.href="/member/autoInvest/modifyStatus.html?status=11";
+		$(".y_deal_states span").html("开启状态");
+		$(this).hide();
+		$(".showHideBid").show();
+		$(".disabled").removeAttr("disabled");
+	})
+	// 开启状态  end
+		
+
+	  $(".textnull").keyup(function(){
+		var amortize = document.getElementsByName("productEnable");
+		if(((parseInt($(".textnull").val())<100||($(".textnull").val()==""))&& 
+				(amortize[0].value == 1||amortize[1].value == 1||amortize[2].value == 1))){	
+			$(this).parent("li").find(".y_labelerrors").html("每次投标不小于100元");
+		}else{
+			$(this).parent("li").find(".y_labelerrors").html("");
+		}
+	  })
+	
+	// 关闭状态  start
+	$(".resetsBid").click(function(){
+		$(".showHideBid").hide();
+		location.href="/member/autoInvest/modifyStatus.html?status=22";
+		$(".y_deal_states span").html("关闭状态");
+		$(".y_deal_states em").show();
+		$(".disabled").attr("disabled","true");
+		$(".textnull").val("");
+		$(".radio_hidden").slideUp();
+		$(".dayradio_hidden").slideUp();
+		$(".choose_hidden1").slideUp();
+		$(".choose_hidden2").slideUp();
+	})
+	// 关闭状态  end
+
+	// 月标投资期限 start
+	$(".radios2").focus(function(){
+		$(".radio_hidden").slideDown();
+	})
+	$(".radios1").focus(function(){
+		$(".radio_hidden").slideUp();
+	})
+	// 月标投资期限 end
+	
+	// 天标投资期限 start
+	$(".dayradios2").focus(function(){
+		$(".dayradio_hidden1").slideDown();
+	})
+	$(".dayradios1").focus(function(){
+		$(".dayradio_hidden1").slideUp();
+	})
+	// 天标投资期限 end
+	
+	// 还款方式 start
+    $(".choose2").focus(function(){
+		$(".choose_hidden1").slideDown();
+	})
+	$(".choose1").focus(function(){
+		$(".choose_hidden1").slideUp();
+	})
+	// 还款方式 end
+	
+	// 年化利率 start
+	$(".aprchoose2").focus(function(){
+		$(".choose_hidden2").slideDown();
+	})
+	$(".aprchoose1").focus(function(){
+		$(".choose_hidden2").slideUp();
+	})
+	//  年化利率  end
+	})
+	
+	
+	//2014.12.30新增
+		/* $(".y_deal_states em" ).click( function(){
+          var ajaxUrl = "/member/autoInvest/modifyStatus.html?status=11" ;
+          $.ajax({
+             type: "POST",
+             url:ajaxUrl,
+             data:{},
+             dataType: "json",
+             success: function(data){
+                  alert(data);
+                  alert(data.code);
+                  if(data.code== "99A" || data.code== "99B" || data.code=="99C" ){
+                        $( ".y_deal_states span").html(data.msg);
+                  } else{
+                     $( ".y_deal_states span" ).html("开启状态" );
+                       $( this).hide();
+                       $( ".showHideBid").show();
+                       $(".disabled" ).removeAttr("disabled" );
+                  }
+             },
+             error: function(XMLHttpRequest, textStatus, errorThrown){
+                  alert(XMLHttpRequest.status);
+                  alert(XMLHttpRequest.readyState);
+                  alert(textStatus);
+             }
+         }); 
+	}) */
+
+	
+
+</script>
+	
+<script>
+	seajs.use("${webroot}${theme_dir}/media/js/member/autodetail")
+</script>
+<script>
+	$(function(){
+		$($(".c_aside_nav dd")[4]).addClass("c_invest_this");
+	})
+</script>
+	<#include "../../include/footer.html">
+</body>
+</html>

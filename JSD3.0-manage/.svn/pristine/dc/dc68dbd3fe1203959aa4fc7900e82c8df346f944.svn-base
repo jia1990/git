@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>债权购买记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'caLogList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'desc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [                     
+			  { field: 'id', title: '编号', width: 60,fixed:true, sortable:false },
+              { field: 'caName', title: '债权名', width: 120, fixed:true, sortable:false, formatter: function(value,row,index){
+            	  var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+   				  var viewWinParmeters = "'{0}','" + viewUrl + "'";
+   				  return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}">'+hideTitleName(value,15)+'</a>', row.id, '${theme_dir}/css/images/extjs_icons/link.png');	
+              	  
+              }},
+        	  { field: 'caId', title: '债权转让ID', width: 80,fixed:true, sortable:false },
+        	  { field: 'status', title: '状态', width: 80, fixed:true, sortable:false, formatter: function(value,row,index){
+        		  if(value =="00"){
+            		  return "未成交"; 
+            	  }else if(value=="01"){
+            		  return "已成交";
+            	  }else if(value=="02"){
+            		  return "撤回";
+            	  }else{
+            		  return "未指定的状态";
+            	  }
+              }}, 
+        	  { field: 'sellUserName', title: '出售债权用户', width: 100,fixed:true, sortable:false },
+              { field: 'buyUserName', title: '购买用户名', width: 80, fixed:true, sortable:false }, 
+              { field: 'buyTime', title: '购买时间', width: 100, fixed:true, sortable:false , formatter: function(value,row,index){
+          	    	return getLocalTime(value,4);  	 
+              }},
+              { field: 'buyCopies', title: '购买份数', width: 80,fixed:true, sortable:false }, 
+              { field: 'buyValue', title: '购买后应有价值', width: 100, fixed:true, sortable:false  , formatter: function(value,row,index){
+                	return value+"元"; 
+              }},
+              { field: 'buyAccount', title: '购买花费金额', width: 100, fixed:true, sortable:false , formatter: function(value,row,index){
+            	    return value+"元"; 
+              }},
+              { field: 'buyFee', title: '购买手续费', width: 100,fixed:true, sortable:false , formatter: function(value,row,index){
+            	    return value+"元";
+              }}, 
+              { field: 'buyFeeStatus', title: '购买手续费状态', width: 100,fixed:true, sortable:false , formatter: function(value,row,index){
+            	  if(value ==1){
+            		  return "已收取"; 
+            	  }else if(value==2){
+            		  return "冻结中";
+            	  }else if(value ==3){
+            		  return "已退回";
+            	  }else{
+            		  return "未指定的状态";  
+            	  }
+              }}, 
+              { field: 'sellFee', title: '出售手续费', width: 100,fixed:true, sortable:false, formatter:function(value,row,index){
+            	    return value+"元";
+              }}, 
+              { field: 'sellFeeStatus', title: '出售手续费状态', width: 120, fixed:true, sortable:false , formatter: function(value,row,index){
+            	  if(value ==1){
+            		  return "已收取"; 
+            	  }else if(value==2){
+            		  return "冻结中";
+            	  }else if(value ==3){
+            		  return "已退回";
+            	  }else{
+            		  return "未指定的状态";  
+            	  }
+              }}, 
+              { field: 'isSell', title: '是否再售出', width: 80,fixed:true, sortable:false, formatter:function(value,row,index){
+            	    if(value == 1){
+            	    	return "售出";
+            	    }else if(value==2){
+            	    	return "未出售";
+            	    }else{
+            	    	return "未指定的状态";
+            	    }
+               }},  
+              { field: 'addTime', title: '添加时间', width: 100,fixed:true, sortable:false, formatter: function(value,row,index){
+            	    return getLocalTime(value,4);  
+              }}, 
+              { field: 'addIp', title: '添加IP', width: 150,fixed:true, sortable:false }
+             
+             ]],
+             toolbar : '#toolbar'
+        }); 
+    });
+    
+    function exportExcel(){
+		var url = "/modules/creditassignment/creditlog/exportCaLogList.html";
+		var userName = $("#userName").val();
+		var caName = $("#caName").val();
+		var status = $("#status").val();
+		var caId = $("#caId").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?buyUserName=" + userName + "&caName=" + caName + "&status=" + status + "&caId=" + caId + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询信息）</font></h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>购买用户名：<input type="text" name="buyUserName" id="userName" autocomplete="off"/></li>
+            		<li>债权名：<input type="text" name="caName" id="caName" autocomplete="off"/></li>
+            		<li>债权转让ID：<input type="text" name="caId" id="caId" autocomplete="off"/></li>
+            		<li>状态：
+		                <select name="status" id="status" class="status" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="00">未成交</option>
+		                  <option value="01">已成交</option>
+		                  <option value="02">撤回</option>
+		                </select>
+		            </li>	  		    	     
+		            <li>购买时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>        
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>          	
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+   </div>
+        <@secAuthorizeUrl value='/exportCreditLog.html'>
+        <div id="toolbar" style="display: none;">		
+			<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>	
+			<span> </span>   <!-- TODO : ajax参数化请求数据求和-->
+		</div>
+	    </@secAuthorizeUrl>
+
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

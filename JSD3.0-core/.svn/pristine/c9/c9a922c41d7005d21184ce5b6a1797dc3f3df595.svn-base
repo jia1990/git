@@ -1,0 +1,146 @@
+
+package com.ddtkj.p2psys.score.service;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.model.UserScoreAwardModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述: 用户积分抽奖记录service
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+public interface UserScoreAwardService {
+	
+	/**
+	 * 取得用户中奖信息
+	 * @param ruleId 规则ID
+	 * @param userId 用户ID
+	 * @return 用户中奖信息
+	 */
+	List<UserScoreAward> getMyAwardList(long ruleId, long userId);
+		
+	/**
+	 * 取得最新中奖信息
+	 * @param ruleId 规则ID
+	 * @param num 条数
+	 * @param isOrderByLevel 是否按中奖级别排序
+	 * @return 中奖信息
+	 */
+	List<UserScoreAward> getScoreAwardedList(long ruleId, int num, boolean isOrderByLevel);
+	
+	/**
+	 * 取得豪华大奖中奖信息
+	 * @param ruleId 规则ID
+	 * @param num 条数
+	 * @param luxuryAward 豪华大奖阀值
+	 * @param isOrderByLevel 是否按中奖级别排序
+	 * @return 中奖信息
+	 */
+	List<UserScoreAward> getScoreLuxuryAwardList(long ruleId, int num, boolean isOrderByLevel, int luxuryAward);
+	
+	/**
+	 * 取得抽奖用户信息列表
+	 * @param page 页数
+	 * @param param 参数
+	 * @return 抽奖用户信息列表
+	 */
+	PageDataList<UserScoreAward> getUserScoreAwardList(UserScoreAward userScoreAward, int page, int pageSize);
+	
+	/**
+	 * 取得抽奖用户信息列表
+	 * @param page 页数
+	 * @param param 参数
+	 * @return 抽奖用户信息列表
+	 */
+	PageDataList<UserScoreAwardModel> getUserScoreAwardList(UserScoreAwardModel model);
+	
+	/**
+	 * 根据条件查询获取抽奖记录面额总和
+	 * @param model
+	 * @return 抽奖记录面额总和
+	 */
+	double getUserScoreAwardSum(UserScoreAwardModel model, String awardType);
+	
+	/**
+	 * 根据条件查询获取抽奖记录数值总和
+	 * @param model awardType奖品类型
+	 * @return 抽奖记录数值总和
+	 */
+	String userScoreAwardTotal(UserScoreAwardModel model, String awardType);
+	
+	/**
+	 * 更新抽奖记录发放状态
+	 * @param  list 
+	 * @throws Exception   
+	 */ 
+	void updateReceiveStaus(List<UserScoreAward> list);
+	
+	/**
+	 * 获取抽奖能转账购物卡总额
+	 * @param  status 状态
+	 * @param  startTime
+	 * @param  endTime
+	 * @throws Exception   
+	 */ 
+	double getCardTotalByStatusAndUser(String status, Date startTime, Date endTime, User user);
+	
+	/**
+	 * 获取抽奖能转账购物卡列表
+	 * @param  status
+	 * @param  startTime
+	 * @param  endTime
+	 * @return List<UserScoreAward> 
+	 * @throws Exception   
+	 */ 
+	List<UserScoreAward> getScoreAwardListByStatusAndTransNo(String status, Date startTime, Date endTime, String transNo);
+	
+	/**
+	 * 获取抽奖能转账购物卡列表,用户id标识
+	 * @param  status
+	 * @param  startTime
+	 * @param  endTime
+	 * @return List<UserScoreAward> 
+	 * @throws Exception   
+	 */ 
+	List<UserScoreAward> getScoreAwardListByStatusAndUser(String status, Date startTime, Date endTime, User user);
+	
+	/**
+	 * 根据奖品类型获取抽奖面值列表
+	 * @param  model
+	 * @param  awardType
+	 * @return PageDataList<UserScoreAwardModel> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<UserScoreAwardModel> getScoreAwardListByType(UserScoreAwardModel model, int awardType);
+	
+	/**
+	 * 更新抽奖记录订单号
+	 * @param  list 
+	 * @throws Exception   
+	 */ 
+	void updateScoreAwardTransNo(List<UserScoreAward> list);
+	
+	String scoreAwardTotal(UserScoreAwardModel model);	
+	
+	/**
+	 * 获取抽奖能转账购物卡总额,根据订单号
+	 * @param  status 状态
+	 * @param  startTime
+	 * @param  endTime
+	 * @throws Exception   
+	 */ 
+	double getCardTotalByStatusAndTransNo(String status, Date startTime, Date endTime, User user, String transNo);
+	//JSDP-116 fengguoqin 2015-05-19 start
+	/**
+	 * 积分抽奖excel导出
+	 * @param  UserScoreAwardModel
+	 * @throws Exception   
+	 */ 
+	public List<UserScoreAwardModel> excelListOrder(UserScoreAwardModel model);
+	//JSDP-116 fengguoqin 2015-05-19 end
+}

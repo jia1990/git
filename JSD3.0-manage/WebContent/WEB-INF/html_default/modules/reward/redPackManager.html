@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>后台企业开户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  800;
+	var winHeight = 500;
+	var addTitle = "添加红包"; //添加窗口标题
+	var addUrl =  "/modules/reward/redPackAddPage.html"; // 添加窗口链接地址
+	var editTitle = "修改红包";
+	var editUrl =  "/modules/reward/redPackEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"','确定'";
+	
+	deleteUrl = "/modules/reward/redPackDelete.html";
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'redPackList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			 			{ field: 'id', title: '编号', width: 50, fixed :true,checkbox : false},
+						{ field: 'name', title: '红包名称', width: 200, fixed :true,checkbox : false},
+						{ field: 'validtime', title: '有效时间', width: 100, fixed :true,sortable: false,
+							formatter:function(value,row,index){
+								return value+"天";
+							}	
+						},
+						{ field: 'isopen', title: '是否开启', width: 100, sortable: false,
+							formatter: function(value,row,index){
+								if(value == 'Y'){
+									return "开启";
+								}else if(value == 'N'){
+									return "关闭";
+								}
+								return "";
+							} 
+						},
+						{ field: 'createtime', title: '添加时间', width: 150, sortable: false, 
+			          	  	formatter: function(value,row,index){
+			          	  		return getLocalTime(value,4);
+							}
+						},
+						{ field: 'userName', title: '添加人',fixed :true, width: 100, sortable: false },
+						{	field : 'action',
+							title : '操作',
+							width :80,
+							fixed :true,
+							formatter : function(value, row, index) {
+								var str = '';
+								
+								str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="锁定用户"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+								str += '&nbsp;';
+								
+								return str;
+							}
+						} ] ],
+						loadFilter: function(data){
+							$.each(data.rows,function(index,row){
+								if(row.operator){
+									row.userName=row.operator.userName;
+								}
+								
+							}); 
+							return data;
+						},
+						toolbar : '#toolbar',
+
+			
+		});
+	});
+</script>
+</head>
+<body style="padding:0 20px;">
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+	           		<li>红包名称：<input type="text" name="name" autocomplete="off"/></li>
+            		<li>红包状态：
+						<select name="isopen" id="isopen" class="type">
+							<option value='A' checked="checked">全部</option>
+							<option value='Y'>启用</option>
+							<option value='N'>不启用</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">		
+		<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加红包</a>				
+	</div>
+</body>
+</html>

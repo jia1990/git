@@ -1,0 +1,76 @@
+
+package com.ddtkj.manage.action.system;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.errorlog.domain.ErrorLog;
+import com.ddtkj.p2psys.errorlog.model.ErrorLogModel;
+import com.ddtkj.p2psys.errorlog.service.ErrorLogService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 后台错误异常日志action
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-12   
+ */
+public class ManageErrorLogAction extends BaseAction implements ModelDriven<ErrorLogModel> {
+	
+	@Resource
+	private ErrorLogService errorLogService;
+	
+	
+	private ErrorLogModel model = new ErrorLogModel();
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+
+	public ErrorLogModel getModel() {
+		return model;
+	}
+	
+	/**
+	 * 错误异常日志页面
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/errorlog/errorLogManage")
+	public String errorLogManage() throws Exception {
+		
+		return "errorLogManage";
+	}
+	
+	/**
+	 * 错误异常日志列表
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/errorlog/errorLogList")
+	public void errorLogList() throws Exception {
+		PageDataList<ErrorLogModel> list = new PageDataList<ErrorLogModel>();
+		if(StringUtil.isNotBlank(model.getStartTime()) || StringUtil.isNotBlank(model.getName()) || StringUtil.isNotBlank(model.getLevel()) ||
+				StringUtil.isNotBlank(model.getPlatform()) || StringUtil.isNotBlank(model.getAddUserName()) || StringUtil.isNotBlank(model.getErrorModuleName())){
+			list = errorLogService.list(model);
+			map.put("total", list.getPage().getTotal());
+			map.put("rows", list.getList());
+		}		
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 查看错误异常日志
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/errorlog/viewErrorLogManage")
+	public String viewErrorLogManage() throws Exception {
+		ErrorLog errorLog = errorLogService.getErrorLogById(model.getId());
+		request.setAttribute("errorLog", errorLog);
+		return "viewErrorLogManage";
+	}
+	
+	
+}

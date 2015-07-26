@@ -1,0 +1,51 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：1.0资金账户转账到3.0 dao层
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月26日 
+ */
+public interface AccountTransferDao extends BaseDao<AccountTransfer>{
+     /**
+      * 查询1.0转账3.0转账列表
+      * @param at
+      * @param startTime
+      * @param endTime
+      * @return
+      */
+	 PageDataList<AccountTransfer> getTransferList(AccountTransferModel at,String startTime,String endTime) ;
+	 /**
+	  * 查询转账记录分页
+	  * @param model
+	  * @return
+	  */
+	 PageDataList<AccountTransfer> getTransferList(AccountTransferModel model);
+	 
+	 
+	 /**
+	 * fengguoqin@ddtkj.com   JSDP-7  
+	  * 查询转账记录分页
+	  * @param model
+	  * @return
+	  */
+	 PageDataList<AccountTransfer> getForeTransferList(AccountTransferModel model);
+	 //JSDP-116 xingjia 2015-05-16 start
+	 /**
+	  * 使用sql导出excel（转账查询）
+	  * @param model
+	  * @return
+	  */
+	 List excelListTransfer(AccountTransferModel model);
+	 //JSDP-116 xingjia 2015-05-16 start
+	 
+}

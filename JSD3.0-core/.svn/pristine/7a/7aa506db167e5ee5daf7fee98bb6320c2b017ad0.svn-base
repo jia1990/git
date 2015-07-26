@@ -1,0 +1,41 @@
+
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpWeixinDataDao;
+import com.ddtkj.p2psys.redpacket.domain.RpWeixinData;
+import com.ddtkj.p2psys.redpacket.exception.RpWeixinDataException;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-6-1   
+ */
+@Repository("rpWeixinDataDao")
+public class RpWeixinDataDaoImpl extends BaseDaoImpl<RpWeixinData> implements RpWeixinDataDao {
+
+	@Override
+	public RpWeixinData getRpWeixinDataBySn(String sn) {
+		return findObjByProperty("sn", sn);
+	}
+
+	@Override
+	public RpWeixinData getRpWeixinDataByStatus(String status) {
+		return findObjByProperty("status", status);
+	}
+
+	@Override
+	public int updateRpWeixinDataStatus(RpWeixinData wxData) {
+		String sql = "UPDATE RpWeixinData SET status = :status WHERE status = :preStatus AND sn = :sn ";
+		String[] names = {"status", "preStatus", "sn"};
+		Object[] values = {RpWeixinData.STATUS_YES, RpWeixinData.STATUS_NO, wxData.getSn()};
+		int count = updateByJpql(sql, names, values);
+		if(count < 1) {
+			throw new RpWeixinDataException("微信奖励数据记录更新失败");
+		}
+		return count;
+	}
+
+}

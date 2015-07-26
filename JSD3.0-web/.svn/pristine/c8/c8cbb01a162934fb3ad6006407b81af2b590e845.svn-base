@@ -1,0 +1,523 @@
+package com.rongdu.p2psys.web.account;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.account.model.accountlog.BaseAccountLog;
+import com.rongdu.p2psys.account.model.accountlog.noac.GetCodeLog;
+import com.rongdu.p2psys.account.service.AccountBankService;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.domain.Article;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.rule.ExtractCashChargeRuleCheck;
+import com.rongdu.p2psys.core.rule.RedPacketConsumeRuleCheck;
+import com.rongdu.p2psys.core.service.ArticleService;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述:账户提现
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月16日
+ */
+public class DrawCashAction extends BaseAction implements
+		ModelDriven<AccountDrawModel> {
+
+	private AccountDrawModel model = new AccountDrawModel();
+
+	@Override
+	public AccountDrawModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private AccountBankService accountBankService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private DictService dictService;
+	@Resource
+	private ArticleService articleService;
+	private User user;
+
+	private Map<String, Object> data;
+	/**
+	 * 用户提现页面
+	 * */
+	@Action(value = "/member/cash/newCash", results = { 
+			@Result(name = "newCashInvest", type = "ftl", location = "/member/cash/newCash.html"),
+			@Result(name = "newCashBorrow", type = "ftl", location = "/member_borrow/cash/newCash.html"),
+			@Result(name = "newCashAssure", type = "ftl", location = "/member_guarantee/cash/newCash.html"),
+			@Result(name = "newCashMerchant", type = "ftl", location = "/member_merchant/cash/newCash.html")
+			
+			})
+	public String drawCashView() throws Exception {
+		User user = this.getSessionUser();
+
+		//防止表单重复提交
+		saveToken("drawCashToken");
+		/*
+		 * 账户可用余额=利息可用总额+奖励可用总额+充值可用总额+回款本金可用总额
+		 */
+		Account account = accountService.findByUser(user.getUserId());
+
+		HttpServletRequest request = this.request;
+		String nid = "account_bank";
+		List<Dict> dictList = dictService.list(nid);
+		request.setAttribute("dictList", dictList);
+		
+		Article article = articleService.findBySiteId(51);
+		if(article!=null ){
+			request.setAttribute("newCashHint", article.getContent());
+		}else{
+			request.setAttribute("newCashHint", null);
+		}
+		// 获取当前用户绑定的银行卡号
+		List<AccountBank> bankList = accountBankService.list(user.getUserId());
+		request.setAttribute("account", account);
+		request.setAttribute("bankList", bankList);
+		request.setAttribute("user", user);
+		
+		//wcw  借款人提现 start
+		if (UserConstant.USER_SORT_BORROW.equals(user.getUserCache().getUserType())) {
+			//公司法人
+		   double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+		   double borrowerEnterUsable=account.getBorrowerEnterUsable();
+		   double usableMoney=BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable);
+		   this.request.setAttribute("UsableMount", usableMoney);
+		   return "newCashBorrow";
+		}else if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			//担保公司提现
+		   double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+		   double borrowerEnterUsable=account.getBorrowerEnterUsable();
+		   double usableMoney=BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable);
+		   this.request.setAttribute("UsableMount", usableMoney);
+		   return "newCashAssure";
+		}else  if (UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())) {
+			//商家账户
+			   double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+			   double borrowerEnterUsable=account.getBorrowerEnterUsable();
+			   double usableMoney=BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable);
+			   this.request.setAttribute("UsableMount", usableMoney);
+			   return "newCashMerchant";
+		}
+	
+		this.request.setAttribute("UsableMount", account.getUsableAccount());
+		return "newCashInvest";
+	}
+
+	/**
+	 * @author 李建云 计算用户提现手续费显示与页面    添加：充值可用+回款可用+奖励可用金额
+	 * @throws IOException
+	 * 
+	 * */
+	@Action(value = "/member/cash/drawMoneyFee", results = { @Result(name = "drawCashView", type = "ftl", location = "/member/cash/newCash.html") })
+	public void drawMoneyFee() throws Exception {
+
+		User user = this.getSessionUser();
+		String userType = user.getUserCache().getUserType();
+		String memberLevel = user.getMemberLevel();
+		Double drawAmount = this.paramDouble("drawAmount");
+		Account account = accountService.findByUser(user.getUserId());
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("drawAmount", drawAmount);
+		map.put("userType", userType);
+		map.put("memberLevel", memberLevel);
+		map.put("user", user);
+		Map<String, Object> returnMap=new HashMap<String, Object>();
+		returnMap=accountDrawCashService.drawFee(map);
+		//JSDP-120 wcw 20150516 start
+		double useStaticRp=(Double) returnMap.get("useStaticRp");
+		//奖励可用
+		double awardUsable=BigDecimalUtil.add(account.getAwardUsable(),useStaticRp);
+		//JSDP-120 wcw 20150516 end
+		//利息可用
+		double interestUsable=account.getInterestUsable();
+		//回款本金可用
+		double returnCapitalUsable=account.getReturnCapitalUsable();
+		//账户可用总额
+		double currRecharge = 0;
+		double currAward = 0;
+		double currInterest = 0;
+		double currReturnCapital = 0;
+		//计算提现金额冻结归属（使用充值、使用奖励、使用利息、使用回款）
+		//提现顺序：使用回款、利息、奖励、充值
+		if(returnCapitalUsable>=drawAmount){
+			currReturnCapital=drawAmount;
+		}else{
+			if((BigDecimalUtil.add(returnCapitalUsable,interestUsable))>=drawAmount){
+				currReturnCapital=returnCapitalUsable;
+				currInterest=BigDecimalUtil.sub(drawAmount, returnCapitalUsable);
+			}else{
+				double currMoney=BigDecimalUtil.add(returnCapitalUsable,awardUsable,interestUsable);
+				if(currMoney>drawAmount){
+					currReturnCapital=returnCapitalUsable;
+					 currAward=awardUsable;
+					currInterest=BigDecimalUtil.sub(drawAmount, BigDecimalUtil.add(currReturnCapital,awardUsable));
+				}else{
+					currReturnCapital=returnCapitalUsable;
+					currAward=awardUsable;
+					currInterest=interestUsable;
+					currRecharge=BigDecimalUtil.sub(drawAmount, currMoney);
+				}
+			}
+		}
+		//JSDP-117 wcw 2015-05-15 start
+		returnMap.put("newCashRechargeUsable", BigDecimalUtil.decimal(currRecharge,2));
+		returnMap.put("newCashReturnMoneyUsable", BigDecimalUtil.decimal(BigDecimalUtil.add(currReturnCapital,currInterest),2));
+		returnMap.put("newCashAwardUsable", BigDecimalUtil.decimal(currAward,2));
+		returnMap.put("newCashMoney", BigDecimalUtil.decimal(drawAmount,2));
+		//JSDP-120 wcw 20150516 start
+		returnMap.put("newCashStaticRp", BigDecimalUtil.decimal(useStaticRp, 2));
+		//JSDP-120 wcw 20150516 end
+		//JSDP-117 wcw 2015-05-15 end
+		printJson(getStringOfJpaObj(returnMap));
+		//JSDP-86 wcw 2015-05-05 start
+		returnMap=null;
+		map=null;
+		//JSDP-86 wcw 2015-05-05 end
+		//return "drawCashView";
+	}
+
+	/**
+	 * @author 李建云 用户获取提现验证码
+	 * @throws IOException
+	 * 
+	 * */
+	@Action(value = "/member/cash/getCashPhoneVerifyCode")
+	public void getCashPhoneVerifyCode() throws Exception {
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		User user = this.getSessionUser();
+		// BUG JSDP-107 
+		// BUG JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+			    
+			try {
+				BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),null, user.getMobilePhone(),
+						NoticeConstant.CASH_VERIFY_CODE);
+				blog.initCode(NoticeConstant.CASH_VERIFY_CODE);
+				blog.doEvent();
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(data));
+			}
+			
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107 
+	}
+	
+	
+	/**
+	 * @author冯国琴  用户绑定银行卡获取短信验证码
+	 * @throws IOException
+	 * 
+	 * */
+	@Action(value = "/member/cash/addBankGetCode")
+	public void getAddBankPhoneVerifyCode() throws Exception {
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		User user = this.getSessionUser();
+		// BUG JSDP-107 
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+			    
+			try {
+				BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),null, user.getMobilePhone(),
+						NoticeConstant.GETCODE_ADDBANK);
+				blog.initCode(NoticeConstant.GETCODE_ADDBANK);
+				blog.doEvent();
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(data));
+			}
+			
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107 
+	}
+	//JSDP-120 wcw 20150516 start
+	@Action(value = "/member/cash/drawStaticRpCash")
+	public void drawStaticRpCash()throws Exception{
+		data = new HashMap<String, Object>();
+	    user=getSessionUser();
+ 	    RedPacketConsumeRuleCheck rpRule = (RedPacketConsumeRuleCheck) Global
+				.getRuleCheck("redPacketConsume");
+		//该用户实际待收本金总额
+		BorrowCollectionDao collectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		double returnMoney=collectionDao.getCollectionSum(0,user.getUserId());
+		//判断是否获得使用静态红包资格
+		boolean flag=rpRule.cashUsestaticRP(returnMoney);
+		double useStaticRp=0;
+		if(flag){
+			RpProduceDao rpProduceDao = (RpProduceDao) BeanUtil.getBean("rpProduceDao");
+			useStaticRp=rpProduceDao.sRedPackSumMoney(user.getUserId());
+		}
+		data.put("useStaticRp", useStaticRp);
+		printJson(getStringOfJpaObj(data));		
+		data=null;
+	}
+	//JSDP-120 wcw 20150516 end
+	/**
+	 * 用户提现操作
+	 * */
+	@Action(value = "/member/cash/drawCash")
+	public void drawCash() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		try {
+			checkToken("drawCashToken");
+			user = userService.find(this.getSessionUserId());
+			/*model.findDrawpwdValidMobile(NoticeConstant.CASH_VERIFY_CODE,user);*/
+			model.validPaypwdModel(user,paramInt("encrypt"));
+			//JSDP-56  fenggq@ddtkj.com  start  银行卡校验、提现金额的校验
+			model.checkDrawAmount(model);
+			//JSDP-56  fenggq@ddtkj.com  end 
+			//JSDBET-802 wcw 2015-3-12 start
+			//本地账户余额与一麻袋账户余额对账
+			accountService.accountCompare(this.getSessionUserId());
+			//JSDBET-802 wcw 2015-3-12 end
+			AccountBank bank = accountBankService.find(user.getUserId(),model.getBankNo());
+			Dict dict=dictService.find("account_bank", bank.getBank());
+			AccountDraw accountDraw = model.prototype(bank);
+			accountDraw.setBankName(dict.getName());
+			accountDraw.setDrawAmount(model.getDrawAmount());
+			accountDraw.setUser(user);
+			accountDraw.setDrawWay(AccountTradeConstant.TRADE_WAY_PC);
+			//JSDP-117 wcw 2015-05-15 start
+			accountDraw.setDrawApplyRpTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+			accountDraw.setDrawHandleStatus("0");
+			accountDraw.setDrawTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_DRAW_CASH));
+			accountDrawCashService.saveDrawCash(accountDraw);
+			//JSDP-117 wcw 2015-05-15 end
+			accountDrawCashService.doApplyDrawCash(accountDraw);
+			data.put("result", true);
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		} catch (Exception e) {
+			data.put("msg", e.getMessage());
+			data.put("result", false) ;	
+		}	
+		printJson(getStringOfJpaObj(data));		
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 根据 nid todo 校验手机验证码
+	 */
+	private Map<String,Object> findPaypwdCheckMobile(String nid,String todo) throws Exception{
+		user =getSessionUser();
+		data = new HashMap<String, Object>() ;
+		UserModel um = (UserModel) paramModel(UserModel.class) ;
+		try{
+			um.findPaypwdValidMobile(todo,user);
+			data.put("code", "01") ;
+			data.put("msg","验证码通过") ;
+			data.put("result",true) ;
+			
+		}catch(Exception e){
+			data.put("code", "02") ;
+			data.put("msg",e.getMessage()) ;
+			data.put("result",false) ;
+		}
+		return data ;
+	}
+
+	/**
+	 * @author 李建云
+	 * 用户取消提现
+	 * */
+	@Action(value = "/member/cash/cancelDrawCash")
+	public void cancelDrawCash() throws Exception {
+		
+		Map<String, Object> drawMap = new HashMap<String, Object>();
+		String id = this.paramString("id");
+		drawMap.put("id", id);	
+		accountDrawCashService.doCancleDrawCash(drawMap);
+		//JSDP-86 wcw 2015-05-05 start
+		drawMap=null;
+		//JSDP-86 wcw 2015-05-05 end
+
+	}
+
+	/**
+	 * 用户提现记录查询
+	 * */
+	@Action(value = "/member/cash/log", results = {
+			@Result(name = "log_invester", type = "ftl", location = "/member/cash/log.html"),
+			@Result(name = "log_borrower", type = "ftl", location = "/member_borrow/cash/log.html"),
+			@Result(name = "log_assure", type = "ftl", location = "/member_guarantee/cash/log.html"), 
+			@Result(name = "log_merchant", type = "ftl", location = "/member_merchant/cash/log.html")})
+	public String drawLog() throws Exception {
+		
+		//accountDrawCashService.
+		User user = this.getSessionUser();
+		Account account = accountService.findByUser(user.getUserId());
+		this.request.setAttribute("account", account);
+		//wcw  借款提现 start
+		if(UserConstant.USER_SORT_BORROW.equals(user.getUserCache().getUserType())){
+			double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+			double borrowerEnterUsable=account.getBorrowerEnterUsable();
+			double borrowerUseMoney=BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable);
+			this.request.setAttribute("UsableMount", borrowerUseMoney);
+			return "log_borrower";
+		}else if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+			double borrowerEnterUsable=account.getBorrowerEnterUsable();
+			double borrowerUseMoney=BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable);
+			this.request.setAttribute("UsableMount", borrowerUseMoney);
+			return "log_assure";
+	
+		}else if(UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())){
+			double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+			double borrowerEnterUsable=account.getBorrowerEnterUsable();
+			double borrowerUseMoney=BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable);
+			this.request.setAttribute("UsableMount", borrowerUseMoney);
+			return "log_merchant";
+		}
+		//wcw  借款提现 end
+		// 奖励可用总额
+		double awardUsable = account.getAwardUsable();
+		// 利息可用总额
+		double interestUsable = account.getInterestUsable();
+		// 充值可用总额
+		double rechargeUsable = account.getRechargeUsable();
+		// 回款本金可用总额
+		double returnCapitalUsable = account.getReturnCapitalUsable();
+		// 用户可用总额
+		double UsableMount = BigDecimalUtil.add(awardUsable, interestUsable,rechargeUsable, returnCapitalUsable);
+		//累计提现总额
+		double cashTotal = accountDrawCashService.allDrawCashMomeny(this.getSessionUserId());
+		//今日提现
+		double cashToday = accountDrawCashService.drawCashMomenyToday(this.getSessionUserId());
+		this.request.setAttribute("UsableMount", UsableMount);
+		this.request.setAttribute("cashTotal", cashTotal);
+		this.request.setAttribute("cashToday", cashToday);
+		return "log_invester";
+	}
+	/**
+	 * 用户提现记录查询
+	 * */
+	@Action(value = "/member_borrow/cash/log")
+	public String drawBorrowCashHistory() throws Exception {
+		//accountDrawCashService.
+		User user = this.getSessionUser();
+		Account account = accountService.findByUser(user.getUserId());
+		//accountDrawCashService.
+		// 奖励可用总额
+		double awardUsable = account.getAwardUsable();
+		// 利息可用总额
+		double interestUsable = account.getInterestUsable();
+		// 充值可用总额
+		double rechargeUsable = account.getRechargeUsable();
+		// 回款本金可用总额
+		double returnCapitalUsable = account.getReturnCapitalUsable();
+		// 用户可用总额
+		double UsableMount = BigDecimalUtil.add(awardUsable, interestUsable,rechargeUsable, returnCapitalUsable);
+		this.request.setAttribute("UsableMount", UsableMount);
+		return "log";
+	}
+	
+	@Action(value = "/member_borrow/cash/newCash")
+	public String drawBorrowCashView() throws Exception {
+		User user = this.getSessionUser();
+		this.saveToken("drawCashToken");
+		/*
+		 * 账户可用余额=利息可用总额+奖励可用总额+充值可用总额+回款本金可用总额
+		 */
+		Account account = accountService.findByUser(user.getUserId());
+
+		// 获取当前用户绑定的银行卡号
+		List<AccountBank> bankList = accountBankService.list(user.getUserId());
+		request.setAttribute("account", account);
+		request.setAttribute("bankList", bankList);
+		request.setAttribute("user", user);
+		//wcw  借款提现 start
+	   double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+	   double borrowerEnterUsable=account.getBorrowerEnterUsable();
+	   double usableMoney=BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable);
+	   this.request.setAttribute("UsableMount", usableMoney);
+		return "newCash";
+	}
+	/**
+	 *李建云 投资人提现明细 ajax数据接口
+	 *
+	 *
+	 * */
+	@Action(value = "/member/cash/logList")
+	public void logList() throws Exception {
+		
+		User user = getSessionUser();
+		long userId = user.getUserId();
+		PageDataList<AccountDrawModel> pageDataList = accountDrawCashService.list(userId, model);
+		Map<String, Object> data = new HashMap<String, Object>();
+		
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+}

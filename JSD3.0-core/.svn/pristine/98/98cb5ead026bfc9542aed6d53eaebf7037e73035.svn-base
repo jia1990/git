@@ -1,0 +1,28 @@
+package com.rongdu.p2psys.core.dao.jdbc;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.core.dao.VerifySupplyLogDao;
+import com.rongdu.p2psys.core.domain.VerifySupplyLog;
+
+@Repository("verifySupplyLogDao")
+public class VerifySupplyLogDaoImpl extends BaseDaoImpl<VerifySupplyLog> implements VerifySupplyLogDao {
+
+	@Override
+	public VerifySupplyLog findByType(String dataId, String optType,
+			int verifyType) {
+		QueryParam param = QueryParam.getInstance().addParam("dataId", dataId).addParam("optType", optType)
+				.addParam("verifyType", verifyType);
+		return findByCriteriaForUnique(param);
+	}
+
+//	@Override
+//	public VerifySupplyLog findByType(long fid, String type, int verifyType) {
+//		QueryParam param = QueryParam.getInstance().addParam("fid", fid).addParam("type", type)
+//				.addParam("verifyType", verifyType);
+//		return findByCriteriaForUnique(param);
+//	}
+
+}

@@ -1,0 +1,573 @@
+package com.rongdu.manage.action.user;
+
+import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.statistics.service.StatisticsDataService;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserCertificationService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 用户管理
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年4月17日
+ */
+public class ManageUserAction extends BaseAction<UserModel> implements ModelDriven<UserModel> {
+	
+	
+	@Resource
+	private UserService userService;
+	@Resource
+	private StatisticsDataService statisticsDataService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserCertificationService attestationService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private VerifyLogService verifyLogService;
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowTenderService tenderService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private RegionService regionService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+
+	private Map<String, Object> data;
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	/**
+	 * 获得用户清单页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/user/user/userManager")
+	public String userManager() throws Exception {
+		return "userManager";
+	}
+
+	/**
+	 * 获得用户清单列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/user/user/userList")
+	public void userList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		map.put("model", model);
+		if(StringUtil.isNotBlank(model.getCustomerNo())){
+			Operator operator = operatorService.getOperatorByNo(model.getCustomerNo());
+			model.setCustomerId(operator.getId());
+		}
+		
+//		PageDataList<User> pagaDataList = userService.getUserPageDataList(map, pageNumber, pageSize);
+		PageDataList<UserModel> pagaDataList = userService.userList(pageNumber, pageSize, model);
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+
+	/**
+	 * 获取认证通过的邮箱列表页面
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/loan/borrow/getEmailListPage")
+	public String getEmailListPage() throws Exception {
+		
+		request.setAttribute("userType", paramString("userType"));
+		request.setAttribute("borrowType", paramString("borrowType"));
+		return "getEmailListPage";
+	}
+	
+	
+
+    /**
+     * 获得用户邮箱
+     * @throws Exception if has error
+     */
+    @Action(value = "/modules/loan/borrow/getEmailList")
+    public void getEmailList() throws Exception {
+    	
+    	if (null != paramString("userName") && !paramString("userName").equals("")){
+			model.setUserName((paramString("userName")));
+		}
+
+		if (null != paramString("phone") && !paramString("phone").equals("")){
+			model.setMobilePhone(paramString("phone"));
+		}
+    	
+        data = new HashMap<String, Object>();
+        int pageNumber = paramInt("page"); 			// 当前页数
+        int pageSize = paramInt("rows"); 			// 每页总数
+        
+        String userType = paramString("userType");
+        String borrowType = paramString("borrowType");
+        if(null != userType && !"".equals(userType)){
+        	model.setUserType(userType);
+        }
+        
+        //能源宝
+        if(borrowType.equals(String.valueOf(Borrow.TYPE_MORTGAGE_ENERGY))){
+        	model.setUserBorrowType("N");
+        }
+        //微商贷
+        if(borrowType.equals(String.valueOf(Borrow.TYPE_NETWORK))){
+        	model.setUserBorrowType("W");
+        }
+        //车贷宝
+        if(borrowType.equals(String.valueOf(Borrow.TYPE_MORTGAGE))){
+        	model.setUserBorrowType("C");
+        }
+        //分期宝(暂无)
+        /*if(borrowType.equals(Borrow.TYPE_AMORTIZE)){
+        	model.setUserBorrowType("N");
+        }*/
+        
+//      PageDataList<User> pagaDataList = userService.findUserEmailList(pageNumber, pageSize, model);
+        PageDataList<User> pagaDataList = userService.findBorrowUserEmali(pageNumber, pageSize, model);
+        int totalPage = pagaDataList.getPage().getTotal(); // 总页数
+        data.put("total", totalPage);
+        data.put("rows", pagaDataList.getList());
+        printJson(getStringOfJpaObj(data));
+    }
+    
+    
+    /**
+	 * 获取认证通过的邮箱列表页面(商户)
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/modules/goods/goodsMessage/getUserListPage")
+	public String getUserListPage() throws Exception {
+		request.setAttribute("userType", paramString("userType"));
+		return "getUserListPage";
+	}
+    
+    /**
+	 * 查找已开通第三方支付的商户账户
+	 * 
+	 */
+	@Action("/modules/loan/borrow/getMerchantList")
+	public void getMerchantList() throws Exception {
+
+		String userType = paramString("userType");
+		
+        if(null != userType && !"".equals(userType)){
+        	model.setUserType(userType);
+        }
+        
+		if (null != paramString("userName") && !paramString("userName").equals("")){
+			model.setUserName((paramString("userName")));
+		}
+
+		if (null != paramString("phone") && !paramString("phone").equals("")){
+			model.setMobilePhone(paramString("phone"));
+		}
+		
+		data = new HashMap<String, Object>();
+        int pageNumber = paramInt("page"); 			// 当前页数
+        int pageSize = paramInt("rows"); 			// 每页总数
+        
+       
+        PageDataList<User> pagaDataList = userService.findUserEmailList(pageNumber, pageSize, model);
+        int totalPage = pagaDataList.getPage().getTotal(); // 总页数
+        data.put("total", totalPage);
+        data.put("rows", pagaDataList.getList());
+        printJson(getStringOfJpaObj(data));
+	}
+
+    
+	
+	/**
+	 * 投资借款担保用户导出excel
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @throws Exception
+	 */
+	@Action("/modules/user/user/user/userAllExport")
+	public void userAllExport() throws Exception{
+		
+		if(StringUtil.isNotBlank(model.getCustomerNo())){
+			Operator operator = operatorService.getOperatorByNo(model.getCustomerNo());
+			model.setCustomerId(operator.getId());
+		}
+		List<UserModel> list = userService.excelListUser(model);
+		/*PageDataList<UserModel> pagaDataList = userService.userList(1, 99999999, model);
+		List<UserModel> list = pagaDataList.getList();
+		List<UserModel> newList = new ArrayList<UserModel>();
+		
+		// BUG JSDP28 2015年4月16日 孙晓勇 start
+		Region regionProvince = new Region();
+		Region regionCity = new Region();
+		Region regionArea = new Region();*/
+		// BUG JSDP28 2015年4月16日 孙晓勇...
+		
+		/*for(int i=0;i<list.size();i++){
+			UserModel um = list.get(i);
+			um.setIsLockedNew(um.convertIsLock(um.getIsLocked()));
+			um.setEmailStatusNew(um.convertEmailStatusNew(um.getEmailStatus()));
+			um.setRealStatusNew(um.convertRealStatusNew(um.getRealStatus()));
+			um.setMobilePhoneStatusNew(um.convertMobilePhoneStatusNew(um.getMobilePhoneStatus()));
+			um.setSexNew(um.convertSex(um.getSex()));
+			um.setUserTypeNew(um.convertUserType(um.getUserType(), um.getUserNature()));
+			um.setMaritalStatusNew(um.convertMaritalStatus(um.getMaritalStatus()));
+			
+			// BUG JSDP28 2015年4月16日 孙晓勇...
+			if(null == um.getUserCache()){
+				um.setProvince("");
+				um.setCity("");
+				um.setArea("");
+			}else{
+				
+				if(null == um.getUserCache().getProvince() || null == um.getUserCache().getCity() || null == um.getUserCache().getArea()){
+					
+					um.setProvince("");
+					um.setCity("");
+					um.setArea("");
+					
+				}else{
+					
+					regionProvince = regionService.getRegionById(Long.parseLong(um.getUserCache().getProvince()));
+					regionCity = regionService.getRegionById(Long.parseLong(um.getUserCache().getCity()));
+					regionArea = regionService.getRegionById(Long.parseLong(um.getUserCache().getArea()));
+					um.setProvince(regionProvince.getName());
+					um.setCity(regionCity.getName());
+					um.setArea(regionArea.getName());
+					
+				}
+				
+				// 
+
+				if (null != um.getUserCache().getProvince()) {
+					regionProvince = regionService.getRegionById(Long.parseLong(um.getUserCache().getProvince()));
+					um.setProvince(regionProvince.getName());
+				} else {
+					um.setProvince("");
+				}
+
+				if (null != um.getUserCache().getCity()) {
+					regionCity = regionService.getRegionById(Long.parseLong(um.getUserCache().getCity()));
+					um.setCity(regionCity.getName());
+				} else {
+					um.setCity("");
+				}
+
+				if (null != um.getUserCache().getArea()) {
+					regionArea = regionService.getRegionById(Long.parseLong(um.getUserCache().getArea()));
+					um.setArea(regionArea.getName());
+				} else {
+					um.setArea("");
+				}
+				
+			}
+			// BUG JSDP28 2015年4月16日 孙晓勇 end
+			newList.add(um);
+		}*/
+		String title = "投资借款担保用户的Excel表";
+
+		String[] hearders = new String[] {"编号","用户名","真实姓名","性别","省","市","县/区","电子邮件","手机号码","身份证号码","客服工号","用户类型","邮箱认证","手机认证","实名认证","注册时间","会员等级","到期时间","状态"};// 表头数组
+		String[] fields = new String[] {"object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]","object[11]","object[12]","object[13]","object[14]","object[15]","object[16]","object[17]","object[18]"};// 对象属性数组
+		
+		/*int sheetRows = 50000;	//导出一页的条数
+		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserModel> tdList = new ArrayList<UserModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+	}
+	
+	
+	/**
+	 * 锁定用户页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 * @author sunxiaoyong 2014年12月23日
+	 */
+	@Action(value = "/modules/user/user/user/userLockEditPage")
+	public String userLockEditPage() throws Exception {
+		//initRSAME();
+		saveToken("userLockEditToken");
+		
+		long userId = paramLong("id");
+		User user = userService.find(userId);
+		request.setAttribute("user", user);
+		request.setAttribute("isLocked", user.getIsLocked());
+		return "userLockEditPage";
+	}
+
+	/**
+	 * 锁定用户	用户登录锁定：UY; 后台管理员锁定：AY; 用户注销锁定：FF; 账户未锁定：NN;
+	 * 
+	 * @return
+	 * @throws Exception
+	 * @author sunxiaoyong 2014年12月23日
+	 */
+	@Action(value = "/modules/user/user/user/userLockEdit")
+	public void userLockEdit() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		User user = userService.find(model.getUserId());
+		
+		if( !paramString("isLocked").equals(user.getIsLocked()) && UserConstant.USER_LOCK_ADMIN.equals(paramString("isLocked"))){
+			user.setIsLocked(paramString("isLocked"));
+			user.setLockTime(Calendar.getInstance().getTime());
+		}else{
+			user.setIsLocked(paramString("isLocked"));
+			user.setLockRemark(null);
+			user.setLoginCount(0);		//清空次数
+		}
+		
+		if(""!=paramString("lockRemark")){
+			user.setLockRemark(paramString("lockRemark"));
+		}
+		checkToken("userLockEditToken");
+		userService.updateUser(user);
+
+		data.put("msg", "修改成功！");
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	/**
+	 * 用户冻结时锁定用户
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/user/user/userLockByFreeze")
+	public String userLockByFreeze() throws Exception {
+		saveToken("userLockEditToken");
+		String userName = paramString("id");
+		User user = userService.getUserByUserName(userName);
+		request.setAttribute("user", user);
+		request.setAttribute("isLocked", user.getIsLocked());
+		return "userLockEditPage";
+	}
+	
+	/**
+	 * 修改用户信息
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/user/user/userEditPage")
+	public String userEditPage() throws Exception {
+		//initRSAME();
+		long userId = paramLong("id");
+		User user = userService.find(userId);
+		UserIdentify userIdentify = userIdentifyService.findByUserId(userId);
+		UserCache userCache = userCacheService.findByUserId(userId);
+		request.setAttribute("user", user);
+		request.setAttribute("userAttestation", userIdentify);
+		request.setAttribute("userCache", userCache);
+		return "userEditPage";
+	}
+	
+	/**
+	 * 注销用户信息
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/user/user/userOffPage")
+	public String userOffPage() throws Exception {
+		//initRSAME();
+		saveToken("userOffToken");
+		long userId = paramLong("id");
+		User user = userService.find(userId);
+		request.setAttribute("user", user);
+		//页面暂时未使用这些信息，因为页面信息未定
+		UserIdentify userIdentify = userIdentifyService.findByUserId(userId);
+		UserCache userCache = userCacheService.findByUserId(userId);
+//		request.setAttribute("userAttestation", userIdentify);
+//		request.setAttribute("userCache", userCache);
+		return "userOffPage";
+	}
+	/**
+	 * 注销用户 1锁定 0未锁定 79注销
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/user/user/userOff")
+	public void userOff() throws Exception {
+		data = new HashMap<String, Object>();
+		long userId = model.getUserId();
+		if(null != model.getIsLocked() && UserConstant.USER_LOCK_LOGOUT.equals(model.getIsLocked())){
+			//获取此用户的信息，判断投资人是否有正在收款的记录，借款人是否有正在招标的记录
+			//如果有则不可以注销
+			Account account = accountService.findByUser(userId);
+			//投资人的待收金额-----------需求延后
+//			double waitMoney = account.getCollectionTotal();
+//			if(waitMoney!=0){
+//				
+//			}
+			if(userService.userOff(userId,this.getOperatorId())){
+				data.put("msg", "用户注销成功！");
+			}else{
+				data.put("msg", "用户注销不成功！");
+			}
+		}else{
+			data.put("msg", "用户注销不成功！");
+		}
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	@Action("/testException")
+	public void testException(){
+		try{
+			int i = 1/0;
+		}catch (Exception e) {
+			
+			throw new HandleException("订单号不存在, orderNo:" + 11,
+					"充值订单号不存在",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_RECHARGE,
+					ErrorLogConstant.CODE_RECHARGE_FAIL_SYS,getSessionUser(),ErrorLogConstant.MODULE_ACCOUNT_RECHARGE,
+					0,1);//新异常处理
+		}
+		
+	}
+	
+	
+	/**
+	 * 重置用户密码
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/user/user/user/userResetPwd")
+	public void operatorResetPwd() throws Exception {
+		data = new HashMap<String, Object>();
+		String userName = paramString("userName");
+		User user = userService.getUserByUserName(userName);
+		if(null !=user && null != user.getMobilePhone()){
+			user.setPassword(MD5.encode("jsd"+user.getMobilePhone()));
+			userService.updateUser(user);
+			data.put("result", true);
+			data.put("msg", "重置密码成功，重置为jsd+手机号！");
+		}else if(null !=user && null == user.getMobilePhone()){
+			user.setPassword(MD5.encode("jsd3"+user.getUserName()));
+			userService.updateUser(user);
+			data.put("result", true);
+			data.put("msg", "重置密码成功，重置为jsd3+用户名！");
+		}else{
+			data.put("result", true);
+			data.put("msg", "重置密码失败！");
+		}
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 判断用户是否存在及用户真实姓名
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/user/user/userIsExist")
+	public void userIsExist() throws Exception{
+		data = new HashMap<String, Object>();
+		String userName = paramString("userName");
+		if(StringUtil.isNotBlank(userName)){
+			User user = userService.getUserByUserName(userName);
+			if(null != user){
+				data.put("result", true);
+				
+				if(null != user.getRealName() || StringUtil.isNotBlank(user.getRealName())){
+					data.put("realName", user.getRealName());
+				}
+				// JSDP-BUG81 20150506  sxy
+				if(null != user.getMobilePhone() || StringUtil.isNotBlank(user.getMobilePhone())){
+					data.put("mobilePhone", user.getMobilePhone());
+				}else{
+					data.put("result", false);
+					data.put("msg", "手机号不存在！");
+				}
+				// JSDP-BUG81 20150506  sxy
+			}else{
+				data.put("result", false);
+				data.put("msg", "用户不存在！");
+			}
+		}
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+}

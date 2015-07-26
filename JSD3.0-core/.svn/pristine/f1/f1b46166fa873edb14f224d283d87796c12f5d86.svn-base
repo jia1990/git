@@ -1,0 +1,279 @@
+package com.rongdu.p2psys.core.protocol;
+
+import java.io.File;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.time.DateUtils;
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.FreemarkerUtil;
+import com.rongdu.common.util.MoneyUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.borrow.service.BorrowProtocolService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.domain.Protocol;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.core.util.itext.PdfHelper;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 创建协议抽象类
+ * 
+ * @author qj
+ * @version 2.0
+ * @since 2014-05-22
+ */
+public abstract class CreditAbstractProtocolBean extends AbstractProtocolBean {
+	private static Logger logger = Logger.getLogger(CreditAbstractProtocolBean.class);
+
+	protected BorrowService borrowService;
+	protected BorrowTenderService borrowTenderService;
+	protected BorrowCollectionService borrowCollectionService;
+	protected VerifyLogService verifyLogService;
+	protected UserService userService;
+	protected BorrowProtocolService borrowProtocolService;
+	protected BorrowRepaymentService borrowRepaymentService;
+	protected OperatorService operatorService;
+	protected CreditAssignmentService creditAssignmentService ;
+	protected CreditLogService creditLogService;
+	
+	// 生成pdf路径名
+	protected String inPdfName;
+	// 下载pdf名
+	protected String downloadFileName;
+	// 转让人id
+	protected long caId;
+	// 标model
+	protected CreditAssignmentModel ca;
+	// 投标记录
+	protected List<CreditLog> clList;
+	// 受让人id
+	protected long clId;
+	// 投标记录
+	protected CreditLogModel cl;
+	// 投标用户
+	protected User clUser;
+	// 发标用户
+	protected User caUser;
+	// 还款计划
+	private List<BorrowRepayment> repaymentList;
+	// 协议模板
+	protected Protocol protocol;
+	// 操纵用户Id
+	protected long userId;
+	
+    /**
+     * 审核通过时间 
+     */
+	protected String vetifyTime;
+	/**
+	 * 标审核通过时间 
+	 */
+	protected String borrowVetifyTime;
+	
+	protected PdfHelper pdf;
+	// 引入数据map
+	protected Map<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * 业务核心处理方法
+	 */
+	@Override
+	public void executer(long caId, Protocol protocol, long userId) {
+		this.executer(caId, 0, protocol, userId);
+	}
+
+	/**
+	 * 业务核心处理方法
+	 */
+	public void executer(long caId, long clId, Protocol protocol, long userId) {
+		// 初始化基础参数
+		logger.info("初始化ProtocolBean");
+		this.borrowService = (BorrowService) BeanUtil.getBean("borrowService");
+		this.borrowTenderService = (BorrowTenderService) BeanUtil.getBean("borrowTenderService");
+		this.borrowCollectionService = (BorrowCollectionService) BeanUtil.getBean("borrowCollectionService");
+		this.verifyLogService = (VerifyLogService) BeanUtil.getBean("verifyLogService");
+		this.userService = (UserService) BeanUtil.getBean("userService");
+		this.borrowProtocolService = (BorrowProtocolService) BeanUtil.getBean("borrowProtocolService");
+		this.borrowRepaymentService = (BorrowRepaymentService) BeanUtil.getBean("borrowRepaymentService");
+		this.operatorService = (OperatorService) BeanUtil.getBean("managerService");
+		this.creditAssignmentService = (CreditAssignmentService) BeanUtil.getBean("creditAssignmentService");
+		this.creditLogService = (CreditLogService) BeanUtil.getBean("creditLogService") ;
+		
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		this.downloadFileName ="credit_"+caId + ".pdf";
+		this.inPdfName = contextPath + "/data/protocol/" + caId + "_" + System.currentTimeMillis() + ".pdf";
+		this.pdf = PdfHelper.instance(inPdfName);
+		this.caId = caId;
+		this.ca = CreditAssignmentModel.instance(creditAssignmentService.getEntityById(caId));
+		this.caUser = ca.getUser();
+		this.protocol = protocol;
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("creditAssignment", ca) ;
+		param.addPage(1, 99999);
+		this.clList= creditLogService.getAll(param).getList();
+		this.repaymentList = borrowRepaymentService.getRepaymentByBorrowId(ca.getBorrow().getId());
+		this.userId = userId;
+		if (clId != 0) {
+			this.clId = clId;
+			this.cl = CreditLogModel.instance(creditLogService.getById(clId)) ;
+			this.clUser = this.cl.getBuyUser();
+		}
+		this.vetifyTime = DateUtil.dateStr2(ca.getVerifyTime());
+		this.borrowVetifyTime = DateUtil.dateStr2(verifyLogService.findByType(ca.getBorrow().getId(), "borrow", 1).getTime());
+		// 业务预处理
+		prepare();
+		// 下载协议校验
+		validDownload();
+		// 初始化参数
+		initData();
+		// 创建pdf逻辑
+		createPdf();
+	}
+
+	
+	@Override
+	public abstract void prepare();
+
+	@Override
+	public void validDownload() {
+		// 判断是否有模板
+		if (this.protocol == null || StringUtil.isBlank(this.protocol.getContent())) {
+			throw new BorrowException("读取协议模板出错！");
+		}
+		// 判断标是否存在
+		if (this.ca != null) {
+			String status = this.ca.getStatus() ;
+			boolean isDown = "00".equals(status) || "01".equals(status) || "02".equals(status) || "03".equals(status) || "04".equals(status) || "05".equals(status) || "07".equals(status);
+			// 判断标是否状态异常
+			if (!isDown) {
+				throw new BorrowException("债权转让状态异常！");
+			}
+		} else {
+			throw new BorrowException("债权转让不存在！");
+		}
+		// 判断用户是否存在
+		if (userId == 0) {
+			throw new BorrowException("用户信息异常！");
+		}
+	}
+
+	@Override
+	public void initData() {
+		data.put("vetifyTime", vetifyTime); //添加审核时间
+		data.put("caId", this.caId);
+		data.put("ca", this.ca);
+		data.put("caUser", this.caUser) ;
+		data.put("borrow",this.ca.getBorrow());
+		data.put("borrowTimeLimt",this.ca.getBorrow().getTimeLimit());
+		data.put("repaymentList",this.repaymentList);
+		data.put("borrowVetifyTime",this.borrowVetifyTime);
+		if(this.ca.getBorrow().getType() != borrow.TYPE_MORTGAGE){
+			VerifyLog vl = verifyLogService.findByType(this.ca.getBorrow().getId(), "borrow", 1) ;
+			data.put("borrowStartTime", vl.getTime()) ;
+			data.put("repayStartTime",vl.getTime());
+			data.put("repayTIme",DateUtil.getDay(vl.getTime())+"日");
+			if(this.ca.getBorrow().getBorrowTimeType()==0){
+				data.put("borrowEndTime",DateUtil.rollMon(vl.getTime(), this.ca.getBorrow().getTimeLimit()));
+				data.put("caEnd",DateUtil.rollMon(vl.getTime(), this.ca.getBorrow().getTimeLimit()));
+			}else{
+				data.put("borrowEndTime",DateUtil.rollDay(vl.getTime(), this.ca.getBorrow().getTimeLimit()));
+				data.put("caEnd",DateUtil.rollDay(vl.getTime(), this.ca.getBorrow().getTimeLimit()));
+			}
+			data.put("caStart",this.ca.getVerifyTime());
+		}else{
+			VerifyLog vl1 = verifyLogService.findByType(this.ca.getBorrow().getId(), "borrow", 2) ;
+			data.put("borrowStartTime",vl1.getTime());
+			data.put("repayStartTime",vl1.getTime());
+			data.put("repayTIme",DateUtil.getDay(vl1.getTime())+"日");
+			if(this.ca.getBorrow().getBorrowTimeType()==0){
+				data.put("borrowEndTime",DateUtil.rollMon(vl1.getTime(), this.ca.getBorrow().getTimeLimit()));
+				data.put("caEnd",DateUtil.rollMon(vl1.getTime(), this.ca.getBorrow().getTimeLimit()));
+			}else{
+				data.put("borrowEndTime",DateUtil.rollDay(vl1.getTime(), this.ca.getBorrow().getTimeLimit()));
+				data.put("caEnd",DateUtil.rollDay(vl1.getTime(), this.ca.getBorrow().getTimeLimit()));
+			}
+			data.put("caStart",this.ca.getVerifyTime());
+		}
+		if (this.clId != 0) {
+			data.put("clUser", this.clUser) ;
+			data.put("clId", this.clId);
+			data.put("cl", this.cl);
+			if(this.ca.getBorrow().getType() != borrow.TYPE_MORTGAGE){
+				data.put("clStartTime",this.ca.getVerifyTime());
+			}else{
+				data.put("clStartTime",this.cl.getBuyTime());
+			}
+		}else{
+			data.put("clList", clList);
+		}
+	}
+
+	@Override
+	public void createPdf() {
+		boolean checkFile = false;
+		File pdfFile = new File(inPdfName);
+		try {
+			if (!pdfFile.exists()) {
+				pdfFile.mkdir();
+			}
+			String out = FreemarkerUtil.renderTemplate(protocol.getContent(), this.data);
+			ProtocolHelper.templateHtml(out, pdf);
+			checkFile = true;
+		} catch (Exception e) {
+			logger.info("生成pdf出错");
+			e.printStackTrace();
+			HandleException he = new HandleException("债权协议下载失败失败原因：" + e.getMessage(),
+					"债权协议下载失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_CREDIT,
+					ErrorLogConstant.CODE_CREDIT_RECHECKED_TPOS,ca.getUser(),ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT,
+					ca.getId(),0);
+			he.saveExceptionLog(he);
+			throw he;
+		}
+		if (!checkFile) {
+			throw new BorrowException("pdf生成的路径不存在...");
+		}
+		pdf.exportPdf();
+	}
+
+	public String getInPdfName() {
+		return inPdfName;
+	}
+
+	public void setInPdfName(String inPdfName) {
+		this.inPdfName = inPdfName;
+	}
+
+	public String getDownloadFileName() {
+		return downloadFileName;
+	}
+
+	public void setDownloadFileName(String downloadFileName) {
+		this.downloadFileName = downloadFileName;
+	}
+
+}

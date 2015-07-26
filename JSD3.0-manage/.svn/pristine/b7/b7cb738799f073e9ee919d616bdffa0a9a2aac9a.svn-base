@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>提现管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = false;
+</script>
+<script type="text/javascript">
+	$.canDelete = false;
+</script>
+<script type="text/javascript">
+	$.canAdd = false;
+</script>
+<script type="text/javascript">
+	$.canGrant = false;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  800;
+	var winHeight = 280;
+	
+	 var cancelCashUrl = "/modules/account/draw/accountDraw/firstTrailFailDraw.html"
+     var cancelCashParmeters = "'{0}','" + cancelCashUrl+"'";
+     
+     var viewTitle="提现初审";
+     var viewCashUrl = "/modules/account/draw/accountDraw/firstTrailDrawView.html"
+     var viewCashParmeters = "'{0}','"+viewTitle+"',950,550,'" + viewCashUrl+"'";
+	
+	var kfVerifyTitle="提现管理";
+	var kfVerifyUrl="/modules/account/draw/accountDraw/firstTrailDraw.html";
+	var kfVerifyWinParmeters = "'{0}','"+kfVerifyTitle+"',800,600,'"+kfVerifyUrl+"','确定'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'firstTrialDrawList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'desc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			showFooter: true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width: 50,fixed: true,sortable:true},
+			{ field: 'userName', title: '用户名', width: 60},
+			{ field: 'realName', title: '真实姓名', width: 60},
+			
+			{ field: 'bankNo', title: '银行卡账号', width: 100},
+			{ field: 'bankBranchName', title: '支行', width: 60},
+			{ field: 'bankProvinceName', title: '开户省', width: 40},
+			{ field: 'bankCityName', title: '开户市', width: 40},
+			{ field: 'bankName', title: '所属银行', width: 60},
+			{ field: 'drawAmountStr', title: '提现总额', width: 120,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'drawInAccountAmountStr', title: '到账金额', width: 120,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'drawFeeStr', title: '手续费', width: 120,formatter:function(value, row, index){
+				return value;
+			}},
+			/* { field: 'cashFeeBear', title: '手续费承担方', width: 100,formatter:function(value, row, index){
+				if(value==1){
+					return '平台垫付';
+				}else if(value==2){
+					return '个人承担';
+				}else{
+					return '';
+				}
+			}}, */
+			{ field: 'drawWay', title: '提现方式', width: 130,
+				formatter: function(value,row,index){
+					if (value == 'A'){
+						return "手机端";
+					} else if(value == 'P') {
+						return "PC端";
+					}
+				}
+			},
+			{ field: 'addTime', title: '提现提交时间', width: 110,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'drawHandleStatus', title: '状态', width: 100,formatter:function(value, row, index){
+					switch(value){
+					case "00":return "申请提现";
+					case "11":return "初审成功";
+					case "10":return "初审失败";
+					case "21":return "复审成功";
+					case "20":return "复审失败";
+					case "99":return "取消提现";
+					}
+				}
+			},
+			{ field : 'action',
+                title : '操作',
+                width :75,
+                fixed:true,
+                formatter : function(value, row, index) {
+                    var str = '';
+                    if(row.drawHandleStatus == "00"){
+                    	str += "<@secAuthorizeUrl value='/drawTrialEditBtn.html'>";
+	                    str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+viewCashParmeters+');" src="{1}" title="提现初审"/>', row.id, '${theme_dir}/css/images/extjs_icons/key.png');
+	                    str += "</@secAuthorizeUrl>";
+	                    str += '&nbsp;'; 
+	                    /* str += $.formatString('<img onclick="$.fn.dataGridOptions.cancelCashFun('+cancelCashParmeters+');" src="{1}" title="提现取消"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+	                    str += '&nbsp;'; */
+                    }
+                    return str;
+                }
+			}
+			 ]],
+	        toolbar : '#toolbar'
+		});
+	});
+	function exportExcel(){
+		var url = "/modules/account/draw/cashDraw/cashOneDrawExcel.html";
+		var userName = $("#userName").val();
+		var status = $("#status").val();
+		var drawWay = $("#drawWay").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&status=" + status + "&startTime=" + startTime + "&endTime=" + endTime+ "&drawWay=" + drawWay ;
+		window.location.href = url + sou;
+	}
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+					<li>用户名：<input type="text" name="userName" id="userName"  autocomplete="off"/></li>
+					<!-- <li>状态：
+					<select name="status" id="status" class="type">
+						<option value=0 selected="selected">申请提现</option>
+						<option value=1>提现成功</option>
+						<option value=2>提现失败</option>
+					</select></li> -->
+            		<!-- <li>时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		-->
+            		<li>提现方式：<select name="drawWay" class="type" id="drawWay">
+            			<option value="">全部</option>
+            			<option value="A">手机端</option>
+            			<option value="P">PC端</option>
+            		</select></li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">	
+		<@secAuthorizeUrl value='/draw/firstTrialDrawExcel.html'>	
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

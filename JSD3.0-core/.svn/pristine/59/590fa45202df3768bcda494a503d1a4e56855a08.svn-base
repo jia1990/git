@@ -1,0 +1,154 @@
+package com.rongdu.p2psys.user.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.rongdu.p2psys.user.domain.KefuRecord;
+
+/**
+ * 客服Model
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月1日
+ */
+public class KefuModel extends KefuRecord {
+	
+	
+	
+	private int verifyResult;
+	
+	private int eventType;
+	
+	private String userName;//用户的用户名
+	private String kefuName;//客服用户名
+	private String kefuRealName;//客服真实名称
+	private String verifyName;//审核人的用户名
+	
+	private String eventTypeNew;//更换/投诉客服用于导出Excel
+	private String verifyResultNew;//审核进度用于导出Excel
+	//JSDP-116 fengguoqin 2015-05-19 start
+    private String operatorNo;//专属客服工号
+	public String getOperatorNo() {
+		return operatorNo;
+	}
+
+	public void setOperatorNo(String operatorNo) {
+		this.operatorNo = operatorNo;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+	/**
+	 * 实体转model
+	 * @param user
+	 * @return
+	 */
+	public static KefuModel instance(KefuRecord kefuRecord) {
+		KefuModel kefuModel = new KefuModel();
+		BeanUtils.copyProperties(kefuRecord, kefuModel);
+		return kefuModel;
+	}
+
+	/**
+	 * model转换实体
+	 * @return
+	 */
+	public KefuRecord prototype(){
+		KefuRecord kefu = new KefuRecord();
+		BeanUtils.copyProperties(this, kefu);
+		return kefu;
+	}
+
+	/**
+	 * 审核结果
+	 * @return the verifyResult 审核结果
+	 */
+	public int getVerifyResult() {
+		return verifyResult;
+	}
+
+	/**
+	 * 审核结果
+	 * @param verifyResult 审核结果
+	 */
+	public void setVerifyResult(int verifyResult) {
+		this.verifyResult = verifyResult;
+	}
+
+	/**
+	 * 更换/投诉
+	 * @return the eventType 更换/投诉
+	 */
+	public int getEventType() {
+		return eventType;
+	}
+
+	/**
+	 * 更换/投诉
+	 * @param eventType 更换/投诉
+	 */
+	public void setEventType(int eventType) {
+		this.eventType = eventType;
+	}
+
+	/**
+	 * @return the userName
+	 */
+	public String getUserName() {
+		return userName;
+	}
+	
+	public String getVerifyName() {
+		return verifyName;
+	}
+
+	public void setVerifyName(String verifyName) {
+		this.verifyName = verifyName;
+	}
+
+	/**
+	 * @param userName the userName to set
+	 */
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	/**
+	 * @return the kefuName
+	 */
+	public String getKefuName() {
+		return kefuName;
+	}
+
+	/**
+	 * @param kefuName the kefuName to set
+	 */
+	public void setKefuName(String kefuName) {
+		this.kefuName = kefuName;
+	}
+
+	public String getKefuRealName() {
+		return kefuRealName;
+	}
+
+	public void setKefuRealName(String kefuRealName) {
+		this.kefuRealName = kefuRealName;
+	}
+
+	public String getEventTypeNew() {
+		return eventTypeNew;
+	}
+
+	public void setEventTypeNew(String eventTypeNew) {
+		this.eventTypeNew = eventTypeNew;
+	}
+
+	public String getVerifyResultNew() {
+		return verifyResultNew;
+	}
+
+	public void setVerifyResultNew(String verifyResultNew) {
+		this.verifyResultNew = verifyResultNew;
+	}
+	
+	
+	
+}

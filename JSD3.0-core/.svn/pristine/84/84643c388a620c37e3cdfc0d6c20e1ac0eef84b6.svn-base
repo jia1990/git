@@ -1,0 +1,101 @@
+package com.ddtkj.p2psys.tpp.ymd.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.rongdu.p2psys.tpp.ips.tool.XmlTool;
+
+/**
+ * 一麻袋查询返回参数
+ * @author wcw
+ * 2014-12-4
+ *
+ */
+public class YmdQueryReturn extends YmdQueryReturnDetails{
+     
+	/**
+	 * 一麻袋系统的数字账户，7位数字账户
+	 */
+	private String accountNumber;
+	
+	/**
+	 * 返回状态  00为成功
+	 */
+	private String resultCode;
+	/**
+	 * 返回数据条数
+	 */
+	private String resultCount;
+	/**
+	 * 每页有多少 数据
+	 */
+	private String pageSize;
+	
+	/**
+	 * 页码
+	 */
+	
+	private String pageIndex;
+	
+    private List<YmdQueryReturnDetails> list=new ArrayList<YmdQueryReturnDetails>();
+	
+    /**
+     * 解析xml字符串
+     * @param xml
+     * @return
+     */
+    public YmdQueryReturn getYmdReturnQuery(XmlTool xml){
+    	YmdQueryReturn yrq=new YmdQueryReturn();
+    	YmdQueryReturnDetails yrqd=new YmdQueryReturnDetails();
+    	yrq.setAccountNumber(xml.getNodeValue("accountNumber"));
+    	yrq.setResultCode(xml.getNodeValue("resultCode"));
+    	yrq.setResultCount(xml.getNodeValue("resultCount"));
+    	yrq.setPageSize(xml.getNodeValue("pageSize"));
+    	yrq.setPageIndex(xml.getNodeValue("pageIndex"));
+    	yrq.setList(yrqd.getYmdQueryDetailList(xml));
+    	return yrq;
+    }
+	
+	public YmdQueryReturn() {
+		super();
+	}
+	public String getAccountNumber() {
+		return accountNumber;
+	}
+	public void setAccountNumber(String accountNumber) {
+		this.accountNumber = accountNumber;
+	}
+	public String getResultCode() {
+		return resultCode;
+	}
+	public void setResultCode(String resultCode) {
+		this.resultCode = resultCode;
+	}
+	public String getResultCount() {
+		return resultCount;
+	}
+	public void setResultCount(String resultCount) {
+		this.resultCount = resultCount;
+	}
+	public String getPageSize() {
+		return pageSize;
+	}
+	public void setPageSize(String pageSize) {
+		this.pageSize = pageSize;
+	}
+	public String getPageIndex() {
+		return pageIndex;
+	}
+	public void setPageIndex(String pageIndex) {
+		this.pageIndex = pageIndex;
+	}
+	public List<YmdQueryReturnDetails> getList() {
+		return list;
+	}
+	public void setList(List<YmdQueryReturnDetails> list) {
+		this.list = list;
+	}
+
+	
+	
+}

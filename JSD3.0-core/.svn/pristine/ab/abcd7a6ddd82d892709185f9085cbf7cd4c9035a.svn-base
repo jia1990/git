@@ -1,0 +1,151 @@
+package com.ddtkj.p2psys.goods.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "t_jsd_goods_category")
+public class DdtkjGoodsCategory implements Serializable {
+
+	private static final long serialVersionUID = -7746094416444824020L;
+
+	//id 
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	
+	//名称 
+	private String name;
+	
+	//是否父级 
+	private long parentId;
+	
+	//分类图标 
+	//private String iconCls;
+	
+	//备注 
+	private String remark;
+	
+	// 排序
+	private int sort;
+	
+	//是否删除:0否，1是
+	private boolean isDelete;
+	
+	//添加时间 
+	private Date addTime;
+	
+	//添加者 
+	private String addUser;
+	
+	//更新时间 
+	private Date updateTime;
+	
+	//更新者
+	private String updateUser;
+	
+	 
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public String getUpdateUser() {
+		return updateUser;
+	}
+
+	public void setUpdateUser(String updateUser) {
+		this.updateUser = updateUser;
+	}
+
+	public DdtkjGoodsCategory() {
+        super();
+    }
+
+	public DdtkjGoodsCategory(long id) {
+        super();
+        this.id = id;
+    }
+	
+    public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public long getParentId() {
+		return parentId;
+	}
+
+	public void setParentId(long parentId) {
+		this.parentId = parentId;
+	}
+/*
+	public String getIconCls() {
+		return iconCls;
+	}
+
+	public void setIconCls(String iconCls) {
+		this.iconCls = iconCls;
+	}
+*/
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+    public String getAddUser() {
+        return addUser;
+    }
+
+    public void setAddUser(String addUser) {
+        this.addUser = addUser;
+    }
+
+    public boolean isDelete() {
+        return isDelete;
+    }
+
+    public void setDelete(boolean isDelete) {
+        this.isDelete = isDelete;
+    }
+
+    public int getSort() {
+        return sort;
+    }
+
+    public void setSort(int sort) {
+        this.sort = sort;
+    }
+}

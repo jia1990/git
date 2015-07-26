@@ -1,0 +1,132 @@
+package com.rongdu.p2psys.borrow.executer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.dao.AccountLogDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+
+/**
+ * 交易手续费
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class DeductTransactionFeeExecuter extends BaseExecuter {
+
+	protected AccountLogDao accountLogDao;
+	protected AccountDao accountDao;
+	protected UserCacheDao userCacheDao;
+	private String accountLogType = Constant.TRANSACTION_FEE;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void prepare() {
+		accountLogDao = (AccountLogDao) BeanUtil.getBean("accountLogDao");
+		accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		userCacheDao = (UserCacheDao) BeanUtil.getBean("userCacheDao");
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		log.setBorrowerEnterMoney(money);
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		log.setRepaymentTotal(account.getRepaymentTotal());
+		//JSDP-200  wcw 2015-06-29 start
+		log.setAccountTotal(account.getAccountTotal());
+		//JSDP-200  wcw 2015-06-29 end
+		/*log.setMoney(super.money);
+		log.setTotal(account.getTotal());
+		log.setUseMoney(account.getUseMoney());
+		log.setNoUseMoney(account.getNoUseMoney());
+		log.setCollection(account.getCollection());*/
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)2);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		//accountDao.modify(-super.money, 0, -super.money, 0, super.user.getUserId());
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		// 总金额
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),
+				-money));
+		if(account.getBorrowerUsableTotal()<money){
+			throw new AccountException("可用金额不足,请先充值！", 1);
+		}
+		// 可用金额
+		account.setBorrowerEnterUsable((BigDecimalUtil.add(
+					account.getBorrowerEnterUsable(), -money)));
+		if (account.getBorrowerUsableTotal() < 0) {
+			throw new AccountException("可用金额不足！", 1);
+		}
+		// 更新
+		accountDao.update(account);
+	}
+
+	@Override
+	public void handleAccountSum() {
+
+	}
+
+	@Override
+	public void handlePoints() {
+
+	}
+
+	@Override
+	public void handleNotice() {
+
+	}
+
+	@Override
+	public void addOperateLog() {
+
+	}
+
+	@Override
+	public void handleInterface() {
+		// 扣除交易手续费
+		if (BaseTPPWay.isOpenApi()) {
+			if(BaseTPPWay.apiCode().equals("1")){
+				/*YjfService apiService = new YjfServiceImpl();
+				BorrowModel borrow = (BorrowModel) Global.getTransfer().get("deduct");
+				List<Object> taskList = new ArrayList<Object>();
+				apiService.fullSuccessDeductFee(taskList, money, borrow, borrow.getUser());
+				apiService.doApiTask(taskList);*/
+			}else if(BaseTPPWay.apiCode().equals("2")){
+				
+			}
+			
+		}
+	}
+
+	@Override
+	public void extend() {
+
+	}
+}

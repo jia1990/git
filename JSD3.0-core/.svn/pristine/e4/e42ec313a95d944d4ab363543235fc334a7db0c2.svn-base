@@ -1,0 +1,43 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.question.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.question.dao.QuestionDao;
+import com.ddtkj.p2psys.question.domain.Question;
+import com.ddtkj.p2psys.question.service.QuestionService;
+
+/**
+ * @描述：问题业务层实现
+ * @作者：guojunhui@ddtkj.com
+ * @创建时间：2015-7-22 
+ */
+@Repository("QuestionService")
+public class QuestionServiceImpl implements QuestionService{
+
+	@Resource
+	private QuestionDao questionDao;
+	
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#getQuestionListAll()
+	 */
+	@Override
+	public List<Question> findAll() {
+		// TODO Auto-generated method stub
+		return questionDao.findAll();
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionService#find(long)
+	 */
+	@Override
+	public Question find(long id) {
+		// TODO Auto-generated method stub
+		return questionDao.find(id);
+	}
+}

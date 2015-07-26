@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@充值人数统计</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+</head>
+<style>
+	.userCount{
+		color:#666;
+	
+	}
+	.dataTable{
+		border:1px #ccc solid;
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		
+	}
+	.dataTable td{
+		border-right:1px #ccc solid;
+		/* border-left:1px #ccc solid; */
+		border-bottom:1px #ccc solid;
+	}
+	#titleTr{
+  		border-bottom-style:1px #000 solid;
+	}
+	
+	/* 统计  */
+	.UserDataTable{
+		border:1px #ccc solid;
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		
+	}
+	.UserDataTable tr{
+		height:60px;
+	}
+	.UserDataTable td{
+		border-right:1px #ccc solid;
+		border-bottom:1px #ccc solid;
+		font-family: "微软雅黑";
+		font-size:16px;
+		color:#666;
+		text-align:center;
+	}
+	
+	/* 查询统计  */
+	.UserDataTableSearch{
+		border:1px #ccc solid;
+		border-top-left-radius:5px;
+		border-top-right-radius:5px;
+		border-bottom-right-radius:5px;
+		border-bottom-left-radius:5px;
+		
+	}
+	.UserDataTableSearch tr{
+		height:100px;
+	}
+	.UserDataTableSearch td{
+		border-right:1px #ccc solid;
+		border-bottom:1px #ccc solid;
+		font-family: "微软雅黑";
+		font-size:16px;
+		color:#666;
+		text-align:center;
+	}
+	
+	
+	
+	
+</style>
+<body style="padding:0 20px;">
+<div class="countBd">
+
+	<div class="countBdTitle" >
+		<!-- <label style="line-height:40px;color:#000;font-size:18px;">投资用户统计</label> -->
+		<div style="padding-left:20px;">
+			
+			<table>
+			<tr>
+				<td><span style="color:#ADADAD">提示：页面数据为整10分钟查询，点击查看按钮为即时查询</span></td>
+			</tr>
+			<tr>
+				<td>
+				<table class="UserDataTable" cellpadding="0" cellspacing="0" width="700" height=200px; >
+					<tr height="60">
+						<td colspan="2">
+						<span style="line-height:40px;color:#373737;font-size:18px;font-weight: 500;">充值用户统计</span>
+						</td>
+					</tr>
+					<tr>
+						<td width=50% title="到目前为止投资用户数量">全部充值人数：</td>
+						<#if rechargeUserAllCount == '000'>
+						<td>暂无数据...</td>
+						<#else>
+						<td>${rechargeUserAllCount!} 人</td>
+						</#if>
+					</tr>
+					<tr>
+						<td>昨日充值人数：</td>
+						<#if yesterdayRechargeUserCount == '000'>
+						<td>暂无数据...</td>
+						<#else>
+						<td>${yesterdayRechargeUserCount!} 人</td>
+						</#if>
+					</tr>
+					<tr>
+						<td>今日充值人数：</td>
+						<#if todayRechargeUserCount == '000'>
+						<td>暂无数据...</td>
+						<#else>
+						<td>${todayRechargeUserCount!} 人</td>
+						</#if>
+					</tr>
+					<tr>
+						<td>一周充值人数：</td>
+						<#if weekRechargeUserCount == '000'>
+						<td>暂无数据...</td>
+						<#else>
+						<td>${weekRechargeUserCount!} 人</td>
+						</#if>
+					</tr>
+				</table>
+				
+				</td>
+					
+				<td width="100px;">&nbsp;</td>
+					
+				<td>
+				
+				<table class="UserDataTableSearch" cellpadding="0" cellspacing="0" width="700" height=200px; >
+					<tr height="60">
+						<td colspan="2">
+						<span style="line-height:40px;color:#373737;font-size:18px;font-weight: 500;">
+						某时间段充值用户统计
+						</span>
+						<p style="font-size:14px;text-align: right;color:#808080">若未选择时间则默认查询全部</p>
+						</td>
+					</tr>
+					<!-- 
+					<tr>
+						<td colspan="2"><p style="font-size:14px;text-align: left;color:#808080">若未选择时间则默认查询全部</p></td>
+					</tr> -->
+					
+					<tr>
+						<td colspan="2">
+						时间段查询：<input type="text" name="startTime" id="startTime" style="width:150px;" class="searchTime" title="大于等于此时间"/>
+						&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" style="width:150px;" class="searchTime" title="小于等于此时间"/>
+						<a href="javascript:void(0);" class="searchBtn searchRechargeUserBtn" ondragstart="return false">查询</a>
+				
+						</td>
+					</tr>
+					
+					<tr>
+						<td width=50%>充值人数：</td>
+						<td id="rechargeUserStatisticsPageArea">${rechargeUserStatisticsPageArea!}</td>
+					</tr>
+					
+				</table>
+				
+				</td>
+			
+			</tr>
+			
+			
+			</table>
+		</div>
+		
+		
+	</div>
+	
+	
+	<!-- --------------------------------- -->
+
+
+	<!-- --------------------------------- -->
+	<!-- <hr color="#999" size="1"/>
+	<div class="adminUserForm"  style="float:left;">
+		
+		<div class="adminUserMuti">
+			<span style="line-height:40px;color:#000;font-size:18px;">用户地区：</span>
+			
+		    <select name="province" id="province" class="prov" style="width:150px;">
+				<option value="">请选择</option>
+			</select> 
+			<select name="city" id="city" class="city" style="width:150px;">
+				<option value="">请选择</option>
+			</select> 
+			<select id="county" name="area" class="dist" style="width:150px;">
+				<option value="">请选择</option>
+			</select> 
+		    <div class="countBdTitle" style="float:right">
+				<a href="javascript:void(0);" class="searchBtn searchAdressBtn" title="点击查询" ondragstart="return false">查询</a>
+			</div>
+		</div>
+		
+		<p style="font-size:14px;">若未选择地区点击查询默认全部投资人信息</p>
+		<hr color="#999" size="1"/>
+		<div>
+			
+			<div id="address">
+				<table width="700" height=200px;  class="dataTable" cellpadding="0" cellspacing="0">
+					<tr height="30" id="titleTr">
+						<td>地区</td>
+						<td width="300" align="center" class="userCount">注册人数</td>
+						<td width="100"align="center" class="userCount">男</td>
+						<td width="100"align="center" class="userCount">女</td>
+						<td width="100"align="center" class="userCount">保密</td>
+						<td width="100"align="center" class="userCount">未知</td>
+					</tr>
+					<tr height="1"><td colspan="5"><hr color="#ccc" size="1"/></td></tr>
+					<tr height="25">
+						<td id="address"></td>
+						<td id="total" align="center"></td>
+						<td id="man" align="center"></td>
+						<td id="woman" align="center"></td>
+						<td id="secrecy" align="center"></td>
+						<td id="unknown" align="center"></td>
+					</tr>
+					<tr height="1"><td colspan="5"><hr color="#ccc" size="1"/></td></tr>
+					<tr>
+						<td colspan="5"></td>
+					</tr>
+				</table>
+			</div>
+		
+		</div>
+		
+	
+	</div> -->
+	<!-- --------------------------------- -->
+	
+</div>
+<script src="/plugins/echarts/echarts-plain-original.js" charset="UTF-8"></script>
+<script src="/plugins/echarts/echarts.js" charset="UTF-8"></script>
+<script src="/plugins/echarts/echarts-all.js" charset="UTF-8"></script>
+<script type="text/javascript">
+var loading = "time="+$("#time a.current").data("val");
+ajaxUrl(loading);//初始化调用
+$("#time a").click(function(){
+	$(this).addClass("current").siblings().removeClass("current");
+	var param = "time="+$("#time a.current").data("val");
+	ajaxUrl(param);
+});
+//具体日期搜索
+$(".searchUserBtn").click(function(){
+	var param = "startTime="+$("#startTime").val()+"&endTime="+$("#endTime").val();
+	ajaxUrl(param);
+});
+function ajaxUrl(param){
+	$.ajax({
+		url:"/modules/home/investmentStatistics.html?"+param,
+		type:"get",
+		dataType:"json",
+		success:function(data){
+			
+			/* alert(data);
+			alert(data.length);
+			alert(data.dates.length);counts
+			 */
+			/* for(var i=0;i<data.dates.length;i++){
+				$("#tableData").append("<tr><td style='width:200px;'>"+data.dates[i]+"</td><td>"+data.counts[i]+"</td></tr>");
+			}
+			 */
+			/* for(var i=0;i<data.accounts.length;i++){
+				$("#tableData").append("<tr><td>"+data.accounts[i]+"</td></tr>");
+				//alert(data.dates[i]);
+			} */
+			
+			/* 
+			// 基于准备好的dom，初始化echarts图表
+	        var myChart = echarts.init(document.getElementById('investment')); 
+	        var option = {
+	        	color  : ['#70bc31'],
+	        	tooltip: {
+	                show: true
+	            },
+	        	toolbox: {
+	                show : true,
+	                feature : {
+	                    saveAsImage : {show: true,title : '保存为图片'}
+	                }
+	            },
+	            grid: {
+	            	x:50,
+	            	y:30,
+	            	x2:30,
+	            	y2:70
+	           	},
+	            xAxis : [
+	                {
+	                   type : 'category',
+	                   data : data.dates
+	                }
+	            ],
+	            yAxis : [
+	                {
+	                	'type':'value',
+	                    'name':'人数（人）',
+	                }
+	            ],
+	            series : [
+	                {
+	                    "name":"人数（人）",
+	                    "type":"bar",
+	                    "data":data.counts
+	                }
+	            ]
+	        };
+	        // 为echarts对象加载数据 
+	        myChart.setOption(option); */
+		} 
+	});
+}
+
+
+// ---------------------------------------
+// 具体地址查询
+/* $(".searchAdressBtn").click(function(){
+	var province = $("#province").val();
+	var city = $("#city").val();
+	var area = $("#county").val();
+	ajaxAddressUrl(province,city,area);
+});
+
+function ajaxAddressUrl(province,city,area){
+	$.ajax({
+		type:"post",//请求方式
+   		url:"/modules/user/user/user/getUserByAddress.html",//发送请求地址
+   		data:{//发送给数据库的数据
+   			province:province,
+   			city:city,
+   			area:area,
+   			userType:10		//投资人
+   	},
+   	//请求成功后的回调函数有两个参数
+   	success:function(data){
+   		
+   		//$("#address").html($("#province").text($("#province").val()));
+   		
+   		$("#total").html(data.userTotal);
+   		$("#man").html(data.manTotal);
+   		$("#woman").html(data.womanTotal);
+   		$("#secrecy").html(data.secrecyTotal);
+   		$("#unknown").html(data.unknownTotal);
+   	}
+   	});
+  
+} */
+// ---------------------------------------
+// 某时间段投标人数查询
+$(".searchRechargeUserBtn").click(function(){
+	var startTime = $("#startTime").val();
+	var endTime = $("#endTime").val();
+	
+	/* if(null != startTime || null != endTime){
+		$.messager.alert('提示', '请选择时间！', 'info');
+	}
+	 */
+	
+	ajaxTenderUrl(startTime,endTime);
+});
+
+function ajaxTenderUrl(startTime,endTime){
+	$.ajax({
+		type:"post",//请求方式
+   		url:"/modules/dataStatistics/rechargeUserStatisticsPageArea.html",//发送请求地址
+   		data:{//发送给数据库的数据
+   			startTime:startTime,
+   			endTime:endTime
+   	},
+   	//请求成功后的回调函数有两个参数
+   	success:function(data){
+   		//$("#address").html($("#province").text($("#province").val()));
+   		$("#rechargeUserStatisticsPageArea").html(data.rechargeUserStatisticsPageArea + " 人");
+   	}
+   	});
+  
+}
+
+
+
+
+</script>
+
+
+
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+<script>
+/*
+ *初始化省份选择框
+ * */
+$.ajax({
+    type:"get",
+    url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+    dataType:"json",
+    success:function(json){
+    	
+    	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+    		 
+    		  var province=json[i];
+    		 $("#province").append("<option  value="+province.id+">"+province.name+"</option>");
+    	 }
+    }
+});
+
+//给省份下拉选择框注册change事件 
+ $("#province").change(function(){
+	 $("#city").empty();
+	 $("#city").append("<option value=''>请选择</option>");
+	 var id = $(this).val();
+	 if($(this).val() != ''){
+	 	getCity(id);
+	 }else{
+	 	 $("#county").empty();
+		 $("#county").append("<option value=''>请选择</option>");
+	 }
+ });
+
+
+/*省份发生变化
+ *AJAX一步后台获取与此省份关联的城市
+ * 
+ * */
+function  getCity(id){
+	//ajax逻辑
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",	        
+        data:{
+        	pId:id
+        },
+        success:function(json){
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		  var city=json[i];
+        		 $("#city").append("<option value="+city.id+">"+city.name+"</option>");
+        	 }
+        }
+    });
+	
+}
+
+/*给城市选择框注册change事件*/
+$("#city").change(function(){
+	 $("#county").empty();
+	 $("#county").append("<option value=''>请选择</option>");
+	var id = $(this).val();
+	if($(this).val() != ''){
+		getCounty(id);
+	}
+});
+
+/*城市发生变化
+ *AJAX一步后台获取与此市关联的县（区）
+ * 
+ * */
+function getCounty(id){
+	//ajax逻辑
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",	        
+        data:{
+        	pId:id
+        },
+        success:function(json){
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		  var county=json[i];
+        		 $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+        	 }
+        }
+    });
+	
+}
+
+
+
+</script>
+</body>
+</html>

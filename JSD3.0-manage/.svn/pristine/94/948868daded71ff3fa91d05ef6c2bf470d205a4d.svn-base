@@ -1,0 +1,278 @@
+package com.ddtkj.manage.action.transfer;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.transfer.service.AccountTransferService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+/**
+ * 1.0转账3.0 后台转账记录
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年4月3日
+ */
+public class ManageAccountTransferAction extends BaseAction  implements ModelDriven<AccountTransferModel>{
+
+	AccountTransferModel model=new AccountTransferModel();
+	@Resource
+	private AccountTransferService accountTransferService;
+	
+	@Resource
+	private UserService userService;
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	
+	Map<String, Object> data=new HashMap<String, Object>();
+
+	public AccountTransferModel getModel() {
+		return model;
+	}
+
+	public void setModel(AccountTransferModel model) {
+		this.model = model;
+	}
+	@Action("/modules/transfer/transferList")
+	public void getList()throws Exception{
+		String startTime=paramString("start_time");
+		String endTime=paramString("end_time");
+		PageDataList<AccountTransfer> list=accountTransferService.getTransferList(model, startTime, endTime);
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		//data.put("footer", footerList);
+		printJson(getStringOfJpaObj(data));
+	}
+	@Action("/modules/transfer/transferManager")
+	public String transferManager()throws Exception{
+		return "transferManager";
+	}
+	/**
+	 * 平台转账页面(如云购卡充值)
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/platformTransferManager")
+	public String platformTransferManager() throws Exception{
+		saveToken("platforTransferToken");
+		return "platformTransferManager";
+	}
+	
+	
+	/**
+	 * 转账充值初审页面
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/transferVerifyManager")
+	public String platformTransferVerifyManager() throws Exception{
+		
+		String tradeNo = paramString("tradeNo");
+		AccountRecharge ar = accountRechargeService.findRechargeByTradeNo(tradeNo);
+		
+		
+		User user = userService.find(ar.getUser().getUserId());
+		request.setAttribute("user", user);
+		request.setAttribute("recharge", ar);
+		saveToken("transferVerify");
+		return "transferVerifyManager";
+	}
+	/**
+	 * 初审
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/transferVerify")
+	public void platformTransferVerify() throws Exception{
+		
+		checkToken("transferVerify");
+		User user = userService.getUserByUserName(model.getUserName());
+		AccountRecharge ar = accountRechargeService.findRechargeByTradeNo(model.getTransferNo());
+		
+		
+		if(model.getPassVerify().equals("Y")){
+				try {
+					if(Global.TRADE_NO_SET.add(model.getTransferNo())){
+						Map<String, Object> map = accountTransferService.checkIsOpenAccount(user.getUserName(), user.getMobilePhone());
+						//开始转账
+						if("ok".equals(map.get("result"))){
+							accountTransferService.transfer(user, model);
+							ar.setTradeStatus(AccountRecharge.RECHARGE_SUCCESS_STATUS);
+							AccountRecharge recharge = accountRechargeService.updateRechargeByTradeNo(ar,getOperator(),model.getRemark());
+							if(null != recharge){
+								data.put("result",true);
+								data.put("msg", "转账成功!");
+							}else{
+								data.put("result",false);
+								data.put("msg", "转账失败!");
+							}
+							
+						}else{
+							data.put("result",false);
+							data.put("msg", "转账失败,未在汇潮开户");
+							throw new BussinessException("该用户未在汇潮开户", 1);
+						}
+					}
+				}finally{
+					Global.TRADE_NO_SET.remove(model.getTransferNo());
+				}
+		}else{
+			ar.setTradeStatus(AccountRecharge.RECHARGE_FAIL_VERIFY_STATUS);
+			AccountRecharge recharge = accountRechargeService.updateRechargeByTradeNo(ar,getOperator(),model.getRemark());
+			if(null != recharge){
+				data.put("result",true);
+				data.put("msg", "初审失败!");
+			}else{
+				data.put("result",false);
+				data.put("msg", "初审失败!");
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 添加充值转账，但未初审
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/platformTransfer")
+	public void plateformTransfer() throws Exception{
+		
+		checkToken("platforTransferToken");
+		User u=userService.getUserByUserName(model.getUserName());
+    	AccountRecharge ar=new AccountRecharge();
+    	ar.setUser(u);
+    	ar.setRechargeType(model.getTransferType()+"");
+    	ar.setInAccountAmount(model.getTransferAmount());
+		// 修改订单状态
+		ar.setRechargeAmount(model.getTransferAmount());
+		ar.setTradeNo(model.getTransferNo());//充值转账中存放了流水号
+		ar.setTradeStatus(AccountRecharge.RECHARGE_WAIT_VERIFY_STATUS); // 设置状态
+		ar.setRechargeFee(0);
+		ar.setAddTime(new Date());
+		ar.setRechargeWay(AccountTradeConstant.TRADE_WAY_PC);
+		ar.setAddIp(Global.getIP());
+		ar.setIsfree("0");
+		ar.setSendCleartextInfo("暂无");
+		AccountRecharge arc = accountRechargeService.saveRecharge(ar);
+		if(null != arc){
+			data.put("result",true);
+			data.put("msg", "转账申请提交成功，请等待审核!");
+		}else{
+			data.put("result",false);
+			data.put("msg", "转账申请提交失败!");
+		}
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	
+	/**
+	 * 充值转账导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/account/accountRecharge/transferRechargeExcel")
+	public void transferRechargeExcel() throws Exception{
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+		int status = paramInt("tradeStatus");
+//		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setRows(99999999);
+
+		
+		AccountRechargeModel rechargeModel = new AccountRechargeModel();
+		rechargeModel.setRechargeType("1");
+		rechargeModel.setUserName(model.getUserName());
+		rechargeModel.setRealName(paramString("realName"));
+		rechargeModel.setStartTime(paramString("startTime"));
+		rechargeModel.setTradeStatus(paramString("tradeStatus"));
+		rechargeModel.setEndTime(paramString("endTime"));
+		rechargeModel.setTradeNo(paramString("tradeNo"));
+		
+		// 记录取得
+//		List<AccountRechargeModel> list = accountRechargeService.list(rechargeModel).getList();
+		List newList = accountRechargeService.excelRechargeList(rechargeModel);
+		
+		
+//		for(int i=0;i<list.size();i++){
+//			AccountRechargeModel recharge = list.get(i);
+//			if(recharge.getTradeStatus().equals("00")){
+//				recharge.setTradeStatus("充值转账成功");
+//			}else if(recharge.getTradeStatus().equals("55")){
+//				recharge.setTradeStatus("充值转账提交中");
+//			}else if(recharge.getTradeStatus().equals("99")){
+//				recharge.setTradeStatus("充值转账失败");
+//			}else if(recharge.getTradeStatus().equals("52")){
+//				recharge.setTradeStatus("充值转账审核中");
+//			}
+//	
+//			newList.add(recharge);
+//		}
+		String title = "";
+		if (status == 66) {
+			title = "全部充值转账Excel表";
+		}else if (status == 00) {
+			title = "充值转账成功Excel表";
+		}else if (status == 99) {
+			title = "充值转账失败Excel表";
+		}else if (status == 55){
+			title = "充值转账提交中Excel表";
+		}else if (status== 52){
+			title = "充值转账待审核Excel表";
+		}
+		String[] hearders = new String[] {"流水号","用户名","真实姓名","到账金额","手续费金额","充值时间","状态" };// 表头数组
+		String[] fields = new String[] { "tradeNo","userName","realName","inAccountamountStr","accountFeeStr","addTime","tradeStatus"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<AccountRechargeModel> tdList = new ArrayList<AccountRechargeModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				AccountRechargeModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	
+	}
+	
+	
+}

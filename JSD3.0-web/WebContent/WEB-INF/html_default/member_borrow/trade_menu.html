@@ -1,0 +1,21 @@
+<dl class="c_aside_nav c_borrow">  
+ 
+	<#if session_user.userCache.userType == "11">
+	
+		   <#if (session_user.userCache.borrowType)??  && session_user.userCache.borrowType == "F">
+					<dd class="<#if (mid??&&mid=='m_borrow')>c_invest_this</#if>"><span class="c_lend_icon"></span><a href="${webroot}/member_borrow/borrow/mine.html" hidefocus>借款详情</a></dd>
+					<dd class="<#if (mid??&&mid=='m_repayment')>c_invest_this</#if>"><span class="c_repay_icon"></span><a href="${webroot}/member_borrow/borrow/repayment.html" hidefocus>还款详情</a></dd>
+					<dd class="<#if (mid??&&mid=='m_indent')>c_invest_this</#if>"><span class="c_indent_icon"></span><a href="${webroot}/member_borrow/borrow/indentDetail.html" hidefocus>订单详情</a></dd>
+		   	<#else>
+			  <dd class="<#if (mid??&&mid=='m_borrow')>c_invest_this</#if>"><span class="c_lend_icon"></span><a href="${webroot}/member_borrow/borrow/mine.html" hidefocus>借款详情</a></dd>
+			  <dd class="<#if (mid??&&mid=='m_repayment')>c_invest_this</#if>"><span class="c_repay_icon"></span><a href="${webroot}/member_borrow/borrow/repayment.html" hidefocus>还款详情</a></dd>
+		   </#if>
+	  
+	<#elseif session_user.userCache.userType == "13">
+		<dd class="<#if (mid??&&mid=='m_store_indent')>c_invest_this</#if>"><span class="c_indent_icon"></span><a href="${webroot}/member_merchant/storeIndentDetail.html" hidefocus>订单详情</a></dd>
+	 <#else>
+		  <dd class="<#if (mid??&&mid=='m_borrow')>c_invest_this</#if>"><span class="c_lend_icon"></span><a href="${webroot}/member_borrow/borrow/mine.html" hidefocus>借款详情</a></dd>
+		  <dd class="<#if (mid??&&mid=='m_repayment')>c_invest_this</#if>"><span class="c_repay_icon"></span><a href="${webroot}/member_borrow/borrow/repayment.html" hidefocus>还款详情</a></dd>
+	</#if>
+	<div class="c_clear"></div>
+</dl>

@@ -1,0 +1,357 @@
+
+package com.ddtkj.transfer;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.authorize.service.ClientUserService;
+import com.ddtkj.p2psys.cardaward.service.CardAwardTransferService;
+import com.ddtkj.p2psys.cardaward.service.MemberCardAwardService;
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.transfer.service.AccountTransferService;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.enums.EnumRuleNid;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck.MoneyTransfer;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述: 购物卡转账到云购
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+public class AccountTyunGouAction extends BaseAction implements ModelDriven<AccountTransferModel> {
+	
+	@Resource
+	private UserService userService;
+	@Resource
+	private MemberCardAwardService memberCardAwardService;
+	@Resource
+	private ClientUserService clientUserService;
+	@Resource
+	private CardAwardTransferService cardAwardTransferService;
+	@Resource
+	private ScoreRuleAwardService scoreRuleAwardService;
+	@Resource
+	private ScoreService scoreService;
+	@Resource
+	private UserScoreAwardService userScoreAwardService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private AccountTransferService accountTransferService;
+	
+	
+	AccountTransferModel model = new AccountTransferModel();
+	Map<String, Object> data = new HashMap<String, Object>();
+	
+	public AccountTransferModel getModel() {
+		return model;
+	}
+	
+	private User user;
+
+	
+	
+	/**
+	 * 转账云购的页面跳转
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member/invest/accounTyunGou", results = {
+			@Result(name = "accountTyunGou", type = "ftl", location = "/member/invest/accountTyunGou.html"),
+			@Result(name = "accountTyunGou_borrow", type = "ftl", location = "/member_borrow/borrow/accountTyunGou.html"),
+			@Result(name = "accountTyunGou_merchant", type = "ftl", location = "/member_merchant/merchant/accountTyunGou.html"),
+			@Result(name = "accountTyunGou_vouch", type = "ftl", location = "/member_guarantee/guarantee/accountTyunGou.html") })
+	
+	public String accountTyunGou() throws Exception{
+		user = getSessionUser();
+		
+		UserCache  uc = user.getUserCache();
+		Account account = accountService.findByUser(user.getUserId());
+		//JSDP-159 xingjia 2015-05-23 start
+		saveToken("accountTyunGouToken");
+		//JSDP-159 xingjia 2015-05-23 end
+		
+		
+		//JSDP-168 xingjia 2015-05-28 start
+		if(uc.getUserType().equals(UserConstant.USER_SORT_BORROW)){
+			request.setAttribute("accountMount", account.getBorrowerUsableTotal());
+			return "accountTyunGou_borrow";
+		}else if(uc.getUserType().equals(UserConstant.USER_SORT_MERCHANT)){
+			request.setAttribute("accountMount", account.getBorrowerUsableTotal());
+			return "accountTyunGou_merchant";
+		}else if(uc.getUserType().equals(UserConstant.USER_SORT_ASSURE)){
+			request.setAttribute("accountMount", account.getBorrowerUsableTotal());
+			return "accountTyunGou_vouch";
+		}else{
+			request.setAttribute("accountMount", account.getUsableAccount());
+			//JSDP-168 xingjia 2015-05-28 end
+			return "accountTyunGou";
+		}
+		
+	}
+	//JSDP-159 xingjia 2015-05-25 start
+	/**
+	 * 转账成功向云购跳转
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member/invest/accounTyunGouLogin", results = {
+			@Result(name = "accountTyunGouLog", type = "ftl", location = "/member/invest/accountTyunGouLog.html"),
+			@Result(name = "accountTyunGouLog_borrow", type = "ftl", location = "/member_borrow/borrow/accountTyunGouLog.html"),
+			@Result(name = "accountTyunGouLog_merchant", type = "ftl", location = "/member_borrow/borrow/accountTyunGouLog.html"),
+			@Result(name = "accountTyunGouLog_vouch", type = "ftl", location = "/member_borrow/borrow/accountTyunGouLog.html") })
+	public String accountTyunGouLogin() throws Exception{
+		if(null != EnableMoneyTransfer()){
+			
+			MoneyTransfer moneyTransfer = EnableMoneyTransfer().getMoneyTransfer();
+			String callUrl = moneyTransfer.getCallUrl();
+			response.sendRedirect(callUrl);
+		}
+		
+		
+		user = getSessionUser();
+		
+		UserCache  uc = user.getUserCache();
+		
+		
+		if(uc.getUserType().equals(UserConstant.USER_SORT_BORROW)){
+			return "accountTyunGouLog_borrow";
+		}else if(uc.getUserType().equals(UserConstant.USER_SORT_MERCHANT)){
+			return "accountTyunGouLog_merchant";
+		}else if(uc.getUserType().equals(UserConstant.USER_SORT_ASSURE)){
+			return "accountTyunGouLog_vouch";
+		}else{
+			return "accountTyunGouLog";
+		}
+	}
+	//JSDP-159 xingjia 2015-05-25 end
+	
+	/**
+	 * 转账日志页面跳转
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member/invest/accounTyunGouLog", results = {
+			@Result(name = "accountTyunGouLog", type = "ftl", location = "/member/invest/accountTyunGouLog.html"),
+			@Result(name = "accountTyunGouLog_borrow", type = "ftl", location = "/member_borrow/borrow/accountTyunGouLog.html"),
+			@Result(name = "accountTyunGouLog_merchant", type = "ftl", location = "/member_borrow/borrow/accountTyunGouLog.html"),
+			@Result(name = "accountTyunGouLog_vouch", type = "ftl", location = "/member_borrow/borrow/accountTyunGouLog.html") })
+	public String accountTyunGouLog() throws Exception{
+		user = getSessionUser();
+		
+		UserCache  uc = user.getUserCache();
+		
+		
+		if(uc.getUserType().equals(UserConstant.USER_SORT_BORROW)){
+			return "accountTyunGouLog_borrow";
+		}else if(uc.getUserType().equals(UserConstant.USER_SORT_MERCHANT)){
+			return "accountTyunGouLog_merchant";
+		}else if(uc.getUserType().equals(UserConstant.USER_SORT_ASSURE)){
+			return "accountTyunGouLog_vouch";
+		}else{
+			return "accountTyunGouLog";
+		}
+	}
+	/**
+	 * 转账云购记录查询
+	 * @throws Exception
+	 */
+	@Action("/member/invest/accounTyunGouLogList")
+	public void accounTyunGouLogList() throws Exception{
+		
+		user = getSessionUser();
+		model.setUser(user);
+		model.setTransferType(Integer.parseInt(AccountTransfer.ACCOUNT_TRANSFER));
+		PageDataList<AccountTransfer> pageDataList = accountTransferService.accountTransferYunGou(model);
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		
+	}
+	
+	
+	/**
+	 * 确认转账到云购
+	 * @throws Exception 
+	 * @throws Exception 
+	 */
+	@Action("/member/invest/accounToyunGouConfirm")
+	public void accountToyunGouConfirm() throws Exception{
+		
+		double transferAmount = model.getTransferAmount();
+		String payPwd = model.getPayPwd();
+		user = getSessionUser();
+		//判断是否为整数
+		try {
+			if(!AccountTyunGouAction.isInteger(transferAmount)){
+				throw new BussinessException("转账金额必须为整数!");
+			}
+			if(StringUtil.isNotBlank(user.getPaypwd())){
+				if (StringUtil.isNotBlank(payPwd)) {
+					if (StringUtil.isBlank(payPwd)) {
+						throw new UserException("交易密码不能为空！", 1);
+					} 
+					try {
+						payPwd = URLDecoder.decode(payPwd.replaceAll("%", "%25"), "utf-8");
+					} catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+					}
+					if (!MD5.encode(payPwd).equals(user.getPaypwd())) {
+						throw new UserException("交易密码不正确！", 1);
+					}
+				}
+			}else{
+				throw new UserException("请先设置交易密码！", 1);
+			}
+			//JSDP-159 xingjia 2015-05-23 start
+			checkToken("accountTyunGouToken");
+			//JSDP-159 xingjia 2015-05-23 end
+			//本地账户余额与一麻袋账户余额对账
+			accountService.accountCompare(this.getSessionUserId());
+			double useableMoney = 0.0;//账户可用金额
+			Account account = accountService.findByUser(user.getUserId());
+			
+			String transferMoney = null;//需要处理的金额
+			//JSDP-168 xingjia 20150528 start
+			if(StringUtil.isNotBlank(user.getUserCache().getUserType()) && 
+					user.getUserCache().getUserType().equals(UserConstant.USER_SORT_INVESTOR)){
+				useableMoney = account.getUsableAccount();		
+			}else{
+				useableMoney = account.getBorrowerUsableTotal();
+			}
+			
+
+			
+			if(useableMoney>=transferAmount){
+				//分配好的使用金额
+				transferMoney  = Account.accountDivider(account, user.getUserCache().getUserType(), transferAmount);
+				//JSDP-168 xingjia 20150528 end
+				AccountTransfer accountTransfer = new AccountTransfer();
+				accountTransfer.setAddIp(Global.getIP());
+				accountTransfer.setAddTime(Calendar.getInstance().getTime());
+				accountTransfer.setAddUser(user.getUserName());
+				accountTransfer.setPopUser(null);
+				accountTransfer.setTransferAmount(transferAmount);
+				accountTransfer.setTransferNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_TRANSFER_YUNGOU));
+				accountTransfer.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_APPLY);
+				accountTransfer.setTransferType(Integer.parseInt(AccountTransfer.ACCOUNT_TRANSFER));
+				accountTransfer.setUser(user);
+				accountTransfer.setTransferMsg(transferMoney);
+
+				//JSDP-159 xingjia 2015-05-23 start
+				//根据规则判断是否需要后台审核
+				if(null != EnableMoneyTransfer()){
+					MoneyTransfer moneyTransfer = EnableMoneyTransfer().getMoneyTransfer();
+					String reqUrl = moneyTransfer.getReqUrl();
+					String clientId = moneyTransfer.getClientId();
+					accountTransfer.setUpdateTime(new Date());
+					AccountTransferModel atm = AccountTransferModel.instance(accountTransfer);
+					if(accountTransfer.getUser() == null){
+						atm.setUserName(Global.getValue("ymd_merchant_id"));
+					}else{
+						atm.setUserName(accountTransfer.getUser().getUserName());
+					}
+					if(accountTransfer.getPopUser() == null){
+						atm.setPopUserName(Global.getValue("ymd_merchant_id"));
+					}else{
+						atm.setPopUserName(accountTransfer.getPopUser().getUserName());
+					}
+					
+					//处理本地账户资金，然后处理第三方账户资金
+					AccountTransfer at = accountTransferService.verifyAccountTransfer(atm, accountTransfer, transferMoney);
+//					DisruptorUtils.transferAccount(atm, accountTransfer, transferMoney, "transferYungou");
+					// 查询应用信息
+					Client currentClient = new Client();
+					currentClient.setClientId(clientId);
+					User user = accountTransfer.getUser();
+					ClientUserModel userInfo = clientUserService.updateOauthUserInfo(user, currentClient);
+					
+//					AccountTransfer at = accountTransferService.findObjByProperty("transferNo", accountTransfer.getTransferNo());
+					if(null != at && at.getTransferStatus().equals(AccountTransfer.ACCOUNT_TRANSFER_YUNGOU_YMD_SUC)){
+						//转账成功后向云购发请求（云购返回信息）
+						accountTransferService.accountTyunGou(at,userInfo,reqUrl);
+						data.put("msg", "转账成功！");
+						data.put("type", "transfer");
+						data.put("result", true);
+					}else{
+						data.put("msg", "转账失败！");
+						data.put("result", false);
+						
+					}
+					
+					
+					
+				}else{
+					accountTransferService.save(accountTransfer);
+					data.put("msg", "申请成功！");
+					data.put("type", "apply");
+					data.put("result", true);
+				}
+				
+				//JSDP-159 xingjia 2015-05-23 end
+//				data.put("result", true);
+				
+			}else{
+				throw new BussinessException("金额不足！");
+			}
+		
+		}catch (Exception e) {
+			data.put("msg", e.getMessage());
+			data.put("result", false) ;	
+		}	
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		
+	}
+	//JSDP-159 xingjia 2015-05-23 start
+	//云购转账规则是否开启
+	private YunGouTransferRuleCheck EnableMoneyTransfer(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(check != null && check.getMoneyTransfer() != null && YunGouTransferRuleCheck.TRANSFER_STATUS_ENABLE.equals(check.getMoneyTransfer().getStatus())) {
+			return null;
+		}
+		return check;
+	}
+	
+	//JSDP-159 xingjia 2015-05-23 end
+	
+	 public static boolean isInteger(Double dbNum) {
+	    Double dbNumObj = new Double(dbNum);
+	    boolean flag = dbNumObj.intValue() == dbNum;
+	    return flag;    
+	}  
+
+}

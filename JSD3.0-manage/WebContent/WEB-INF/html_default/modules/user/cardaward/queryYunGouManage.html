@@ -1,0 +1,59 @@
+<div class="popShow" style="padding-bottom:0">
+	<h1><span>订单号：</span>${cardTransfer.transNo!}</h1>
+	
+	<div class="showItem">
+		<span>用户名：</span>
+		${user.userName!}
+	</div>
+	<div class="showItem">
+		<span>转账金额：</span>
+		${cardTransfer.transMoney!}
+	</div>
+	<div class="showItem">
+		<span>转账类型：</span>
+		<#if cardTransfer.transType =="3">
+			购物卡转账
+		<#elseif cardTransfer.transType =="4">
+			 现金转账
+		<#else>
+			未指定的转账类型
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>晋商贷状态：</span>
+		<#if cardTransfer.receiveStatus =="11">
+			转账成功
+		<#elseif cardTransfer.receiveStatus =="22">
+			转账失败
+		<#else>
+			未指定的转账状态类型
+		</#if>
+	</div>
+	
+	<div class="showItem">
+		<span>云购查询状态：</span>
+		<#if cardTransfer.receiveStatus =="22">
+			<#if queryResult == "check_yes">
+				云购已有订单号（成功），回调通知失败
+			<#elseif queryResult == "check_no">
+				云购无此订单号
+			<#else>
+				未指定的查询状态类型
+			</#if>	
+		<#elseif cardTransfer.receiveStatus =="11" && queryResult == "check_yes">
+			转账到云购成功
+		<#else>
+			转账到云购失败
+		</#if>	
+	</div>
+	
+	<div class="showItem">
+		<span>添加时间：</span>
+		${cardTransfer.addTime?string("yyyy-MM-dd HH:mm:ss")}
+	</div>
+	<div class="showItem">
+		<span>添加IP：</span>
+		${cardTransfer.addIp!}
+	</div>
+	
+</div>

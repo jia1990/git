@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>账户对账管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<style type="text/css">
+.searchBtn{
+display: inline-block;
+width: 80px;
+line-height: 30px;
+margin-left: 6px;
+text-align: center;
+background-color: #4B93CF;
+border-bottom: 3px solid #317CBA;
+font-size: 16px;
+color: #FFF;
+border-radius: 5px;
+}
+</style>
+</head>
+<body style="padding:0 20px;">
+<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+<div style="padding:0 20px;">本地数据</div>
+<div class="popShow" style="padding-bottom:0;height:50%">
+	<br>
+	<#if accountLogModel??>
+	<div class="showItem">
+		<span>用户名：</span>
+		${accountLogModel.userName!}
+	</div>
+	<div class="showItem">
+		<span>交易对方用户：</span>
+		${accountLogModel.toUserName!}
+	</div>
+	<div class="showItem">
+		<span>交易批次号：</span>
+		${accountLogModel.tradeNo!}
+	</div>
+	<div class="showItem">
+		<span>交易流水号：</span>
+		${accountLogModel.outTradeNo!}
+	</div>
+	<div class="showItem">
+		<span>操作金额：</span>
+		${accountLogModel.money!}
+	</div>
+	<#else>
+	<div class="showItem">
+		<span>无数据</span>
+	</div>
+	</#if>
+	</div>
+	</div>
+	<br>
+	<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+	<div style="padding:0 20px;">一麻袋</div>
+	<div class="popShow" style="padding-bottom:0;height:50%">
+	<#if ymdQueryReturnDetails??&&ymdQueryReturnDetails.outTradeNo??>
+		<div class="showItem">
+			<span>付款人昵称：</span>  ${ymdQueryReturnDetails.outNickName!}
+		</div>
+		<div class="showItem">
+			<span>收款人昵称：</span>  ${ymdQueryReturnDetails.inNickName!}
+		</div>
+		<div class="showItem">
+			<span>交易批次号：</span>${ymdQueryReturnDetails.tradeNo!}
+		</div>
+		<div class="showItem">
+			<span>操作金额：</span>${ymdQueryReturnDetails.amount!}
+		</div>
+		<div class="showItem">
+			<span>返回状态：</span><#if ymdQueryReturn??&&ymdQueryReturn.resultCode??>
+						<#if ymdQueryReturn.resultCode=='00'>
+						        成功
+						<#else>
+						        失败
+						</#if>
+			       </#if>
+		</div>
+		<div class="showItem">
+			<span>查询模式：</span> <#if ymdQueryReturnDetails.mode=='trade'>交易<#else>错误</#if>
+		</div>
+		<div class="showItem">
+			<span>交易状态：</span>  <#if ymdQueryReturnDetails.tradeStatus=='00'>
+			                                      交易成功
+			       <#else>
+			                                       交易失败
+			       </#if>
+		</div>
+		<div class="showItem">
+			<span>一麻袋数字账户：</span>  ${ymdQueryReturn.numberId!}
+		</div>
+		<#else>
+		<div class="showItem">
+			<span>无数据</span>
+		</div>
+		</#if>
+		
+	</div>
+	</div>
+	<#if ymdQueryReturnDetails??&&ymdQueryReturnDetails.outTradeNo??>
+	<#else>
+	<div class="popShow" style="padding-bottom:0;">
+	<!-- 补单 -->
+	    
+	</div>
+	</#if>
+</body>

@@ -1,0 +1,48 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityConsumeDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的消费（夺宝骑兵）
+ * @作者：wangchangwei@ddtkj.com  JSDP-203
+ * @创建时间：2015年4月14日 
+ */
+public class RpActivityRpMoneyIndianaJonesConsumeWorker extends RpActivityBaseWorker{
+	
+	public RpActivityRpMoneyIndianaJonesConsumeWorker(BorrowTender tender,double consumeMoney){
+		super(tender, consumeMoney);
+	}
+
+	@Override
+	public void autoHandld() {
+		RpActivityConsumeDao rpActivityConsumeDao = (RpActivityConsumeDao) BeanUtil.getBean("rpActivityConsumeDao");
+		if(consumeMoney > 0){
+			RpActivityConsume rpConsume = rpActivityConsumeDao.getActivityRpConsumeByTender(tender.getUser().getUserId(),tender.getBorrow().getId(),
+					RpActivityConsume.RP_CONSUME_STATUS_FZEN);
+			rpConsume.setConsumeStatus(RpActivityConsume.RP_CONSUME_STATUS_SUC);
+			rpActivityConsumeDao.update(rpConsume);
+			
+			//记录活动红包的消费资金日志，第三方不需要处理
+			Global.setTransfer("user", tender.getUser());
+			Global.setTransfer("rpMoney", consumeMoney);
+			
+			map.put("rechargeMoney", consumeMoney);
+			map.put("logType", "indianaJonesConsume");
+			AbstractExecuter executer = ExecuterHelper.doExecuter("rpActivityConsumeInvesterExecuter");
+			executer.execute(map, tender.getUser());
+		}
+
+
+	}
+	
+
+}

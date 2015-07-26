@@ -1,0 +1,117 @@
+<script type="text/javascript">
+$(function(){
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/market/activity/activityEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	
+		<div class="formitm">
+		     <label class="lab" id="title_label">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" value="${activityNew.title}" class="w400 easyui-validatebox" data-options="required: true" maxlength="30" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab" >副标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="subhead" class="w400 easyui-validatebox" value="${activityNew.subhead}" maxlength="40" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		     </div>
+		</div>
+		<!-- 添加时间开始 -->
+		<div class="formitm">
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="onlineTime" id="startTime" value="${activityNew.onlineTime?string('yyyy-MM-dd HH:mm:ss')}" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="nolineTime" id="endTime" value="${activityNew.nolineTime?string('yyyy-MM-dd HH:mm:ss')}" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间结束 -->
+		<!-- <div class="formitm">
+		     <label class="lab">类型：</label>
+		     <div class="ipt">
+		     	<input type="text" name="type" value="0" value="${activityNew.type}"/>
+		     	<input type="radio" name="type" value="0" <#if activityNew.type?? && activityNew.type == "0">checked="checked"</#if>/>&nbsp;&nbsp;普通
+				<input type="radio" name="type" value="1" <#if activityNew.type?? && activityNew.type == "1">checked="checked"</#if>/>&nbsp;&nbsp;其他
+				
+		     </div>
+		</div> -->
+		<input type="hidden" name="type" value="${activityNew.type}" />
+		
+		<div class="formitm">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" value="${activityNew.sort}" class="easyui-numberbox" maxlength="4" onkeyup="this.value=this.value.replace(/\D/g,'')"/>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">是否显示：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="2" <#if activityNew.status?? && activityNew.status ==2>checked="checked"</#if>/>&nbsp;&nbsp;隐藏
+				<input type="radio" name="status" value="1" <#if activityNew.status?? && activityNew.status ==1>checked="checked"</#if>/>&nbsp;&nbsp;显示
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">是否推荐：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isRecommend" value="0" <#if activityNew.isRecommend?? && activityNew.isRecommend ==0>checked="checked"</#if>/>&nbsp;&nbsp;否
+				<input type="radio" name="isRecommend" value="1" <#if activityNew.isRecommend?? && activityNew.isRecommend ==1>checked="checked"</#if>/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">是否置顶：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isTop" value="0" <#if activityNew.isTop?? && activityNew.isTop ==0>checked="checked"</#if>/>&nbsp;&nbsp;否
+				<input type="radio" name="isTop" value="1" <#if activityNew.isTop?? && activityNew.isTop ==1>checked="checked"</#if>/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file" accept="image/gif,image/jpeg,image/png,image/jpg,image/bmp"/><br />(建议：900 * 240)
+		     </div>
+		</div>
+		<div class="formitm">
+		     <div class="ipt">
+		     	<a href="${activityNew.picPath!}" class="fileshow"  rel="group1" ondragstart="return false"><img src="${activityNew.picPath!}"  title="点击预览">	</a>	
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">链接：</label>
+		     <div class="ipt">
+		     	<input type="text" name="content" class="w400 easyui-validatebox" value="${activityNew.content!}"  data-options="required: true" maxlength="300"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		<div class="formitm" id="introduction">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="introduction"  maxlength="120">${activityNew.introduction!}</textarea>	
+		     </div>
+		</div>
+ 		 
+		<input name="addTime" value="${activityNew.addTime?string('yyyy-MM-dd HH:mm:ss')}" type="hidden"/>
+		<input name="picPath" value="${activityNew.picPath!}" type="hidden"/>
+		<input name="addIp" value="${activityNew.addIp}" type="hidden"/>
+		<input name="clicks" value="${activityNew.clicks}" type="hidden"/>
+		<input name="id" value="${activityNew.id}" type="hidden"/>
+		
+		<input type="hidden" value="${activityEditToken!}" name="activityEditToken">
+		
+	</form>
+</div>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>

@@ -1,0 +1,45 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/reward/redPackEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址		
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+	
+		
+		
+		
+		<div class="formitm">
+		     <label class="lab">红包名称： </label>
+		     <div class="ipt">
+		     	<input type="text" name="name" class="w400 easyui-validatebox" value="${redPacket.name!}" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">红包有效期： </label>
+		     <div class="ipt">
+		     	<input type="text" name="validtime" class="w400 easyui-validatebox" value="${redPacket.validtime}" data-options="required: true,validType:'numeric'"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">是否开启： </label>
+		     <div class="ipt">
+		     	<select name="isopen">
+		            <option <#if isopen == 'Y'>selected="selected"</#if>  value="Y">启用</option>
+		            <option  <#if isopen == 'N'>selected="selected"</#if> value="N">不启用</option>
+	            </select>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">类型编码： </label>
+		     <div class="ipt">
+		     	<input type="text" name="typeCode" class="w400 easyui-validatebox" value="${redPacket.typeCode}" data-options="required: true" />
+		     	<b>*</b>
+		     </div>
+		</div>
+    <input name="createtime" value="${redPacket.createtime}" type="hidden">
+    <input name="operator.id" value="${redPacket.operator.id}" type="hidden">
+	<input name="id" value="${redPacket.id!}" type="hidden">
+	<input type="hidden" name="redPackEditToken" value="${redPackEditToken}" />
+</form>
+</div>

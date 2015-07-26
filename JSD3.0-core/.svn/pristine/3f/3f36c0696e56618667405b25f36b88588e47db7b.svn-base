@@ -1,0 +1,69 @@
+package com.ddtkj.p2psys.redpacket.dao;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.rongdu.common.dao.BaseDao;
+
+/**
+ * @描述：活动红包的产生dao层接口   JSDP-184
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+public interface RpActivityProduceDao extends BaseDao<RpActivityProduce>{
+	
+	/**
+	 * 活动红包产生金额汇总
+	 * @param model
+	 * @return
+	 */
+	List<RpActivityProduceModel> getSumListRpProduce(RpActivityProduceModel model);
+	
+	/**
+	 * 活动红包产生导出excel
+	 * @param model
+	 * @return
+	 */
+	List excelListRpProduce(RpActivityProduceModel model);
+	/**
+	 * 特定活动产生的红包总和
+	 * @param activityType
+	 * @param userId
+	 * @return
+	 */
+	double getSumProduceByType(String activityType, long userId);
+	//端午节活动 wcw 2015-6-19 start
+	/**
+	 * 根据活动查询不同的borrowid
+	 * @param activityType
+	 * @return
+	 */
+	List getBorrowId(String activityType,Date addTime,Date endTime);
+	//List getBorrowId(String activityType);
+	//端午节活动 wcw 2015-6-19 end
+	//JSDP-203 xingjia 20150702 start
+	/**
+	 * 根据用户id获取活动类型
+	 * @param userId
+	 * @param status
+	 * @param awardType
+	 * @return
+	 */
+	List<RpActivityProduce> getActivityTypeList(long userId,String status,String awardType);
+
+	public List<RpActivityProduce> getRpActivityProduceList(RpActivityProduceModel rpm);
+	
+	public RpActivityProduce getRpActivityProduce(RpActivityProduceModel rpm);
+	//JSDP-203 xingjia 20150702 end
+	
+	/**
+	 * 根据活动类型和金额和用户id查询用户是否获得过此奖励
+	 * @param activityType
+	 * @param awardMoney
+	 * @param userId
+	 * @return
+	 */
+	public RpActivityProduce getRpActivityProduce(String activityType,double awardMoney,long userId);
+}

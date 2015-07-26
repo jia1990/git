@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<#include "../../include/resource1.html"> 
+<body>
+<#assign nid="my_account">
+<#include "../../include/headerMemberCenter.html">
+<!--header-end-->
+<!--用户中心的主栏目 开始-->
+<div id="container" class="clearfix" >
+<div class="usermain clearfix">
+	<!--左边的导航 开始-->
+	<div class="c_deal">
+		<div class="c_deal_content">
+    	<#assign mid="m_info" >
+		<#include "../account_menu.html">
+	
+	<!--左边的导航 结束-->
+	
+	<!--右边的内容 开始-->	
+	<div class="user_right">
+		<h2 class="user_title">站内信息</h2>
+		<div class="user_right_main">
+			<div class="messagebar">
+				<input type="checkbox" class="checkAll regular-checkbox" /><label class="checkAll_label"></label>选择所有
+				<em id="msgTip"></em>
+				<span><a href="javascript:;" id="delMsg" title="删除信息">删除信息</a>|
+				<a href="javascript:;" id="signRead" title="标记已读">标记已读</a>|
+				<a href="javascript:;" id="signUnRead" title="标记未读">标记未读</a>
+				</span>
+			</div>
+			<form action="/member/message/set.html">
+				<ul class="messagelist clearfix" id="messagelist"></ul>
+			</form>
+			<div id="kkpager"></div>
+		</div>
+ 	 </div>
+	<!--右边的内容 结束-->
+	</div>
+	</div>
+</div>
+<!--用户中心的主栏目 结束-->
+<script>seajs.use('member/message_detail');</script>
+<script>
+	$(function(){
+		$($(".y_account_nav dd")[11]).addClass("c_invest_this");
+	})
+</script>
+<#include "../../include/footer.html"> 
+</body>
+</html>

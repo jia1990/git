@@ -1,0 +1,137 @@
+package com.ddtkj.p2psys.account.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * @描述:投资人取消提现
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月17日
+ */
+public class DrawCancelInvesterExecuter extends BaseExecuter {
+	private String accountLogType = Constant.CASH_CANCEL;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId",
+				this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(
+				Constant.ADMIN_ID));
+		// 操作金额
+		log.setRechargeMoney(rechargeMoney);
+		log.setAwardMoney(awardMoney);
+		log.setInterestMoney(interestMoney);
+		log.setReturnCapitalMoney(returnCapitalMoney);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		// 账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		// 账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte) 0);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		// 平台用户资金账户表中冻结总金额
+		double freezeUseAward = BigDecimalUtil.sub(account.getFreezeUseAward(),
+				awardMoney);// 冻结使用奖励总额
+		double freezeUseInterest = BigDecimalUtil.sub(
+				account.getFreezeUseInterest(), interestMoney);// 冻结使用利息总额
+		double freezeUseRecharge = BigDecimalUtil.sub(
+				account.getFreezeUseRecharge(), rechargeMoney);// 冻结使用充值总额
+		double freezeUseReturnCapital = BigDecimalUtil.sub(
+				account.getFreezeUseReturnCapital(), returnCapitalMoney);// 冻结使用回款总额
+		/*// 冻结总金额
+		double freezeTotal = BigDecimalUtil.add(freezeUseAward,
+				freezeUseInterest, freezeUseRecharge, freezeUseReturnCapital);*/
+
+		// 平台用户资金账户表中可用总金额
+		/* 利息可用总额 */
+		double interestUsable = BigDecimalUtil.add(account.getInterestUsable(),
+				interestMoney);
+		/* 奖励可用总额 */
+		double awardUsable = BigDecimalUtil.add(account.getAwardUsable(),
+				awardMoney);
+		/* 充值可用总额 */
+		double rechargeUsable = BigDecimalUtil.add(account.getRechargeUsable(),
+				rechargeMoney);
+		/* 回款本金可用总额 */
+		double returnCapitalUsable = BigDecimalUtil.add(
+				account.getReturnCapitalUsable(), returnCapitalMoney);
+		/*// 可用总金额
+		double usableTotal = BigDecimalUtil.add(interestUsable, awardUsable,
+				rechargeUsable, returnCapitalUsable);*/
+
+		/*// 账户总金额=可用总金额+冻结总金额+借款人待还总金额  公式错误
+		double accountTotal = BigDecimalUtil.add(usableTotal, freezeTotal,
+				account.getRepaymentTotal());
+		account.setAccountTotal(accountTotal);*/
+		account.setAwardUsable(awardUsable);
+		account.setInterestUsable(interestUsable);
+		account.setRechargeUsable(rechargeUsable);
+		account.setReturnCapitalUsable(returnCapitalUsable);
+		account.setFreezeUseAward(freezeUseAward);
+		account.setFreezeUseInterest(freezeUseInterest);
+		account.setFreezeUseRecharge(freezeUseRecharge);
+		account.setFreezeUseReturnCapital(freezeUseReturnCapital);
+		//JSDP-164 wcw 20150527 start
+		accountDao.modifyInvesterAccount(account, user.getUserId());
+		//accountDao.update(account);
+		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+
+	}
+
+	@Override
+	public void handlePoints() {
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.DRAW_CANCEL_SUCC);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+
+	}
+
+	@Override
+	public void handleInterface() {
+
+	}
+
+	@Override
+	public void extend() {
+
+	}
+}

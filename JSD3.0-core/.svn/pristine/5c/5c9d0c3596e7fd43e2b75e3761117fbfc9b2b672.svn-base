@@ -1,0 +1,131 @@
+package com.ddtkj.p2psys.user.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+/**
+ * @描述:用户登录历史实体类
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月8日
+ */
+@Entity
+@Table(name = "t_jsd_user_login_hisotry")
+public class UserLoginHisotry implements Serializable {
+	private static final long serialVersionUID = -2454132734512654910L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;// 对象标识
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;// 平台用户ID
+	private String loginAccount;// 登录账户
+	private Date loginTime;// 登录时间
+	private String loginWay;// 登录方式(APP,PC)
+	private String loginIp;// 登录IP
+	private String loginStatus;// 登录状态(成功或失败)
+	private String loginFailReason;// 登录失败原因
+
+	public UserLoginHisotry(){
+		
+	}
+	
+	/**
+	 * @author 郭俊辉
+	 * 
+	 * @param user
+	 * @param loginAccount
+	 * @param loginTime
+	 * @param loginWay
+	 * @param loginIp
+	 * @param loginStatus
+	 * @param loginFailReason
+	 */
+	public UserLoginHisotry(User user, String loginAccount,
+			Date loginTime, String loginWay, String loginIp,
+			String loginStatus, String loginFailReason) {
+		this.user = user;
+		this.loginAccount = loginAccount;
+		this.loginTime = loginTime;
+		this.loginWay = loginWay;
+		this.loginIp = loginIp;
+		this.loginStatus = loginStatus;
+		this.loginFailReason = loginFailReason;
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getLoginAccount() {
+		return loginAccount;
+	}
+
+	public void setLoginAccount(String loginAccount) {
+		this.loginAccount = loginAccount;
+	}
+
+	public Date getLoginTime() {
+		return loginTime;
+	}
+
+	public void setLoginTime(Date loginTime) {
+		this.loginTime = loginTime;
+	}
+
+	public String getLoginWay() {
+		return loginWay;
+	}
+
+	public void setLoginWay(String loginWay) {
+		this.loginWay = loginWay;
+	}
+
+	public String getLoginStatus() {
+		return loginStatus;
+	}
+
+	public void setLoginStatus(String loginStatus) {
+		this.loginStatus = loginStatus;
+	}
+
+	public String getLoginFailReason() {
+		return loginFailReason;
+	}
+
+	public void setLoginFailReason(String loginFailReason) {
+		this.loginFailReason = loginFailReason;
+	}
+
+	public String getLoginIp() {
+		return loginIp;
+	}
+
+	public void setLoginIp(String loginIp) {
+		this.loginIp = loginIp;
+	}
+
+}

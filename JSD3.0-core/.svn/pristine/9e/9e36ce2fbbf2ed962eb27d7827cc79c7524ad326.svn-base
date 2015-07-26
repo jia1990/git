@@ -1,0 +1,144 @@
+
+package com.ddtkj.p2psys.score.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.score.constant.ScoreAwardConstant;
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.score.exception.ScoreException;
+
+/**
+ * @描述: 抽奖奖品配置
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-7   
+ */
+public class ScoreAwardObjectModel extends ScoreAward{
+
+	private static final long serialVersionUID = -4785493709185303589L;
+	
+	/** 当前页码 **/
+	private int page = 1;
+
+	/** 每页数据条数 **/
+	private int size = Page.ROWS;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	/** 抽奖规则名 **/
+	private String ruleName;
+	/** 抽奖规则类型 **/
+	private int ruleAwardType;
+	
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getSize() {
+		return size;
+	}
+	public void setSize(int size) {
+		this.size = size;
+	}
+	public String getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+	public String getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	public int getTime() {
+		return time;
+	}
+	public void setTime(int time) {
+		this.time = time;
+	}
+	
+	public String getRuleName() {
+		return ruleName;
+	}
+	public void setRuleName(String ruleName) {
+		this.ruleName = ruleName;
+	}
+	
+	public int getRuleAwardType() {
+		return ruleAwardType;
+	}
+	public void setRuleAwardType(int ruleAwardType) {
+		this.ruleAwardType = ruleAwardType;
+	}
+	
+	/**
+	 * 奖品配置规则数据校验
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	public void validAwardObject(ScoreAwardObjectModel model){
+		if (model != null) {
+			if(StringUtil.isBlank(model.getName())){					
+				throw new ScoreException("奖品名称必须填写",1);
+			}
+			if(model.getLevel() <= 0){
+				throw new ScoreException("奖品级别必须填写",1);
+			}
+			if(model.getRate() <= 0){
+				throw new ScoreException("奖品中奖率必须填写",1);
+			}
+			if(model.getAwardValue() <= 0){
+				throw new ScoreException("奖品面值必须填写",1);
+			}
+			if(StringUtil.isBlank(model.getDescription())){
+				throw new ScoreException("奖品描述必须填写",1);
+			}
+			if(model.getAwardLimit() == ScoreAwardConstant.AWARD_OBJECTLIMIT_AMOUNT && model.getTotal() <= 0){
+				throw new ScoreException("奖品数量限制开启时必须填写奖品总量",1);
+			}
+			if(model.getRuleAwardType() == ScoreAwardConstant.AWARD_TYPE_RATIO && model.getRatio() <= 0){
+				throw new ScoreException("抽奖规则为按倍率抽奖时必须填写倍率",1);							
+			}	
+			if(model.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_VIP && StringUtil.isBlank(model.getVipLevel())){
+				throw new ScoreException("抽奖规则奖品为VIP时必须填写VIP等级",1);							
+			}
+			if(model.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_VIP && model.getVipValidMonth() <=0 ){
+				throw new ScoreException("抽奖规则奖品为VIP时必须填写VIP有效期或有效期非法",1);							
+			}
+			//现有抽奖规则主要是积分抽奖，所以其他抽奖方式数据校验暂时不用规则动态配置，为固定值
+			if(!StringUtil.isPositiveInteger(model.getLevel()+"") || model.getLevel() > 100){
+				throw new ScoreException("非法的奖品级别，奖品级别为1到100以内的整数",1);
+			}
+			if(model.getRate() > 100000000){
+				throw new ScoreException("非法的中奖率，中奖率为0到1之间的小数，目前系统支持的最小概率为0.00000001",1);
+			}
+			if(model.getAwardLimit() == ScoreAwardConstant.AWARD_OBJECTLIMIT_AMOUNT && (!StringUtil.isPositiveInteger(model.getTotal()+"") || model.getTotal() > 1000000000)){
+				throw new ScoreException("非法的奖品数量，奖品数量为1到1000000000以内的整数",1);
+			}
+			if(model.getRuleAwardType() == ScoreAwardConstant.AWARD_TYPE_RATIO && (model.getRatio() > 10000 || model.getRatio() < 0.00001)){
+				throw new ScoreException("非法的奖品倍率，奖品倍率数值为0.00001到10000的数字",1);							
+			}	
+		}
+	}	
+	
+	public static ScoreAwardObjectModel instance(ScoreAward scoreAward){
+		ScoreAwardObjectModel model = new ScoreAwardObjectModel();
+		BeanUtils.copyProperties(scoreAward, model);
+		return model;
+	}
+	
+	public ScoreAward prototype(){
+		ScoreAward scoreAward = new ScoreAward();
+		BeanUtils.copyProperties(this, scoreAward);
+		return scoreAward;
+	}
+	
+}

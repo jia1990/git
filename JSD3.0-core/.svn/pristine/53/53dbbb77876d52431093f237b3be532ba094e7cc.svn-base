@@ -1,0 +1,150 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.member.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：会员VIP奖励表
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月22日
+ */
+@Entity
+@Table(name = "t_jsd_vip_award")
+public class MemberVipAward implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2075673520554266912L;
+	
+	/** VIP奖励来源: 现金购买 */
+	public static final String AWARD_RESOURCE_CASHBUY = "P1";
+	/** VIP奖励来源: 投资TOP奖励 */
+	public static final String AWARD_RESOURCE_INVESTTOP = "P2";
+	/** VIP奖励来源: 抽奖活动奖励  */
+	public static final String AWARD_RESOURCE_SCOREAWARD = "P3";
+	/** VIP奖励来源: 邀请兑换VIP */
+	public static final String AWARD_RESOURCE_MEMBERVIP = "P4";
+	/** VIP奖励来源: 会员升级购买 */
+	public static final String AWARD_RESOURCE_MEMBERUPGRADE = "P5";
+	
+	/** 是否兑换: 1已兑换 */
+	public static final int MEMBERVIP_IS_CONVERTED = 1;
+	/** 是否兑换: 0未兑换 */
+	public static final int MEMBERVIP_NO_CONVERTED = 0;
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name="user_id")
+	private User user;
+	private String awardResource;// VIP奖励来源 P2:投资TOP奖励,P3：抽奖活动奖励，P4：邀请兑换VIP
+	protected String vipLevel;// VIP级别
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date vipConvertTime;// VIP兑换时间
+	private int vipValidMonth;// VIP有效月份
+	private int vipConvertUsedPeople;// 兑换VIP消耗人数
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime;// 记录生成时间
+	private int isConvert;//是否兑换 1：已兑换，0未兑换
+	
+	public MemberVipAward(){
+		
+	}
+	
+	public MemberVipAward(User user){
+		super();
+		this.user = user;
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getAwardResource() {
+		return awardResource;
+	}
+
+	public void setAwardResource(String awardResource) {
+		this.awardResource = awardResource;
+	}
+
+	public String getVipLevel() {
+		return vipLevel;
+	}
+
+	public void setVipLevel(String vipLevel) {
+		this.vipLevel = vipLevel;
+	}
+
+	public Date getVipConvertTime() {
+		return vipConvertTime;
+	}
+
+	public void setVipConvertTime(Date vipConvertTime) {
+		this.vipConvertTime = vipConvertTime;
+	}
+
+	public int getVipValidMonth() {
+		return vipValidMonth;
+	}
+
+	public void setVipValidMonth(int vipValidMonth) {
+		this.vipValidMonth = vipValidMonth;
+	}
+
+	public int getVipConvertUsedPeople() {
+		return vipConvertUsedPeople;
+	}
+
+	public void setVipConvertUsedPeople(int vipConvertUsedPeople) {
+		this.vipConvertUsedPeople = vipConvertUsedPeople;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public int getIsConvert() {
+		return isConvert;
+	}
+
+	public void setIsConvert(int isConvert) {
+		this.isConvert = isConvert;
+	}
+
+}

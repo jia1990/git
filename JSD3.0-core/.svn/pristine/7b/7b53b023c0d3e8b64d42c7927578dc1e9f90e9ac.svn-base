@@ -1,0 +1,125 @@
+package com.ddtkj.p2psys.tpp.ymd.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.tpp.domain.TppIpsPay;
+import com.rongdu.p2psys.tpp.ips.model.IpsRegisterGuarantor;
+
+/**
+ * 
+ * TODO 调用托管接口的业务处理方法
+ * 
+ * @author lx
+ * @version 2.0
+ * @since 2014年7月22日
+ */
+public interface YmdService {
+	/**
+	 * 统一处理所有接口任务
+	 * @param taskList 
+	 * @return 处理结果
+	 */
+	boolean doIpsTask(List<Object> taskList);
+	
+	
+	/**
+	 * 转账
+	 * @param borrow 标
+	 * @param tender 投标记录
+	 * @param u  转出人
+	 * @param toU 转入人
+	 * @param transferType 转账类型
+	 * @param transferNo 商户交易号（多笔交易可以共用一个)
+	 */
+	void transfer(Borrow borrow, BorrowTender tender, User u, User toU,
+			String transferType, String transferNo);
+	/**
+     * 转账
+     * @param borrow 标
+     * @param tender 投标记录
+     * @param transferType 转账类型
+     * @param transferNo 商户交易号（多笔交易可以共用一个）
+     */
+    void transfer(Borrow borrow, List<BorrowTender> tender,
+            String transferType,String transferNo);
+
+    /**
+     * 转账（还款）
+     * @param borrow
+     * @param tender
+     * @param transferType
+     * @param transferNo
+     */
+    void repayTransfer(Borrow borrow, List<BorrowCollection> tender,
+            String transferType,String transferNo);
+	/**
+	 * 汇潮用户还款信息组装
+	 * @param repayment 还款信息
+	 * @param repayType 还款类型
+	 * @return
+	 */
+    String repaySkip(BorrowRepayment repayment, byte repayType,String resultFlag)throws Exception ;
+    /**
+     * 汇潮转账（即投即生息还款）
+     * @param repayment
+     * @param repayType
+     * @return
+     */
+   String instantLiveYmdBorrowRepay(BorrowCollection c, byte repayType) throws Exception;
+    /**
+     * 更新repayment信息
+     * @param pay
+     */
+    BorrowRepayment updateRepay(TppIpsPay pay);
+    /**
+     * 登记担保方
+     * @param borrow
+     * @return
+     */
+    IpsRegisterGuarantor registerGuarantor(Borrow borrow);
+
+    /**
+     * 担保方代偿
+     * @param repayment
+     * @return
+     */
+    void doCompensate(BorrowRepayment repayment,String resultFlag);
+    
+    /**
+     * 担保方代偿成功后处理
+     * @param borrow
+     * @return
+     */
+    void doCompensateSuccess(BorrowRepayment repayment);
+    
+    /**
+     * 充值业务逻辑
+     * @param y
+     * @param u
+     */
+    public YmdRecharge doRecharge(AccountRechargeModel model,User u)throws Exception;
+    /**
+     * 充值回调业务处理
+     * @param ymdRecharge
+     * @param u
+     * @param resultFlag
+     * @return
+     */
+    public YmdRecharge doReturnRecharge(YmdRecharge ymdRecharge,User u,String resultFlag);
+    /**
+     * 提现业务处理
+     * @param y
+     * @param u
+     * @param resultFlag
+     */
+    public void doDraw(YmdCash y,User u,String resultFlag);
+    
+}

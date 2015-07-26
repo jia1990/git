@@ -1,0 +1,44 @@
+<script type="text/javascript">
+    $(function() {
+    	$.fn.dataGridOptions.formSubFun("#form",'/modules/account/transfer/addAccountTransfer.html');
+    });
+</script>
+
+<form id="form"  method="post">
+<div class="popForm sForm">
+	<div class="formitm">
+		<label class="lab">转出人：</label>
+		<div class="ipt"><#if type=='borrow_account_transfer'><input type="text" name="popUserName" value="1980092" readonly="readonly"/> *平台账户<#else><input type="text" name="popUserName" class="easyui-validatebox" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/> *用户名</#if></div>
+	</div>
+	
+	<div class="formitm" >
+		<label class="lab">转入人：</label>
+		<div class="ipt">
+		<#if type=='user_to_platform_transfer'>
+		<input type="text" name="userName" value="1980092" readonly="readonly"/>
+		 <span>*平台账户</span>
+		 <#else>
+		<input type="text" name="userName" class="easyui-validatebox" value="" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		 <span>*用户名</span>
+		 </#if>
+		</div>
+		
+	</div>
+	<div class="formitm" >
+		<label class="lab">转账金额：</label>
+		<div class="ipt"><input type="text" name="transferAmount" class="easyui-validatebox" value="" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/>
+		</div>
+		
+	</div>
+	<div class="formitm" >
+		<label class="lab">备注：</label>
+		<div class="ipt">
+		<textarea name="remark" class="easyui-validatebox" value="" data-options="required: true" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"></textarea>
+		</div>
+		
+	</div>
+	
+	<input name="type" value="${type!}" type="hidden">
+	<input name="addAccountTransferToken" value="${addAccountTransferToken!}" type="hidden">
+</div>
+</form>

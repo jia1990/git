@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  480;
+	var winHeight = 520;
+	var editTitle = "审核证明资料";
+	var editUrl =  "/modules/user/user/certification/certificationEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'certificationList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'id', title: '编号', width: 50, fixed:true,checkbox : false},
+			{ field: 'userName', title: '用户名', width: 80, fixed:true,checkbox : false},
+			{ field: 'realName', title: '真实姓名', width: 60, fixed:true,sortable:false },
+			{ field: 'typeName', title: '资料类型', width: 100, sortable:false},
+			{ field: 'addTime', title: '上传时间', width: 120, sortable:false,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'name', title: '备注', width: 100, sortable:false },
+// 			{ field: 'verifyTime', title: '审核时间', width: 130, sortable:false, 
+// 				formatter: function(value,row,index){
+// 					if (value){
+// 						return getLocalTime(value,4);
+// 					} else {
+// 						return "";
+// 					}
+// 				}	
+// 			},
+// 			{ field: 'verifyRemark', title: '审核说明', width: 100, sortable:false },
+			{ field: 'status', title: '状态', width: 80, fixed:true,sortable:false, 
+				formatter: function(value,row,index){
+					return verifyStatus(value);
+				}	
+			},
+			{ field:'picPath',title:'图片',width:40,fixed:true,sortable:false,formatter: function(value,row,index){
+					return "<a target='_Blank' href='${weburl}"+value+"' >查看</a>";
+				  }  
+			},
+			  {	field : 'action',
+				title : '操作',
+				width :40,
+				fixed:true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if(row.status == 0){
+						if ($.canEdit) {
+							str = $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="审核"/>', row.id, '${theme_dir}/css/images/rd/edit.png');
+						}
+					}
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			},
+		});
+	});
+</script>
+</head>
+<body>
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',title:'查询条件',border:false,collapsible:false" style="height: 90px; overflow: hidden;">
+			<form id="searchForm">
+				<div class="search_box">用户名：<input type="text" name="userName"/></div>
+				<div class="search_box">
+					状态：
+					<select name="status" id="status" class="status">
+						<option value=-1>全部</option>
+						<option value=0 selected="selected">待审核</option>
+						<option value=1>审核通过</option>
+						<option value=2>审核未通过</option>
+					</select>
+				</div>
+				<div class="search_box">
+					<a href="javascript:void(0);" class="easyui-linkbutton" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a>
+					<a href="javascript:void(0);" class="easyui-linkbutton" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a>
+				</div>
+			</form>
+		</div>
+		<div data-options="region:'center',border:false">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+</html>

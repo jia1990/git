@@ -1,0 +1,100 @@
+package com.ddtkj.p2psys.core.quartz.openAccount;
+/**
+ * 业务处理类型：
+ * 第三方账户开立
+ * 用户账户激活
+ * 绑定银行卡异步通知
+ * 双乾三合一接口
+ * 扣款签名
+ * 易极付实名
+ * 汇付合作账户开立
+ * 【重要】：
+ *  此队列只处理第三方账户相关注册信息的，和资金信息无关。
+ */
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.core.quartz.tender.TenderJobQueue;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.user.service.UserCacheService;
+/**
+ * 第三方账户，账户业务处理
+ * @author zxc
+ *
+ */
+public class OpenAccountTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(OpenAccountTask.class);
+
+	@Resource
+	private UserCacheService userCacheService;
+	
+	
+	public UserCacheService getUserCacheService() {
+		return userCacheService;
+	}
+
+	public void setUserCacheService(UserCacheService userCacheService) {
+		this.userCacheService = userCacheService;
+	}
+
+	public Logger getLogger() {
+		return logger;
+	}
+
+	public void setLogger(Logger logger) {
+		this.logger = logger;
+	}
+
+	public OpenAccountTask(UserCacheService userCacheService) {
+		super();
+		task.setName("openAccount.Task");
+		this.userCacheService = userCacheService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (OpenAccountJobQueue.OPEN_ACCOUNT!=null && OpenAccountJobQueue.OPEN_ACCOUNT.size() > 0) {
+			OpenAccountBean aab = OpenAccountJobQueue.OPEN_ACCOUNT.peek();
+			if (aab != null) {
+				String result = "success";
+				try {
+					userCacheService.ymdRegisterCall(aab.getUser(), aab.getYmdRegister());
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					OpenAccountJobQueue.OPEN_ACCOUNT.remove(aab);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				    if(aab.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(aab.getResultFlag(), result);
+			            }
+			        }
+				}
+			}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return OpenAccountTask.OPEN_ACCOUNT_STATUS;
+	}
+
+}

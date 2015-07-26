@@ -1,0 +1,130 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.redpacket.dao.ActivityDao;
+import com.ddtkj.p2psys.redpacket.dao.ActivityRPDao;
+import com.ddtkj.p2psys.redpacket.domain.Activity;
+import com.ddtkj.p2psys.redpacket.domain.ActivityRP;
+import com.ddtkj.p2psys.redpacket.model.RedPacketModel;
+import com.ddtkj.p2psys.redpacket.service.ActivityService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+/**
+ * 活动service实现类
+ * @author YJF
+ *
+ */
+
+@Service("activityService")
+public class ActivityServiceImpl implements ActivityService {
+
+	@Resource
+	private ActivityDao activityDao ;
+	@Resource
+	private ActivityRPDao activityRPDao ;
+	
+
+	@Override
+	public Activity save(Activity rp) {
+		return this.activityDao.save(rp);
+	}
+
+	@Override
+	public Activity update(Activity rp) {
+		// TODO Auto-generated method stub
+		return this.activityDao.update(rp);
+	}
+
+	@Override
+	public void delete(Activity rp) {
+		this.activityDao.delete(rp.getId());
+	}
+
+	@Override
+	public List<Activity> getAll() {
+		return this.activityDao.findAll();
+	}
+
+	@Override
+	public Activity getEntityById(long id) {
+		return this.activityDao.getEntityById(id);
+	}
+
+	@Override
+	public PageDataList<Activity> getEntityByName(String name,int currentPage,int pagenum) {
+		return this.activityDao.getEntityByName(name, currentPage, pagenum);
+	}
+
+	@Override
+	public PageDataList<Activity> getEntityByTypeCode(String typecode,int currentPage,int pagenum) {
+		List<Activity> list = new ArrayList<Activity>();
+		PageDataList<ActivityRP> p = this.activityRPDao.findByRPTypecode(typecode,currentPage,pagenum);
+		for (ActivityRP activityRP : p.getList()) {
+			list.add(activityRP.getActivity());
+		}
+		PageDataList<Activity> redmPageList = new PageDataList<Activity>(p.getPage(), list);
+		return redmPageList ;
+	}
+	@Override
+	public PageDataList<RedPacketModel> getModelByTypeCode(String typecode,int currentPage,int pagenum) {
+		List<RedPacketModel> list = new ArrayList<RedPacketModel>();
+		PageDataList<ActivityRP> p = this.activityRPDao.findByRPTypecode(typecode, currentPage, pagenum) ;
+		for (ActivityRP activityRP : p.getList()) {
+			list.add(RedPacketModel.getInstance(activityRP));
+		}
+		PageDataList<RedPacketModel> redmPageList = new PageDataList<RedPacketModel>(p.getPage(), list);
+		return redmPageList ;
+	}
+	@Override
+	public PageDataList<Activity> getEntityPageDataList(QueryParam param,int currentPage,int pagenum) {
+		// TODO Auto-generated method stub
+		return this.activityDao.findAllPageList(param);
+	}
+
+	@Override
+	public PageDataList<Activity> getEntityListBetweenTime(Date date,int currentPage,int pagenum) {
+		// TODO Auto-generated method stub
+		return this.activityDao.getEntityListBetweenTime(date, currentPage, pagenum);
+	}
+
+	@Override
+	public Activity getEntityByTimeAndRPTypeCode(Date date, String typecode) {
+		if(this.activityRPDao.getEntityByTimeAndRPTypeCode(date, typecode)!=null){
+			return activityRPDao.getEntityByTimeAndRPTypeCode(date, typecode).getActivity() ;
+		}
+		return null ;
+	}
+	@Override
+	public RedPacketModel getModelByTimeAndRPTypeCode(Date date, String typecode) {
+		return RedPacketModel.getInstance(activityRPDao.getEntityByTimeAndRPTypeCode(date, typecode)) ;
+	}
+
+	@Override
+	public PageDataList<Activity> getPageDataList(Map<String, Object> map,
+			int currentPage, int pagenum) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance().addPage(currentPage,pagenum);
+		Activity activity = (Activity) map.get("model");
+		if(null != activity.getActName() && !"".equals(activity.getActName())){
+			param.addParam("actName", Operators.LIKE, activity.getActName());
+		}
+		if(null != activity.getBegintime() && !"".equals(activity.getBegintime())){
+			param.addParam("begintime", Operators.GT, activity.getBegintime());
+		}
+		if(null !=activity.getEndtime() && !"".equals(activity.getEndtime())){
+			param.addParam("endtime", Operators.LT, activity.getEndtime());
+		}
+		PageDataList<Activity> activityPageList = this.getEntityPageDataList(param, currentPage, pagenum);
+		return activityPageList;
+	}
+
+}

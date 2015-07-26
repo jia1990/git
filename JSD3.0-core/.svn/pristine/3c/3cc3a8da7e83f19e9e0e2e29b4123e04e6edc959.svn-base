@@ -1,0 +1,213 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Map;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.RpActivityProduceAndConsumeRuleCheck;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+
+/**
+ * @描述：活动红包的产生(夺宝骑兵)
+ * @作者：wangchangwei@ddtkj.com  JSDP-203
+ * @创建时间：2015年4月14日 
+ */
+public class RpActivityRpMoneyIndianaJonesProduceWorker extends RpActivityBaseWorker{
+	
+	
+	public RpActivityRpMoneyIndianaJonesProduceWorker(RpActivity rpActivity,BorrowTender tender){
+		super(rpActivity,tender);
+	}
+
+	@Override
+	public void autoHandld() {
+		RpActivityProduceDao rpActivityProduceDao = (RpActivityProduceDao) BeanUtil.getBean("rpActivityProduceDao");
+		
+		//根据规则所得的奖励
+		double awardAmountD = 0;
+		try {
+			awardAmountD = rpActivityCalculate(rpActivity.getActivityType());
+			
+		} catch (ScriptException e) {
+			e.printStackTrace();
+		}
+		if(awardAmountD > 0){
+			String batchNo = TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP);
+			String tradeNo = TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER);
+			//生成红包产生记录
+			RpActivityProduce rpActivityPro = new RpActivityProduce();
+			rpActivityPro.setActivityType(rpActivity.getActivityType());
+			rpActivityPro.setActivityAward(awardAmountD);
+			rpActivityPro.setAddTime(Calendar.getInstance().getTime());
+			rpActivityPro.setAwardType(null);
+			rpActivityPro.setAwardUser(tender.getUser());
+			
+			rpActivityPro.setTenderMoney(tender.getAccount());
+			rpActivityPro.setRemark(RpActivityProduce.RP_RPODUCE_INDIANA_JONES+":"+tender.getUser().getUserId()+"金额"+awardAmountD);
+			rpActivityPro.setIsEnable(0);//1:可用 0:不可用
+			rpActivityPro.setTradeNo(tradeNo);
+			rpActivityProduceDao.save(rpActivityPro);
+			
+			
+			Global.setTransfer("user", tender.getUser());
+			Global.setTransfer("rpMoney", awardAmountD);
+			
+			//修改账户金额，放入冻结金额中
+			map.put("outTradeNo", tradeNo);//流水号
+			map.put("tradeNo", batchNo);//批次号
+			map.put("logType", rpActivity.getActivityType());
+			map.put("rechargeMoney", awardAmountD);
+			AbstractExecuter executer = ExecuterHelper.doExecuter("rpActivityProduceInvesterExecuter");
+			executer.execute(map, tender.getUser());
+			
+			
+			String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+			String transferNo= batchNo;
+			String oriMerBillNo=rpActivityPro.getTradeNo();//流水号
+			String trdAmt= rpActivityPro.getActivityAward()+"";
+			String fromApiId=Global.getValue("ymd_merchant_id");
+			String toApiId=rpActivityPro.getAwardUser().getUserName();
+			if(StringUtil.isNotBlank(rpActivityPro.getAwardUser().getUserName())){
+				YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+				if("0000".equals(ymdTransfer.getErrCode())){
+					
+				}else{
+					throw new BussinessException("本地账户信息和一麻袋不符",1);
+				}
+			}
+		}
+
+	}
+	/**
+	 * 根据规则计算所得的奖励
+	 * @throws ScriptException 
+	 */
+	private double rpActivityCalculate(String activityType) throws ScriptException{
+		
+		
+		RpActivityProduceAndConsumeRuleCheck rpActivityRule = (RpActivityProduceAndConsumeRuleCheck) Global.getRuleCheck(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE);
+		Map<String,Object> activityRp = rpActivityRule.IndianaJonesRp();
+		
+		RpActivityProduceDao rpActivityProduceDao = (RpActivityProduceDao) BeanUtil.getBean("rpActivityProduceDao");
+		UserIdentifyDao userIdentifyDao = (UserIdentifyDao) BeanUtil.getBean("userIdentifyDao");
+		BorrowTenderDao borrowTenderDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		User user = tender.getUser();
+
+		double awardAmountD = 0;
+		if("indianaJones".equals(activityType)){
+			//判断此用户是否在活动期间注册，通过3项认证
+			UserIdentify userIdentify = userIdentifyDao.findByUserId(user.getUserId());
+			if(null != userIdentify && "83".equals(userIdentify.getRealNameStatus()) 
+					&& "81".equals(userIdentify.getEmailStatus()) 
+					&& "86".equals(userIdentify.getMobilePhoneStatus())){
+				
+				if(!activityRp.isEmpty()){
+					Date startTime =  (Date) activityRp.get("activityRp_start_time");
+					Date endTime =  (Date) activityRp.get("activityRp_end_time");
+
+					long registerTime = user.getAddTime().getTime();
+					if(registerTime >= startTime.getTime() && registerTime <= endTime.getTime()){
+						//查询活动期间内的累计投标金额
+						double tenderMoneySum = borrowTenderDao.tenderSumAccount(startTime, endTime, user.getUserId());
+						if(tenderMoneySum > 0){
+							RpActivityProduce rap = null;
+							if(tenderMoneySum >= Double.parseDouble(activityRp.get("activityRp_tender_formula_a")+"")){
+								//判断此用户是否已获取过此次奖励
+								rap = rpActivityProduceDao.getRpActivityProduce(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE, 
+										Double.parseDouble(activityRp.get("activityRp_award_formula_a")+""), user.getUserId());
+								if(null != rap){
+									awardAmountD = 0;
+								}else{
+									awardAmountD = Double.parseDouble(activityRp.get("activityRp_award_formula_a")+"");
+								}
+							}else if(tenderMoneySum >= Double.parseDouble(activityRp.get("activityRp_tender_formula_b")+"")){
+								rap = rpActivityProduceDao.getRpActivityProduce(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE, 
+										Double.parseDouble(activityRp.get("activityRp_award_formula_b")+""), user.getUserId());
+								if(null != rap){
+									awardAmountD = 0;
+								}else{
+									awardAmountD = Double.parseDouble(activityRp.get("activityRp_award_formula_b")+"");
+								}
+							}else if(tenderMoneySum >= Double.parseDouble(activityRp.get("activityRp_tender_formula_c")+"")){
+								rap = rpActivityProduceDao.getRpActivityProduce(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE, 
+										Double.parseDouble(activityRp.get("activityRp_award_formula_c")+""), user.getUserId());
+								if(null != rap){
+									awardAmountD = 0;
+								}else{
+									awardAmountD = Double.parseDouble(activityRp.get("activityRp_award_formula_c")+"");
+								}
+							}else if(tenderMoneySum >= Double.parseDouble(activityRp.get("activityRp_tender_formula_d")+"")){
+								rap = rpActivityProduceDao.getRpActivityProduce(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE, 
+										Double.parseDouble(activityRp.get("activityRp_award_formula_d")+""), user.getUserId());
+								if(null != rap){
+									awardAmountD = 0;
+								}else{
+									awardAmountD = Double.parseDouble(activityRp.get("activityRp_award_formula_d")+"");
+								}
+							}else if(tenderMoneySum >= Double.parseDouble(activityRp.get("activityRp_tender_formula_e")+"")){
+								rap = rpActivityProduceDao.getRpActivityProduce(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE, 
+										Double.parseDouble(activityRp.get("activityRp_award_formula_e")+""), user.getUserId());
+								if(null != rap){
+									awardAmountD = 0;
+								}else{
+									awardAmountD = Double.parseDouble(activityRp.get("activityRp_award_formula_e")+"");
+								}
+							}else if(tenderMoneySum >= Double.parseDouble(activityRp.get("activityRp_tender_formula_f")+"")){
+								rap = rpActivityProduceDao.getRpActivityProduce(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE, 
+										Double.parseDouble(activityRp.get("activityRp_award_formula_f")+""), user.getUserId());
+								if(null != rap){
+									awardAmountD = 0;
+								}else{
+									awardAmountD = Double.parseDouble(activityRp.get("activityRp_award_formula_f")+"");
+								}
+							}else if(tenderMoneySum >= Double.parseDouble(activityRp.get("activityRp_tender_formula_g")+"")){
+								rap = rpActivityProduceDao.getRpActivityProduce(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE, 
+										Double.parseDouble(activityRp.get("activityRp_award_formula_g")+""), user.getUserId());
+								if(null != rap){
+									awardAmountD = 0;
+								}else{
+									awardAmountD = Double.parseDouble(activityRp.get("activityRp_award_formula_g")+"");
+								}
+							}
+						}
+						
+					}
+				}
+			}
+		}
+		
+		if(awardAmountD>0){
+			return awardAmountD;
+		}else{
+			return 0;
+		}
+	}
+	
+
+}

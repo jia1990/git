@@ -1,0 +1,120 @@
+package com.rongdu.p2psys.account.executer;
+
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.domain.AccountSum;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.domain.AccountSumLog;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.enums.EnumAccountSumProperty;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * 
+ * 提现异步通知成功
+ * 
+ * @author lx
+ * @version 2.0
+ * @since 2014年7月31日
+ */
+public class CashNotifySuccessExecuter extends BaseExecuter {
+	private final static Logger logger = Logger.getLogger(CashNotifySuccessExecuter.class);
+	private String accountLogType = Constant.CASH_SUCCESS;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		logger.info("userID:  "+this.user.getUserId());
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		log.setMoney(this.money);
+		log.setTotal(account.getTotal());
+		log.setUseMoney(account.getUseMoney());
+		log.setNoUseMoney(account.getNoUseMoney());
+		log.setCollection(account.getCollection());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)2);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		accountDao.modify(-super.money,  -super.money, 0,super.user.getUserId());
+	}
+
+	@Override
+	public void handleAccountSum() {
+		// 先取出更新前的account_sum
+		AccountSum accountSum = accountSumDao.findByUserId(super.user.getUserId());
+		// 取出可能扣款的值
+		double cashFee = accountSum.getAccumulativeCashFee();
+		Map<String, Object> transferMap = Global.getTransfer();
+		AccountCash cash = (AccountCash) transferMap.get("cash");
+		// 添加提现费的account_sum_log
+		double fee = cash.getFee();
+		if (fee > 0) {
+			AccountSumLog caseFeeAccountSumLog = new AccountSumLog(super.user,
+					EnumAccountSumProperty.CASH_FEE.getValue(), new User(Constant.ADMIN_ID));
+			caseFeeAccountSumLog.setBeforeMoney(cashFee);
+			caseFeeAccountSumLog.setMoney(fee);
+			caseFeeAccountSumLog.setAfterMoney(BigDecimalUtil.add(cashFee, fee));
+			this.setAccountSumLogRemarkTemplate(cashfeeRemark);
+			caseFeeAccountSumLog.setRemark(this.getAccountSumLogRemark());
+			accountSumLogDao.save(caseFeeAccountSumLog);
+			accountSumDao.update(EnumAccountSumProperty.CASH_FEE.getValue(), fee, super.user.getUserId());
+		}
+		// 提现成功增加account sum 中的case
+		// 生成account_sum_log
+		if (super.money > 0) {
+			AccountSumLog cashAccountSumLog = new AccountSumLog(super.user, EnumAccountSumProperty.CASH.getValue(),
+					super.toUser);
+			cashAccountSumLog.setBeforeMoney(accountSum.getAccumulativeCash());
+			cashAccountSumLog.setMoney(super.money);
+			cashAccountSumLog.setAfterMoney(BigDecimalUtil.add(accountSum.getAccumulativeCash(), super.money));
+			this.setAccountSumLogRemarkTemplate(cashRemark);
+			cashAccountSumLog.setRemark(this.getAccountSumLogRemark());
+			accountSumLogDao.save(cashAccountSumLog);
+			accountSumDao.update(EnumAccountSumProperty.CASH.getValue(), money, super.user.getUserId());
+		}
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+
+}

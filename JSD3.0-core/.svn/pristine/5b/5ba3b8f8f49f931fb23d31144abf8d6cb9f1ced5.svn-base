@@ -1,0 +1,66 @@
+package com.ddtkj.p2psys.goods.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsCategory;
+import com.ddtkj.p2psys.goods.model.GoodsCategoryModel;
+
+public interface GoodsCategoryService {
+
+    /**
+     * 查询所有的商品分类
+     * @return 商品分类
+     */
+    List<DdtkjGoodsCategory> getCategoryAll();
+    
+    /**
+     * 查询所有的顶级商品分类
+     * @return 商品分类
+     */
+    List<DdtkjGoodsCategory> getCategoryParent(int parentId);
+    
+    /**
+     * 查询所有的二级商品分类
+     * @return 商品分类
+     */
+    List<DdtkjGoodsCategory> getCategorySecond();
+    
+    
+    /**
+     * 查询商品分类
+     * @param model 分类
+     * @return 商品分类
+     */
+    List<DdtkjGoodsCategory> getCategoryList(GoodsCategoryModel model);
+    
+    /**
+     * 添加商品分类
+     * @param model 商品分类model
+     * @return 是否成功
+     */
+    Boolean addCategory(GoodsCategoryModel model);
+    
+    /**
+     * 根据ID查询商品分类信息
+     * @param id ID
+     * @return 商品分类
+     */
+    DdtkjGoodsCategory getCategoryById(long id);
+    
+    /**
+     * 修改商品分类
+     * @param model 商品分类model
+     * @return 是否成功
+     */
+    Boolean editCategory(GoodsCategoryModel model);
+    
+    /**
+	 * 修改商品分类——用于删除
+	 * @param goodsCategory 
+	 */
+	void update(DdtkjGoodsCategory goodsCategory);
+	
+	
+	public int getGoodsCategoryId(int goodsCategoryId);
+    
+}

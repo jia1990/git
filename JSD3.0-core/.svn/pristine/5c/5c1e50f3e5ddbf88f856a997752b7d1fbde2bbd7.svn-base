@@ -1,0 +1,317 @@
+package com.rongdu.p2psys.user.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+/**
+ * @author xx
+ * @version 2.0
+ * @since 2014年1月8日
+ */
+public interface UserDao extends BaseDao<User> {
+
+	/**
+	 * 根据用户名获取用户ID
+	 * 
+	 * @param username
+	 * @return
+	 * @throws Exception
+	 */
+	long getUserIdByUserName(String username) throws Exception;
+
+	/**
+	 * 统计注册数量
+	 * 
+	 * @return
+	 */
+	int count(QueryParam param);
+
+	/**
+	 * 根据用户名计数
+	 * 
+	 * @param username
+	 * @return
+	 */
+	int countByUserName(String username);
+
+	/**
+	 * 根据用户名计数
+	 * 
+	 * @param username
+	 * @return
+	 */
+	int countByNickName(String nickName);
+
+	/**
+	 * 根据身份证计数
+	 * 
+	 * @param cardId
+	 * @return
+	 */
+	int countByCardId(String cardId);
+
+	/**
+	 * 根据手机计数
+	 * 
+	 * @param mobilePhone
+	 * @return
+	 */
+	int countByMobilePhone(String mobilePhone);
+
+	/**
+	 * 根据邮箱计数 注意:已经邮箱激活的用户
+	 * 
+	 * @param email
+	 * @return
+	 */
+	int countByEmail(String email);
+
+	/**
+	 * 修改用户密码
+	 * 
+	 * @param user
+	 * @return User
+	 */
+	User modifyPwd(User user);
+
+	/**
+	 * 修改用户交易密码
+	 * 
+	 * @param user
+	 * @return User
+	 */
+	 User modifyPaypwd(User user); // 交易密码修改不在用户表里
+
+	/**
+	 * 实名认证更新真实姓名
+	 * 
+	 * @param userId
+	 *            real_name
+	 * @return
+	 */
+	void modifyRealname(long userId, String real_name);
+
+	/**
+	 * 更新用户名
+	 * 
+	 * @param userId
+	 *            用户ID
+	 * @param userName
+	 *            用户名
+	 * @return
+	 */
+	void modifyUsername(long userId, String userName);
+
+	/**
+	 * 更新邮箱
+	 * 
+	 * @param userId
+	 */
+	void modifyEmail(long userId, String email);
+	/**
+	 * 更新锁定状态
+	 * 
+	 * @param userId
+	 */
+	void modifyisLock(long id, String islocked);
+
+	/**
+	 * 手机认证更新手机号码
+	 * 
+	 * @param userId
+	 */
+	void modifyPhone(long userId, String phone);
+
+	/**
+	 * 获得用户清单列表
+	 * 
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<UserModel> userList(int pageNumber, int pageSize,
+			UserModel model);
+	/**
+	 * 获得用户清单列表2
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<UserModel> registerUserList(UserModel model, int page, int pernum);
+	/**
+	 * 获得用户清单列表-用于认证统计
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<User> proveStatisticsUserList(UserModel model, int page, int size);
+	/**
+	 * 获得用户清单列表
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<User> registerStatisticsUserList(UserModel model, int page, int size);
+
+	/**
+	 * 通过用户名获得User
+	 * 
+	 * @param userName
+	 * @return
+	 */
+	User getUserByUserName(String userName);
+
+	/**
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	User getUserById(long userId);
+
+	/**
+	 * 修改证件号
+	 * 
+	 * @param userId
+	 *            用户ID，
+	 * @param card_id
+	 *            证件号
+	 */
+	void modify(long userId, String card_id);
+
+	/**
+	 * 修改用户第三方账户
+	 * 
+	 * @param userId
+	 *            用户ID
+	 * @param api_id
+	 *            第三方托管编号
+	 * @param api_status
+	 *            第三方认证状态
+	 * @param apiUserCustId
+	 *            第三方账户（用于登录第三方）
+	 */
+	void modifyApi(long userId, String api_id, String api_status,
+			String apiUserCustId);
+
+	/**
+	 * 查找已开通第三方支付的企业账户
+	 * 
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<User> findUserList(int pageNumber, int pageSize);
+
+	/**
+	 * @author 李建云 当月实现借款人数
+	 * 
+	 * @throws Exception
+	 * */
+	int countUserBySuccessBorrow();
+
+	/**
+	 * 更新数据库用户会员级别(xinggw)
+	 * 
+	 * @param userID
+	 *            平台用户ID
+	 * @param memberLevel
+	 *            会员级别
+	 * 
+	 * @throws Exception
+	 * */
+	void updateMemberLevel(long userId,String memberLevle);
+	
+	/**
+	 * 查询某类型用户注册数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countUserByType(int userType);
+	
+	
+	/**
+	 * 查询上月注册用户数 —— 投资人
+	 * @return
+	 * @author guojunhui@ddtkj.com
+	 */
+	int countUltimoTender();
+	
+	/**
+	 * @author 冯国琴
+	 * 用户昵称修改
+	 * @return
+	 */
+	void modifyNickName(long userId,String nickName);
+	
+	
+	/**
+	 * @author 李建云
+	 * 用户未奖励邀请列表
+	 * @return
+	 */
+	PageDataList<UserModel> getUnInviteAwardList(UserModel userModel,long userId);
+	
+	/**
+	 *@author 李建云
+	 *用户未奖励邀请个数 
+	 * */
+	int getUnInviteAwardSum(UserModel userModel,long userId);
+	/**
+	 *@author 李建云
+	 *更新用户第三方开户次数 
+	 * */
+	void modifythirdPartyOpenCount(long userId, int count) throws Exception;
+	
+	/**
+     * 按照地区获取用户数据(不使用)
+     * @author 孙晓勇
+     * @return 担保公司列表
+     */
+    List<User> getUserByAddress(UserModel userModel);
+    
+    /**
+     * 按照地区获取投资人注册用户数据
+     * @author 孙晓勇
+     * @return 担保公司列表
+     */
+    int getUserRegisterByAddress(String province,String city,String area,String userType,String sex);
+    
+	/**
+	 * 根据条件查询借款用户是否开户
+	 * @param userModel
+	 * @return
+	 */
+	public PageDataList<User> findThirdOpenBorrowUser(int size, int page, UserModel userModel);
+	
+	
+	//JSDP-116 fengguoqin 2015-05-16 start
+	/**
+	 * excel导出用户信息
+	 * @return
+	 * @author 冯国琴
+	 */
+	public List<UserModel> excelListUser(UserModel model);
+	//JSDP-116 fengguoqin 2015-05-16 end
+	/**
+	 * 投资人修改手机号时将第三方账户也修改 JSDP-179
+	 * @param userId
+	 * @param phoneNo
+	 */
+	public void modifyThirdAccount(long userId, String phoneNo);
+
+}

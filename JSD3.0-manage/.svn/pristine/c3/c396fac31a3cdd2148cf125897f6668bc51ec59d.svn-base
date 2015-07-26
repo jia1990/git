@@ -1,0 +1,73 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/user/openAccount/openAccountEdit.html');	
+</script>
+<form id="form"  method="post">
+<div class="popForm sForm">
+	<div class="formitm">
+		<label class="lab">真实姓名：</label>
+		<div class="ipt">
+		    ${userRealnameApplication.user.realName!}
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">身份证号：</label>
+		<div class="ipt">
+		    ${userRealnameApplication.user.cardNO!}
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">正面照片：</label>
+		<div class="ipt">
+		<a href="${weburl}${userRealnameApplication.positivePhoto!}" class="fileshow"  rel="group1" ondragstart="return false">
+		    <img src="${weburl}${userRealnameApplication.positivePhoto!}" style="width:200px;height:115px;"/>
+		</a> 
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">反面照片：</label>
+		<div class="ipt">
+		    <a href="${weburl}${userRealnameApplication.reversePhoto!}" class="fileshow"  rel="group1" ondragstart="return false">
+		    	<img src="${weburl}${userRealnameApplication.reversePhoto!}" style="width:200px;height:115px;"/>
+		    </a> 
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">状态：</label>
+		<div class="ipt">
+			<input type="radio" name="status" value="1" checked="checked" disabled="disabled" <#if userRealnameApplication.status == 1>checked="checked"</#if>/>&nbsp;&nbsp;审核通过  
+			<input type="radio" name="status" value="2"  disabled="disabled"  <#if userRealnameApplication.status == 2>checked="checked"</#if>/>&nbsp;&nbsp;审核未通过
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">添加时间：</label>
+		<div class="ipt">
+			${userRealnameApplication.addTime!}&nbsp;&nbsp;
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">审核人员：</label>
+		<div class="ipt">
+			${operatorUserName!}&nbsp;&nbsp;
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">审核时间：</label>
+		<div class="ipt">
+			${userRealnameApplication.operateTime!}&nbsp;&nbsp;
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">备注信息：</label>
+		<div class="ipt">
+		    <textarea id="remark" name="remark" style="width:300px;" maxlength="1000" class="easyui-validatebox borrowFormTextarea" disabled="disabled">${userRealnameApplication.remark!}</textarea>
+		</div>
+	</div>
+	
+</div>
+<input type="hidden" name="id" value="${userRealnameApplication.user.userId!}">
+</form>
+
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>

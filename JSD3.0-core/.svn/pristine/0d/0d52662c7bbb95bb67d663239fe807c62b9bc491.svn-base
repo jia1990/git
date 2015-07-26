@@ -1,0 +1,330 @@
+package com.ddtkj.p2psys.autotender.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述:自动投标用户设置表  
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-12   
+ */
+@Entity
+@Table(name = "t_jsd_borrow_auto_set")
+public class BorrowAutoSet implements Serializable {
+
+	private static final long serialVersionUID = -8053124883427613523L;
+	
+	/** 自动投标设置状态 : 启用 */
+	public static final String AUTO_TENDER_SET_ENABLE = "11";
+	/** 自动投标设置状态 : 不启用 */
+	public static final String AUTO_TENDER_SET_DISABLE = "22";
+	/** 自动投标设置状态 : 已删除 */
+	public static final String AUTO_TENDER_SET_DELETE = "33";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;				//主键
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;				//用户ID
+	
+	private int totalRank;			//自动投标总排名
+	private int validRank;			//自动投标有效排名
+	private int invalidRank;		//自动投标无效排名
+	private String status;			//是否开启(22不启用, 11启用 , 33已删除)
+	private String isVip;			//是否VIP(N否, Y是)
+	private String vipLevel;			//VIP等级(关联会员表)
+	private double tenderAccount;			//实际投标金额
+	private boolean borrowStyleEnable;		//还款方式是否启用(0不启用, 1启用)
+	private int borrowStyle ;				//还款方式
+	private boolean timelimitMonthEnable;	//借款期限月标是否限制(0不限制, 1限制)
+	private int timelimitMonthUp;			//借款期限月标上限
+	private int timelimitMonthDown;			//借款期限月标下限
+	private boolean timelimitDayEnable;		//借款期限天标是否限制(0不限制, 1限制)
+	private int timelimitDayUp;				//借款期限天标上限
+	private int timelimitDayDown;			//借款期限天标下限
+	private boolean aprEnable;				//利率是否启用(0不启用, 1启用)
+	private int aprUp;						//利率上限
+	private int aprDown;					//利率下限
+	private boolean awardEnable;			//奖励是否启用(0不启用, 1启用)
+	private double awardUp;					//奖励上限
+	private double awardDown;				//奖励下限
+	private boolean energyEnable;			//能源宝是否开启(0不启用, 1启用)
+	private boolean carEnable;				//车宝宝是否开启(0不启用, 1启用)
+	private boolean networkEnable;			//微商贷是否开启(0不启用, 1启用)
+	private boolean amortizeEnable;			//分期宝是否开启(0不启用, 1启用)
+	
+	private String borrowTypes;				//存放标种(类型对应borrow表)
+	private Date updateTime;				//更新时间
+	private Date addTime;					//添加时间
+	private String addIp;					//添加IP
+
+	public BorrowAutoSet() {
+		super();
+	}
+	
+	public BorrowAutoSet(User user){
+		super();
+		this.user = user;
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public int getTotalRank() {
+		return totalRank;
+	}
+
+	public void setTotalRank(int totalRank) {
+		this.totalRank = totalRank;
+	}
+
+	public int getValidRank() {
+		return validRank;
+	}
+
+	public void setValidRank(int validRank) {
+		this.validRank = validRank;
+	}
+
+	public int getInvalidRank() {
+		return invalidRank;
+	}
+
+	public void setInvalidRank(int invalidRank) {
+		this.invalidRank = invalidRank;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getIsVip() {
+		return isVip;
+	}
+
+	public void setIsVip(String isVip) {
+		this.isVip = isVip;
+	}
+
+	public String getVipLevel() {
+		return vipLevel;
+	}
+
+	public void setVipLevel(String vipLevel) {
+		this.vipLevel = vipLevel;
+	}
+
+	public double getTenderAccount() {
+		return tenderAccount;
+	}
+
+	public void setTenderAccount(double tenderAccount) {
+		this.tenderAccount = tenderAccount;
+	}
+
+	public boolean isBorrowStyleEnable() {
+		return borrowStyleEnable;
+	}
+
+	public void setBorrowStyleEnable(boolean borrowStyleEnable) {
+		this.borrowStyleEnable = borrowStyleEnable;
+	}
+
+	public int getBorrowStyle() {
+		return borrowStyle;
+	}
+
+	public void setBorrowStyle(int borrowStyle) {
+		this.borrowStyle = borrowStyle;
+	}
+
+	public boolean isTimelimitMonthEnable() {
+		return timelimitMonthEnable;
+	}
+
+	public void setTimelimitMonthEnable(boolean timelimitMonthEnable) {
+		this.timelimitMonthEnable = timelimitMonthEnable;
+	}
+
+	public int getTimelimitMonthUp() {
+		return timelimitMonthUp;
+	}
+
+	public void setTimelimitMonthUp(int timelimitMonthUp) {
+		this.timelimitMonthUp = timelimitMonthUp;
+	}
+
+	public int getTimelimitMonthDown() {
+		return timelimitMonthDown;
+	}
+
+	public void setTimelimitMonthDown(int timelimitMonthDown) {
+		this.timelimitMonthDown = timelimitMonthDown;
+	}
+
+	public boolean isTimelimitDayEnable() {
+		return timelimitDayEnable;
+	}
+
+	public void setTimelimitDayEnable(boolean timelimitDayEnable) {
+		this.timelimitDayEnable = timelimitDayEnable;
+	}
+
+	public int getTimelimitDayUp() {
+		return timelimitDayUp;
+	}
+
+	public void setTimelimitDayUp(int timelimitDayUp) {
+		this.timelimitDayUp = timelimitDayUp;
+	}
+
+	public int getTimelimitDayDown() {
+		return timelimitDayDown;
+	}
+
+	public void setTimelimitDayDown(int timelimitDayDown) {
+		this.timelimitDayDown = timelimitDayDown;
+	}
+
+	public boolean isAprEnable() {
+		return aprEnable;
+	}
+
+	public void setAprEnable(boolean aprEnable) {
+		this.aprEnable = aprEnable;
+	}
+
+	public int getAprUp() {
+		return aprUp;
+	}
+
+	public void setAprUp(int aprUp) {
+		this.aprUp = aprUp;
+	}
+
+	public int getAprDown() {
+		return aprDown;
+	}
+
+	public void setAprDown(int aprDown) {
+		this.aprDown = aprDown;
+	}
+
+	public boolean isAwardEnable() {
+		return awardEnable;
+	}
+
+	public void setAwardEnable(boolean awardEnable) {
+		this.awardEnable = awardEnable;
+	}
+
+	public double getAwardUp() {
+		return awardUp;
+	}
+
+	public void setAwardUp(double awardUp) {
+		this.awardUp = awardUp;
+	}
+
+	public double getAwardDown() {
+		return awardDown;
+	}
+
+	public void setAwardDown(double awardDown) {
+		this.awardDown = awardDown;
+	}
+
+	public boolean isEnergyEnable() {
+		return energyEnable;
+	}
+
+	public void setEnergyEnable(boolean energyEnable) {
+		this.energyEnable = energyEnable;
+	}
+
+	public boolean isCarEnable() {
+		return carEnable;
+	}
+
+	public void setCarEnable(boolean carEnable) {
+		this.carEnable = carEnable;
+	}
+
+	public boolean isNetworkEnable() {
+		return networkEnable;
+	}
+
+	public void setNetworkEnable(boolean networkEnable) {
+		this.networkEnable = networkEnable;
+	}
+
+	public boolean isAmortizeEnable() {
+		return amortizeEnable;
+	}
+
+	public void setAmortizeEnable(boolean amortizeEnable) {
+		this.amortizeEnable = amortizeEnable;
+	}
+
+	public String getBorrowTypes() {
+		return borrowTypes;
+	}
+
+	public void setBorrowTypes(String borrowTypes) {
+		this.borrowTypes = borrowTypes;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	
+}

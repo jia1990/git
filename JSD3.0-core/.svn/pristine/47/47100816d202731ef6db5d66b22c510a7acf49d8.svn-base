@@ -1,0 +1,445 @@
+package com.ddtkj.p2psys.webpetcard.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.exception.PetCardException;
+import com.ddtkj.p2psys.webpetcard.model.PetCardModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+@Repository("petCardDao")
+public class PetCardDaoImpl extends BaseDaoImpl<PetCard>  implements PetCardDao {
+
+	// JSDP-171 sxy 2015-06-04 start
+	/**
+	 * 返回id最大值
+	 */
+	@Override
+	public long findMaxId() {
+		
+		String sql = "SELECT MAX(t1.id) FROM t_jsd_pet_card t1";
+		Query query = em.createQuery(sql);
+		//query.setParameter("id", id);
+		return (Long) query.getSingleResult();
+		
+	}
+
+	/**
+	 * SQL查询体验卡数据
+	 * 
+	 */
+	@Override
+	public PageDataList<PetCard> petCardListForSQL(int pageNumber,
+			int pageSize, PetCardModel model) {
+
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT t1.id,t1.batch_no,t1.card_no,t1.status,t1.money,t1.user_name, "
+				+ " t1.type,t1.is_valid,t1.valid_time,t1.win_time,t1.activate_time,t1.add_time,t1.is_export "
+				+ " FROM t_jsd_pet_card t1 where 1=1 ");
+
+		if (model != null) {
+			// 批次号
+			if(StringUtil.isNotBlank(model.getBatchNo())){
+				sql.append(" AND t1.batch_no LIKE '%"+model.getBatchNo()+"%' "); 
+			}
+			// 卡号
+			if(StringUtil.isNotBlank(model.getCardNo())){
+				sql.append(" AND t1.card_no LIKE '%"+model.getCardNo()+"%' "); 
+			}
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				sql.append(" and t1.user_name LIKE '%"+model.getUserName()+"%' "); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				sql.append(" AND t1.status = '"+model.getStatus()+"' "); 
+			}
+			// 类型
+			if(StringUtil.isNotBlank(model.getType())){
+				sql.append(" AND t1.type = '"+model.getType()+"' "); 
+			}
+			// 开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				sql.append(" AND t1.add_time >= '"+model.getStartTime()+"' ");
+			}
+			// 结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				sql.append(" AND t1.add_time < '"+model.getEndTime()+"' ");
+			}
+			 
+		}
+		sql.append("  ORDER BY t1.id DESC ");
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		Page pages = new Page(query.getResultList().size(), pageSize, pageNumber);
+		PageDataList<PetCard> pageList = new PageDataList<PetCard>();
+		query.setFirstResult((pageNumber - 1) * pageSize);
+		query.setMaxResults(pageSize);
+		List queryList = query.getResultList();
+		List<PetCard> petCardList = new ArrayList<PetCard>();
+		Object[] object = new Object[10];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			PetCardModel dataModel = new PetCardModel();
+			dataModel.setIdInt((Integer)object[0]);
+			dataModel.setBatchNo((String) object[1]);
+			dataModel.setCardNo((String) object[2]);
+			dataModel.setStatus((String) object[3]);
+			dataModel.setMoney(Double.valueOf((object[4]).toString()));
+			dataModel.setUserName((String) object[5]);
+			dataModel.setType((String) object[6]);
+			if(true == (Boolean)object[7]){
+				dataModel.setIsValid(1);
+			}else{
+				dataModel.setIsValid(0);
+			}
+			dataModel.setValidTime((Integer)object[8]);
+			//if(null != object[9]){
+				//dataModel.setWinTime(DateUtil.getDate((String) object[9]));
+			//};
+			dataModel.setWinTime((Date)object[9]);
+			dataModel.setActivateTime((Date)object[10]);
+			dataModel.setAddTime((Date)object[11]);
+			dataModel.setIsExport((String) object[12]);
+			petCardList.add(dataModel);
+		}
+		pageList.setList(petCardList);
+		pageList.setPage(pages);
+		return pageList;
+	}
+	/**
+	 * SQL查询体验卡数据
+	 * // JSDP-171 sxy 20150703 start
+	 */
+	@Override
+	public List<PetCard> petCardListForSQLToUpdate(PetCardModel model) {
+		
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT t1.id,t1.batch_no,t1.card_no,t1.status,t1.money,t1.user_name, "
+				+ " t1.type,t1.is_valid,t1.valid_time,t1.win_time,t1.activate_time,t1.add_time,t1.is_export "
+				+ " FROM t_jsd_pet_card t1 where 1=1 ");
+		
+		if (model != null) {
+			// 批次号
+			if(StringUtil.isNotBlank(model.getBatchNo())){
+				sql.append(" AND t1.batch_no LIKE '%"+model.getBatchNo()+"%' "); 
+			}
+			// 卡号
+			if(StringUtil.isNotBlank(model.getCardNo())){
+				sql.append(" AND t1.card_no LIKE '%"+model.getCardNo()+"%' "); 
+			}
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				sql.append(" and t1.user_name LIKE '%"+model.getUserName()+"%' "); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				sql.append(" AND t1.status = '"+model.getStatus()+"' "); 
+			}
+			// 类型
+			if(StringUtil.isNotBlank(model.getType())){
+				sql.append(" AND t1.type = '"+model.getType()+"' "); 
+			}
+			// 开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				sql.append(" AND t1.add_time >= '"+model.getStartTime()+"' ");
+			}
+			// 结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				sql.append(" AND t1.add_time < '"+model.getEndTime()+"' ");
+			}
+			
+		}
+		sql.append("  ORDER BY t1.id DESC ");
+		Query query = em.createNativeQuery(sql.toString());
+		List queryList = query.getResultList();
+		List<PetCard> petCardList = new ArrayList<PetCard>();
+		Object[] object = new Object[10];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			PetCardModel dataModel = new PetCardModel();
+			dataModel.setIdInt((Integer)object[0]);
+			dataModel.setBatchNo((String) object[1]);
+			dataModel.setCardNo((String) object[2]);
+			dataModel.setStatus((String) object[3]);
+			dataModel.setMoney(Double.valueOf((object[4]).toString()));
+			dataModel.setUserName((String) object[5]);
+			dataModel.setType((String) object[6]);
+			if(true == (Boolean)object[7]){
+				dataModel.setIsValid(1);
+			}else{
+				dataModel.setIsValid(0);
+			}
+			dataModel.setValidTime((Integer)object[8]);
+			//if(null != object[9]){
+			//dataModel.setWinTime(DateUtil.getDate((String) object[9]));
+			//};
+			dataModel.setWinTime((Date)object[9]);
+			dataModel.setActivateTime((Date)object[10]);
+			dataModel.setAddTime((Date)object[11]);
+			dataModel.setIsExport((String) object[12]);
+			petCardList.add(dataModel);
+		}
+		return petCardList;
+		//return queryList;
+	}
+
+
+	/**
+	 * 导出体验卡数据
+	 */
+	@Override
+	public List<PetCard> excelPetCardList(PetCardModel model) {
+		
+		StringBuffer sql = new StringBuffer();
+		
+//		sql.append(" SELECT t1.id,t1.batch_no,t1.card_no, "
+//				//+ " t1.status, "
+//				+ " CASE t1.status WHEN  'ua' THEN '未激活'  WHEN  'da' THEN '已激活' WHEN  'dd' THEN '已失效'  ELSE '保密' END AS statusCard, "
+//				+ " t1.money,t1.user_name, "
+//				//+ " t1.type, "
+//				+ " CASE t1.type  WHEN  'pt'  THEN '晋商贷体验卡' ELSE  '其他' END AS typeCard, "
+//				//+ " t1.is_valid, "
+//				+ " CASE t1.is_valid  WHEN  0  THEN '永久有效'  WHEN 1 THEN '短期有效' ELSE  '其他' END AS isValidCard, "
+//				+ " t1.valid_time, t1.win_time, t1.activate_time, t1.add_time, t1.add_user, t1.remark  "
+//				+ "   "
+//				+ " FROM t_jsd_pet_card t1 WHERE 1=1 ");
+		//JSDP-183 xingjia 20150619 start
+		sql.append("SELECT t1.id,t1.batch_no,t1.card_no,t1.paw,t1.money,t1.TYPE,t1.STATUS,"
+					+ "case t1.is_valid when 'true' then '0' when 'false' then '1' else '1' end as isValid,"
+					+ "t1.valid_time,t1.add_time,t1.win_time,t1.activate_time,t1.add_user,t1.remark"
+					+ " FROM t_jsd_pet_card t1 where 1=1");
+		//JSDP-183 xingjia 20150619 end
+		
+		if (model != null) {
+			// 批次号
+			if(StringUtil.isNotBlank(model.getBatchNo())){
+				sql.append(" AND t1.batch_no LIKE '%"+model.getBatchNo()+"%' "); 
+			}
+			// 卡号
+			if(StringUtil.isNotBlank(model.getCardNo())){
+				sql.append(" AND t1.card_no LIKE '%"+model.getCardNo()+"%' "); 
+			}
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				sql.append(" AND t1.user_name LIKE '%"+model.getUserName()+"%' "); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				sql.append(" AND t1.status = '"+model.getStatus()+"' "); 
+			}
+			// 开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				sql.append(" AND t1.add_time >= '"+model.getStartTime()+"' ");
+			}
+			// 结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				sql.append(" AND t1.add_time < '"+model.getEndTime()+"' ");
+			}
+		}
+		
+
+		sql.append("  ORDER BY t1.id DESC ");
+
+		Query query = em.createNativeQuery(sql.toString());
+		//List list = query.getResultList();
+		List dataList = query.getResultList();
+		return dataList;
+	}
+	// JSDP-171 sxy 2015-06-04 end
+	
+	@Override
+	public PetCard getPetCardByCardNo(String cardNo) {
+		PetCard petCard = super.findObjByProperty("cardNo", cardNo);
+		if (petCard != null) {
+			return petCard;
+		}
+		return null;
+	}
+
+	@Override
+	public double getSumPetCardProduce(long userId) {
+		//JSDP-171 xingjia 20150609 start
+		StringBuffer sql = new StringBuffer("SELECT sum(pc.money) FROM t_jsd_pet_card pc,t_jsd_account_recharge ar "
+				+ "WHERE ar.trade_no=pc.trade_no and ar.trade_status='"+AccountRecharge.RECHARGE_SUCCESS_STATUS+"'"
+				+ " AND pc.status = '"+PetCard.ED_CARD_STATUS+"'");
+		if(userId != 0){
+			sql.append(" and pc.user_id ="+userId);
+			Query query = em.createNativeQuery(sql.toString());
+			Object object = query.getSingleResult();
+			//JSDP-171 xingjia 20150609 start
+			if(null != object){
+			   return Double.parseDouble(object+"");
+			}
+			//JSDP-171 xingjia 20150609 end
+		}
+		return 0;
+		//JSDP-171 xingjia 20150609 end
+	}
+	
+	
+	@Override
+	public void updateExcelStatus(long id, String isExport) {
+		String sql = "UPDATE PetCard SET isExport = :isExport WHERE id = :id";
+		Query query = em.createQuery(sql);
+		query.setParameter("isExport", isExport);
+		query.setParameter("id", id);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("更新导出状态失败！", 1);
+		}
+	}
+	
+	
+	@Override
+	public List<PetCard> getYgCardByStatusAndType(String status, String type,
+			double money) {
+		String sql = "SELECT card.* FROM t_jsd_pet_card card WHERE status = :status AND type = :type AND money = :money ";
+		Query query = em.createNativeQuery(sql, PetCard.class);
+		query.setParameter("status", status);
+		query.setParameter("type", type);
+		query.setParameter("money", money);
+		List<PetCard> list = (List<PetCard>)query.getResultList();
+		return list;
+	}
+
+	@Override
+	public void updateYgCardByStatusAndType(PetCard petCard) {
+		String sql = "UPDATE t_jsd_pet_card SET status = :status,activate_time = :activateTime WHERE status = :preStatus and card_no = :cardNo ";
+		String[] names = {"status", "activateTime", "preStatus", "cardNo"};
+		Object[] values = {petCard.getStatus(), petCard.getActivateTime(), PetCard.UD_CARD_STATUS, petCard.getCardNo()};
+		int count = updateBySql(sql, names, values);
+		if (count < 1) {
+			throw new PetCardException("云购体验卡状态和激活时间更新失败");
+		}
+	}
+	
+	@Override
+	public double getPetCardSumByStatusAndType(long userId, String type,
+			String status) {
+		String sql = "SELECT SUM(money) FROM t_jsd_pet_card WHERE user_id = :userId AND type = :type AND status = :status ";
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("userId", userId);
+		query.setParameter("type", type);
+		query.setParameter("status", status);		
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+	@Override
+	public List<Object[]> getPetCardPackSumByStatusAndType(long userId, String type, String status) {
+		String sql = "SELECT money,COUNT(*) FROM t_jsd_pet_card WHERE user_id = :userId AND type = :type AND status = :status GROUP BY money";
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("userId", userId);
+		query.setParameter("type", type);
+		query.setParameter("status", status);
+		List<Object[]> list = query.getResultList();
+		if (list.size() > 0) {
+			return list;
+		}
+		return null;
+	}
+	@Override
+	public boolean updateIsCheck(PetCardModel model) {
+		StringBuffer moneys = null;
+		if(model.getMoneys() != null){
+			moneys = new StringBuffer();
+			for(String money:model.getMoneys()){
+				moneys.append(money+",");
+			}
+		}
+		StringBuffer ids = null;
+		if(model.getIds()!=null){
+		ids = new StringBuffer();
+			for(String id:model.getIds()){
+				ids.append(id+",");
+			}
+		}
+		String sql = "UPDATE t_jsd_pet_card SET is_check = 1 WHERE user_id = :userId AND type = :type AND status = :status ";
+		if(moneys != null && !moneys.toString().equals("")){
+			sql = sql+" AND money in("+moneys.substring(0, moneys.length() - 1)+")";
+		}
+		if(ids != null && !ids.toString().equals("")){
+			sql = sql+ " AND id in("+ids.substring(0, ids.length() - 1)+")";
+		}
+		String[] names = {"userId", "type", "status"};
+		Object[] values = {model.getUserId(), model.getType(), model.getStatus()};
+		int count = updateBySql(sql, names, values);
+		if (count < 1) {
+			return false;
+		}else{
+			return true;
+		}
+	}
+	
+	// JSDP-201 sxy 20150630 start
+	@Override
+	public String petCardDataTotal(PetCardModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT SUM(t1.money) AS money1, t1.id "
+				+ " FROM t_jsd_pet_card AS t1 where 1=1 ");
+
+		if (model != null) {
+			// 批次号
+			if(StringUtil.isNotBlank(model.getBatchNo())){
+				sql.append(" AND t1.batch_no LIKE '%"+model.getBatchNo()+"%' "); 
+			}
+			// 卡号
+			if(StringUtil.isNotBlank(model.getCardNo())){
+				sql.append(" AND t1.card_no LIKE '%"+model.getCardNo()+"%' "); 
+			}
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				sql.append(" AND t1.user_name LIKE '%"+model.getUserName()+"%' "); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				sql.append(" AND t1.status = '"+model.getStatus()+"' "); 
+			}
+			// 类型
+			if(StringUtil.isNotBlank(model.getType())){
+				sql.append(" AND t1.type = '"+model.getType()+"' "); 
+			}
+			// 开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				sql.append(" AND t1.add_time >= '"+model.getStartTime()+"' ");
+			}
+			// 结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				sql.append(" AND t1.add_time < '"+model.getEndTime()+"' ");
+			}
+			 
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		Object obj = query.getSingleResult();
+		Object[] objs = new Object[3];
+		objs = (Object[]) obj;
+		StringBuffer drawTotalStr = new StringBuffer();
+		for(int i=0;i<objs.length;i++){
+			if(objs[i]==null){
+				return null;
+			}else{
+				drawTotalStr.append(objs[i].toString()+",");
+			}
+		}
+		objs=null;
+		return drawTotalStr.toString();
+	}
+	// JSDP-201 sxy 20150630 end
+}

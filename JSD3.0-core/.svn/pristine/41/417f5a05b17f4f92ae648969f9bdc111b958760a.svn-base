@@ -1,0 +1,92 @@
+package com.ddtkj.p2psys.core.quartz.creditAssignment;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.BeanUtil;
+/**
+ * 债权业务处理
+ * @author wcw
+ */
+public class CreditAssignmentTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(CreditAssignmentTask.class);
+
+	@Resource
+	private CreditLogService  creditLogService;
+	
+	
+
+
+	public CreditLogService getCreditLogService() {
+		return creditLogService;
+	}
+
+	public void setCreditLogService(CreditLogService creditLogService) {
+		this.creditLogService = creditLogService;
+	}
+
+	public CreditAssignmentTask(CreditLogService creditLogService) {
+		super();
+		task.setName("CreditAssignment.Task");
+		this.creditLogService = creditLogService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (CreditAssignmentJobQueue.CREDIT_ASSIGNMENT!=null && CreditAssignmentJobQueue.CREDIT_ASSIGNMENT.size() > 0) {
+			CreditAssignmentBean tb = CreditAssignmentJobQueue.CREDIT_ASSIGNMENT.peek();
+			if (tb != null) {
+				String result="success";
+				try {
+					if("creditVerifyFullSuccess".equals(tb.getType())){
+					    creditLogService.creditVerifyFullSuccess(tb.getCreditAssignment()); 
+					}else if ("creditVerifyFullFail".equals(tb.getType())){
+						creditLogService.creditVerifyFullFail(tb.getCreditAssignment()); 
+					}else if("creditBuySuccess".equals(tb.getType())){
+						creditLogService.save(tb.getUser(), tb.getCreditAssignment(), tb.getCreditLog().getBuyCopies(), tb.getCreditLog().getBuyAccount());
+						result="债权购买成功" ;
+					}else if("creditReCall".equals(tb.getType())){
+						creditLogService.creditReCall(tb.getCreditAssignment()); 
+						result="债权已撤销" ;
+					}
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					CreditAssignmentJobQueue.CREDIT_ASSIGNMENT.remove(tb);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				    if(tb.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(tb.getResultFlag(), result);
+			            }
+			        }
+				}
+		}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return CreditAssignmentTask.CREDIT_ASSIGNMENT_STATUS;
+	}
+
+}

@@ -1,0 +1,713 @@
+package com.ddtkj.p2psys.account.model;
+
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryBalance;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.rongdu.common.model.jpa.SearchParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+public class AccountModel extends Account implements Serializable{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 9001438262723865876L;
+	/** 当前页数 **/
+	private int page;
+	/** 每页总数 **/
+	private int rows;
+	/** 排序 asc/desc **/
+	private String order;
+	/** 排序字段 **/
+	private String sort;
+	// 我的账户 待收待还详情
+	private double collectionCapital;// 待收总额
+	private double collectInterest;// 待收利息
+	private double newestCollectMoney;// 最近待收金额
+	private double newestCollectDate;// 最近待收时间
+	private double borrowTotal;// 借款总额
+	private double repayTotal;// 待还本息
+	private double repayInterest;// 待还利息
+	private double repayTime;// 最近待还时间
+	private double repayAccount;// 待还金额
+
+	private String bank;
+	private String bankaccount;
+	private String bankname;
+	private String branch;
+	private String provinceName;
+	private String cityName;
+	private String areaName;
+	private int province;
+	private int city;
+	private int area;
+	private String addtime;
+	private String addip;
+	private String username;
+	private String realname;
+	private String modifyUsername;
+	private long bank_id;
+	private SearchParam param;
+	private String startTime;
+	private String endTime;
+	private String accountType;
+	private long userId;
+	
+	private String accountTotalStr;  //账户总额
+	
+	//投资人
+	private String interestUsableStr;  //利息可用总额
+	private String awardUsableStr;    //奖励可用总额
+	private String rechargeUsableStr;  //充值可用总额
+	private String returnCapitalUsableStr;  //回款本金可用总额
+	private String freezeUseInterestStr;  //冻结使用利息金额
+	private String freezeUseRechargeStr;  //冻结使用充值金额
+	private String freezeUseReturnCapitalStr;  //冻结使用回款本金金额
+	private String freezeUseAwardStr;   //冻结使用奖励金额
+	private String collectionTotalStr;  //待收总额
+	private String rpDynamicTotalStr;// 钱袋子总额
+	private String freezeRpDynamicStr; //冻结钱袋子金额
+	
+	//借款人
+	private String repaymentTotalStr;   //还款总额
+	private String borrowerRechargeUsableStr;  //借款人充值可用金额
+	private String borrowerEnterUsableStr;  //借款人借款入账可用金额
+	private String borrowerFreezeUseRechargeStr; //借款人冻结充值可用金额
+	private String borrowerFreezeUseEnterStr; //借款人冻结借款入账可用金额
+	
+	private String result;//结果
+	private String resultBorrow;//借款人结果
+	
+	private String userType;//用户类型(投资人:10,借款人:11,担保公司:12,商户:13)
+	
+	
+	private String freezeUseMoneyTotal;//冻结金额
+	private String freezeBorrowerMoneyTotal;//借款人冻结金额
+	private String usableMoneyTotal;//可用金额
+	private String borrowerUsableMoney;//借款人可用金额
+	private String rpDynamicTotalz;//钱袋子总额
+	
+	
+	
+	
+	
+	
+	
+	public String getResultBorrow() {
+		return resultBorrow;
+	}
+
+	public void setResultBorrow(String resultBorrow) {
+		this.resultBorrow = resultBorrow;
+	}
+
+	public String getResult() {
+		return result;
+	}
+
+	public void setResult(String result) {
+		this.result = result;
+	}
+
+	public String getBorrowerUsableMoney() {
+		return borrowerUsableMoney;
+	}
+
+	public void setBorrowerUsableMoney(String borrowerUsableMoney) {
+		this.borrowerUsableMoney = borrowerUsableMoney;
+	}
+
+	public String getFreezeBorrowerMoneyTotal() {
+		return freezeBorrowerMoneyTotal;
+	}
+
+	public void setFreezeBorrowerMoneyTotal(String freezeBorrowerMoneyTotal) {
+		this.freezeBorrowerMoneyTotal = freezeBorrowerMoneyTotal;
+	}
+
+	public String getFreezeUseMoneyTotal() {
+		return freezeUseMoneyTotal;
+	}
+
+	public void setFreezeUseMoneyTotal(String freezeUseMoneyTotal) {
+		this.freezeUseMoneyTotal = freezeUseMoneyTotal;
+	}
+
+	public String getUsableMoneyTotal() {
+		return usableMoneyTotal;
+	}
+
+	public void setUsableMoneyTotal(String usableMoneyTotal) {
+		this.usableMoneyTotal = usableMoneyTotal;
+	}
+
+	
+
+	public String getRpDynamicTotalz() {
+		return rpDynamicTotalz;
+	}
+
+	public void setRpDynamicTotalz(String rpDynamicTotalz) {
+		this.rpDynamicTotalz = rpDynamicTotalz;
+	}
+
+	public String getUserType() {
+		return userType;
+	}
+
+	public void setUserType(String userType) {
+		this.userType = userType;
+	}
+
+	public String getAccountTotalStr() {
+		return accountTotalStr;
+	}
+
+	public void setAccountTotalStr(String accountTotalStr) {
+		this.accountTotalStr = accountTotalStr;
+	}
+
+	public String getInterestUsableStr() {
+		return interestUsableStr;
+	}
+
+	public void setInterestUsableStr(String interestUsableStr) {
+		this.interestUsableStr = interestUsableStr;
+	}
+
+	public String getAwardUsableStr() {
+		return awardUsableStr;
+	}
+
+	public void setAwardUsableStr(String awardUsableStr) {
+		this.awardUsableStr = awardUsableStr;
+	}
+
+	public String getRechargeUsableStr() {
+		return rechargeUsableStr;
+	}
+
+	public void setRechargeUsableStr(String rechargeUsableStr) {
+		this.rechargeUsableStr = rechargeUsableStr;
+	}
+
+	public String getReturnCapitalUsableStr() {
+		return returnCapitalUsableStr;
+	}
+
+	public void setReturnCapitalUsableStr(String returnCapitalUsableStr) {
+		this.returnCapitalUsableStr = returnCapitalUsableStr;
+	}
+
+	public String getFreezeUseInterestStr() {
+		return freezeUseInterestStr;
+	}
+
+	public void setFreezeUseInterestStr(String freezeUseInterestStr) {
+		this.freezeUseInterestStr = freezeUseInterestStr;
+	}
+
+	public String getFreezeUseRechargeStr() {
+		return freezeUseRechargeStr;
+	}
+
+	public void setFreezeUseRechargeStr(String freezeUseRechargeStr) {
+		this.freezeUseRechargeStr = freezeUseRechargeStr;
+	}
+
+	public String getFreezeUseReturnCapitalStr() {
+		return freezeUseReturnCapitalStr;
+	}
+
+	public void setFreezeUseReturnCapitalStr(String freezeUseReturnCapitalStr) {
+		this.freezeUseReturnCapitalStr = freezeUseReturnCapitalStr;
+	}
+
+	public String getFreezeUseAwardStr() {
+		return freezeUseAwardStr;
+	}
+
+	public void setFreezeUseAwardStr(String freezeUseAwardStr) {
+		this.freezeUseAwardStr = freezeUseAwardStr;
+	}
+
+	public String getCollectionTotalStr() {
+		return collectionTotalStr;
+	}
+
+	public void setCollectionTotalStr(String collectionTotalStr) {
+		this.collectionTotalStr = collectionTotalStr;
+	}
+
+	public String getRepaymentTotalStr() {
+		return repaymentTotalStr;
+	}
+
+	public void setRepaymentTotalStr(String repaymentTotalStr) {
+		this.repaymentTotalStr = repaymentTotalStr;
+	}
+
+	public String getBorrowerRechargeUsableStr() {
+		return borrowerRechargeUsableStr;
+	}
+
+	public void setBorrowerRechargeUsableStr(String borrowerRechargeUsableStr) {
+		this.borrowerRechargeUsableStr = borrowerRechargeUsableStr;
+	}
+
+	public String getBorrowerEnterUsableStr() {
+		return borrowerEnterUsableStr;
+	}
+
+	public void setBorrowerEnterUsableStr(String borrowerEnterUsableStr) {
+		this.borrowerEnterUsableStr = borrowerEnterUsableStr;
+	}
+
+	public String getBorrowerFreezeUseRechargeStr() {
+		return borrowerFreezeUseRechargeStr;
+	}
+
+	public void setBorrowerFreezeUseRechargeStr(String borrowerFreezeUseRechargeStr) {
+		this.borrowerFreezeUseRechargeStr = borrowerFreezeUseRechargeStr;
+	}
+
+	public String getBorrowerFreezeUseEnterStr() {
+		return borrowerFreezeUseEnterStr;
+	}
+
+	public void setBorrowerFreezeUseEnterStr(String borrowerFreezeUseEnterStr) {
+		this.borrowerFreezeUseEnterStr = borrowerFreezeUseEnterStr;
+	}
+
+	public String getRpDynamicTotalStr() {
+		return rpDynamicTotalStr;
+	}
+
+	public void setRpDynamicTotalStr(String rpDynamicTotalStr) {
+		this.rpDynamicTotalStr = rpDynamicTotalStr;
+	}
+
+	public String getFreezeRpDynamicStr() {
+		return freezeRpDynamicStr;
+	}
+
+	public void setFreezeRpDynamicStr(String freezeRpDynamicStr) {
+		this.freezeRpDynamicStr = freezeRpDynamicStr;
+	}
+
+	public static AccountModel instance(Account account) {
+		AccountModel model = new AccountModel();
+		BeanUtils.copyProperties(account, model);
+		return model;
+	}
+
+	/**
+	 * 信用额度申请 校验用户认证状态
+	 * 
+	 * @param attestation
+	 */
+	public void validAttestionForAmountApply(UserIdentify attestation, int amount) {
+		if (!"83".equals(attestation.getRealNameStatus())) {
+			throw new AccountException("您还没有通过实名认证，请先通过实名认证！", 1);
+		}
+		if (amount > 10000 || amount <= 0) {
+			throw new AccountException("信用额度每次最多申请1万！", 1);
+		}
+	}
+	
+	/**
+	 * 账户资金余额对账
+	 * @param account
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, Object> accountCompare(Account account)throws Exception{
+		Map<String, Object> map =new HashMap<String, Object>();
+		if(account!=null&&account.getUser()!=null){
+			YmdQueryBalance  ymdQueryBalance=new YmdQueryBalance();
+			ymdQueryBalance=YmdTPPWay.checkBalance(account.getUser().getUserName());
+			if(!"00".equals(ymdQueryBalance.getErrCode())){
+				map.put("result", false);
+				map.put("msg", ymdQueryBalance.getErrMsg(ymdQueryBalance.getErrCode(), "一麻袋查询余额异常或网络超时，请稍后再试"));
+				return map;
+			}
+			//本地余额
+			UserCache uc=account.getUser().getUserCache();
+			if(uc!=null){
+				double localhostBalance=0;
+				if("10".equals(uc.getUserType())){
+					localhostBalance=BigDecimalUtil.add(account.getUsableAccount(),account.getFreezeAccount());
+				}else{
+					localhostBalance=BigDecimalUtil.add(account.getBorrowerUsableTotal(),account.getBorrowerFreezeTotal());
+				}
+				//一麻袋余额
+				double ymdBalance=NumberUtil.getDouble(ymdQueryBalance.getBalance());
+				//本地余额与一麻袋余额差
+				double balance=BigDecimalUtil.sub(localhostBalance, ymdBalance);
+				double balance_=BigDecimalUtil.sub(ymdBalance, localhostBalance);
+				if(balance<0.1&&balance_<0.1){
+					map.put("result", true);
+				}else{
+					map.put("result", false);
+					map.put("msg", "本地账户余额与一麻袋账户余额不匹配");
+				}
+			}
+			
+		}
+		if(map.size()<=0){
+			map.put("result", false);
+			map.put("msg", "系统异常，请联系客服");
+		}
+		return map;
+	}
+
+	public void accountCompare(long userId)throws Exception{
+		AccountDao accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		Account account=accountDao.findObjByProperty("user.userId",  userId);
+		if(account==null){
+			throw new HandleException("系统异常",
+					"本地账户资金和一麻袋对账出错",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_ACCOUNT,
+					ErrorLogConstant.CODE_ACCOUNT_COMPARE_TPOS,account.getUser(),ErrorLogConstant.MODULE_ACCOUNT,
+					userId,1);
+		}
+		if(account!=null&&account.getUser()!=null){
+			YmdQueryBalance  ymdQueryBalance=new YmdQueryBalance();
+			ymdQueryBalance=YmdTPPWay.checkBalance(account.getUser().getUserName());
+			if(!"00".equals(ymdQueryBalance.getErrCode())){
+				throw new HandleException(ymdQueryBalance.getErrMsg(ymdQueryBalance.getErrCode(), "一麻袋查询余额异常或网络超时，请稍后再试"),
+    					"本地账户资金和一麻袋对账出错",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_ACCOUNT,
+    					ErrorLogConstant.CODE_ACCOUNT_COMPARE_TPOS,account.getUser(),ErrorLogConstant.MODULE_ACCOUNT,
+    					userId,1);
+			}
+			//本地余额
+			UserCache uc=account.getUser().getUserCache();
+			if(uc==null){
+				throw new HandleException("系统异常",
+    					"本地账户资金和一麻袋对账出错",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_ACCOUNT,
+    					ErrorLogConstant.CODE_ACCOUNT_COMPARE_TPOS,account.getUser(),ErrorLogConstant.MODULE_ACCOUNT,
+    					userId,1);
+			}
+			double localhostBalance=0;
+			if("10".equals(uc.getUserType())){
+				localhostBalance=BigDecimalUtil.add(account.getUsableAccount(),account.getFreezeAccount());
+			}else{
+				localhostBalance=BigDecimalUtil.add(account.getBorrowerUsableTotal(),account.getBorrowerFreezeTotal());
+			}
+			//一麻袋余额
+			double ymdBalance=NumberUtil.getDouble(ymdQueryBalance.getBalance());
+			//本地余额与一麻袋余额差
+			double balance=BigDecimalUtil.sub(localhostBalance, ymdBalance);
+			if(Math.abs(balance)>0.1){
+				throw new HandleException("本地账户余额与一麻袋账户余额不匹配",
+    					"本地账户资金和一麻袋对账出错",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_ACCOUNT,
+    					ErrorLogConstant.CODE_ACCOUNT_COMPARE_TPOS,account.getUser(),ErrorLogConstant.MODULE_ACCOUNT,
+    					userId,1);
+			}
+			
+		}
+	}
+	
+	
+	public long getBank_id() {
+		return bank_id;
+	}
+
+	public void setBank_id(long bank_id) {
+		this.bank_id = bank_id;
+	}
+
+	public String getBank() {
+		return bank;
+	}
+
+	public void setBank(String bank) {
+		this.bank = bank;
+	}
+
+	public String getBankaccount() {
+		return bankaccount;
+	}
+
+	public void setBankaccount(String bankaccount) {
+		this.bankaccount = bankaccount;
+	}
+
+	public String getBankname() {
+		return bankname;
+	}
+
+	public void setBankname(String bankname) {
+		this.bankname = bankname;
+	}
+
+	public String getBranch() {
+		return branch;
+	}
+
+	public void setBranch(String branch) {
+		this.branch = branch;
+	}
+
+	public String getAddtime() {
+		return addtime;
+	}
+
+	public String getProvinceName() {
+		return provinceName;
+	}
+
+	public void setProvinceName(String provinceName) {
+		this.provinceName = provinceName;
+	}
+
+	public String getCityName() {
+		return cityName;
+	}
+
+	public void setCityName(String cityName) {
+		this.cityName = cityName;
+	}
+
+	public String getAreaName() {
+		return areaName;
+	}
+
+	public void setAreaName(String areaName) {
+		this.areaName = areaName;
+	}
+
+	public String getModifyUsername() {
+		return modifyUsername;
+	}
+
+	public void setModifyUsername(String modifyUsername) {
+		this.modifyUsername = modifyUsername;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getAccountType() {
+		return accountType;
+	}
+
+	public void setAccountType(String accountType) {
+		this.accountType = accountType;
+	}
+
+	public int getProvince() {
+		return province;
+	}
+
+	public void setProvince(int province) {
+		this.province = province;
+	}
+
+	public int getCity() {
+		return city;
+	}
+
+	public void setCity(int city) {
+		this.city = city;
+	}
+
+	public int getArea() {
+		return area;
+	}
+
+	public void setArea(int area) {
+		this.area = area;
+	}
+
+	public void setAddtime(String addtime) {
+		this.addtime = addtime;
+	}
+
+	public String getAddip() {
+		return addip;
+	}
+
+	public void setAddip(String addip) {
+		this.addip = addip;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getRealname() {
+		return realname;
+	}
+
+	public void setRealname(String realname) {
+		this.realname = realname;
+	}
+
+	// 业务方法
+	/**
+	 * 冻结资金
+	 * 
+	 * @param money
+	 */
+	/*public synchronized void freeze(double money) {
+		this.setNoUseMoney(this.getNoUseMoney() + money);
+		this.setUseMoney(this.getUseMoney() - money);
+	}*/
+
+	public double getCollectionCapital() {
+		return collectionCapital;
+	}
+
+	public void setCollectionCapital(double collectionCapital) {
+		this.collectionCapital = collectionCapital;
+	}
+
+	public double getCollectInterest() {
+		return collectInterest;
+	}
+
+	public void setCollectInterest(double collectInterest) {
+		this.collectInterest = collectInterest;
+	}
+
+	public double getNewestCollectMoney() {
+		return newestCollectMoney;
+	}
+
+	public void setNewestCollectMoney(double newestCollectMoney) {
+		this.newestCollectMoney = newestCollectMoney;
+	}
+
+	public double getNewestCollectDate() {
+		return newestCollectDate;
+	}
+
+	public void setNewestCollectDate(double newestCollectDate) {
+		this.newestCollectDate = newestCollectDate;
+	}
+
+	public double getBorrowTotal() {
+		return borrowTotal;
+	}
+
+	public void setBorrowTotal(double borrowTotal) {
+		this.borrowTotal = borrowTotal;
+	}
+
+	public double getRepayTotal() {
+		return repayTotal;
+	}
+
+	public void setRepayTotal(double repayTotal) {
+		this.repayTotal = repayTotal;
+	}
+
+	public double getRepayInterest() {
+		return repayInterest;
+	}
+
+	public void setRepayInterest(double repayInterest) {
+		this.repayInterest = repayInterest;
+	}
+
+	public double getRepayTime() {
+		return repayTime;
+	}
+
+	public void setRepayTime(double repayTime) {
+		this.repayTime = repayTime;
+	}
+
+	public double getRepayAccount() {
+		return repayAccount;
+	}
+
+	public void setRepayAccount(double repayAccount) {
+		this.repayAccount = repayAccount;
+	}
+
+	public SearchParam getParam() {
+		return param;
+	}
+
+	public void setParam(SearchParam param) {
+		this.param = param;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+	public String getOrder() {
+		return order;
+	}
+
+	public void setOrder(String order) {
+		this.order = order;
+	}
+
+	public String getSort() {
+		return sort;
+	}
+
+	public void setSort(String sort) {
+		this.sort = sort;
+	}
+
+	public long getUserId() {
+		return userId;
+	}
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+	
+}

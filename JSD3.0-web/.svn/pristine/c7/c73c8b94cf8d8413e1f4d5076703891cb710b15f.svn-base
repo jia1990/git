@@ -1,0 +1,97 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.web.user;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserRealnameApplication;
+import com.ddtkj.p2psys.user.model.UserRealnameApplicationModel;
+import com.ddtkj.p2psys.user.service.UserRealnameApplicationService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述：用户开户认证资料申请
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月29日 
+ */
+public class UserRealnameApplicationAction extends BaseAction<UserRealnameApplicationModel> implements ModelDriven<UserRealnameApplicationModel>{
+	
+	
+	private UserRealnameApplicationModel model =  new UserRealnameApplicationModel();
+
+	public UserRealnameApplicationModel getModel() {
+		return model;
+	}
+
+	public void setModel(UserRealnameApplicationModel model) {
+		this.model = model;
+	}
+	
+	@Resource
+	private UserRealnameApplicationService userRealnameApplicationService;
+	
+	private User user;
+	
+	private Map<String ,Object> data;	
+	
+	
+	/**
+	 *@author 上传认证资料 
+	 * */
+	@Action("/user/userRealnameApplication/upload")
+	public void upload() throws Exception{
+		
+		data = new HashMap<String,Object>();
+		user =  this.getSessionUser();
+		try {
+			model.setUser(user);
+			model.validUserApplicationModel();
+			if (request.getParameter("fileIndex") != null) {
+				String[] picPath = this.webImgsUpload();
+				if (picPath[0] != null) {
+					model.setPositivePhoto(picPath[0]);
+				}
+				if (picPath[1] != null) {
+					model.setReversePhoto(picPath[1]);
+				}
+			}
+			userRealnameApplicationService.uploadUserRealNameApplication(model);
+			data.put("success", true);
+
+		} catch (Exception e) {
+			data.put("success", false);
+			data.put("msg", e.getMessage());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 *@author 李建云
+	 *查看用户上传省份证正反面  
+	 * */
+	@Action("/user/userRealnameApplication/getUserPic")
+	public void getUserPic() throws Exception{
+		data = new HashMap<String,Object>();
+		long userId = this.getSessionUserId();
+		UserRealnameApplication userRealnameApplication = 	userRealnameApplicationService.findUserRealnameApplication(userId);
+		
+		data.put("success", true);
+		data.put("userRealnameApplication", userRealnameApplication);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+}

@@ -1,0 +1,247 @@
+package com.rongdu.p2psys.web.weixin;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.webdav.lib.methods.XMLResponseMethodBase.Response;
+import org.springframework.ui.Model;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+import com.ddtkj.common.http.HttpResult;
+import com.ddtkj.common.http.HttpUtils;
+import com.ddtkj.common.util.security.AES;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.cooperation.domain.CooperationLogin;
+import com.rongdu.p2psys.cooperation.service.CooperationLoginService;
+import com.rongdu.p2psys.cooperation.util.qq.OpenQqConstants;
+import com.rongdu.p2psys.cooperation.util.qq.OpenQqUtils;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+import com.rongdu.p2psys.weixin.service.WxService;
+import com.rongdu.p2psys.weixin.util.SignUtils;
+import com.rongdu.p2psys.weixin.util.WxConstants;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.TreeMap;
+
+public class WxAction extends BaseAction<User> {
+
+	@Resource
+	private UserService userService;
+	@Resource
+	private WxService wxService;
+	private User user = new User();
+	@Resource
+	private CooperationLoginService cooperationLoginService;
+	private static Properties properties;
+    private static  String appId;
+	/** 用户中心：应用密钥 */
+    private static String appSecret ;
+	
+	/** 用户中心：签名密钥 */
+	private static  String signKey ;
+	
+	
+	static{
+		properties = new Properties();
+		try {
+			properties.load(WxConstants.class.getResourceAsStream(WxConstants.WX_CONFIG_NAME));
+			appId =  properties.getProperty("wx.appid");
+			signKey  = properties.getProperty("wx.signkey");
+			appSecret = properties.getProperty("wx.appSecret");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	//fengguoqin@ddtkj.com JSDP-214   20150707 start
+	/**
+	 * 绑定微信方法
+	 */
+	@Action(value = "/user/bindWx")
+	public void bindWx() throws Exception {
+		user = this.getSessionUser();
+		 Map<String, Object> data = new HashMap<String,Object>();
+		if(user==null){
+			this.redirect("/user/login.html");
+		}else{
+			long userId= user.getUserId();
+			CooperationLogin cooperationLogin = new CooperationLogin();
+			cooperationLogin.setType(2);
+			cooperationLogin.setUserId(userId);
+			cooperationLogin = cooperationLoginService.getCooperationLogin(cooperationLogin);
+			if(cooperationLogin==null){
+				cooperationLogin = new CooperationLogin();
+				cooperationLogin.setUserId(userId);
+				cooperationLogin.setType(2);
+				cooperationLogin.setAddTime(new Date());
+				cooperationLoginService.addCooperationLogin(cooperationLogin);
+			}
+			String url = "https://service.xiaowo.me/api/wx/qrBind";
+			Map<String, Object> parameterMap = new HashMap<String, Object>();
+			parameterMap.put("appId",appId);
+			parameterMap.put("uid", userId);
+			parameterMap.put("username", user.getUserName());
+			parameterMap = SignUtils.signMap(parameterMap,signKey );
+			
+			HttpResult httpResult = HttpUtils.sendPost(url, parameterMap);
+			data.put("content", httpResult.getContent());
+			printJson(getStringOfJpaObj(data));
+		}
+	}
+
+	/**
+	 * 绑定微信号回调地址  接收消息
+	 * @throws Exception 
+	 */
+	@Action(value = "/user/bindWxCallBack")
+	public void bindWxCallBack() throws Exception {
+
+		//收到消息后，务必快速返回字符串"ok"
+		HttpUtils.printText("ok", response);
+		// 全局配置参数
+		// 获取request中所有请求参数
+		Map<String, Object> dataMap = new TreeMap<String, Object>();
+		for (Map.Entry<String, String[]> entry :
+			 ((Map<String, String[]>)request.getParameterMap()).entrySet())
+			dataMap.put(entry.getKey(), entry.getValue()[0]);
+		
+		// 校验参数签名
+		dataMap = SignUtils.checkMap(dataMap, signKey);
+		if(dataMap == null){
+			System.out.println("参数签名错误，忽略本条消息：" + JSON.toJSONString(dataMap));
+		}else{
+			System.out.println("收到推送消息：" + JSON.toJSONString(dataMap));
+			try {
+				Integer type = Integer.valueOf((String) dataMap.get("type"));
+				Integer code = Integer.valueOf((String) dataMap.get("code"));
+				String data = (String) dataMap.get("data");
+				// 解密消息
+				data = AES.decrypt(Base64.decodeBase64(data), appSecret); 
+				// 解析消息内容
+				dataMap = JSON.parseObject(data, new TypeReference<Map<String, Object>>(){});
+				
+				if(type == NoticeApi.TYPE_PAY){			// 支付通知
+					System.out.println("收到支付通知：" + data);
+					
+					Long money = Long.valueOf((String) dataMap.get("money"));
+					String orderNo = (String) dataMap.get("orderNo");
+					String transId = (String) dataMap.get("transId");
+					String status = (String) dataMap.get("status");
+					String state = (String) dataMap.get("state");
+					
+					// 继续其它业务
+				}else if(type == NoticeApi.TYPE_UC){	// 用户中心通知
+					if(code == NoticeApi.CODE_UC_BIND_WX_SCAN){	//	微信扫码绑定通知
+						System.out.println("收到微信扫码绑定通知：" + data);
+						
+						Integer uid = Integer.valueOf((String) dataMap.get("uid"));
+						String username = (String) dataMap.get("username");
+						String openId = (String) dataMap.get("openId");
+						
+						// 继续其它业务
+						CooperationLogin cooperationLogin = new CooperationLogin();
+						cooperationLogin.setType(2);
+						cooperationLogin.setUserId(uid);
+						//将openID和uid入库
+						if (uid != 0 && StringUtil.isNotBlank(openId)) {
+							 cooperationLogin = cooperationLoginService.getCooperationLogin(cooperationLogin);
+							if(cooperationLogin==null){
+								cooperationLogin = new CooperationLogin();
+								cooperationLogin.setType(2);
+								cooperationLogin.setUserId(uid);
+								cooperationLogin.setOpenId(openId);
+								cooperationLoginService.addCooperationLogin(cooperationLogin);
+							}else{
+								cooperationLogin.setOpenId(openId);
+								cooperationLoginService.updateCooperationLogin(cooperationLogin);
+							}
+						}
+						
+					}
+				}else if(type == NoticeApi.TYPE_SYS){	// 系统通知
+					if(code == NoticeApi.CODE_SYS_APP_UPDATE){	//	更新App配置参数
+						System.out.println("收到系统更新通知：" + data);
+						
+						String newAppSecret = (String) dataMap.get("appSecret");
+						String newSignKey = (String) dataMap.get("signKey");
+						
+						// 继续其它业务
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+		}
+	
+	}
+	
+	/**
+	 * 解除绑定
+	 * @throws Exception 
+	 */
+	@Action(value = "/user/wxLoginUnBind")
+	public void unBind() throws Exception {
+		long userId = getSessionUserId();
+		 Map<String, Object> data = new HashMap<String,Object>();
+		if(userId==0){
+			this.redirect("/user/login.html");
+		}else{
+			CooperationLogin cooperationLogin = new CooperationLogin();
+			cooperationLogin.setType(2);
+			cooperationLogin.setUserId(userId);
+			 cooperationLogin = cooperationLoginService.getCooperationLogin(cooperationLogin);
+			if(cooperationLogin!=null && StringUtil.isNotBlank(cooperationLogin.getOpenId())){
+				cooperationLogin.setOpenId("");
+				cooperationLoginService.updateCooperationLogin(cooperationLogin);
+				data.put("result", true);
+				data.put("msg", "解除绑定成功!");
+			}else{
+				data.put("result", false);
+				data.put("msg", "从未绑定何来解除!");
+			}
+			printJson(getStringOfJpaObj(data));
+		}
+	}
+	
+	
+	/**
+	 * 查看用户微信绑定信息
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/user/wxCooperateLoginInfo")
+	public void CooperateLoginInfo() throws Exception {
+		user = this.getSessionUser();
+		 Map<String, Object> data = new HashMap<String,Object>();
+		if(user!=null){
+			CooperationLogin cooperationLogin= new CooperationLogin();
+			cooperationLogin.setUserId(user.getUserId());
+			cooperationLogin.setType(2);
+			cooperationLogin = cooperationLoginService.getCooperationLogin(cooperationLogin);
+			//微信绑定状态
+			if(cooperationLogin!=null && StringUtil.isNotBlank(cooperationLogin.getOpenId())){
+				data.put("wxCooperateInfo", true);//已绑定
+			}else{
+				data.put("wxCooperateInfo", false);//未绑定
+			}
+			printJson(getStringOfJpaObj(data));
+		}else {
+			this.redirect("/user/login.html");
+		}
+		
+ }
+	//fengguoqin@ddtkj.com JSDP-214   20150707 end
+
+}

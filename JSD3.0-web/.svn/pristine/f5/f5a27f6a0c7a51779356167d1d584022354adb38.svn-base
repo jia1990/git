@@ -1,0 +1,38 @@
+package com.ddtkj.mobile.cn.jpush.newapi;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ddtkj.mobile.MobileException;
+
+public class PushExample {
+	protected static final Logger LOG = LoggerFactory
+			.getLogger(PushExample.class);
+
+	// demo App defined in resources/jpush-api.conf
+	private static final String appKey = "82e62ead395503d785c1bfc9";
+	private static final String masterSecret = "cd731bdb6de2e19ab1e7b548";
+
+	public static final String TITLE = "Test from API example";
+	public static final String ALERT = "Test from API Example - alert";
+	public static final String MSG_CONTENT = "Test from API Example - msgContent";
+	public static final String REGISTRATION_ID = "0900e8d85ef";
+	public static final String TAG = "tag_api";
+
+	public static void main(String[] args) {
+		testSendPush();
+	}
+
+	public static void testSendPush() {
+		JPushClient jpushClient = new JPushClient(masterSecret, appKey, 3);
+		RequestWarper rw = new RequestWarper();
+		PushResult result = new PushResult();
+		try{
+			 result = jpushClient.sendPush(rw);
+			LOG.info("Got result - " + result.toString());
+		}catch(MobileException e){
+			
+		}	
+	}
+
+}

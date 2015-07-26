@@ -1,0 +1,55 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/user/user/userAdminLock.html');	
+</script>
+<form id="form"  method="post">
+<div class="popForm sForm">
+
+		<#if user.isLocked=='FF'>
+			<div class="formitm">
+			     <label class="lab">用户状态： </label>
+			     <div class="ipt">
+			     	 用户已注销
+			     </div>
+			</div>
+		<#else>
+		
+			
+			<div class="formitm">
+			     <label class="lab">锁定状态： </label>
+			     <div class="ipt">
+			     	<input type="radio" name="isLocked" <#if isLocked=='AY'>checked="checked" <#elseif isLocked=='UY'>checked="checked"  </#if> value="AY"/>&nbsp;&nbsp;锁定用户
+					<input type="radio" name="isLocked" <#if isLocked=='NN'>checked="checked"</#if> value="NN" />&nbsp;&nbsp;解锁用户
+			     </div>
+			</div>
+			<#if user.isLocked=='NN'>
+			
+			
+			<div class="formitm">
+			     <label class="lab">备注：</label>
+			     <div class="ipt">
+			     	<textarea class="w300 easyui-validatebox" name="lockRemark"></textarea>	
+			     </div>
+			</div>
+			<#else>
+			<div class="formitm">
+			     <label class="lab">锁定时间：</label>
+			     <div class="ipt">
+			     ${user.lockTime?string("yyyy-MM-dd HH:mm:ss")!}
+			     </div>
+			</div>
+			<div class="formitm">
+			     <label class="lab">锁定原因：</label>
+			     <div class="ipt">
+			     ${user.lockRemark!}
+			     </div>
+			</div>
+			</#if>
+			
+			
+		</#if>
+		<input value="${user.isLocked}" type="hidden">
+		<input name="userId" value="${user.userId}" type="hidden"/>
+		
+		<input name="userAdminLockToken" value="${userAdminLockToken!}" type="hidden"/>
+</div>
+</form>

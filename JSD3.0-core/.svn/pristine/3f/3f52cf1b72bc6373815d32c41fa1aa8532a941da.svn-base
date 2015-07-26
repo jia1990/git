@@ -1,0 +1,65 @@
+package com.rongdu.p2psys.core.notice.message;
+
+import org.apache.log4j.Logger;
+
+public class AbstractMessageLoanTask implements MessageLoanTask {
+	private Logger logger = Logger.getLogger(AbstractMessageLoanTask.class);
+	public Thread messageTask = new Thread("messageTask") {
+
+		private boolean isRun = true;
+
+		@Override
+		public void run() {
+			while (isRun) {
+				logger.debug(this.getName() + " Running!");
+				doLoan();
+				doWait();
+			}
+		}
+		
+		public void stopThread(){
+			isRun=false;
+		}
+	};
+
+	public AbstractMessageLoanTask() {
+		messageTask.start();
+		logger.debug("message线程启动！");
+	}
+
+	@Override
+	public void execute() {
+		logger.debug("message task.execute()");
+		Object lock = getLock();
+		synchronized (lock) {
+			lock.notifyAll();
+		}
+	}
+
+	@Override
+	public void doLoan() {
+		logger.debug("message AbstractTask开始");
+	}
+
+	public void doWait() {
+		Object lock = this.getLock();
+		synchronized (getLock()) {
+			try {
+				lock.wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
+	public void stop() {
+
+	}
+
+	@Override
+	public Object getLock() {
+		return MessageLoanTask.LOAN_STATUS;
+	}
+
+}

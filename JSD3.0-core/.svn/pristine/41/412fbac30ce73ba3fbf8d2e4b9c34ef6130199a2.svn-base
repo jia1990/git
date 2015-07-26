@@ -1,0 +1,78 @@
+package com.ddtkj.p2psys.core.quartz.draw;
+
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.account.service.impl.AccountDrawCashServiceImpl;
+import com.ddtkj.p2psys.core.quartz.LoanTask;
+import com.rongdu.p2psys.user.service.UserService;
+/**
+ * 取现、充值业务处理
+ * @author zxc
+ *
+ */
+public class DrawJobQueue<T> {
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Queue<T> queue = new ConcurrentLinkedQueue();
+	private LoanTask task;
+
+	public DrawJobQueue(LoanTask task) {
+		super();
+		this.task = task;
+	}
+
+	public synchronized void offer(T model) {
+		if (!queue.contains(model)) {
+			queue.offer(model);
+			synchronized (task.getLock()) {
+				task.execute();
+			}
+		}
+	}
+
+	public synchronized void offer(List<T> ts) {
+		for (int i = 0; i < ts.size(); i++) {
+			T t = ts.get(i);
+			if (!queue.contains(t)) {
+				queue.offer(t);
+			}
+		}
+		synchronized (task.getLock()) {
+			task.execute();
+		}
+	}
+
+	public synchronized T poll() {
+		return queue.poll();
+	}
+
+	public synchronized T peek() {
+		return queue.peek();
+	}
+
+	public synchronized void remove(T model) {
+		queue.remove(model);
+	}
+
+	public int size() {
+		return queue.size();
+	}
+
+	public static DrawJobQueue<DrawBean> DRAW = null;
+
+	public static void init(AccountDrawCashService accountDrawCashService) {
+		DRAW = new DrawJobQueue<DrawBean>(new DrawTask(accountDrawCashService));
+	}
+
+	public static void stop() {
+		DRAW.task.stop();
+	}
+
+	public void doAutoQueue() {
+	}
+
+}

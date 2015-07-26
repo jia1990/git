@@ -1,0 +1,510 @@
+package com.rongdu.p2psys.web.tpp;
+
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.InterceptorRef;
+import org.apache.struts2.convention.annotation.Result;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.ddtkj.p2psys.tpp.ymd.version2.model.YmdCallBack;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.tpp.ips.service.TppIpsConfigService;
+import com.rongdu.p2psys.tpp.ips.service.TppIpsPayService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 
+ * 汇潮回调处理类
+ * 
+ * @author wcw
+ * @version 3.0
+ * @since 2014年11月25日
+ */
+public class YmdAction extends BaseAction {
+	private static Logger logger = Logger.getLogger(YmdAction.class);
+	
+	@Autowired
+	private UserService userService;
+	@Resource
+	private TppIpsConfigService tppIpsConfigService;
+	@Resource
+	private TppIpsPayService tppIpsPayService;
+	@Resource
+	private YmdService ymdService;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService; 
+	@Resource
+	private BorrowService borrowService; 
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	
+	
+	@Resource
+	private AccountRechargeService rechargeService;
+	
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	
+	public static String getErrMsg(String errCode, String defaultMsg){
+		String errMsg = MessageUtil.getMessage(errCode);
+		if(!StringUtil.isBlank(errMsg)){
+			return errMsg;
+		}else{
+			return defaultMsg;
+		}
+	}
+	/**
+	 * 回调函数前台处理
+	 * @return
+	 */
+	private YmdModel getWebReturnYmdParam(){
+		YmdModel ymd=new YmdModel();
+		String pMerCode = paramString("number_id");  //获取处理状态
+		String pErrCode = paramString("status");  //获取处理状态
+		String pNickName = paramString("nick_name");  //平台用户唯一昵称
+		try {
+			pNickName = URLDecoder.decode(pNickName, "UTF-8"); //解密
+			//pNickName = URLEncoder.encode(pNickName, "UTF-8"); //加密
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		String pmode = paramString("mode");  //类型
+		String pSign = paramString("sign_info");//加密签名
+		ymd.setNumberId(pMerCode);
+		ymd.setErrCode(pErrCode);
+		ymd.setErrMsg(getErrMsg(pErrCode, "开户失败，请检查输入是否符合要求"));
+		ymd.setNickName(pNickName);
+		ymd.setMode(pmode);
+		ymd.setSignInfo(pSign);
+		return ymd;
+	}
+	/**
+	 * 回调参数拼接共用方法
+	 * 
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public String getRequestParams() {
+		String params = "";
+		try {
+			Enumeration<String> e = (Enumeration<String>) request.getParameterNames();
+			while (e.hasMoreElements()) {
+				String parName = e.nextElement();
+				String value = request.getParameter(parName);
+				params += parName + "=" + value + "&";
+			}
+		} catch (Exception e) {
+			logger.error(e);
+		}
+		return params;
+	}
+
+	
+	/******************开户业务start*****************/
+	/**
+	 * 开户同步回调
+	 * @return
+	 */
+	@Action(value="/public/ymd/ymdRegisterReturn",results = { @Result(name = "re", type = "ftl", location = "/tpp/result.html")},
+			interceptorRefs = { @InterceptorRef("defaultStack"),@InterceptorRef("action")})
+	public String ymdRegisterReturn() throws Exception{
+		logger.info("开户同步通知-----------");
+		logger.info("进入用户开户回调" + getRequestParams());
+		String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+		request.setAttribute("resultFlag", resultFlag);
+		request.setAttribute("left_url", "/member/main.html"); // 成功返回地址
+		request.setAttribute("right_url", "/member/recharge/newRecharge.html"); // 成功返回地址
+		request.setAttribute("left_msg", "账户主页"); 
+		request.setAttribute("right_msg", "我要充值"); 
+		YmdModel ymd = getWebReturnYmdParam();
+		logger.info("昵称===="+ymd.getNickName());
+		if(StringUtil.isNotBlank(ymd.getNickName())){
+			User user = userService.getUserByUserName(ymd.getNickName());
+			if(user!=null&&user.getUserCache()!=null){
+				if("11".equals(user.getUserCache().getUserType())){
+					request.setAttribute("back_url", "/member_borrow/security/realNameIdentify.html");// 借款人失败返回地址
+				}else{
+					request.setAttribute("back_url", "/member/security/realNameIdentify.html");// 失败返回地址
+				}
+				request.setAttribute("r_msg", "恭喜您，开通汇潮账号成功！");
+				dealYmdRegister(ymd,resultFlag,user);
+			}else{
+				request.setAttribute("r_msg", "系统异常，请联系管理员！");
+			}
+		}else{
+			request.setAttribute("r_msg", "系统异常，请联系管理员！");
+		}
+		return "re";
+	}
+	/**
+	 * 开户异步通知
+	 * @return
+	 * @throws IOException 
+	 */
+	@Action(value="/public/ymd/ymdRegisterNotify",interceptorRefs = { @InterceptorRef("defaultStack"),@InterceptorRef("action")})
+	public String ymdRegisterNotify() throws IOException{
+		logger.info("开户异步通知"+getRequestIp());
+		YmdModel ymd = getWebReturnYmdParam();
+		if(StringUtil.isNotBlank(ymd.getNickName())){
+			User user = userService.getUserByUserName(ymd.getNickName());
+			if(user!=null&&"83".equals(user.getUserIdentify().getRealNameStatus())){
+				printResult("ok", true);
+				return null;
+			}
+			try {
+				dealYmdRegister(ymd,"",user);
+			} catch (Exception e1) {
+				printResult("异常"+e1.getMessage(), false);
+			}
+		}
+		return null;
+		
+	}
+	
+	private void dealYmdRegister(YmdModel ymd,String resultFlag,User user)throws Exception {
+		try {
+			if (Global.OPEN_ACCOUNT_SET.add(ymd.getNickName())) {
+				logger.info("进入用户开户回调" + getRequestParams());
+				//判断是否开户成功！
+				checkYmdResCode(ymd,user);
+				YmdRegister ymdRegister=new YmdRegister();
+				BeanUtils.copyProperties(ymd, ymdRegister);
+				ymdRegister.checkSign(); //验签
+				//处理回调
+				//ymd = ymd.doReturnCreate(sign);
+				// JSDP-161  wcw 20150525 start
+				//DisruptorUtils.ymdRegister(user, ymdRegister,resultFlag);
+				DisruptorUtils.openUserRegister(user, ymdRegister,resultFlag);
+				// JSDP-161  wcw 20150525 end
+			}else{
+				logger.info("用户名为："+ymd.getNickName()+"的用户开户处理重复！**********");
+			}
+		}catch(Exception e1) {
+			throw e1;
+		}finally{
+			Global.OPEN_ACCOUNT_SET.remove(ymd.getNickName());
+		} 
+	}
+	
+	/**
+	 * 校验处理是否成功
+	 * @param ips
+	 */
+	private void checkYmdResCode(YmdModel ymd,User user){
+		if (!"00".equals(ymd.getErrCode())) {
+			logger.info("开户失败原因："+ymd.getErrMsg());
+			if("11".equals(user.getUserCache().getUserType())){
+				throw new BussinessException(getErrMsg(ymd.getErrCode(), "开户失败，请检查输入是否符合要求"), "/member_borrow/security/realNameIdentify.html");
+			}else{
+				throw new BussinessException(getErrMsg(ymd.getErrCode(), "开户失败，请检查输入是否符合要求"), "/member/security/realNameIdentify.html");
+			}
+		}
+		
+	}
+	/******************开户业务end*****************/
+	/******************充值业务start*****************/
+	@Action(value="/public/ymd/ymdRechargeReturn",results = { @Result(name = "re", type = "ftl", location = "/tpp/result.html")},
+			interceptorRefs = { @InterceptorRef("defaultStack"),@InterceptorRef("action")})
+	public String ymdRechargeReturn(){
+  		logger.info("充值同步通知-----------"+getRequestIp());
+		YmdModel ymd = getWebReturnYmdParam();
+		String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+		request.setAttribute("resultFlag", resultFlag);
+		//request.setAttribute("ok_url", "/member/recharge/log.html"); // 成功返回地址
+		User u =getSessionUser();
+		if(u!=null && "11".equals( u.getUserCache().getUserType())){
+			request.setAttribute("left_url", "/member_borrow/account/log.html"); // 成功返回地址
+			request.setAttribute("right_url", "/member_borrow/borrow/repayment.html"); // 成功返回地址
+			request.setAttribute("left_msg", "资金记录"); 
+			request.setAttribute("right_msg", "我要还款"); 
+		}else if(u!=null && "20".equals(u.getUserCache().getUserNature())){
+			request.setAttribute("left_url", "/member/recharge/log.html"); // 成功返回地址
+			request.setAttribute("right_url", "/invest/index.html"); // 成功返回地址
+			request.setAttribute("left_msg", "充值记录"); 
+			request.setAttribute("right_msg", "我要投资"); 
+		}else{
+			request.setAttribute("left_url", "/member/recharge/log.html"); // 成功返回地址
+			request.setAttribute("right_url", "/member/main.html"); // 成功返回地址
+			request.setAttribute("left_msg", "充值记录"); 
+			request.setAttribute("right_msg", "账户主页"); 
+		}
+		request.setAttribute("back_url", "/member/recharge/newRecharge.html");// 失败返回地址
+		request.setAttribute("r_msg", "恭喜您，充值成功！");
+		dealYmdRecharge(ymd,resultFlag);
+		//message("充值申请成功，请您返回查看","/member/recharge/log.html");
+		return "re";
+	}
+	
+	@Action(value="/public/ymd/ymdRechargeNotify",interceptorRefs = { @InterceptorRef("defaultStack"),@InterceptorRef("action")})
+	public String ymdRechargeNotify() throws IOException{
+		logger.info("充值异步通知-----------"+getRequestIp());
+		YmdModel ymd = getWebReturnYmdParam();
+		String out_trade_no=paramString("out_trade_no");
+		if(StringUtil.isNotBlank(out_trade_no)){
+			AccountRecharge ar=rechargeService.findRechargeByOrderTradeNo(paramString("out_trade_no"));
+			if(ar!=null&&"00".equals(ar.getTradeStatus())){
+				printResult("ok", true);
+				return null;
+			}
+			try {
+				dealYmdRecharge(ymd,"");
+			} catch (Exception e1) {
+				printResult(e1.getMessage(), false);
+			}
+		}else{
+			return null;
+		}
+		return null;
+		
+	}
+	
+	/**
+	 * 充值业务处理
+	 * @param param
+	 * @return
+	 */
+	private void dealYmdRecharge(YmdModel ymd,String resultFlag) {
+		String out_trade_no=paramString("out_trade_no");
+		try {
+			if (Global.TRADE_NO_SET.add(out_trade_no)){
+				logger.info("进入充值异步回调" + getRequestParams());
+				YmdRecharge ymdRecharge=new YmdRecharge();
+				BeanUtils.copyProperties(ymd, ymdRecharge);
+				ymdRecharge.setOutTradeNo(out_trade_no);
+				ymdRecharge.setAmount(paramString("amount"));
+				ymdRecharge.setFee(paramString("fee"));
+				ymdRecharge.checkSign(); //验签
+				//处理回调O
+				//ymdRecharge.doReturnMessage(xml);
+				ymdRecharge.setErrCode(ymd.getErrCode());
+				ymdRecharge.setErrMsg(ymd.getErrMsg());
+				RechargeModel reModel = new RechargeModel(); // 对通用javabean进行参数封装
+				reModel.setOrderAmount(ymdRecharge.getAmount());
+				reModel.setOrderId(ymdRecharge.getOutTradeNo());
+				reModel.setResultMsg(ymdRecharge.getErrMsg());
+				reModel.setResult(ymdRecharge.getErrCode());
+				reModel.setSerialNo(ymd.getOutTradeNo());
+				// JSDP-161  wcw 20150525 start
+				//DisruptorUtils.doRechargeBackTask(reModel,resultFlag);
+				DisruptorUtils.rechargeBack(reModel,resultFlag);
+				// JSDP-161  wcw 20150525 end
+			}else{
+				logger.info("订单号为："+out_trade_no+"的用户充值处理重复！**********");
+			}
+		} finally{
+			Global.TRADE_NO_SET.remove(out_trade_no);
+		} 
+		/*}*/
+	}
+
+	/******************充值业务end*****************/
+	
+	/*******************提现银行处理失败业务处理start
+	 * @throws IOException ********/
+	@Action(value="/public/ymd/ymdCashNotify",interceptorRefs = { @InterceptorRef("defaultStack"),@InterceptorRef("action")})
+	public String ymdCashNotify() throws IOException{
+		logger.info("提现银行转账失败异步回调===========");
+		YmdModel ymd = getWebReturnYmdParam();
+		String out_trade_no=paramString("out_trade_no");
+		if(StringUtil.isNotBlank(out_trade_no)){
+			AccountDraw draw=accountDrawCashService.getDrawByOutTradeNo(paramString("out_trade_no"));
+			if(draw!=null&&"88".equals(draw.getDrawHandleStatus())){
+				printResult("ok", true);
+				return null;
+			}
+			try {
+				dealYmdCash(ymd,"");
+				//JSDBET-812 gjh 2015-3-14 start
+			} catch (HandleException e) {
+				throw e;
+				//JSDBET-812 gjh 2015-3-14 end
+			} catch (Exception e1) {
+				printResult(e1.getMessage(), false);
+			}
+		}else{
+			return null ;
+		}
+		return null;
+	}
+	/**
+	 * 提现业务处理
+	 * @param param
+	 * @return
+	 */
+	private void dealYmdCash(YmdModel ymd,String resultFlag) {
+		
+		logger.info("进入提现提现银行转账失败回调接口获取参数链：" + getRequestParams());
+		YmdCash  ymdCash = new YmdCash();
+		String out_trade_no=paramString("out_trade_no");
+		try {
+			if (Global.TRADE_NO_SET.add(out_trade_no)){
+				try {
+					BeanUtils.copyProperties(ymd, ymdCash);
+					ymdCash.setOutTradeNo(out_trade_no);
+					ymdCash.setAmount(paramString("amount"));
+					ymdCash.setFee(paramString("fee"));
+					ymdCash.checkSign(); //验签
+					// JSDP-161  wcw 20150525 start
+					//DisruptorUtils.doCashBankFailBackTask(ymdCash,resultFlag);
+					DisruptorUtils.drawFailBack(ymdCash);
+					// JSDP-161  wcw 20150525 end
+					//JSDBET-812 gjh 2015-3-14 start
+				} catch (HandleException e) {
+					e.setUrl("/member/cash/newCash.html");
+					throw e;
+					//JSDBET-812 gjh 2015-3-14 end
+				} catch (Exception e) {
+					logger.info("提现回调处理失败！原因" + e.getMessage());
+					throw new BussinessException("提现失败！", "/member/cash/newCash.html");
+				} 
+			}else{
+				logger.info("订单号为："+out_trade_no+"的用户提现处理重复！**********");
+			}
+		} finally{
+			Global.TRADE_NO_SET.remove(out_trade_no);
+		} 
+	}
+	/*******************提现银行处理失败业务处理end********/
+	/**
+	 * 返回系通处理的信息
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/public/ymd/getResult")
+	public String getTenderResult() throws Exception{
+ 		String result = "";
+		String resultFlag = paramString("resultFlag");
+		if(StringUtil.isBlank(resultFlag)){
+			result="查询处理信息错误";
+		}else{
+			result = (String)Global.RESULT_MAP.get(resultFlag);
+			//Global.RESULT_MAP.remove(resultFlag);//系统消息取出来之后立即删除，保证集合为空
+		}
+		Map<String,String> map = new HashMap<String, String>();
+		map.put("msg_data", result);
+		printJson(JSON.toJSONString(map));
+		 //JSDP-86 wcw 2015-05-05 start
+		map=null;
+		 //JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	
+	
+	/**
+	 * 交易回调
+	 * 
+	 * @author sxy
+	 * @return
+	 */
+	@Action(value="/public/ymd/ymdDealReturn",results = { @Result(name = "deal", type = "ftl", location = "/tpp/result.html")},
+			interceptorRefs = { @InterceptorRef("defaultStack"),@InterceptorRef("action")})
+	public String ymdDealReturn(){
+  		logger.info("交易同步通知-----------"+getRequestIp());
+  		
+  		String numberId = paramString("number_id");
+  		String mode = paramString("mode");
+  		String orderNo = paramString("order_no");
+  		String totalSize = paramString("total_size");
+  		String status = paramString("status");
+  		String signInfo = paramString("sign_info");
+  		
+  		YmdCallBack ymdCallBack = new YmdCallBack();
+  		ymdCallBack.setNumberId(numberId);
+  		ymdCallBack.setMode(mode);
+  		ymdCallBack.setOrderNo(orderNo);
+  		ymdCallBack.setTotalSize(totalSize);
+  		ymdCallBack.setStatus(status);
+  		ymdCallBack.setSignInfo(signInfo);
+  		
+		YmdModel ymd = getWebReturnYmdParam();
+		String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+		dealYmdRecharge(ymd,resultFlag);
+		request.setAttribute("resultFlag", resultFlag);
+		request.setAttribute("ymdCallBack", ymdCallBack);
+		
+		//User u =getSessionUser();
+		//dealYmdRecharge(ymd,resultFlag);
+		return "deal";
+		
+	}
+	
+	/////////////////////////////////////////////////////
+	/**
+	 * 充值业务处理
+	 * @param param
+	 * @return
+	 */
+	/*private void dealYmdDeal(YmdModel ymd,String resultFlag) {
+		String out_trade_no=paramString("out_trade_no");
+		try {
+			if (Global.TRADE_NO_SET.add(out_trade_no)){
+				logger.info("进入充值异步回调" + getRequestParams());
+				YmdRecharge ymdRecharge=new YmdRecharge();
+				BeanUtils.copyProperties(ymd, ymdRecharge);
+				ymdRecharge.setOutTradeNo(out_trade_no);
+				ymdRecharge.setAmount(paramString("amount"));
+				ymdRecharge.setFee(paramString("fee"));
+				ymdRecharge.checkSign(); //验签
+				//处理回调O
+				//ymdRecharge.doReturnMessage(xml);
+				ymdRecharge.setErrCode(ymd.getErrCode());
+				ymdRecharge.setErrMsg(ymd.getErrMsg());
+				RechargeModel reModel = new RechargeModel(); // 对通用javabean进行参数封装
+				reModel.setOrderAmount(ymdRecharge.getAmount());
+				reModel.setOrderId(ymdRecharge.getOutTradeNo());
+				reModel.setResultMsg(ymdRecharge.getErrMsg());
+				reModel.setResult(ymdRecharge.getErrCode());
+				reModel.setSerialNo(ymd.getOutTradeNo());
+				// JSDP-161  wcw 20150525 start
+				//DisruptorUtils.doRechargeBackTask(reModel,resultFlag);
+				DisruptorUtils.rechargeBack(reModel,resultFlag);
+				// JSDP-161  wcw 20150525 end
+			}else{
+				logger.info("订单号为："+out_trade_no+"的用户充值处理重复！**********");
+			}
+		} finally{
+			Global.TRADE_NO_SET.remove(out_trade_no);
+		} 
+		}
+	}*/
+	
+	
+	
+	
+	
+	
+	
+	
+}

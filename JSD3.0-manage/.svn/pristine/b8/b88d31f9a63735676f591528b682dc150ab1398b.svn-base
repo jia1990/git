@@ -1,0 +1,2868 @@
+package com.ddtkj.manage.action.dataStatistics;
+
+import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.statistics.model.StatisticsDataModel;
+import com.ddtkj.p2psys.statistics.service.StatisticsDataService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserCertificationService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 用户管理
+ * // JSDPBUG-99 20150505  sxy
+ * @author sj
+ * @version 2.0
+ * @since 2014年4月17日
+ */
+public class ManageDataStatisticsAction extends BaseAction<StatisticsDataModel> implements ModelDriven<StatisticsDataModel> {
+	
+	
+	@Resource
+	private UserService userService;
+	@Resource
+	private StatisticsDataService statisticsDataService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserCertificationService attestationService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private VerifyLogService verifyLogService;
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowTenderService tenderService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private RegionService regionService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+
+	private Map<String, Object> data;
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	// 资金保留两位小数
+	DecimalFormat df = new DecimalFormat("#0.00");
+	
+	/**
+	 * 注册人数统计页面
+	 * 
+	 * @author sxy 2015年4月23日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/registerStatisticsPage")
+	public String registerCountStatisticsPage() throws Exception {
+	
+		// ★方法一：查询数据统计表 —— 调用存储结构
+
+		//调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部注册用户数
+		StatisticsData registerAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER, StatisticsData.DATA_TIME_ALL);
+		// 本月注册用户数
+		StatisticsData monthRegisterUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER, StatisticsData.DATA_TIME_MONTH);
+		// 一周内注册用户数
+		StatisticsData weekRegisterUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER, StatisticsData.DATA_TIME_WEEK);
+		// 今日注册用户数
+		StatisticsData todayRegisterUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER, StatisticsData.DATA_TIME_TODAY);
+		// 昨日注册用户数
+		StatisticsData yesterdayRegisterUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER, StatisticsData.DATA_TIME_YESTERDAY);	
+		
+		String registerAllCount = "000";
+		String monthRegisterUserCount = "000";
+		String weekRegisterUserCount = "000";
+		String todayRegisterUserCount = "000";
+		String yesterdayRegisterUserCount = "000";
+		
+		if(null != registerAll){
+			registerAllCount = registerAll.getCount();
+		}
+		if(null != monthRegisterUser){
+			monthRegisterUserCount = monthRegisterUser.getCount();
+		}
+		if(null != weekRegisterUser){
+			weekRegisterUserCount = weekRegisterUser.getCount();
+		}
+		if(null != todayRegisterUser){
+			todayRegisterUserCount = todayRegisterUser.getCount();
+		}
+		if(null != yesterdayRegisterUser){
+			yesterdayRegisterUserCount = yesterdayRegisterUser.getCount();
+		}
+		
+		request.setAttribute("registerAllCount", registerAllCount);
+		request.setAttribute("monthRegisterUserCount", monthRegisterUserCount);
+		request.setAttribute("weekRegisterUserCount", weekRegisterUserCount);
+		request.setAttribute("todayRegisterUserCount", todayRegisterUserCount);
+		request.setAttribute("yesterdayRegisterUserCount", yesterdayRegisterUserCount);
+		
+		// ---------------------------- PC端  -----------------------------------
+		
+		// 全部PC端注册用户数
+		StatisticsData registerPCAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PC, StatisticsData.DATA_TIME_ALL);
+		// 本月PC端注册用户数
+		StatisticsData monthRegisterUserPC = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PC, StatisticsData.DATA_TIME_MONTH);
+		// 一周内PC端注册用户数
+		StatisticsData weekRegisterUserPC = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PC, StatisticsData.DATA_TIME_WEEK);
+		// 今日PC端注册用户数
+		StatisticsData todayRegisterUserPC = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PC, StatisticsData.DATA_TIME_TODAY);
+		// 昨日PC端注册用户数
+		StatisticsData yesterdayRegisterUserPC = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PC, StatisticsData.DATA_TIME_YESTERDAY);	
+		
+		String registerPCAllCount = "000";
+		String monthRegisterUserPCCount = "000";
+		String weekRegisterUserPCCount = "000";
+		String todayRegisterUserPCCount = "000";
+		String yesterdayRegisterUserPCCount = "000";
+		
+		if(null != registerPCAll){
+			registerPCAllCount = registerPCAll.getCount();
+		}
+		if(null != monthRegisterUserPC){
+			monthRegisterUserPCCount = monthRegisterUserPC.getCount();
+		}
+		if(null != weekRegisterUserPC){
+			weekRegisterUserPCCount = weekRegisterUserPC.getCount();
+		}
+		if(null != todayRegisterUserPC){
+			todayRegisterUserPCCount = todayRegisterUserPC.getCount();
+		}
+		if(null != yesterdayRegisterUserPC){
+			yesterdayRegisterUserPCCount = yesterdayRegisterUserPC.getCount();
+		}
+		
+		request.setAttribute("registerPCAllCount", registerPCAllCount);
+		request.setAttribute("monthRegisterUserPCCount", monthRegisterUserPCCount);
+		request.setAttribute("weekRegisterUserPCCount", weekRegisterUserPCCount);
+		request.setAttribute("todayRegisterUserPCCount", todayRegisterUserPCCount);
+		request.setAttribute("yesterdayRegisterUserPCCount", yesterdayRegisterUserPCCount);
+		//JSDP - BUG110  sxy
+		// ---------------------------- 手机端  -----------------------------------
+		// 全部手机端注册用户数
+		StatisticsData registerPhoneAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PHONE, StatisticsData.DATA_TIME_ALL);
+		// 本月手机端注册用户数
+		StatisticsData monthRegisterUserPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PHONE, StatisticsData.DATA_TIME_MONTH);
+		// 一周内手机端注册用户数
+		StatisticsData weekRegisterUserPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PHONE, StatisticsData.DATA_TIME_WEEK);
+		// 今日手机端注册用户数
+		StatisticsData todayRegisterUserPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PHONE, StatisticsData.DATA_TIME_TODAY);
+		// 昨日手机端注册用户数
+		StatisticsData yesterdayRegisterUserPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_REGISTER_PHONE, StatisticsData.DATA_TIME_YESTERDAY);	
+		
+		String registerPhoneAllCount = "000";
+		String monthRegisterUserPhoneCount = "000";
+		String weekRegisterUserPhoneCount = "000";
+		String todayRegisterUserPhoneCount = "000";
+		String yesterdayRegisterUserPhoneCount = "000";
+		
+		if(null != registerPhoneAll){
+			registerPhoneAllCount = registerPhoneAll.getCount();
+		}
+		if(null != monthRegisterUserPhone){
+			monthRegisterUserPhoneCount = monthRegisterUserPhone.getCount();
+		}
+		if(null != weekRegisterUserPhone){
+			weekRegisterUserPhoneCount = weekRegisterUserPhone.getCount();
+		}
+		if(null != todayRegisterUserPhone){
+			todayRegisterUserPhoneCount = todayRegisterUserPhone.getCount();
+		}
+		if(null != yesterdayRegisterUserPhone){
+			yesterdayRegisterUserPhoneCount = yesterdayRegisterUserPhone.getCount();
+		}
+		
+		request.setAttribute("registerPhoneAllCount", registerPhoneAllCount);
+		request.setAttribute("monthRegisterUserPhoneCount", monthRegisterUserPhoneCount);
+		request.setAttribute("weekRegisterUserPhoneCount", weekRegisterUserPhoneCount);
+		request.setAttribute("todayRegisterUserPhoneCount", todayRegisterUserPhoneCount);
+		request.setAttribute("yesterdayRegisterUserPhoneCount", yesterdayRegisterUserPhoneCount);
+		
+		//JSDP - BUG110  sxy
+		return "registerStatisticsPage";
+	}
+	
+	/**
+	 * 某段时间注册人数统计页面
+	 * 
+	 * @author sxy 2015年4月23日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/registerStatisticsPageArea")
+	public void registerStatisticsPage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setUserType("10");
+		model.setUserNature("20");
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		
+		// 注册方式
+		String registerWay = paramString("registerWay");
+		
+		if(StringUtil.isNotBlank(registerWay)){
+			model.setRegisterWay(registerWay);
+		}
+		
+		// 按照时间段查询注册用户信息
+		int registerStatisticsPageArea = statisticsDataService.countUserByTypeAndTime(model);
+		
+		data.put("registerStatisticsPageArea", registerStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 某段时间PC注册人数统计页面
+	 * 
+	 * @author sxy 2015年5月8日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/registerPCStatisticsPageArea")
+	public void registerPCStatisticsPage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setUserType("10");
+		model.setUserNature("20");
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		
+		// 注册方式
+		String registerWay = paramString("registerWay");
+		
+		if(StringUtil.isNotBlank(registerWay)){
+			model.setRegisterWay(registerWay);
+		}else{
+			model.setRegisterWay("P");
+		}
+		
+		// 按照时间段查询注册用户信息
+		int registerPCStatisticsPageArea = statisticsDataService.countUserByTypeAndTime(model);
+		
+		data.put("registerPCStatisticsPageArea", registerPCStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 某段时间手机端注册人数统计页面
+	 * 
+	 * @author sxy 2015年5月8日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/registerPhoneStatisticsPageArea")
+	public void registerPhoneStatisticsPage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setUserType("10");
+		model.setUserNature("20");
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		
+		// 注册方式
+		String registerWay = paramString("registerWay");
+		
+		if(StringUtil.isNotBlank(registerWay)){
+			model.setRegisterWay(registerWay);
+		}else{
+			model.setRegisterWay("M");
+		}
+		
+		// 按照时间段查询注册用户信息
+		int registerPhoneStatisticsPageArea = statisticsDataService.countUserByTypeAndTime(model);
+		
+		data.put("registerPhoneStatisticsPageArea", registerPhoneStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 充值人数统计页面
+	 * 
+	 * @author sxy 2015年4月23日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeUserStatisticsPage")
+	public String rechargeUserStatisticsPage() throws Exception {
+	
+		// ★方法一：查询数据统计表 —— 调用存储结构
+
+		//调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部充值用户数
+		StatisticsData rechargeUserAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_USER, StatisticsData.DATA_TIME_ALL);
+		// 一周内充值用户数
+		StatisticsData weekRechargeUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_USER, StatisticsData.DATA_TIME_WEEK);
+		// 今日充值用户数
+		StatisticsData todayRechargeUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_USER, StatisticsData.DATA_TIME_TODAY);
+		// 昨日充值用户数
+		StatisticsData yesterdayRechargeUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_USER, StatisticsData.DATA_TIME_YESTERDAY);	
+		// 本月充值用户数
+		StatisticsData monthRechargeUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_USER, StatisticsData.DATA_TIME_MONTH);	
+		
+		String rechargeUserAllCount = "000";
+		String monthRechargeUserCount = "000";
+		String weekRechargeUserCount = "000";
+		String todayRechargeUserCount = "000";
+		String yesterdayRechargeUserCount = "000";
+		
+		if(null != rechargeUserAll){
+			rechargeUserAllCount = rechargeUserAll.getCount();
+		}
+		if(null != monthRechargeUser){
+			monthRechargeUserCount = monthRechargeUser.getCount();
+		}
+		if(null != weekRechargeUser){
+			weekRechargeUserCount = weekRechargeUser.getCount();
+		}
+		if(null != todayRechargeUser){
+			todayRechargeUserCount = todayRechargeUser.getCount();
+		}
+		if(null != yesterdayRechargeUser){
+			yesterdayRechargeUserCount = yesterdayRechargeUser.getCount();
+		}
+		
+		request.setAttribute("rechargeUserAllCount", rechargeUserAllCount);
+		request.setAttribute("monthRechargeUserCount", monthRechargeUserCount);
+		request.setAttribute("weekRechargeUserCount", weekRechargeUserCount);
+		request.setAttribute("todayRechargeUserCount", todayRechargeUserCount);
+		request.setAttribute("yesterdayRechargeUserCount", yesterdayRechargeUserCount);
+		
+		
+		
+		// ★方法一：SQL语句查询
+		/*// 1、充值用户信息统计
+		int userCount = userService.countUserByType(10);
+		// 昨日充值用户数
+		int yesterdayRechargeUser = userService.countRechargeUserByTime("yesterday",null,null);
+		// 今日充值用户数
+		int todayRechargeUser = userService.countRechargeUserByTime("today",null,null);
+		// 一周内充值用户数
+		int weekRechargeUser = userService.countRechargeUserByTime("week",null,null);
+		
+		request.setAttribute("userCount", userCount);
+		request.setAttribute("yesterdayRechargeUser", yesterdayRechargeUser);
+		request.setAttribute("todayRechargeUser", todayRechargeUser);
+		request.setAttribute("weekRechargeUser", weekRechargeUser);
+		*/
+		return "rechargeUserStatisticsPage";
+	}
+	/**
+	 * 某段时间充值人数统计页面
+	 * 
+	 * @author sxy 2015年4月23日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeUserStatisticsPageArea")
+	public void rechargeUserStatisticsTimePage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		// 按照时间段查询注册用户信息
+		int rechargeStatisticsPageArea = statisticsDataService.countRechargeUserByTime(StatisticsData.DATA_TIME_AREA,startTime,endTime);
+		data.put("rechargeStatisticsPageArea", rechargeStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 充值金额统计页面（1：页面无误 2：明细已开发）
+	 * 
+	 * @author sxy 2015年4月23日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeMoneyStatisticsPage")
+	public String rechargeMoneyStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构
+		
+		//调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部充值金额数
+		StatisticsData rechargeMoneyAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY, StatisticsData.DATA_TIME_ALL);
+		// 本月充值金额数
+		StatisticsData monthRechargeMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY, StatisticsData.DATA_TIME_MONTH);
+		// 一周内充值金额数
+		StatisticsData weekRechargeMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY, StatisticsData.DATA_TIME_WEEK);
+		// 今日充值金额数
+		StatisticsData todayRechargeMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY, StatisticsData.DATA_TIME_TODAY);
+		// 昨日充值金额数
+		StatisticsData yesterdayRechargeMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY, StatisticsData.DATA_TIME_YESTERDAY);	
+		
+		// 资金保留两位小数
+		//DecimalFormat df = new DecimalFormat("#0.00");
+		
+		String rechargeMoneyAllCount = "000";
+		String monthRechargeMoneyCount = "000";
+		String weekRechargeMoneyCount = "000";
+		String todayRechargeMoneyCount = "000";
+		String yesterdayRechargeMoneyCount = "000";
+		
+		if(null != rechargeMoneyAll){
+			rechargeMoneyAllCount = rechargeMoneyAll.getCount();
+		}
+		if(null != monthRechargeMoney){
+			monthRechargeMoneyCount = monthRechargeMoney.getCount();
+		}
+		if(null != weekRechargeMoney){
+			weekRechargeMoneyCount = weekRechargeMoney.getCount();
+		}
+		if(null != todayRechargeMoney){
+			todayRechargeMoneyCount = todayRechargeMoney.getCount();
+		}
+		if(null != yesterdayRechargeMoney){
+			yesterdayRechargeMoneyCount = yesterdayRechargeMoney.getCount();
+		}
+		// 精确化数据
+		//DecimalFormat df = new DecimalFormat("#0.00");
+		
+		
+		request.setAttribute("rechargeMoneyAllCount", df.format(Double.parseDouble(rechargeMoneyAllCount)));
+		request.setAttribute("monthRechargeMoneyCount", df.format(Double.parseDouble(monthRechargeMoneyCount)));
+		request.setAttribute("weekRechargeMoneyCount", df.format(Double.parseDouble(weekRechargeMoneyCount)));
+		request.setAttribute("todayRechargeMoneyCount", df.format(Double.parseDouble(todayRechargeMoneyCount)));
+		request.setAttribute("yesterdayRechargeMoneyCount", df.format(Double.parseDouble(yesterdayRechargeMoneyCount)));
+		
+		// ------------------------------------------------------------------------------------------
+		// 全部第三方充值金额数
+		StatisticsData rechargeMoneyOnlineAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_ONLINE, StatisticsData.DATA_TIME_ALL);
+		// 本月第三方充值金额数
+		StatisticsData monthRechargeMoneyOnline = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_ONLINE, StatisticsData.DATA_TIME_MONTH);
+		// 一周内第三方充值金额数
+		StatisticsData weekRechargeMoneyOnline = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_ONLINE, StatisticsData.DATA_TIME_WEEK);
+		// 今日第三方充值金额数
+		StatisticsData todayRechargeMoneyOnline = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_ONLINE, StatisticsData.DATA_TIME_TODAY);
+		// 昨日第三方充值金额数
+		StatisticsData yesterdayRechargeMoneyOnline = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_ONLINE, StatisticsData.DATA_TIME_YESTERDAY);	
+		
+		// 资金保留两位小数
+		//DecimalFormat df = new DecimalFormat("#0.00");
+		
+		String rechargeMoneyOnlineAllCount = "000";
+		String monthRechargeMoneyOnlineCount = "000";
+		String weekRechargeMoneyOnlineCount = "000";
+		String todayRechargeMoneyOnlineCount = "000";
+		String yesterdayRechargeMoneyOnlineCount = "000";
+		
+		if(null != rechargeMoneyAll){
+			rechargeMoneyOnlineAllCount = rechargeMoneyOnlineAll.getCount();
+		}
+		if(null != monthRechargeMoney){
+			monthRechargeMoneyOnlineCount = monthRechargeMoneyOnline.getCount();
+		}
+		if(null != weekRechargeMoney){
+			weekRechargeMoneyOnlineCount = weekRechargeMoneyOnline.getCount();
+		}
+		if(null != todayRechargeMoney){
+			todayRechargeMoneyOnlineCount = todayRechargeMoneyOnline.getCount();
+		}
+		if(null != yesterdayRechargeMoney){
+			yesterdayRechargeMoneyOnlineCount = yesterdayRechargeMoneyOnline.getCount();
+		}
+		
+		request.setAttribute("rechargeMoneyOnlineAllCount", df.format(Double.parseDouble(rechargeMoneyOnlineAllCount)));
+		request.setAttribute("monthRechargeMoneyOnlineCount", df.format(Double.parseDouble(monthRechargeMoneyOnlineCount)));
+		request.setAttribute("weekRechargeMoneyOnlineCount", df.format(Double.parseDouble(weekRechargeMoneyOnlineCount)));
+		request.setAttribute("todayRechargeMoneyOnlineCount", df.format(Double.parseDouble(todayRechargeMoneyOnlineCount)));
+		request.setAttribute("yesterdayRechargeMoneyOnlineCount", df.format(Double.parseDouble(yesterdayRechargeMoneyOnlineCount)));
+		
+		// ------------------------------------------------------------------------------------------
+		// 全部转账充值金额数
+		StatisticsData rechargeMoneyChangeAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_CHANGE, StatisticsData.DATA_TIME_ALL);
+		// 本月转账充值金额数
+		StatisticsData monthRechargeMoneyChange = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_CHANGE, StatisticsData.DATA_TIME_MONTH);
+		// 一周内转账充值金额数
+		StatisticsData weekRechargeMoneyChange = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_CHANGE, StatisticsData.DATA_TIME_WEEK);
+		// 今日转账充值金额数
+		StatisticsData todayRechargeMoneyChange = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_CHANGE, StatisticsData.DATA_TIME_TODAY);
+		// 昨日转账充值金额数
+		StatisticsData yesterdayRechargeMoneyChange = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_CHANGE, StatisticsData.DATA_TIME_YESTERDAY);	
+				
+		// 资金保留两位小数
+		//DecimalFormat df = new DecimalFormat("#0.00");
+				
+		String rechargeMoneyChangeAllCount = "000";
+		String monthRechargeMoneyChangeCount = "000";
+		String weekRechargeMoneyChangeCount = "000";
+		String todayRechargeMoneyChangeCount = "000";
+		String yesterdayRechargeMoneyChangeCount = "000";
+				
+		if(null != rechargeMoneyChangeAll){
+			rechargeMoneyChangeAllCount = rechargeMoneyChangeAll.getCount();
+		}
+		if(null != monthRechargeMoneyChange){
+			monthRechargeMoneyChangeCount = monthRechargeMoneyChange.getCount();
+		}
+		if(null != weekRechargeMoney){
+			weekRechargeMoneyChangeCount = weekRechargeMoneyChange.getCount();
+		}
+		if(null != todayRechargeMoney){
+			todayRechargeMoneyChangeCount = todayRechargeMoneyChange.getCount();
+		}
+		if(null != yesterdayRechargeMoney){
+			yesterdayRechargeMoneyChangeCount = yesterdayRechargeMoneyChange.getCount();
+		}
+				
+		request.setAttribute("rechargeMoneyChangeAllCount", df.format(Double.parseDouble(rechargeMoneyChangeAllCount)));
+		request.setAttribute("monthRechargeMoneyChangeCount", df.format(Double.parseDouble(monthRechargeMoneyChangeCount)));
+		request.setAttribute("weekRechargeMoneyChangeCount", df.format(Double.parseDouble(weekRechargeMoneyChangeCount)));
+		request.setAttribute("todayRechargeMoneyChangeCount", df.format(Double.parseDouble(todayRechargeMoneyChangeCount)));
+		request.setAttribute("yesterdayRechargeMoneyChangeCount", df.format(Double.parseDouble(yesterdayRechargeMoneyChangeCount)));
+		
+		// ------------------------------------------------------------------------------------------
+		// 全部平台转账充值金额数
+		StatisticsData rechargeMoneyStageAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_STAGE, StatisticsData.DATA_TIME_ALL);
+		// 本月平台转账充值金额数
+		StatisticsData monthRechargeMoneyStage = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_STAGE, StatisticsData.DATA_TIME_MONTH);
+		// 一周内平台转账充值金额数
+		StatisticsData weekRechargeMoneyStage = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_STAGE, StatisticsData.DATA_TIME_WEEK);
+		// 今日平台转账充值金额数
+		StatisticsData todayRechargeMoneyStage = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_STAGE, StatisticsData.DATA_TIME_TODAY);
+		// 昨日平台转账充值金额数
+		StatisticsData yesterdayRechargeMoneyStage = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_RECHARGE_MONEY_STAGE, StatisticsData.DATA_TIME_YESTERDAY);	
+				
+		
+				
+		String rechargeMoneyStageAllCount = "000";
+		String monthRechargeMoneyStageCount = "000";
+		String weekRechargeMoneyStageCount = "000";
+		String todayRechargeMoneyStageCount = "000";
+		String yesterdayRechargeMoneyStageCount = "000";
+				
+		if(null != rechargeMoneyStageAll){
+			rechargeMoneyStageAllCount = rechargeMoneyStageAll.getCount();
+		}
+		if(null != monthRechargeMoney){
+			monthRechargeMoneyStageCount = monthRechargeMoneyStage.getCount();
+		}
+		if(null != weekRechargeMoneyStage){
+			weekRechargeMoneyStageCount = weekRechargeMoneyStage.getCount();
+		}
+		if(null != todayRechargeMoneyStage){
+			todayRechargeMoneyStageCount = todayRechargeMoneyStage.getCount();
+		}
+		if(null != yesterdayRechargeMoneyStage){
+			yesterdayRechargeMoneyStageCount = yesterdayRechargeMoneyStage.getCount();
+		}
+				
+		request.setAttribute("rechargeMoneyStageAllCount", df.format(Double.parseDouble(rechargeMoneyStageAllCount)));
+		request.setAttribute("monthRechargeMoneyStageCount", df.format(Double.parseDouble(monthRechargeMoneyStageCount)));
+		request.setAttribute("weekRechargeMoneyStageCount", df.format(Double.parseDouble(weekRechargeMoneyStageCount)));
+		request.setAttribute("todayRechargeMoneyStageCount", df.format(Double.parseDouble(todayRechargeMoneyStageCount)));
+		request.setAttribute("yesterdayRechargeMoneyStageCount", df.format(Double.parseDouble(yesterdayRechargeMoneyStageCount)));
+		
+		
+		return "rechargeMoneyStatisticsPage";
+	}
+	
+	
+	
+	/**
+	 * 时间段——某段时间充值金额统计页面（1：页面无误 2：明细开发）
+	 * 
+	 * @author sxy 2015年4月23日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeMoneyStatisticsPageArea")
+	public void rechargeMoneyStatisticsTimePage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		model.setRechargeStatus("00");
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询注册用户信息
+		double rechargeMoneyStatisticsPageArea = statisticsDataService.countRechargeMoneyByTime(model);
+		
+		// 精确化数据
+		DecimalFormat df = new DecimalFormat("#0.00");
+		
+		data.put("rechargeMoneyStatisticsPageArea", df.format(rechargeMoneyStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 时间段——某段时间第三方充值金额统计页面（1：页面无误 2：明细未开发）
+	 * 
+	 * @author sxy 2015年5月7日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeMoneyOnlineStatisticsPageArea")
+	public void rechargeMoneyOnlineStatisticsTimePage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 充值方式
+		String rechargeType = paramString("rechargeType");
+		if(StringUtil.isNotBlank(rechargeType)){
+			model.setRechargeType(rechargeType);
+		}
+		
+		model.setRechargeType("00");
+		model.setRechargeStatus("00");
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询注册用户信息
+		double rechargeMoneyOnlineStatisticsPageArea = statisticsDataService.countRechargeMoneyByTime(model);
+		data.put("rechargeMoneyOnlineStatisticsPageArea", df.format(rechargeMoneyOnlineStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 时间段——某段时间充值转账金额统计页面（1：页面无误 2：明细未开发）
+	 * 
+	 * @author sxy 2015年5月7日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeMoneyChangeStatisticsPageArea")
+	public void rechargeMoneyChangeStatisticsTimePage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 充值方式
+		String rechargeType = paramString("rechargeType");
+		if (StringUtil.isNotBlank(rechargeType)) {
+			model.setRechargeType(rechargeType);
+		}
+		
+		model.setRechargeType("01");
+		model.setRechargeStatus("00");
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询充值转账
+		double rechargeMoneyChangeStatisticsPageArea = statisticsDataService.countRechargeMoneyByTime(model);
+		data.put("rechargeMoneyChangeStatisticsPageArea", df.format(rechargeMoneyChangeStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 时间段——某段时间平台充值转账金额统计页面（1：页面无误 2：明细未开发）
+	 * 
+	 * @author sxy 2015年5月7日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/rechargeMoneyStageStatisticsPageArea")
+	public void rechargeMoneyStageStatisticsTimePage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 充值方式
+		String rechargeType = paramString("rechargeType");
+		if (StringUtil.isNotBlank(rechargeType)) {
+			model.setRechargeType(rechargeType);
+		}
+		
+		model.setRechargeType("02");
+		model.setRechargeStatus("00");
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询平台充值
+		double rechargeMoneyStageStatisticsPageArea = statisticsDataService.countRechargeMoneyByTime(model);
+		data.put("rechargeMoneyStageStatisticsPageArea", df.format(rechargeMoneyStageStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	// JSDPBUG-99 20150505  sxy
+	/**
+	 * 充值统计导出报表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/exportExcelRechargeMoneyStatistics")
+	public void exportExcelRechargeStatistics() throws Exception {
+		// 新导出
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+		// JSDP-99 sxy 2015-05-25 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+			
+		// 充值类型
+		String rechargeType = paramString("rechargeType");
+
+		if (StringUtil.isNotBlank(rechargeType)) {
+			model.setRechargeType(rechargeType);
+		}
+		if (StringUtil.isNotBlank(timeType)) {
+			model.setTimeType(timeType);
+		}
+		// 充值状态
+		
+		model.setRechargeStatus("00");
+				
+		if (StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)) {
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 用户类型
+		//model.setUserType("10");
+
+		List<AccountRecharge> newList = statisticsDataService.excelStatisticsRechargeMoneyList(model);
+		String title = "充值金额的Excel表";
+		String[] hearders = new String[] { "流水号","用户类型","用户名","真实姓名","到账金额","手续费金额","充值时间","充值方式","状态" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-99 sxy 2015-05-25 start
+		
+		
+	}
+	
+	/**
+	 * 提现金额统计页面（1：页面无误 2：明细未开发）
+	 * 
+	 * @author sxy 2015年4月23日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/drawMoneyStatisticsPage")
+	public String drawMoneyStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构
+		
+		//调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部充值金额数
+		StatisticsData drawMoneyAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_DRAW_MONEY, StatisticsData.DATA_TIME_ALL);
+		// 本月充值金额数
+		StatisticsData monthDrawMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_DRAW_MONEY, StatisticsData.DATA_TIME_MONTH);
+		// 一周内充值金额数
+		StatisticsData weekDrawMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_DRAW_MONEY, StatisticsData.DATA_TIME_WEEK);
+		// 今日充值金额数
+		StatisticsData todayDrawMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_DRAW_MONEY, StatisticsData.DATA_TIME_TODAY);
+		// 昨日充值金额数
+		StatisticsData yesterdayDrawMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_DRAW_MONEY, StatisticsData.DATA_TIME_YESTERDAY);	
+		
+		
+		String drawMoneyAllCount = "000";
+		String monthDrawMoneyCount = "000";
+		String weekDrawMoneyCount = "000";
+		String todayDrawMoneyCount = "000";
+		String yesterdayDrawMoneyCount = "000";
+		
+		if(null != drawMoneyAll){
+			drawMoneyAllCount = drawMoneyAll.getCount();
+		}
+		if(null != monthDrawMoney){
+			monthDrawMoneyCount = monthDrawMoney.getCount();
+		}
+		if(null != weekDrawMoney){
+			weekDrawMoneyCount = weekDrawMoney.getCount();
+		}
+		if(null != todayDrawMoney){
+			todayDrawMoneyCount = todayDrawMoney.getCount();
+		}
+		if(null != yesterdayDrawMoney){
+			yesterdayDrawMoneyCount = yesterdayDrawMoney.getCount();
+		}
+		
+		request.setAttribute("drawMoneyAllCount", df.format(Double.parseDouble(drawMoneyAllCount)));
+		request.setAttribute("monthDrawMoneyCount", df.format(Double.parseDouble(monthDrawMoneyCount)));
+		request.setAttribute("weekDrawMoneyCount", df.format(Double.parseDouble(weekDrawMoneyCount)));
+		request.setAttribute("todayDrawMoneyCount", df.format(Double.parseDouble(todayDrawMoneyCount)));
+		request.setAttribute("yesterdayDrawMoneyCount", df.format(Double.parseDouble(yesterdayDrawMoneyCount)));
+		
+		return "drawMoneyStatisticsPage";
+	}
+	
+	
+	
+	/**
+	 * 某段时间提现金额统计页面（1：页面无误 2：明细未开发）
+	 * 
+	 * @author sxy 2015年5月5日
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/drawMoneyStatisticsPageArea")
+	public void drawMoneyStatisticsTimePage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		// 按照时间段查询提现金额
+		double drawMoneyStatisticsPageArea = statisticsDataService.countDrawMoneyByTime(StatisticsData.DATA_TIME_AREA,startTime,endTime);
+		data.put("drawMoneyStatisticsPageArea", df.format(drawMoneyStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 提现统计导出报表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/exportExcelDrawStatistics")
+	public void exportExcelDrawStatistics() throws Exception {
+		
+		// 新导出
+		// ---------------------2015年5月25日 10:48:03
+		// sxy--------------------------------------------
+		// JSDP-99 sxy 2015-05-25 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if (StringUtil.isNotBlank(timeType)) {
+			model.setTimeType(timeType);
+		}
+
+		if (StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)) {
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 用户类型
+		//model.setUserType("10");
+
+		List<AccountDraw> newList = statisticsDataService.excelStatisticsDrawMoneyList(model);
+		String title = "投标记录Excel表";
+		String[] hearders = new String[] { "编号","用户名", "真实姓名", "银行卡尾号", "支行", "开户省", "开户市","所属银行","提现总额","到账金额","手续费","提现时间","状态"  };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]"};// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-99 sxy 2015-05-25 start
+		
+	}	
+	
+	
+	/**
+	 * 三项认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/proveStatisticsPage")
+	public String proveStatisticsPage() throws Exception {
+	
+		// ★方法一：查询数据统计表 —— 调用存储结构
+
+		//调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部三项认证用户数
+		StatisticsData proveAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_ALL, StatisticsData.DATA_TIME_ALL);
+		// 本月三项认证用户数
+		StatisticsData monthProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_ALL, StatisticsData.DATA_TIME_MONTH);
+		// 一周内三项认证用户数
+		StatisticsData weekProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_ALL, StatisticsData.DATA_TIME_WEEK);
+		// 今日三项认证用户数
+		StatisticsData todayProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_ALL, StatisticsData.DATA_TIME_TODAY);
+		// 昨日三项认证用户数
+		StatisticsData yesterdayProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_ALL, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String proveAllCount = "000";
+		String monthProveUserCount = "000";
+		String weekProveUserCount = "000";
+		String todayProveUserCount = "000";
+		String yesterdayProveUserCount = "000";
+		
+		if(null != proveAll){
+			proveAllCount = proveAll.getCount();
+		}
+		if(null != monthProveUser){
+			monthProveUserCount = monthProveUser.getCount();
+		}
+		if(null != weekProveUser){
+			weekProveUserCount = weekProveUser.getCount();
+		}
+		if(null != todayProveUser){
+			todayProveUserCount = todayProveUser.getCount();
+		}
+		if(null != yesterdayProveUser){
+			yesterdayProveUserCount = yesterdayProveUser.getCount();
+		}
+		
+		request.setAttribute("proveAllCount", proveAllCount);
+		request.setAttribute("monthProveUserCount", monthProveUserCount);
+		request.setAttribute("weekProveUserCount", weekProveUserCount);
+		request.setAttribute("todayProveUserCount", todayProveUserCount);
+		request.setAttribute("yesterdayProveUserCount", yesterdayProveUserCount);
+		
+		// ◆ 实名认证
+		
+		// 全部实名认证用户数
+		StatisticsData proveRealNameAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_ALL);
+		// 本月实名认证用户数
+		StatisticsData monthRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_MONTH);
+		// 一周内实名认证用户数
+		StatisticsData weekRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_WEEK);
+		// 今日实名认证用户数
+		StatisticsData todayRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_TODAY);
+		// 昨日实名认证用户数
+		StatisticsData yesterdayRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String proveRealNameAllCount = "000";
+		String monthRealNameProveUserCount = "000";
+		String weekRealNameProveUserCount = "000";
+		String todayRealNameProveUserCount = "000";
+		String yesterdayRealNameProveUserCount = "000";
+		
+		if(null != proveRealNameAll){
+			proveRealNameAllCount = proveRealNameAll.getCount();
+		}
+		if(null != monthRealNameProveUser){
+			monthRealNameProveUserCount = monthRealNameProveUser.getCount();
+		}
+		if(null != weekRealNameProveUser){
+			weekRealNameProveUserCount = weekRealNameProveUser.getCount();
+		}
+		if(null != todayRealNameProveUser){
+			todayRealNameProveUserCount = todayRealNameProveUser.getCount();
+		}
+		if(null != yesterdayRealNameProveUser){
+			yesterdayRealNameProveUserCount = yesterdayRealNameProveUser.getCount();
+		}
+		
+		request.setAttribute("proveRealNameAllCount", proveRealNameAllCount);
+		request.setAttribute("monthRealNameProveUserCount", monthRealNameProveUserCount);
+		request.setAttribute("weekRealNameProveUserCount", weekRealNameProveUserCount);
+		request.setAttribute("todayRealNameProveUserCount", todayRealNameProveUserCount);
+		request.setAttribute("yesterdayRealNameProveUserCount", yesterdayRealNameProveUserCount);
+				
+		
+		// ◆ 手机认证
+		
+		// 全部手机认证用户数
+		StatisticsData provePhoneAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_ALL);
+		// 本月手机认证用户数
+		StatisticsData monthPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_MONTH);
+		// 一周内手机认证用户数
+		StatisticsData weekPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_WEEK);
+		// 今日手机认证用户数
+		StatisticsData todayPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_TODAY);
+		// 昨日手机认证用户数
+		StatisticsData yesterdayPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_YESTERDAY);
+				
+		String provePhoneAllCount = "000";
+		String monthPhoneProveUserCount = "000";
+		String weekPhoneProveUserCount = "000";
+		String todayPhoneProveUserCount = "000";
+		String yesterdayPhoneProveUserCount = "000";
+				
+		if(null != provePhoneAll){
+			provePhoneAllCount = provePhoneAll.getCount();
+		}
+		if(null != monthPhoneProveUser){
+			monthPhoneProveUserCount = monthPhoneProveUser.getCount();
+		}
+		if(null != weekPhoneProveUser){
+			weekPhoneProveUserCount = weekPhoneProveUser.getCount();
+		}
+		if(null != todayPhoneProveUser){
+			todayPhoneProveUserCount = todayPhoneProveUser.getCount();
+		}
+		if(null != yesterdayPhoneProveUser){
+			yesterdayPhoneProveUserCount = yesterdayPhoneProveUser.getCount();
+		}
+				
+		request.setAttribute("provePhoneAllCount", provePhoneAllCount);
+		request.setAttribute("monthPhoneProveUserCount", monthPhoneProveUserCount);
+		request.setAttribute("weekPhoneProveUserCount", weekPhoneProveUserCount);
+		request.setAttribute("todayPhoneProveUserCount", todayPhoneProveUserCount);
+		request.setAttribute("yesterdayPhoneProveUserCount", yesterdayPhoneProveUserCount);
+		
+		
+		// ◆ 邮箱认证
+		
+		// 全部邮箱认证用户数
+		StatisticsData proveEmailAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_ALL);
+		// 本月邮箱认证用户数
+		StatisticsData monthEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_MONTH);
+		// 一周内邮箱认证用户数
+		StatisticsData weekEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_WEEK);
+		// 今日邮箱认证用户数
+		StatisticsData todayEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_TODAY);
+		// 昨日邮箱认证用户数
+		StatisticsData yesterdayEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_YESTERDAY);
+				
+		String proveEmailAllCount = "000";
+		String monthEmailProveUserCount = "000";
+		String weekEmailProveUserCount = "000";
+		String todayEmailProveUserCount = "000";
+		String yesterdayEmailProveUserCount = "000";
+				
+		if(null != proveEmailAll){
+			proveEmailAllCount = proveEmailAll.getCount();
+		}
+		if(null != monthEmailProveUser){
+			monthEmailProveUserCount = monthEmailProveUser.getCount();
+		}
+		if(null != weekEmailProveUser){
+			weekEmailProveUserCount = weekEmailProveUser.getCount();
+		}
+		if(null != todayEmailProveUser){
+			todayEmailProveUserCount = todayEmailProveUser.getCount();
+		}
+		if(null != yesterdayEmailProveUser){
+			yesterdayEmailProveUserCount = yesterdayEmailProveUser.getCount();
+		}
+				
+		request.setAttribute("proveEmailAllCount", proveEmailAllCount);
+		request.setAttribute("monthEmailProveUserCount", monthEmailProveUserCount);
+		request.setAttribute("weekEmailProveUserCount", weekEmailProveUserCount);
+		request.setAttribute("todayEmailProveUserCount", todayEmailProveUserCount);
+		request.setAttribute("yesterdayEmailProveUserCount", yesterdayEmailProveUserCount);
+		
+		
+		return "proveStatisticsPage";
+	}
+	
+	/**
+	 * 某段时间三项认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/proveStatisticsPageArea")
+	public void proveStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		model.setProveType(StatisticsData.DATA_WAY_PROVE_ALL);
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		model.setEmail("81");
+		model.setPhone("86");
+		model.setRealName("83");
+		
+		
+		// 按照时间段查询认证用户信息
+		int proveStatisticsPageArea = statisticsDataService.countIdentifiedUserByTime(model);
+		
+		data.put("proveStatisticsPageArea", proveStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * (1)实名认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/proveRealNameStatisticsPage")
+	public String proveRealNameStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构
+		
+		//调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部实名认证用户数
+		StatisticsData proveRealNameAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_ALL);
+		// 本月实名认证用户数
+		StatisticsData monthRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_MONTH);
+		// 一周内实名认证用户数
+		StatisticsData weekRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_WEEK);
+		// 今日实名认证用户数
+		StatisticsData todayRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_TODAY);
+		// 昨日实名认证用户数
+		StatisticsData yesterdayRealNameProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_REALNAME, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String proveRealNameAllCount = "000";
+		String monthRealNameProveUserCount = "000";
+		String weekRealNameProveUserCount = "000";
+		String todayRealNameProveUserCount = "000";
+		String yesterdayRealNameProveUserCount = "000";
+		
+		if(null != proveRealNameAll){
+			proveRealNameAllCount = proveRealNameAll.getCount();
+		}
+		if(null != monthRealNameProveUser){
+			monthRealNameProveUserCount = monthRealNameProveUser.getCount();
+		}
+		if(null != weekRealNameProveUser){
+			weekRealNameProveUserCount = weekRealNameProveUser.getCount();
+		}
+		if(null != todayRealNameProveUser){
+			todayRealNameProveUserCount = todayRealNameProveUser.getCount();
+		}
+		if(null != yesterdayRealNameProveUser){
+			yesterdayRealNameProveUserCount = yesterdayRealNameProveUser.getCount();
+		}
+		
+		request.setAttribute("proveRealNameAllCount", proveRealNameAllCount);
+		request.setAttribute("monthRealNameProveUserCount", monthRealNameProveUserCount);
+		request.setAttribute("weekRealNameProveUserCount", weekRealNameProveUserCount);
+		request.setAttribute("todayRealNameProveUserCount", todayRealNameProveUserCount);
+		request.setAttribute("yesterdayRealNameProveUserCount", yesterdayRealNameProveUserCount);
+		
+		return "proveRealNameStatisticsPage";
+	}
+	
+	/**
+	 * 时间段——某段时间实名认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/proveRealNameStatisticsPageArea")
+	public void proveRealNameStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime1");
+		String endTime = paramString("endTime1");
+		
+
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		model.setProveType(StatisticsData.DATA_WAY_PROVE_REALNAME);
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		model.setEmail(null);
+		model.setPhone(null);
+		model.setRealName("83");
+		
+		
+		// 按照时间段查询实名用户信息
+		int proveRealNameStatisticsPageArea = statisticsDataService.countIdentifiedUserByTime(model);
+		
+		data.put("proveRealNameStatisticsPageArea", proveRealNameStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * (2)手机认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/provePhoneStatisticsPage")
+	public String provePhoneStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构
+		
+		// 调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部手机认证用户数
+		StatisticsData provePhoneAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_ALL);
+		// 本月手机认证用户数
+		StatisticsData monthPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_MONTH);
+		// 一周内手机认证用户数
+		StatisticsData weekPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_WEEK);
+		// 今日手机认证用户数
+		StatisticsData todayPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_TODAY);
+		// 昨日手机认证用户数
+		StatisticsData yesterdayPhoneProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_PHONE, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String provePhoneAllCount = "000";
+		String monthPhoneProveUserCount = "000";
+		String weekPhoneProveUserCount = "000";
+		String todayPhoneProveUserCount = "000";
+		String yesterdayPhoneProveUserCount = "000";
+		
+		if(null != provePhoneAll){
+			provePhoneAllCount = provePhoneAll.getCount();
+		}
+		if(null != monthPhoneProveUser){
+			monthPhoneProveUserCount = monthPhoneProveUser.getCount();
+		}
+		if(null != weekPhoneProveUser){
+			weekPhoneProveUserCount = weekPhoneProveUser.getCount();
+		}
+		if(null != todayPhoneProveUser){
+			todayPhoneProveUserCount = todayPhoneProveUser.getCount();
+		}
+		if(null != yesterdayPhoneProveUser){
+			yesterdayPhoneProveUserCount = yesterdayPhoneProveUser.getCount();
+		}
+		
+		request.setAttribute("provePhoneAllCount", provePhoneAllCount);
+		request.setAttribute("monthPhoneProveUserCount", monthPhoneProveUserCount);
+		request.setAttribute("weekPhoneProveUserCount", weekPhoneProveUserCount);
+		request.setAttribute("todayPhoneProveUserCount", todayPhoneProveUserCount);
+		request.setAttribute("yesterdayPhoneProveUserCount", yesterdayPhoneProveUserCount);
+		
+		return "provePhoneStatisticsPage";
+	}
+	
+	/**
+	 * 时间段——某段时间手机认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/provePhoneStatisticsPageArea")
+	public void provePhoneStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime2");
+		String endTime = paramString("endTime2");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		model.setProveType(StatisticsData.DATA_WAY_PROVE_PHONE);
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		model.setEmail(null);
+		model.setPhone("86");
+		model.setRealName(null);
+		
+		
+		
+		// 按照时间段查询实名用户信息
+		int provePhoneStatisticsPageArea = statisticsDataService.countIdentifiedUserByTime(model);
+		
+		data.put("provePhoneStatisticsPageArea", provePhoneStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	/**
+	 * (3)邮箱认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/proveEmailStatisticsPage")
+	public String proveEmailStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构
+		
+		//调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();     // 若去掉注释，则每次操作调用存储结构，建议保留
+		
+		// 全部邮箱认证用户数
+		StatisticsData proveEmailAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_ALL);
+		// 本月邮箱认证用户数
+		StatisticsData monthEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_MONTH);
+		// 一周内邮箱认证用户数
+		StatisticsData weekEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_WEEK);
+		// 今日邮箱认证用户数
+		StatisticsData todayEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_TODAY);
+		// 昨日邮箱认证用户数
+		StatisticsData yesterdayEmailProveUser = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_PROVE_EMAIL, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String proveEmailAllCount = "000";
+		String monthEmailProveUserCount = "000";
+		String weekEmailProveUserCount = "000";
+		String todayEmailProveUserCount = "000";
+		String yesterdayEmailProveUserCount = "000";
+		
+		if(null != proveEmailAll){
+			proveEmailAllCount = proveEmailAll.getCount();
+		}
+		if(null != monthEmailProveUser){
+			monthEmailProveUserCount = monthEmailProveUser.getCount();
+		}
+		if(null != weekEmailProveUser){
+			weekEmailProveUserCount = weekEmailProveUser.getCount();
+		}
+		if(null != todayEmailProveUser){
+			todayEmailProveUserCount = todayEmailProveUser.getCount();
+		}
+		if(null != yesterdayEmailProveUser){
+			yesterdayEmailProveUserCount = yesterdayEmailProveUser.getCount();
+		}
+		
+		request.setAttribute("proveEmailAllCount", proveEmailAllCount);
+		request.setAttribute("monthEmailProveUserCount", monthEmailProveUserCount);
+		request.setAttribute("weekEmailProveUserCount", weekEmailProveUserCount);
+		request.setAttribute("todayEmailProveUserCount", todayEmailProveUserCount);
+		request.setAttribute("yesterdayEmailProveUserCount", yesterdayEmailProveUserCount);
+		
+		return "proveEmailStatisticsPage";
+	}
+	
+	/**
+	 * 时间段——某段时间邮箱认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/proveEmailStatisticsPageArea")
+	public void proveEmailStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime3");
+		String endTime = paramString("endTime3");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		model.setProveType(StatisticsData.DATA_WAY_PROVE_EMAIL);
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		model.setEmail("81");
+		model.setPhone(null);
+		model.setRealName(null);
+		
+		
+		// 按照时间段查询实名用户信息
+		int proveEmailStatisticsPageArea = statisticsDataService.countIdentifiedUserByTime(model);
+		
+		data.put("proveEmailStatisticsPageArea", proveEmailStatisticsPageArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	/**
+	 * 明细——注册人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/registerStatisticsListPage")
+	public String registerStatisticsListPage() throws Exception {
+	
+		String timeType = paramString("timeType");
+		String dataType = paramString("dataType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			request.setAttribute("startTimeStr", startTime);
+			request.setAttribute("endTimeStr", endTime);
+		}
+		// 注册方式
+		String registerWay = paramString("registerWay");
+
+		if (StringUtil.isNotBlank(registerWay)) {
+			model.setRegisterWay(registerWay);
+		}
+		
+		request.setAttribute("timeType", timeType);
+		request.setAttribute("dataType", dataType);
+		request.setAttribute("registerWay", registerWay);
+	
+		return "registerStatisticsListPage";
+	}
+	
+	
+	
+	/**
+	 * 明细——获得某时间注册用户清单列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/dataStatistics/registerStatisticsList")
+	public void registerStatisticsList() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		String timeType = paramString("timeType");
+		String dataType = paramString("dataType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		UserModel userModel = new UserModel();
+		
+		userModel.setTimeType(timeType);
+		
+		DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			userModel.setStartTime(fmt.parse(startTime));
+			userModel.setEndTime(fmt.parse(endTime));
+		}
+		// 注册方式
+		String registerWay = paramString("registerWay");
+
+		if (StringUtil.isNotBlank(registerWay)) {
+			userModel.setRegisterWay(registerWay);
+		}
+		if (StringUtil.isNotBlank(dataType)) {
+			userModel.setDataType(dataType);
+		}
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		map.put("model", model);
+		
+		userModel.setUserType("10");
+		//model.setIsLocked("all");
+		// 原model查询
+		//PageDataList<UserModel> pagaDataList = userService.registerUserList(pageNumber, pageSize, userModel);
+		// 新SQL查询 2015年5月27日  孙晓勇
+		PageDataList<User> pagaDataList = userService.registerStatisticsUserList(userModel,pageNumber, pageSize);
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 注册用户信息明细导出
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/userAllStatisticsExport")
+	public void userAllStatisticsExport() throws Exception{
+		// 原方法
+		/*String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		UserModel userModel = new UserModel();
+		
+		userModel.setTimeType(timeType);
+		
+		DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			userModel.setStartTime(fmt.parse(startTime));
+			userModel.setEndTime(fmt.parse(endTime));
+		}
+		// 注册方式
+		String registerWay = paramString("registerWay");
+
+		if (StringUtil.isNotBlank(registerWay)) {
+			model.setRegisterWay(registerWay);
+		} 
+		
+		PageDataList<UserModel> pagaDataList = userService.registerUserList(1, 99999999, userModel);
+		List<UserModel> list = pagaDataList.getList();
+		List<UserModel> newList = new ArrayList<UserModel>();
+		
+		// BUG JSDP28 2015年4月16日 孙晓勇 start
+		Region regionProvince = new Region();
+		Region regionCity = new Region();
+		Region regionArea = new Region();
+		// BUG JSDP28 2015年4月16日 孙晓勇...
+		
+		for(int i=0;i<list.size();i++){
+			UserModel um = list.get(i);
+			um.setIsLockedNew(um.convertIsLock(um.getIsLocked()));
+			um.setEmailStatusNew(um.convertEmailStatusNew(um.getEmailStatus()));
+			um.setRealStatusNew(um.convertRealStatusNew(um.getRealStatus()));
+			um.setMobilePhoneStatusNew(um.convertMobilePhoneStatusNew(um.getMobilePhoneStatus()));
+			um.setSexNew(um.convertSex(um.getSex()));
+			um.setUserTypeNew(um.convertUserType(um.getUserType(), um.getUserNature()));
+			um.setMaritalStatusNew(um.convertMaritalStatus(um.getMaritalStatus()));
+			
+			if("N1".equals(um.getMemberLevel())){
+				um.setMemberLevel("普通用户");
+			}else if("V1".equals(um.getMemberLevel())){
+				um.setMemberLevel("铜牌会员");
+			}else if("V2".equals(um.getMemberLevel())){
+				um.setMemberLevel("银牌会员");
+			}else if("V3".equals(um.getMemberLevel())){
+				um.setMemberLevel("金牌会员");
+			}else if("V4".equals(um.getMemberLevel())){
+				um.setMemberLevel("钻石会员");
+			}
+			
+			if("P".equals(um.getRegisterWay())){
+				um.setRegisterWayStr("PC端");
+			}else if("M".equals(um.getRegisterWay())){
+				um.setRegisterWayStr("手机端");
+			}else{
+				um.setRegisterWayStr("未知");
+			}
+			
+			
+			// BUG JSDP28 2015年4月16日 孙晓勇...
+			if(null == um.getUserCache()){
+				um.setProvince("");
+				um.setCity("");
+				um.setArea("");
+			}else{
+				
+				if(null == um.getUserCache().getProvince() || null == um.getUserCache().getCity() || null == um.getUserCache().getArea()){
+					
+					um.setProvince("");
+					um.setCity("");
+					um.setArea("");
+					
+				}else{
+					
+					regionProvince = regionService.getRegionById(Long.parseLong(um.getUserCache().getProvince()));
+					regionCity = regionService.getRegionById(Long.parseLong(um.getUserCache().getCity()));
+					regionArea = regionService.getRegionById(Long.parseLong(um.getUserCache().getArea()));
+					um.setProvince(regionProvince.getName());
+					um.setCity(regionCity.getName());
+					um.setArea(regionArea.getName());
+					
+				}
+				
+			}
+			// BUG JSDP28 2015年4月16日 孙晓勇 end
+			newList.add(um);
+		}
+		String title = "投资借款担保用户的Excel表";
+
+		String[] hearders = new String[] {"编号","用户名","真实姓名","性别","省","市","县/区","电子邮件","手机号码","身份证号码","客服工号","用户类型","会员等级","邮箱认证","手机认证","实名认证","注册时间","注册方式","状态"};// 表头数组
+		String[] fields = new String[] {"userId","userName","realName","sexNew","province","city","area","email","mobilePhone","cardNO","customerNo","userTypeNew","memberLevel","emailStatusNew", "mobilePhoneStatusNew", "realStatusNew", "addTime","registerWayStr","isLockedNew"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserModel> tdList = new ArrayList<UserModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		// 新导出
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+		// JSDP-99 sxy 2015-05-25 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		// 注册方式
+		String registerWay = paramString("registerWay");
+
+		if (StringUtil.isNotBlank(registerWay)) {
+			model.setRegisterWay(registerWay);
+		} 
+		if (StringUtil.isNotBlank(timeType)) {
+			model.setTimeType(timeType);
+		} 
+		
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 用户类型
+		model.setUserType("10");
+
+		
+		List<User> newList = statisticsDataService.excelStatisticsRegisterUserList(model);
+		String title = "注册用户的Excel表";
+		String[] hearders = new String[] { "用户ID", "用户名", "真实姓名", "性别", "省",
+				"市", "县/区", "邮箱", "手机号", "身份证号", "客服工号", "用户类型", "邮箱认证", 
+				"手机认证", "实名认证", "注册时间", "会员等级", "VIP到期时间", "锁定状态", "注册方式" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]", 
+				"object[11]", "object[12]", "object[13]", "object[14]", 
+				"object[15]", "object[16]", "object[17]", "object[18]",
+				"object[19]","object[20]"};// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-99 sxy 2015-05-25 start
+
+	}
+	
+	
+	/**
+	 * 投资金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/tenderMoneyStatisticsPage")
+	public String tenderMoneyStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构(按照一定时间)
+		
+		// 调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();    // 若去掉注释，则每次操作调用存储结构，建议保留
+		// 全部投资金额数
+		StatisticsData tenderMoneyAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY, StatisticsData.DATA_TIME_ALL);
+		// 本月投资金额数
+		StatisticsData monthTenderMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY, StatisticsData.DATA_TIME_MONTH);
+		// 一周内投资金额数
+		StatisticsData weekTenderMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY, StatisticsData.DATA_TIME_WEEK);
+		// 今日投资金额数
+		StatisticsData todayTenderMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY, StatisticsData.DATA_TIME_TODAY);
+		// 昨日投资金额数
+		StatisticsData yesterdayTenderMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String tenderMoneyAllCount = "000";
+		String monthTenderMoneyCount = "000";
+		String weekTenderMoneyCount = "000";
+		String todayTenderMoneyCount = "000";
+		String yesterdayTenderMoneyCount = "000";
+		
+		if(null != tenderMoneyAll){
+			tenderMoneyAllCount = tenderMoneyAll.getCount();
+		}
+		if(null != monthTenderMoney){
+			monthTenderMoneyCount = monthTenderMoney.getCount();
+		}
+		if(null != weekTenderMoney){
+			weekTenderMoneyCount = weekTenderMoney.getCount();
+		}
+		if(null != todayTenderMoney){
+			todayTenderMoneyCount = todayTenderMoney.getCount();
+		}
+		if(null != yesterdayTenderMoney){
+			yesterdayTenderMoneyCount = yesterdayTenderMoney.getCount();
+		}
+		
+		request.setAttribute("tenderMoneyAllCount", df.format(Double.parseDouble(tenderMoneyAllCount)));
+		request.setAttribute("monthTenderMoneyCount", df.format(Double.parseDouble(monthTenderMoneyCount)));
+		request.setAttribute("weekTenderMoneyCount", df.format(Double.parseDouble(weekTenderMoneyCount)));
+		request.setAttribute("todayTenderMoneyCount", df.format(Double.parseDouble(todayTenderMoneyCount)));
+		request.setAttribute("yesterdayTenderMoneyCount", df.format(Double.parseDouble(yesterdayTenderMoneyCount)));
+		
+		//--------------------------------------------
+		// 全部网站投资金额数
+		StatisticsData tenderMoneyWebAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_WEB, StatisticsData.DATA_TIME_ALL);
+		// 本月网站投资金额数
+		StatisticsData monthTenderMoneyWeb = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_WEB, StatisticsData.DATA_TIME_MONTH);
+		// 一周内网站投资金额数
+		StatisticsData weekTenderMoneyWeb = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_WEB, StatisticsData.DATA_TIME_WEEK);
+		// 今日网站投资金额数
+		StatisticsData todayTenderMoneyWeb = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_WEB, StatisticsData.DATA_TIME_TODAY);
+		// 昨日网站投资金额数
+		StatisticsData yesterdayTenderMoneyWeb = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_WEB, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String tenderMoneyWebAllCount = "000";
+		String monthTenderMoneyWebCount = "000";
+		String weekTenderMoneyWebCount = "000";
+		String todayTenderMoneyWebCount = "000";
+		String yesterdayTenderMoneyWebCount = "000";
+		
+		if(null != tenderMoneyWebAll){
+			tenderMoneyWebAllCount = tenderMoneyWebAll.getCount();
+		}
+		if(null != monthTenderMoneyWeb){
+			monthTenderMoneyWebCount = monthTenderMoneyWeb.getCount();
+		}
+		if(null != weekTenderMoneyWeb){
+			weekTenderMoneyWebCount = weekTenderMoneyWeb.getCount();
+		}
+		if(null != todayTenderMoneyWeb){
+			todayTenderMoneyWebCount = todayTenderMoneyWeb.getCount();
+		}
+		if(null != yesterdayTenderMoneyWeb){
+			yesterdayTenderMoneyWebCount = yesterdayTenderMoneyWeb.getCount();
+		}
+		
+		request.setAttribute("tenderMoneyWebAllCount", df.format(Double.parseDouble(tenderMoneyWebAllCount)));
+		request.setAttribute("monthTenderMoneyWebCount", df.format(Double.parseDouble(monthTenderMoneyWebCount)));
+		request.setAttribute("weekTenderMoneyWebCount", df.format(Double.parseDouble(weekTenderMoneyWebCount)));
+		request.setAttribute("todayTenderMoneyWebCount", df.format(Double.parseDouble(todayTenderMoneyWebCount)));
+		request.setAttribute("yesterdayTenderMoneyWebCount", df.format(Double.parseDouble(yesterdayTenderMoneyWebCount)));
+		
+		//--------------------------------------------
+
+		// 全部自动投资金额数
+		StatisticsData tenderMoneyAutoAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_AUTO, StatisticsData.DATA_TIME_ALL);
+		// 本月自动投资金额数
+		StatisticsData monthTenderMoneyAuto = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_AUTO, StatisticsData.DATA_TIME_MONTH);
+		// 一周内自动投资金额数
+		StatisticsData weekTenderMoneyAuto = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_AUTO, StatisticsData.DATA_TIME_WEEK);
+		// 今日自动投资金额数
+		StatisticsData todayTenderMoneyAuto = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_AUTO, StatisticsData.DATA_TIME_TODAY);
+		// 昨日自动投资金额数
+		StatisticsData yesterdayTenderMoneyAuto = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_AUTO, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String tenderMoneyAutoAllCount = "000";
+		String monthTenderMoneyAutoCount = "000";
+		String weekTenderMoneyAutoCount = "000";
+		String todayTenderMoneyAutoCount = "000";
+		String yesterdayTenderMoneyAutoCount = "000";
+		
+		if(null != tenderMoneyAutoAll){
+			tenderMoneyAutoAllCount = tenderMoneyAutoAll.getCount();
+		}
+		if(null != monthTenderMoney){
+			monthTenderMoneyAutoCount = monthTenderMoneyAuto.getCount();
+		}
+		if(null != weekTenderMoneyAuto){
+			weekTenderMoneyAutoCount = weekTenderMoneyAuto.getCount();
+		}
+		if(null != todayTenderMoneyAuto){
+			todayTenderMoneyAutoCount = todayTenderMoneyAuto.getCount();
+		}
+		if(null != yesterdayTenderMoneyAuto){
+			yesterdayTenderMoneyAutoCount = yesterdayTenderMoneyAuto.getCount();
+		}
+		
+		request.setAttribute("tenderMoneyAutoAllCount", df.format(Double.parseDouble(tenderMoneyAutoAllCount)));
+		request.setAttribute("monthTenderMoneyAutoCount", df.format(Double.parseDouble(monthTenderMoneyAutoCount)));
+		request.setAttribute("weekTenderMoneyAutoCount", df.format(Double.parseDouble(weekTenderMoneyAutoCount)));
+		request.setAttribute("todayTenderMoneyAutoCount", df.format(Double.parseDouble(todayTenderMoneyAutoCount)));
+		request.setAttribute("yesterdayTenderMoneyAutoCount", df.format(Double.parseDouble(yesterdayTenderMoneyAutoCount)));
+		
+		//--------------------------------------------
+
+		// 全部手机投资金额数
+		StatisticsData tenderMoneyPhoneAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_PHONE, StatisticsData.DATA_TIME_ALL);
+		// 本月手机投资金额数
+		StatisticsData monthTenderMoneyPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_PHONE, StatisticsData.DATA_TIME_MONTH);
+		// 一周内手机投资金额数
+		StatisticsData weekTenderMoneyPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_PHONE, StatisticsData.DATA_TIME_WEEK);
+		// 今日手机投资金额数
+		StatisticsData todayTenderMoneyPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_PHONE, StatisticsData.DATA_TIME_TODAY);
+		// 昨日手机投资金额数
+		StatisticsData yesterdayTenderMoneyPhone = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_MONEY_PHONE, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String tenderMoneyPhoneAllCount = "000";
+		String monthTenderMoneyPhoneCount = "000";
+		String weekTenderMoneyPhoneCount = "000";
+		String todayTenderMoneyPhoneCount = "000";
+		String yesterdayTenderMoneyPhoneCount = "000";
+		
+		if(null != tenderMoneyPhoneAll){
+			tenderMoneyPhoneAllCount = tenderMoneyPhoneAll.getCount();
+		}
+		if(null != monthTenderMoneyPhone){
+			monthTenderMoneyPhoneCount = monthTenderMoneyPhone.getCount();
+		}
+		if(null != weekTenderMoneyPhone){
+			weekTenderMoneyPhoneCount = weekTenderMoneyPhone.getCount();
+		}
+		if(null != todayTenderMoneyPhone){
+			todayTenderMoneyPhoneCount = todayTenderMoneyPhone.getCount();
+		}
+		if(null != yesterdayTenderMoneyPhone){
+			yesterdayTenderMoneyPhoneCount = yesterdayTenderMoneyPhone.getCount();
+		}
+		
+		request.setAttribute("tenderMoneyPhoneAllCount", df.format(Double.parseDouble(tenderMoneyPhoneAllCount)));
+		request.setAttribute("monthTenderMoneyPhoneCount", df.format(Double.parseDouble(monthTenderMoneyPhoneCount)));
+		request.setAttribute("weekTenderMoneyPhoneCount", df.format(Double.parseDouble(weekTenderMoneyPhoneCount)));
+		request.setAttribute("todayTenderMoneyPhoneCount", df.format(Double.parseDouble(todayTenderMoneyPhoneCount)));
+		request.setAttribute("yesterdayTenderMoneyPhoneCount", df.format(Double.parseDouble(yesterdayTenderMoneyPhoneCount)));
+		
+		//--------------------------------------------
+
+		
+		
+		return "tenderMoneyStatisticsPage";
+	}
+	
+	/**
+	 * 时间段——某段时间投资金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月27日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/tenderMoneyStatisticsPageArea")
+	public void tenderMoneyStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 投资方式
+		String tenderType = paramString("tenderType");
+
+		if (StringUtil.isNotBlank(tenderType)) {
+			model.setTenderType(tenderType);
+		}
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询投资用户信息
+		double tenderMoneyStatisticsPageArea = statisticsDataService.countTenderMoneyByTime(model);
+		
+		data.put("tenderMoneyStatisticsPageArea", df.format(tenderMoneyStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 时间段——某段时间网站投资金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月7日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/tenderMoneyWebStatisticsPageArea")
+	public void tenderMoneyWebStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 投资方式
+		String tenderType = paramString("tenderType");
+		
+		if(StringUtil.isNotBlank(tenderType)){
+			model.setTenderType(tenderType);
+		}else{
+			model.setTenderType("0");
+		}
+		
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询投资用户信息
+		double tenderMoneyWebStatisticsPageArea = statisticsDataService.countTenderMoneyByTime(model);
+		
+		data.put("tenderMoneyWebStatisticsPageArea", df.format(tenderMoneyWebStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 时间段——某段时间自动投资金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月7日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/tenderMoneyAutoStatisticsPageArea")
+	public void tenderMoneyAutoStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 投资方式
+		String tenderType = paramString("tenderType");
+
+		if (StringUtil.isNotBlank(tenderType)) {
+			model.setTenderType(tenderType);
+		}else{
+			model.setTenderType("1");
+		}
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询投资用户信息
+		double tenderMoneyAutoStatisticsPageArea = statisticsDataService.countTenderMoneyByTime(model);
+		
+		data.put("tenderMoneyAutoStatisticsPageArea", df.format(tenderMoneyAutoStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 时间段——某段时间手机投资金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月7日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/tenderMoneyPhoneStatisticsPageArea")
+	public void tenderMoneyPhoneStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 投资方式
+		String tenderType = paramString("tenderType");
+
+		if (StringUtil.isNotBlank(tenderType)) {
+			model.setTenderType(tenderType);
+		}else{
+			model.setTenderType("2");
+		}
+
+		model.setTimeType(StatisticsData.DATA_TIME_AREA);
+		// 按照时间段查询投资用户信息
+		double tenderMoneyPhoneStatisticsPageArea = statisticsDataService.countTenderMoneyByTime(model);
+		
+		data.put("tenderMoneyPhoneStatisticsPageArea", df.format(tenderMoneyPhoneStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	
+	
+	/**
+	 * 明细——认证人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/proveStatisticsListPage")
+	public String proveStatisticsListPage() throws Exception {
+		
+		String timeType = paramString("timeType");
+		String dataType = paramString("dataType");
+		String proveType = paramString("proveType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			request.setAttribute("startTimeStr", startTime);
+			request.setAttribute("endTimeStr", endTime);
+		}
+		
+		request.setAttribute("timeType", timeType);
+		request.setAttribute("dataType", dataType);
+		request.setAttribute("proveType", proveType);
+		
+		return "proveStatisticsListPage";
+	}
+	
+	
+	
+	/**
+	 * 明细——获得某时间认证用户清单列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/dataStatistics/proveStatisticsList")
+	public void proveStatisticsList() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		String timeType = paramString("timeType");
+		String dataType = paramString("dataType");
+		String proveType = paramString("proveType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		UserModel userModel = new UserModel();
+		
+		userModel.setTimeType(timeType);
+		userModel.setProveType(proveType);
+		
+		DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			userModel.setStartTime(fmt.parse(startTime));
+			userModel.setEndTime(fmt.parse(endTime));
+		}
+		
+		// 数据类型
+		if(StringUtil.isNotBlank(dataType)){
+			userModel.setDataType(dataType);
+		}
+		
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		
+		map.put("model", userModel);
+		
+		userModel.setPage(pageNumber);
+		userModel.setSize(pageSize);
+		
+		
+		userModel.setUserType("10");
+		//model.setIsLocked("all");
+		
+		//PageDataList<UserModel> pagaDataList = userService.registerUserList(pageNumber, pageSize, userModel);
+		PageDataList<User> pagaDataList = userService.proveStatisticsUserList(userModel,pageNumber, pageSize);
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 用户认证信息明细导出
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/userProveStatisticsExport")
+	public void userProveStatisticsExport() throws Exception{
+		/*
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		
+		DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		UserModel userModel = new UserModel();
+
+		String proveType = paramString("proveType");
+		userModel.setProveType(proveType);
+		
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			userModel.setStartTime(fmt.parse(startTime));
+			userModel.setEndTime(fmt.parse(endTime));
+		}
+		PageDataList<UserModel> pagaDataList = userService.registerUserList(1, 99999999, userModel);
+		List<UserModel> list = pagaDataList.getList();
+		List<UserModel> newList = new ArrayList<UserModel>();
+		
+		// BUG JSDP28 2015年4月16日 孙晓勇 start
+		Region regionProvince = new Region();
+		Region regionCity = new Region();
+		Region regionArea = new Region();
+		// BUG JSDP28 2015年4月16日 孙晓勇...
+		
+		for(int i=0;i<list.size();i++){
+			UserModel um = list.get(i);
+			um.setIsLockedNew(um.convertIsLock(um.getIsLocked()));
+			um.setEmailStatusNew(um.convertEmailStatusNew(um.getEmailStatus()));
+			um.setRealStatusNew(um.convertRealStatusNew(um.getRealStatus()));
+			um.setMobilePhoneStatusNew(um.convertMobilePhoneStatusNew(um.getMobilePhoneStatus()));
+			um.setSexNew(um.convertSex(um.getSex()));
+			um.setUserTypeNew(um.convertUserType(um.getUserType(), um.getUserNature()));
+			um.setMaritalStatusNew(um.convertMaritalStatus(um.getMaritalStatus()));
+			
+			// BUG JSDP28 2015年4月16日 孙晓勇...
+			if(null == um.getUserCache()){
+				um.setProvince("");
+				um.setCity("");
+				um.setArea("");
+			}else{
+				
+				if(null == um.getUserCache().getProvince() || null == um.getUserCache().getCity() || null == um.getUserCache().getArea()){
+					
+					um.setProvince("");
+					um.setCity("");
+					um.setArea("");
+					
+				}else{
+					
+					regionProvince = regionService.getRegionById(Long.parseLong(um.getUserCache().getProvince()));
+					regionCity = regionService.getRegionById(Long.parseLong(um.getUserCache().getCity()));
+					regionArea = regionService.getRegionById(Long.parseLong(um.getUserCache().getArea()));
+					um.setProvince(regionProvince.getName());
+					um.setCity(regionCity.getName());
+					um.setArea(regionArea.getName());
+					
+				}
+				
+			}
+			// BUG JSDP28 2015年4月16日 孙晓勇 end
+			newList.add(um);
+		}
+		String title = "投资借款担保用户的Excel表";
+
+		String[] hearders = new String[] {"编号","用户名","真实姓名","性别","省","市","县/区","电子邮件","手机号码","身份证号码","客服工号","用户类型","邮箱认证","手机认证","实名认证","注册时间","状态"};// 表头数组
+		String[] fields = new String[] {"userId","userName","realName","sexNew","province","city","area","email","mobilePhone","cardNO","customerNo","userTypeNew","emailStatusNew", "mobilePhoneStatusNew", "realStatusNew", "addTime","isLockedNew"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserModel> tdList = new ArrayList<UserModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		// 新导出
+		// ---------------------2015年5月15日 10:48:03
+		// sxy--------------------------------------------
+		// JSDP-99 sxy 2015-05-25 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		// 注册方式
+		String registerWay = paramString("registerWay");
+
+		if (StringUtil.isNotBlank(registerWay)) {
+			model.setRegisterWay(registerWay);
+		}
+		if (StringUtil.isNotBlank(timeType)) {
+			model.setTimeType(timeType);
+		}
+
+		if (StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)) {
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 用户类型
+		model.setUserType("10");
+
+		List<User> newList = statisticsDataService.excelStatisticsIdentifiedList(model);
+		String title = "注册用户的Excel表";
+		String[] hearders = new String[] { "用户ID", "用户名", "真实姓名", "手机号", "身份证号",
+				"用户类型", "邮箱认证", "手机认证", "实名认证", "注册时间", "实名认证时间", "手机认证时间", "邮箱认证时间", "状态" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]", "object[13]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-99 sxy 2015-05-25 start
+
+	}
+	
+	
+	
+	
+	
+	/**
+	 * 根据手机号判断用户是否存在
+	 * @throws IOException 
+	 */
+	@Action(value = "/modules/user/user/user/mobileIsExist")
+	public void mobileIsExist() throws IOException{
+		data = new HashMap<String, Object>();
+		String mobil = paramString("mobile");
+		if(StringUtil.isNotBlank(mobil)){
+			User user = userService.getUserByMobilePhone(mobil);
+			if(null != user){
+				data.put("result", true);
+			}else{
+				data.put("result", false);
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 明细——投资金额列表页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/tenderMoneyStatisticsListPage")
+	public String tenderMoneyStatisticsListPage() throws Exception {
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			request.setAttribute("startTimeStr", startTime);
+			request.setAttribute("endTimeStr", endTime);
+		}
+		// 投资方式
+		String tenderType = paramString("tenderType");
+
+		if (StringUtil.isNotBlank(tenderType)) {
+			model.setTenderType(tenderType);
+		}
+		request.setAttribute("tenderType", tenderType);
+		request.setAttribute("timeType", timeType);
+		
+		return "tenderMoneyStatisticsListPage";
+	}
+	
+	
+	
+	/**
+	 * 明细——获得某时间投资列表清单列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/dataStatistics/tenderMoneyStatisticsList")
+	public void tenderMoneyStatisticsList() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		BorrowTenderModel model = new BorrowTenderModel();
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 投资方式
+		String tenderType = paramString("tenderType");
+
+		if (StringUtil.isNotBlank(tenderType)) {
+			model.setTenderTypeStr(tenderType);
+		}
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		
+		model.setPage(pageNumber);
+		model.setSize(pageSize);
+		// 原model查询
+		//PageDataList<BorrowTenderModel> pagaDataList = borrowTenderService.tenderlist(model);
+		// 新SQL查询
+		PageDataList<BorrowTender> pagaDataList = borrowTenderService.tenderMoneyStatisticsListForSQL(model,pageNumber,pageSize);
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 统计——投资金额明细导出
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/tenderMoneyStatisticsExport")
+	public void tenderDetailExcel() throws Exception{
+		// 原导出
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		BorrowTenderModel model = new BorrowTenderModel();
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		// 投资方式
+		String tenderType = paramString("tenderType");
+
+		if (StringUtil.isNotBlank(tenderType)) {
+			model.setTenderTypeStr(tenderType);
+		}
+		model.setTimeType(timeType);
+		
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		
+		model.setSize(99999999);
+		model.setPage(1);
+		// 投标记录
+		PageDataList<BorrowTenderModel> pageDataList = borrowTenderService.tenderlist(model);
+		List<BorrowTenderModel> list = pageDataList.getList();
+		
+		for (int i = 0; i < pageDataList.getList().size(); i++) {
+
+			BorrowTenderModel bt = list.get(i);
+
+			if (bt.getTenderType() == 0) {
+				bt.setType("网站投标");
+			} else if (bt.getTenderType() == 1) {
+				bt.setType("自动投标");
+			} else if (bt.getTenderType() == 2) {
+				bt.setType("手机投标");
+			}
+			
+			// 借款类型
+			// 0：月标 1：天标
+			if (bt.getBorrowTimeType() == 0) {
+				bt.setTimeLimitStr(bt.getTimeLimit() + "月");
+			} else if (bt.getBorrowTimeType() == 1) {
+				bt.setTimeLimitStr(bt.getTimeLimit() + "天");
+			}
+
+		}
+		
+		//String title = "标："+borrow.getName()+"("+borrow.getDealNo()+") 投标记录Excel表";
+		String title = "投标记录Excel表";
+
+		String[] hearders = new String[] {"编号","借款人","借款期限","投标人","注册时间","真实姓名","专属客服","账户总额","投标金额 ","有效投标金额 ","回收本息 ","投标类型","投标时间 ","投标IP "};// 表头数组
+		String[] fields = new String[] {"id","borrowUserName","timeLimitStr","userName","registerTime","realName","customerUserId","tenderUserAccountStr","money","account","repaymentAccount","type","addTime","addIp"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = pageDataList.getList().size()/sheetRows;
+		if(pageDataList.getList().size()%sheetRows > 0){
+			sheetPage += 1;
+		}           
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowTenderModel> tdList = new ArrayList<BorrowTenderModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <pageDataList.getList().size(); j++ ){
+				BorrowTenderModel sm = pageDataList.getList().get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		
+		// 新导出
+		// ---------------------2015年5月25日 10:48:03
+		// sxy--------------------------------------------
+		// JSDP-99 sxy 2015-05-25 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		// 投资方式
+		String tenderType = paramString("tenderType");
+
+		if (StringUtil.isNotBlank(tenderType)) {
+			model.setTenderType(tenderType);
+		}
+		if (StringUtil.isNotBlank(timeType)) {
+			model.setTimeType(timeType);
+		}
+
+		if (StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)) {
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 用户类型
+		model.setUserType("10");
+
+		List<BorrowTender> newList = statisticsDataService.excelStatisticsTenderMoneyList(model);
+		String title = "投标记录Excel表";
+		String[] hearders = new String[] { "编号","借款人","借款类型","借款人ID","借款期限","投标人","注册时间","真实姓名","专属客服","账户总额","投标金额 ","有效投标金额 ","回收本息 ","投标类型","投标时间 ","投标IP " };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]", "object[13]", "object[14]", "object[15]", "object[16]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-99 sxy 2015-05-25 start
+
+	}
+	
+	/**
+	 * 债权转让——(售出)金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月5日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/creaditMoneyStatisticsPage")
+	public String creaditOutMoneyStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构(按照一定时间)
+		
+		// 调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();    // 若去掉注释，则每次操作调用存储结构，建议保留
+		// 全部债权售出金额数
+		StatisticsData creaditOutMoneyAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_OUT, StatisticsData.DATA_TIME_ALL);
+		// 本月债权售出金额数
+		StatisticsData monthCreaditOutMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_OUT, StatisticsData.DATA_TIME_MONTH);
+		// 一周内债权售出金额数
+		StatisticsData weekCreaditOutMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_OUT, StatisticsData.DATA_TIME_WEEK);
+		// 今日债权售出金额数
+		StatisticsData todayCreaditOutMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_OUT, StatisticsData.DATA_TIME_TODAY);
+		// 昨日债权售出金额数
+		StatisticsData yesterdayCreaditOutMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_OUT, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String creaditOutMoneyAllCount = "000";
+		String monthCreaditOutMoneyCount = "000";
+		String weekCreaditOutMoneyCount = "000";
+		String todayCreaditOutMoneyCount = "000";
+		String yesterdayCreaditOutMoneyCount = "000";
+		
+		if(null != creaditOutMoneyAll){
+			creaditOutMoneyAllCount = creaditOutMoneyAll.getCount();
+		}
+		if(null != monthCreaditOutMoney){
+			monthCreaditOutMoneyCount = monthCreaditOutMoney.getCount();
+		}
+		if(null != weekCreaditOutMoney){
+			weekCreaditOutMoneyCount = weekCreaditOutMoney.getCount();
+		}
+		if(null != todayCreaditOutMoney){
+			todayCreaditOutMoneyCount = todayCreaditOutMoney.getCount();
+		}
+		if(null != yesterdayCreaditOutMoney){
+			yesterdayCreaditOutMoneyCount = yesterdayCreaditOutMoney.getCount();
+		}
+		
+		request.setAttribute("creaditOutMoneyAllCount", df.format(Double.parseDouble(creaditOutMoneyAllCount)));
+		request.setAttribute("monthCreaditOutMoneyCount", df.format(Double.parseDouble(monthCreaditOutMoneyCount)));
+		request.setAttribute("weekCreaditOutMoneyCount", df.format(Double.parseDouble(weekCreaditOutMoneyCount)));
+		request.setAttribute("todayCreaditOutMoneyCount", df.format(Double.parseDouble(todayCreaditOutMoneyCount)));
+		request.setAttribute("yesterdayCreaditOutMoneyCount", df.format(Double.parseDouble(yesterdayCreaditOutMoneyCount)));
+		
+		// 
+		// 调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();    // 若去掉注释，则每次操作调用存储结构，建议保留
+		// 全部债权售出金额数
+		StatisticsData creaditInMoneyAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_ALL);
+		// 本月债权售出金额数
+		StatisticsData monthCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_MONTH);
+		// 一周内债权售出金额数
+		StatisticsData weekCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_WEEK);
+		// 今日债权售出金额数
+		StatisticsData todayCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_TODAY);
+		// 昨日债权售出金额数
+		StatisticsData yesterdayCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String creaditInMoneyAllCount = "000";
+		String monthCreaditInMoneyCount = "000";
+		String weekCreaditInMoneyCount = "000";
+		String todayCreaditInMoneyCount = "000";
+		String yesterdayCreaditInMoneyCount = "000";
+		
+		if(null != creaditInMoneyAll){
+			creaditInMoneyAllCount = creaditInMoneyAll.getCount();
+		}
+		if(null != monthCreaditInMoney){
+			monthCreaditInMoneyCount = monthCreaditInMoney.getCount();
+		}
+		if(null != weekCreaditInMoney){
+			weekCreaditInMoneyCount = weekCreaditInMoney.getCount();
+		}
+		if(null != todayCreaditInMoney){
+			todayCreaditInMoneyCount = todayCreaditInMoney.getCount();
+		}
+		if(null != yesterdayCreaditInMoney){
+			yesterdayCreaditInMoneyCount = yesterdayCreaditInMoney.getCount();
+		}
+			
+		request.setAttribute("creaditInMoneyAllCount", df.format(Double.parseDouble(creaditInMoneyAllCount)));
+		request.setAttribute("monthCreaditInMoneyCount", df.format(Double.parseDouble(monthCreaditInMoneyCount)));
+		request.setAttribute("weekCreaditInMoneyCount", df.format(Double.parseDouble(weekCreaditInMoneyCount)));
+		request.setAttribute("todayCreaditInMoneyCount", df.format(Double.parseDouble(todayCreaditInMoneyCount)));
+		request.setAttribute("yesterdayCreaditInMoneyCount", df.format(Double.parseDouble(yesterdayCreaditInMoneyCount)));
+			
+		
+		
+		return "creaditMoneyStatisticsPage";
+	}
+	
+	/**
+	 * 某段时间债权转让(售出)金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月5日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/creaditOutMoneyStatisticsPageArea")
+	public void creaditOutMoneyStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		// 按照时间段查询投资用户信息
+		double creaditOutMoneyStatisticsPageArea = statisticsDataService.creaditOutMoneyByTime(StatisticsData.DATA_TIME_AREA,startTime,endTime);
+		// 资金保留两位小数
+		data.put("creaditOutMoneyStatisticsPageArea", df.format(creaditOutMoneyStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 某段时间债权转让(买入)金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月5日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/creaditInMoneyStatisticsPageArea")
+	public void creaditInMoneyStatisticsPageArea() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		// 按照时间段查询投资用户信息
+		double creaditInMoneyStatisticsPageArea = statisticsDataService.creaditInMoneyByTime(StatisticsData.DATA_TIME_AREA,startTime,endTime);
+		// 资金保留两位小数
+		data.put("creaditInMoneyStatisticsPageArea", df.format(creaditInMoneyStatisticsPageArea));
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+
+	/**
+	 * 投资人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/investmentStatisticsPage")
+	public String investmentStatisticsPage() throws Exception {
+	
+		// ★方法一：查询数据统计表 —— 调用存储结构(按照一定时间)
+
+		// 调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();    // 若去掉注释，则每次操作调用存储结构，建议保留
+		// 全部投资用户数
+		StatisticsData tenderUserAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_USER, StatisticsData.DATA_TIME_ALL);
+		// 本月投资用户数
+		StatisticsData monthTender = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_USER, StatisticsData.DATA_TIME_MONTH);
+		// 一周内投资用户数
+		StatisticsData weekTender = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_USER, StatisticsData.DATA_TIME_WEEK);
+		// 今日投资用户数
+		StatisticsData todayTender = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_USER, StatisticsData.DATA_TIME_TODAY);
+		// 昨日投资用户数
+		StatisticsData yesterdayTender = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_TENDER_USER, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String tenderUserAllCount = "000";
+		String monthTenderCount = "000";
+		String weekTenderCount = "000";
+		String todayTenderCount = "000";
+		String yesterdayTenderCount = "000";
+		
+		if(null != tenderUserAll){
+			tenderUserAllCount = tenderUserAll.getCount();
+		}
+		if(null != monthTender){
+			monthTenderCount = monthTender.getCount();
+		}
+		if(null != weekTender){
+			weekTenderCount = weekTender.getCount();
+		}
+		if(null != todayTender){
+			todayTenderCount = todayTender.getCount();
+		}
+		if(null != yesterdayTender){
+			yesterdayTenderCount = yesterdayTender.getCount();
+		}
+		
+		request.setAttribute("tenderUserAllCount", tenderUserAllCount);
+		request.setAttribute("monthTenderCount", monthTenderCount);
+		request.setAttribute("weekTenderCount", weekTenderCount);
+		request.setAttribute("todayTenderCount", todayTenderCount);
+		request.setAttribute("yesterdayTenderCount", yesterdayTenderCount);
+		
+		// ★方法一：SQL语句查询
+		// 2、投资用户信息统计
+		/*int tenderUserCount = userService.countTenderUserByTime(null,null,null);
+		int yesterdayTenderCount = userService.countTenderUserByTime("yesterday",null,null);
+		int todayTenderCount = userService.countTenderUserByTime("today",null,null);
+		int weekTenderCount = userService.countTenderUserByTime("week",null,null);
+		
+		request.setAttribute("tenderUserAllCount", tenderUserCount);
+		request.setAttribute("yesterdayTenderCount", yesterdayTenderCount);
+		request.setAttribute("todayTenderCount", todayTenderCount);
+		request.setAttribute("weekTenderCount", weekTenderCount);
+		*/
+		
+		
+		return "investmentStatisticsPage";
+	}
+	
+	/**
+	 * 某段时间投资人数统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年4月22日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/borrow/tenderUserStatisticsPage")
+	public void tenderStatisticsPage() throws Exception {
+		data = new HashMap<String, Object>();
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		// 按照时间段查询投资用户信息
+		int tenderUserCountArea = statisticsDataService.countTenderUserByTime(StatisticsData.DATA_TIME_AREA,startTime,endTime);
+		
+		data.put("tenderUserCountArea", tenderUserCountArea);
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 债权(售出)——统计导出报表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/exportExcelCreaditOutMoneyStatistics")
+	public void exportExcelCreaditOutStatistics() throws Exception {
+		
+		// 新导出
+		// ---------------------2015年5月25日 10:48:03
+		// sxy--------------------------------------------
+		// JSDP-99 sxy 2015-05-25 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if (StringUtil.isNotBlank(timeType)) {
+			model.setTimeType(timeType);
+		}
+
+		if (StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)) {
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 用户类型
+		//model.setUserType("10");
+
+		List<CreditAssignment> newList = statisticsDataService.excelStatisticsCreaditOutMoneyList(model);
+		String title = "债权售出Excel表";
+		String[] hearders = new String[] {"编号","出售债权用户","债权名","债权转让类型","债权等级","债权预期价值","债权发布价格","债权转让费率","债权转让份数","已售金额","已售份数","债权状态","进度","是否违约提前转出","债权转让截止时间","添加时间","添加IP"};// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]", "object[13]", "object[14]", "object[15]", "object[16]"};// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-99 sxy 2015-05-25 start
+		
+	}	
+	
+	/**
+	 * 债权(买入)——统计导出报表
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/exportExcelCreaditInMoneyStatistics")
+	public void exportExcelCreaditInStatistics() throws Exception {
+		
+		// 新导出
+		// ---------------------2015年5月25日 10:48:03
+		// sxy--------------------------------------------
+		// JSDP-99 sxy 2015-05-25 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if (StringUtil.isNotBlank(timeType)) {
+			model.setTimeType(timeType);
+		}
+		
+		if (StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)) {
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		// 用户类型
+		//model.setUserType("10");
+		
+		List<CreditLog> newList = statisticsDataService.excelStatisticsCreaditInMoneyList(model);
+		String title = "债权买入Excel表";
+		String[] hearders = new String[] {"编号","债权名","债权转让ID","状态","出售债权用户","购买债权用户名","购买时间","购买份数","购买后应有价值","购买花费金额","购买手续费","购买手续费状态","出售手续费","出售手续费状态","是否再售出","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]", "object[13]", "object[14]", "object[15]", "object[16]"};// 对象属性数组
+		
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+		
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-99 sxy 2015-05-25 start
+		
+	}	
+	
+	/**
+	 * 债权转让——(买入)金额统计页面
+	 * 
+	 * @author 孙晓勇
+	 * @time 2015年5月5日 
+	 * @return
+	 * @throws Exception
+	 */
+	/*@Action("/modules/dataStatistics/creaditInMoneyStatisticsPage")
+	public String creaditInMoneyStatisticsPage() throws Exception {
+		
+		// ★方法一：查询数据统计表 —— 调用存储结构(按照一定时间)
+		
+		// 调用数据统计存储结构——该操作会向数据统计表里插入所需要的数据
+		// statisticsDataService.callProcedureStatistics();    // 若去掉注释，则每次操作调用存储结构，建议保留
+		// 全部债权售出金额数
+		StatisticsData creaditInMoneyAll = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_ALL);
+		// 本月债权售出金额数
+		StatisticsData monthCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_MONTH);
+		// 一周内债权售出金额数
+		StatisticsData weekCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_WEEK);
+		// 今日债权售出金额数
+		StatisticsData todayCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_TODAY);
+		// 昨日债权售出金额数
+		StatisticsData yesterdayCreaditInMoney = statisticsDataService.getStatisticsDataCount(StatisticsData.DATA_WAY_CREADIT_MONEY_IN, StatisticsData.DATA_TIME_YESTERDAY);
+		
+		String creaditInMoneyAllCount = "000";
+		String monthCreaditInMoneyCount = "000";
+		String weekCreaditInMoneyCount = "000";
+		String todayCreaditInMoneyCount = "000";
+		String yesterdayCreaditInMoneyCount = "000";
+		
+		if(null != creaditInMoneyAll){
+			creaditInMoneyAllCount = creaditInMoneyAll.getCount();
+		}
+		if(null != monthCreaditInMoney){
+			monthCreaditInMoneyCount = monthCreaditInMoney.getCount();
+		}
+		if(null != weekCreaditInMoney){
+			weekCreaditInMoneyCount = weekCreaditInMoney.getCount();
+		}
+		if(null != todayCreaditInMoney){
+			todayCreaditInMoneyCount = todayCreaditInMoney.getCount();
+		}
+		if(null != yesterdayCreaditInMoney){
+			yesterdayCreaditInMoneyCount = yesterdayCreaditInMoney.getCount();
+		}
+		
+		request.setAttribute("creaditInMoneyAllCount", creaditInMoneyAllCount);
+		request.setAttribute("monthCreaditInMoneyCount", monthCreaditInMoneyCount);
+		request.setAttribute("weekCreaditInMoneyCount", weekCreaditInMoneyCount);
+		request.setAttribute("todayCreaditInMoneyCount", todayCreaditInMoneyCount);
+		request.setAttribute("yesterdayCreaditInMoneyCount", yesterdayCreaditInMoneyCount);
+		
+		
+		return "creaditInMoneyStatisticsPage";
+	}*/
+	
+	
+	
+}

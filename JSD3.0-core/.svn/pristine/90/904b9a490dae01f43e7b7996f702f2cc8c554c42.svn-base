@@ -1,0 +1,232 @@
+package com.rongdu.p2psys.core.web.listener;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionBindingEvent;
+
+import org.apache.log4j.Logger;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.core.cache.ShowDataCache;
+import com.ddtkj.p2psys.core.quartz.tender.TenderJobQueue;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowConfigDao;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.dao.LogTemplateDao;
+import com.rongdu.p2psys.core.dao.NoticeTypeDao;
+import com.rongdu.p2psys.core.domain.LogTemplate;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.model.SystemConfigModel;
+import com.rongdu.p2psys.core.notice.email.EmailNoticeJobQueue;
+import com.rongdu.p2psys.core.notice.message.MessageNoticeJobQueue;
+import com.rongdu.p2psys.core.notice.sms.SmsNoticeJobQueue;
+import com.rongdu.p2psys.core.protocol.ProtocolHelper;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.service.RuleService;
+import com.rongdu.p2psys.core.service.SystemConfigService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+/**
+ * @描述:全站后端监听,负责加载全局缓存
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月26日
+ */
+public class WebConfigContextManageListener implements ServletContextListener,
+		HttpSessionAttributeListener {
+	private static Logger logger = Logger
+			.getLogger(WebConfigContextManageListener.class);
+	private Object lock = new Object();
+
+	private String rulePackageName = "com.rongdu.p2psys.core.rule";
+
+	@Override
+	public void contextDestroyed(ServletContextEvent event) {
+		 /*
+		  MemCachedUtil.memCachedClient.delete(GlobalCache.RULE_CONFIG);
+		  MemCachedUtil.memCachedClient.delete(GlobalCache.SYS_CONFIG);
+		  MemCachedUtil.memCachedClient.delete(GlobalCache.NOTICE_TYPE_CONFIG);
+		  MemCachedUtil.memCachedClient.delete(GlobalCache.LOG_TEMPLATE_CONFIG);
+		  MemCachedUtil.memCachedClient.delete(GlobalCache.BORROW_CONFIG);
+		 */
+	}
+	@Override
+	public void contextInitialized(ServletContextEvent event) {
+
+		ServletContext context = event.getServletContext();
+		ApplicationContext ctx = WebApplicationContextUtils
+				.getRequiredWebApplicationContext(context);
+        //系统配置服务
+		SystemConfigService systemConfigService = (SystemConfigService) BeanUtil
+				.getBean("systemConfigService");
+		//通知服务
+		NoticeService noticeService = (NoticeService) ctx
+				.getBean("noticeService");
+		LogTemplateDao logTemplateDao = (LogTemplateDao) ctx
+				.getBean("logTemplateDao");
+		/*ArticleService articleService = (ArticleService) ctx
+				.getBean("articleService");
+		Tree<Site> tree = articleService.getSiteTree();
+		context.setAttribute("tree", tree);*/
+		SystemConfigModel info = systemConfigService.getSystemInfo();
+		/* 全局缓存 */
+		GlobalCache.initSysConfig2Cache(info);
+		setWebConfig(context, info);
+
+		BorrowConfigDao borrowConfigDao = (BorrowConfigDao) ctx
+				.getBean("borrowConfigDao");
+		List<BorrowConfig> borrowConfigList = borrowConfigDao.findAll();
+		Map<Long, BorrowConfig> borrowConfigMap = new HashMap<Long, BorrowConfig>();
+		for (BorrowConfig config : borrowConfigList) {
+			borrowConfigMap.put(config.getId(), config);
+		}
+		/* 全局缓存 */
+		GlobalCache.initBorrowConfig2Cache(borrowConfigMap);
+		// 读取通知类型配置
+		NoticeTypeDao noticeTypeDao = (NoticeTypeDao) ctx
+				.getBean("noticeTypeDao");
+		List<NoticeType> noticeTypeList = noticeTypeDao.list();
+		Map<String, NoticeType> noticeTypeMap = new HashMap<String, NoticeType>();
+		for (int i = 0; i < noticeTypeList.size(); i++) {
+			NoticeType noticeType = noticeTypeList.get(i);
+			noticeTypeMap.put(
+					noticeType.getNid() + "_" + noticeType.getNoticeType(),
+					noticeType);
+		}
+		/* 全局缓存 */
+		GlobalCache.initNoticeTypeConfig2Cache(noticeTypeMap);
+
+		/*
+		 * s_rule规则表中配置的规则转换为对应的规则Check对象 把所有规则Check对象设置到全局变量RULECHECKS容器中
+		 */
+		Map<String, RuleCheck> ruleCheckMap = new HashMap<String, RuleCheck>();
+		RuleService ruleService = (RuleService) ctx.getBean("ruleService");
+		List<Rule> ruleList = ruleService.findAll();
+		for (int i = 0; i < ruleList.size(); i++) {
+			Rule r = ruleList.get(i);
+			try {
+				Class<?> clazz = null;
+				clazz = Class.forName(rulePackageName + "."
+						+ StringUtil.firstCharUpperCase(r.getNid())
+						+ "RuleCheck");
+				Object jsonObj = JSON.parseObject(r.getRuleCheck(), clazz);
+				if (jsonObj == null) {
+					jsonObj = clazz.newInstance();
+				} else {
+					ruleCheckMap.put(r.getNid(), (RuleCheck) jsonObj);
+				}
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+
+		}
+		/* 全局缓存 */
+		GlobalCache.initRuleCheckConfig2Cache(ruleCheckMap);
+
+		Map<String, LogTemplate> logTemplateMap = new HashMap<String, LogTemplate>();
+		List<LogTemplate> logTemplateList = logTemplateDao.findAll();
+		for (int i = 0; i < logTemplateList.size(); i++) {
+			LogTemplate logT = logTemplateList.get(i);
+			if (logT != null) {
+				String mapKey = logT.getType() + "_" + logT.getNid();
+				logTemplateMap.put(mapKey, logT);
+			}
+		}
+		/* 全局缓存 */
+		GlobalCache.initLogTemplateConfig2Cache(logTemplateMap);
+		
+		//JSDP-211 xingjia 20150706 start
+		/*前台展示数据，已废弃*/
+		//ShowDataCache.initplatformDataMap();
+		//JSDP-211 xingjia 20150706 end
+
+		// 消息发送
+		SmsNoticeJobQueue.init(noticeService);
+		MessageNoticeJobQueue.init(noticeService);
+		EmailNoticeJobQueue.init(noticeService);
+		BorrowTenderService borrowTenderService = (BorrowTenderService) ctx
+				.getBean("borrowTenderService");
+		TenderJobQueue.init(borrowTenderService);
+		// 初始化系统指定对象
+		ExecuterHelper.init();
+		// 初始化协议指定对象
+		ProtocolHelper.init();
+	}
+
+	private void setWebConfig(ServletContext context, SystemConfigModel info) {
+		String[] webinfo = Global.SYSTEMNAME;
+		for (String s : webinfo) {
+			context.setAttribute(s, info.getValue(s));
+			if (s.equals("theme_dir") && StringUtil.isBlank(info.getValue(s))) {
+				context.setAttribute(s, "/themes/soonmes_default");
+			}
+		}
+		context.setAttribute("webroot", context.getContextPath());
+	}
+
+	@Override
+	public void attributeAdded(HttpSessionBindingEvent event) {
+		User user = getSessionUser(event);
+		if (user != null) {
+			synchronized (lock) {
+				// 刷新登录时间
+				Global.SESSION_MAP.put(user.getUserName(),
+						System.currentTimeMillis());
+			}
+		}
+	}
+
+	@Override
+	public void attributeRemoved(HttpSessionBindingEvent event) {
+		User user = getSessionUser(event);
+		if (user != null) {
+			synchronized (lock) {
+				if (Global.SESSION_MAP.containsKey(user.getUserName())) {
+				}
+			}
+		}
+	}
+
+	@Override
+	public void attributeReplaced(HttpSessionBindingEvent event) {
+		User user = getSessionUser(event);
+		if (user == null) {
+			synchronized (lock) {
+				if (Global.SESSION_MAP.containsKey(event.getName())
+						&& event.getValue() == null) {
+					Global.SESSION_MAP.remove(event.getName());
+				}
+			}
+		}
+
+	}
+
+	public User getSessionUser(HttpSessionBindingEvent event) {
+		if (StringUtil.isNull(event.getName()).equals(Constant.SESSION_USER)) {
+			Object obj = event.getValue();
+			if (obj != null) {
+				return (User) obj;
+			}
+		}
+		return null;
+	}
+
+}

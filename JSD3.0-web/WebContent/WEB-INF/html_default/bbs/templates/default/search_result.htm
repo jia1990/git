@@ -1,0 +1,110 @@
+<#include "header.htm"/>
+
+<script type="text/javascript" src="${contextPath}/bbs/templates/${templateName}/js/pagination.js?${startupTime}"></script>
+
+<#import "../macros/pagination.ftl" as topicPagination>
+<#import "../macros/search_pagination.ftl" as pagination>
+<#import "../macros/presentation.ftl" as presentation/>
+
+<table cellspacing="0" cellpadding="10" width="100%" align="center" border="0">
+	<tr>
+		<td class="bodyline" valign="top">
+			<table class="search_result" cellspacing="0" cellpadding="5" width="100%" border="0">
+            <tr>
+            <td class="search_head"	>
+            ${I18n.getMessage("Search.searchResults")}
+            </td>
+            </tr>
+				<tr>
+              
+					<td class="search_data" >
+                    <img src="${contextPath}/themes/bbs/templates/${templateName}/images/search_data.png" />
+							${I18n.getMessage("Search.searchResults")}:${totalRecords}
+							<#if (totalRecords == 1)>
+                            ${I18n.getMessage("Search.recordFound")}
+							<#else>
+								${I18n.getMessage("Search.recordsFound")}
+							</#if>
+                            </td>
+                            
+				</tr>
+            	<tr>
+					<td class="nav" valign="bottom" nowrap="nowrap" align="right">
+						<#assign paginationLinks>
+							<@pagination.searchPagination/>
+						</#assign>
+                        ${paginationLinks}
+					</td>
+				</tr>
+				<#if results.size() == 0>
+					<tr>
+						<td class="gen">
+							${I18n.getMessage("Search.noResults")} <a href="	${JForumContext.encodeURL("/search/filters")}">${I18n.getMessage("Search.clickHere")}</a> ${I18n.getMessage("Search.newSearch")}
+						</td>
+					</tr>
+				<#else>
+					<#list results as post>
+						<tr>
+							<td class="search_result_title_wrap" style="padding:0;">
+								<#assign postUrl = JForumContext.encodeURL("/posts/preList/${post.topicId}/${post.id}")/>
+
+							<table class="search_result_title" cellspacing="0" cellpadding="0" width="100%"  height="33">
+                            <tr>
+                            <td><img  src="${contextPath}/bbs/templates/${templateName}/images/notice_li.png" alt=""/>标题</td>
+                            <td class="result_con"> <a href="${postUrl}">${post.subject?html}</a></td>
+							<td>${I18n.getMessage("Search.postedOn")} </td>		
+							<td class="result_con"><a href="${JForumContext.encodeURL("/forums/show/${post.forum.id}")}">${post.forum.name}</a></td>
+                            <td>${I18n.getMessage("Search.postedAt")}</td>
+                            <td class="result_con">${post.time?datetime}</td>
+                            <td>${I18n.getMessage("Search.postedBy")} </td>
+                            <td class="result_con"><a href="${JForumContext.encodeURL("/user/profile/${post.userId}")}">${post.postUsername}</a></td>
+                            </tr>
+                            </table>
+							</td>
+						</tr>
+
+						<tr>
+							<td class="search_result_content">
+								${post.text}
+								<div class="search_result_more" align="right"><a href="${postUrl}">${I18n.getMessage("Search.viewMessage")}</a></div>
+							</td>
+						</tr>
+					</#list>
+				</#if>
+			</table>
+
+			<table cellspacing="2" cellpadding="2" width="100%" align="center" border="0">
+				<tr>
+					<td nowrap="nowrap">
+									<form action="" accept-charset="${encoding}" name="f">
+										<span class="gensmall">${I18n.getMessage("ForumIndex.goTo")}:&nbsp;
+											<select onchange="if(this.options[this.selectedIndex].value != -1){ document.location = '${contextPath}/forums/show/'+ this.options[this.selectedIndex].value +'${extension}'; }" name="select">
+												<option value="-1" selected="selected">${I18n.getMessage("ForumIndex.goToSelectAForum")}</option>
+
+												<#list categories as category>
+													<optgroup label="${category.name}">
+														<#list category.getForums() as forum>
+														<option value="${forum.id}">${forum.name}</option>
+														</#list>
+													</optgroup>
+												</#list>
+											</select>				  
+											&nbsp;
+											<input class="liteoption" type="button" value="${I18n.getMessage("ForumIndex.goToGo")}" onclick="if(document.f.select.options[document.f.select.selectedIndex].value != -1){ document.location = '${contextPath}/forums/show/'+ document.f.select.options[document.f.select.selectedIndex].value +'${extension}'; }" />
+										</span>
+									</form>
+								</td>
+					<td valign="middle" nowrap="nowrap" align="right">
+						${paginationLinks}
+					</td>
+				</tr>
+				<tr>
+					<td align="left" colspan="2"></td>
+				</tr>
+			</table>
+
+	
+		</td>
+	</tr>
+</table>
+<#include "bottom.htm"/>

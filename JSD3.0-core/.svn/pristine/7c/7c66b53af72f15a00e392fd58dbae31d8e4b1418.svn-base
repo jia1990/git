@@ -1,0 +1,119 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+/**
+ * 
+ * @描述：钱袋子使用记录
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月30日
+ */
+@Entity
+@Table(name = "t_jsd_rp_use_log")
+public class RpUseLog implements Serializable {
+	private static final long serialVersionUID = -7792507089018497306L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ;  // 标识ID
+	@ManyToOne
+	@JoinColumn(name="user_id")
+	private User user;  // 用户id 
+	@ManyToOne
+	@JoinColumn(name="borrow_id")
+	private Borrow borrow ;  // 标ID
+	private int rpType ;
+	private double account ;   // 操作金额
+	private double beforeAmount;  //  操作前金额
+	private double afterAmount ; // 操作后金额
+	private Date addTime;  // 记录添加时间
+	private String addIp ; //  记录添加IP 
+	private String remark ;  // 备注
+	
+	public RpUseLog(){};
+	public RpUseLog(User user, Borrow borrow, int rpType,
+			double account, double beforeAmount, double afterAmount,
+			Date addTime, String addIp, String remark) {
+		super();
+		this.user = user;
+		this.borrow = borrow;
+		this.rpType = rpType;
+		this.account = account;
+		this.beforeAmount = beforeAmount;
+		this.afterAmount = afterAmount;
+		this.addTime = addTime;
+		this.addIp = addIp;
+		this.remark = remark;
+	}
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public Borrow getBorrow() {
+		return borrow;
+	}
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+	public double getAccount() {
+		return account;
+	}
+	public void setAccount(double account) {
+		this.account = account;
+	}
+	public double getBeforeAmount() {
+		return beforeAmount;
+	}
+	public void setBeforeAmount(double beforeAmount) {
+		this.beforeAmount = beforeAmount;
+	}
+	public double getAfterAmount() {
+		return afterAmount;
+	}
+	public void setAfterAmount(double afterAmount) {
+		this.afterAmount = afterAmount;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public int getRpType() {
+		return rpType;
+	}
+	public void setRpType(int rpType) {
+		this.rpType = rpType;
+	}
+	
+}

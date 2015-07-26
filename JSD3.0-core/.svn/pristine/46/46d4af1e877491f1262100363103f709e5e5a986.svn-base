@@ -1,0 +1,217 @@
+package com.rongdu.p2psys.core.disruptor;
+
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.member.model.MemberVipAwardSubModel;
+import com.ddtkj.p2psys.member.model.MemberVipSubModel;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.user.domain.User;
+import com.lmax.disruptor.EventFactory;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+
+public final class ValueEvent {
+	// 操作
+	private String operate;
+	private long value;
+	private User user;
+	private BorrowModel borrowModel;
+	private BorrowRepayment borrowRepayment;
+	private Borrow borrow;
+	private AccountDrawModel  drawModel;
+	private RechargeModel rechargeModel;
+	private AccountLog accountLog;
+	private String resultFlag;
+	//汇潮
+	private YmdRegister ymdRegister;
+	private BorrowTender tender;
+	private YmdCash ymdCash;
+	//债权转让
+	private CreditAssignment creditAssignment ;
+	//lijianyun 加
+	private MemberVipSubModel memberVipSubModel;
+	private MemberVipAwardSubModel memberVipAwardSubModel;
+	private BorrowCollection borrowCollection;//待收
+	private GoodsOrder goodsOrder ;
+	private GoodsModel gm;
+	
+	
+	private CreditLog cl;  //债权购买记录
+
+	public CreditLog getCl() {
+		return cl;
+	}
+
+	public void setCl(CreditLog cl) {
+		this.cl = cl;
+	}
+
+	public BorrowCollection getBorrowCollection() {
+		return borrowCollection;
+	}
+
+	public void setBorrowCollection(BorrowCollection borrowCollection) {
+		this.borrowCollection = borrowCollection;
+	}
+	public YmdCash getYmdCash() {
+		return ymdCash;
+	}
+
+	public void setYmdCash(YmdCash ymdCash) {
+		this.ymdCash = ymdCash;
+	}
+
+	public BorrowTender getTender() {
+		return tender;
+	}
+
+	public void setTender(BorrowTender tender) {
+		this.tender = tender;
+	}
+
+	public YmdRegister getYmdRegister() {
+		return ymdRegister;
+	}
+
+	public void setYmdRegister(YmdRegister ymdRegister) {
+		this.ymdRegister = ymdRegister;
+	}
+
+	public String getOperate() {
+		return operate;
+	}
+
+	public void setOperate(String operate) {
+		this.operate = operate;
+	}
+
+	public long getValue() {
+		return value;
+	}
+
+	public void setValue(final long value) {
+		this.value = value;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public BorrowModel getBorrowModel() {
+		return borrowModel;
+	}
+
+	public void setBorrowModel(BorrowModel borrowModel) {
+		this.borrowModel = borrowModel;
+	}
+
+	public BorrowRepayment getBorrowRepayment() {
+		return borrowRepayment;
+	}
+
+	public void setBorrowRepayment(BorrowRepayment borrowRepayment) {
+		this.borrowRepayment = borrowRepayment;
+	}
+	public Borrow getBorrow() {
+		return borrow;
+	}
+
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+
+
+	public AccountDrawModel getDrawModel() {
+		return drawModel;
+	}
+
+	public void setDrawModel(AccountDrawModel drawModel) {
+		this.drawModel = drawModel;
+	}
+
+	public RechargeModel getRechargeModel() {
+		return rechargeModel;
+	}
+
+	public void setRechargeModel(RechargeModel rechargeModel) {
+		this.rechargeModel = rechargeModel;
+	}
+
+	public AccountLog getAccountLog() {
+		return accountLog;
+	}
+
+	public void setAccountLog(AccountLog accountLog) {
+		this.accountLog = accountLog;
+	}
+	public String getResultFlag() {
+        return resultFlag;
+    }
+
+    public void setResultFlag(String resultFlag) {
+        this.resultFlag = resultFlag;
+    }
+
+	public final static EventFactory<ValueEvent> EVENT_FACTORY = new EventFactory<ValueEvent>() {
+		public ValueEvent newInstance() {
+			return new ValueEvent();
+		}
+	};
+
+	public CreditAssignment getCreditAssignment() {
+		return creditAssignment;
+	}
+
+	public void setCreditAssignment(CreditAssignment creditAssignment) {
+		this.creditAssignment = creditAssignment;
+	}
+
+
+
+	public GoodsOrder getGoodsOrder() {
+		return goodsOrder;
+	}
+
+	public void setGoodsOrder(GoodsOrder goodsOrder) {
+		this.goodsOrder = goodsOrder;
+	}
+
+	public MemberVipSubModel getMemberVipSubModel() {
+		return memberVipSubModel;
+	}
+
+	public void setMemberVipSubModel(MemberVipSubModel memberVipSubModel) {
+		this.memberVipSubModel = memberVipSubModel;
+	}
+
+	public MemberVipAwardSubModel getMemberVipAwardSubModel() {
+		return memberVipAwardSubModel;
+	}
+
+	public void setMemberVipAwardSubModel(
+			MemberVipAwardSubModel memberVipAwardSubModel) {
+		this.memberVipAwardSubModel = memberVipAwardSubModel;
+	}
+
+	public GoodsModel getGm() {
+		return gm;
+	}
+
+	public void setGm(GoodsModel gm) {
+		this.gm = gm;
+	}
+
+}

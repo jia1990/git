@@ -1,0 +1,186 @@
+package com.ddt.p2psys.redpacket.service;
+
+import java.util.Date;
+import java.util.List;
+
+import junit.framework.TestCase;
+
+import com.ddt.test.util.BeanUtil;
+import com.ddtkj.p2psys.redpacket.domain.RedPacketLog;
+import com.ddtkj.p2psys.redpacket.domain.UserActivity;
+import com.ddtkj.p2psys.redpacket.model.RedPacketModel;
+import com.ddtkj.p2psys.redpacket.service.ActivityService;
+import com.ddtkj.p2psys.redpacket.service.RedPacketLogService;
+import com.ddtkj.p2psys.redpacket.service.UserActivityService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.user.service.UserService;
+
+
+/**
+ * 测试用户与活动的基本操作
+ * 
+ * @author YJF
+ */
+public class UserActivityServiceTest extends TestCase{
+
+   
+	/**
+    * 测试用户注册获取红包
+    * */
+	public void testSaveUserActivity(){
+		try {
+			ActivityService actService = BeanUtil.getBean("activityService",ActivityService.class);
+			UserActivityService ucService = BeanUtil.getBean("userActivityService",UserActivityService.class);
+			RedPacketLogService rplService = BeanUtil.getBean("redPacketLogService",RedPacketLogService.class);
+			UserService userService = BeanUtil.getBean("userService",UserService.class);
+			// 用户注册了。没有推荐人
+			// 获取当前注册活动
+			RedPacketModel arp = actService.getModelByTimeAndRPTypeCode(new Date(), "register");
+			UserActivity ua = new UserActivity() ;
+			ua.setActivityRP(arp);
+			ua.setUser(new User(16696));
+			ua.setRefRpIsUse(0);
+			ua.setUserRpIsuse(0);
+			ua = ucService.save(ua) ;
+			//  日志记录，注册属于静态红包
+			RedPacketLog rpl = new RedPacketLog() ;
+			rpl.setActivityRP(arp);
+			rpl.setCreatetime(new Date());
+			User user = userService.find(ua.getUser().getUserId()) ;
+			rpl.setDescription("用户【"+user.getUserName()+"】通过活动："+arp.getActivity().getActName()+"获得"+arp.getAccount()+"元红包");
+			rpl.setUser(ua.getUser());
+			rpl.setType(1);
+			rpl.setRpAccount(arp.getAccount());
+			rpl.setLogType(1);
+			rpl.setOptChannel("P");
+			rplService.save(rpl);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	/**
+    * 测试用户通过推荐红包
+    * */
+	public void testSaveUserRefActivity(){
+		try {
+			UserService userService = BeanUtil.getBean("userService",UserService.class);
+			ActivityService actService = BeanUtil.getBean("activityService",ActivityService.class);
+			UserActivityService ucService = BeanUtil.getBean("userActivityService",UserActivityService.class);
+			RedPacketLogService rplService = BeanUtil.getBean("redPacketLogService",RedPacketLogService.class);
+			// 用户注册了。没有推荐人
+			// 获取当前注册活动
+			RedPacketModel arp = actService.getModelByTimeAndRPTypeCode(new Date(), "register");
+			// 获取当前推广活动
+			RedPacketModel refarp = actService.getModelByTimeAndRPTypeCode(new Date(), "popularize");
+			
+			UserActivity ua = new UserActivity() ;
+			ua.setActivityRP(arp);
+			ua.setUser(new User(16697));
+			ua.setRefActivityRP(refarp);
+			ua.setReferrer(new User(16696));
+			ua.setRefRpIsUse(0);
+			ua.setUserRpIsuse(0);
+			ucService.save(ua) ;
+		//  日志记录，注册属于静态红包
+			User user = userService.find(ua.getUser().getUserId()) ;
+			User refuser = userService.find(ua.getReferrer().getUserId()) ;
+			RedPacketLog rpl = new RedPacketLog() ;
+			rpl.setActivityRP(arp);
+			rpl.setCreatetime(new Date());
+			rpl.setDescription("用户【"+user.getUserName()+"】通过活动："+arp.getActivity().getActName()+"获得"+arp.getAccount()+"元红包");
+			rpl.setUser(ua.getUser());
+			rpl.setType(1);
+			rpl.setRpAccount(arp.getAccount());
+			rpl.setLogType(1);
+			rpl.setOptChannel("P");
+			rplService.save(rpl);
+		// 有推荐 推荐属于静态   所以记两笔日志
+			RedPacketLog rpl2 = new RedPacketLog() ;
+			rpl2.setActivityRP(refarp);
+			rpl2.setCreatetime(new Date());
+			rpl2.setDescription("用户【"+refuser.getUserName()+"】通过活动"+refarp.getActivity().getActName()+"邀请用户【"+user.getUserName()+"】获得"+arp.getAccount()+"元红包");
+			rpl2.setUser(ua.getReferrer());
+			rpl2.setType(1);
+			rpl2.setRpAccount(refarp.getAccount());
+			rpl2.setLogType(1);
+			rpl2.setOptChannel("P");
+			rplService.save(rpl2);
+			
+			
+			
+			UserActivity ua2 = new UserActivity() ;
+			ua2.setActivityRP(arp);
+			ua2.setUser(new User(16698));
+			ua2.setRefActivityRP(refarp);
+			ua2.setReferrer(new User(16696));
+			ua2.setRefRpIsUse(0);
+			ua2.setUserRpIsuse(0);
+			ucService.save(ua2) ;
+		//  日志记录，注册属于静态红包
+			User user2 = userService.find(ua2.getUser().getUserId()) ;
+			User refuser2 = userService.find(ua2.getReferrer().getUserId()) ;
+			RedPacketLog rpl11 = new RedPacketLog() ;
+			rpl11.setActivityRP(arp);
+			rpl11.setCreatetime(new Date());
+			rpl11.setDescription("用户【"+user2.getUserName()+"】通过活动："+arp.getActivity().getActName()+"获得"+arp.getAccount()+"元红包");
+			rpl11.setUser(ua2.getUser());
+			rpl11.setType(1);
+			rpl11.setRpAccount(arp.getAccount());
+			rpl11.setLogType(1);
+			rpl11.setOptChannel("P");
+			rplService.save(rpl11);
+		// 有推荐 推荐属于静态   所以记两笔日志
+			RedPacketLog rpl12 = new RedPacketLog() ;
+			rpl12.setActivityRP(refarp);
+			rpl12.setCreatetime(new Date());
+			rpl12.setDescription("用户【"+refuser2.getUserName()+"】通过活动"+refarp.getActivity().getActName()+"邀请用户【"+user2.getUserName()+"】获得"+arp.getAccount()+"元红包");
+			rpl12.setUser(ua2.getReferrer());
+			rpl12.setType(1);
+			rpl12.setRpAccount(refarp.getAccount());
+			rpl12.setLogType(1);
+			rpl12.setOptChannel("P");
+			rplService.save(rpl12);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	/**
+    * 测试更新红包类型  和 查询全部
+    * */
+	public void testUpdateUserActivity(){
+		UserActivityService uaService = BeanUtil.getBean("userActivityService",UserActivityService.class);
+		// 获取所有的
+		List<UserActivity> list = uaService.getAll();
+		for (UserActivity UserActivity : list) {
+			System.out.println(UserActivity.getUser().getUserName()+"的红包  "+(UserActivity.getUserRpIsuse()==0?"未使用":"已使用"));;
+		}
+		if(list.size()>0 && list!=null){
+			UserActivity ua = list.get(0) ;
+			ua.setUserRpIsuse(1);
+			uaService.update(ua) ;
+		}
+		
+	}
+	/**
+    * 测试更新红包类型  和 查询全部
+    * */
+	public void testDeleteUserActivity(){
+		UserActivityService uaService = BeanUtil.getBean("userActivityService",UserActivityService.class);
+		// 获取所有的
+		List<UserActivity> list = uaService.getAll();
+		for (UserActivity UserActivity : list) {
+			System.out.println(UserActivity.getUser().getUserName()+"的红包  "+(UserActivity.getUserRpIsuse()==0?"未使用":"已使用"));;
+		}
+		if(list.size()>0 && list!=null){
+			UserActivity ua = list.get(0) ;
+			uaService.update(ua) ;
+		}
+		
+	}
+}

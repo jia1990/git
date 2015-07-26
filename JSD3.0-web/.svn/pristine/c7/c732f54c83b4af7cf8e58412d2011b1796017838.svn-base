@@ -1,0 +1,115 @@
+package com.ddtkj.analysis;
+
+import java.util.Calendar;
+
+import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.analysis.domain.Analysis;
+import com.ddtkj.p2psys.analysis.domain.UserSource;
+import com.ddtkj.p2psys.analysis.model.AnalysisModel;
+import com.ddtkj.p2psys.analysis.service.AnalysisService;
+import com.ddtkj.p2psys.analysis.service.UserSourceService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class AnalysisAction extends BaseAction implements ModelDriven<AnalysisModel>{
+	private static Logger logger = Logger.getLogger(AnalysisAction.class);
+	AnalysisModel  model = new AnalysisModel();
+	@Resource
+	AnalysisService analyservice;
+	@Resource
+	UserSourceService userSourceService;
+	
+	public AnalysisModel getModel() {
+		return model;
+	}
+	@Action("/analysis/urlCollection")
+	public void urlCollection(){
+		//logger.info("进入了url路径收集方法"+request.getSession().getId());
+		User u = (User) request.getSession().getAttribute("user");
+		Cookie[] cooke = request.getCookies();
+		String sessionId = null;
+		if(null != cooke){
+			for(Cookie cookie : cooke){
+				if(cookie.getName().equals("ls_p")){
+					sessionId = cookie.getValue();
+				} 
+			}
+		}
+		//JSDP-166 xingjia 20150611 start
+		String reffer = request.getHeader("referer");
+		//JSDP-166 xingjia 20150611 end
+		Cookie cooki = null;
+		if(null == sessionId){
+			cooki=new Cookie("ls_p",request.getSession().getId());
+			cooki.setPath("/");
+			response.addCookie(cooki);
+		}
+
+		//先将路径收集后再进行判断
+//		String urlParam = paramString("urlPara");
+		//JSDP-166 xingjia 20150611 start
+		String urlParam = reffer;
+		//JSDP-166 xingjia 20150611 end
+		//logger.info("上一步的路径："+urlParam);
+		Analysis analysis = new Analysis();
+		analysis.setHitTime(Calendar.getInstance().getTime());
+		if(null != sessionId){
+			analysis.setSessionId(sessionId);
+		}else{
+			analysis.setSessionId(request.getSession().getId());
+		}
+		analysis.setVisitIp(Global.getIP());
+		
+		if(StringUtil.isNotBlank(urlParam) && !urlParam.equals("null")){
+			if(urlParam.length()>=198){
+				analysis.setVisitUrl(urlParam.substring(0, 196));
+			}else{//JSDBET-952 xingjia 2005-05-22 start
+				analysis.setVisitUrl(urlParam);
+			}//JSDBET-952 xingjia 2005-05-22 end
+		}
+		analyservice.saveAnalysisBySql(analysis);
+		
+		if(null != u){
+			//用户注册成功，但还未登录
+			logger.info("已注册成功："+u.getUserName());
+			UserSource userSources = userSourceService.findByUserId(u.getUserId());
+			if(null == userSources){
+//				Analysis analysis = analyservice.findAnalysisSource(request.getSession().getId());
+				//查看此用户是否注册成功
+				Analysis analysisRegister = analyservice.findAnalysisSource(sessionId,"/user/register");
+				if(null != analysisRegister ){
+					//获取此用户的注册来源
+					Analysis analysisSource = analyservice.findAnalysisSource(sessionId,null);
+					UserSource userSource = new UserSource();
+					userSource.setAddTime(analysisSource.getHitTime());
+					
+					String visitUrl = analysisSource.getVisitUrl();
+					logger.info("放入用户来源表中："+visitUrl);
+					if(null != visitUrl && visitUrl.length()>90){
+						userSource.setSourceUrl(visitUrl.substring(0, 88));
+					}else{
+						if(StringUtil.isNotBlank(visitUrl)){
+							userSource.setSourceUrl(visitUrl);
+						}else{
+							userSource.setSourceUrl(Global.getValue("weburl"));
+						}
+					}
+					userSource.setUser(u);
+					userSource.setRegisterWay(analysisRegister.getVisitUrl());
+					userSource.setUserName(u.getUserName());
+					userSourceService.saveUserSource(userSource);
+				}
+			}
+		}
+		
+	}
+	
+}

@@ -1,0 +1,213 @@
+package com.ddtkj.p2psys.core.usercenter;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.codec.binary.Base64;
+import org.junit.Test;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+
+public class UcApiTest {
+	
+	/**
+	 * 获取登录地址
+	 */
+	@Test
+	public void testLogin(){
+		String url = "https://service.xiaowo.me/api/auth/login";
+		
+		String appId = "dwc37d54bb8cd9df492";
+		String signKey = "kB6jXMkyjPfI4iJSbV1tIqx4nQSpu2y1hZncVBj6BkC";
+		String state = Encodes.nonceString(16);
+			
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("appId", appId);
+		parameterMap.put("state", state);
+		
+		System.out.println(SignUtils.getUrl(url, parameterMap, signKey));
+	}
+	
+	/**
+	 * 测试获取AccessToken
+	 * @author ZDF
+	 * @date 2015年4月16日
+	 * @throws Exception
+	 */
+	@Test
+	public void testAccessToken() throws Exception{
+		String appId = "dwc37d54bb8cd9df492";
+		String appSecret = "6e3d430af98ea7639bfdc19c3a30da5e";
+		appSecret = AES.encryptToBase64(appSecret, appSecret);
+
+		String url = "https://service.xiaowo.me/api/auth/token";
+
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("appId", appId);
+		parameterMap.put("appSecret", appSecret);
+
+		HttpResult httpResult = HttpUtils.sendGet(url, parameterMap);
+		String resultString = httpResult.getContent();
+		System.out.println(resultString);
+		
+		Map<String, Object> result = JSON.parseObject(resultString, new TypeReference<Map<String, Object>>(){});
+		Integer errcode = (Integer) result.get("errcode");
+		if(errcode == 0){
+			System.out.println("AccessToken：" + result.get("access_token"));
+			System.out.println("ExpiresIn：" + result.get("expires_in"));
+		}else{
+			System.out.println("获取失败：" + result.get("message"));
+		}
+	}
+
+	/**
+	 * 获取晋商贷用户ID
+	 * @throws Exception
+	 */
+	@Test
+	public void testJsdUser() throws Exception{
+		String appSecret = "6e3d430af98ea7639bfdc19c3a30da5e";
+		String accessToken = "dv3xjT2aXnKYOlGQjdCHO7DIFPppZ6fiWrDR1hRlumgF82Ga3eBcvyLLsWnX41xspKseYDeEWtoKqfqmHh2xWGMwwyRwzt8gbAoLcGr7cmFXgWQlcI90cohpzpEjmk4f";
+		String openId = "dwo2e2e2f0b18cc3aed";
+		
+		String url = "https://service.xiaowo.me/api/auth/jsd/check";
+			
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("accessToken", accessToken);
+		parameterMap.put("openId", openId);
+		
+		HttpResult httpResult = HttpUtils.sendGet(url, parameterMap);
+		String resultString = httpResult.getContent();
+		System.out.println("返回信息：" + resultString);
+		
+		Map<String, Object> result = JSON.parseObject(resultString, new TypeReference<Map<String, Object>>(){});
+		Integer errcode = (Integer) result.get("errcode");
+		if(errcode == 0){
+			String data = (String) result.get("data");
+			System.out.println("获取密文消息：" + data);
+			
+			data = AES.decrypt(Base64.decodeBase64(data), appSecret);
+			System.out.println("获取解密消息：" + data);
+		}else{
+			System.out.println("获取失败：" + result.get("message"));
+		}
+	}
+	
+	/**
+	 * 获取用户信息
+	 * @throws Exception
+	 */
+	@Test
+	public void testInfo() throws Exception{
+		String appSecret = "6e3d430af98ea7639bfdc19c3a30da5e";
+		String accessToken = "dv3xjT2aXnKYOlGQjdCHO7DIFPppZ6fiWrDR1hRlumgF82Ga3eBcvyLLsWnX41xspKseYDeEWtoKqfqmHh2xWGMwwyRwzt8gbAoLcGr7cmFXgWQlcI90cohpzpEjmk4f";
+		String openId = "dwo2e2e2f0b18cc3aed";
+		
+		String url = "https://service.xiaowo.me/api/auth/user/info";
+			
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("accessToken", accessToken);
+		parameterMap.put("openId", openId);
+		
+		HttpResult httpResult = HttpUtils.sendGet(url, parameterMap);
+		String resultString = httpResult.getContent();
+		System.out.println("返回信息：" + resultString);
+		
+		Map<String, Object> result = JSON.parseObject(resultString, new TypeReference<Map<String, Object>>(){});
+		Integer errcode = (Integer) result.get("errcode");
+		if(errcode == 0){
+			String data = (String) result.get("data");
+			System.out.println("获取密文消息：" + data);
+			
+			data = AES.decrypt(Base64.decodeBase64(data), appSecret);
+			System.out.println("获取解密消息：" + data);
+		}else{
+			System.out.println("获取失败：" + result.get("message"));
+		}
+	}
+	
+	/**
+	 * 检查手机号
+	 */
+	@Test
+	public void testCheckMobile(){
+		String accessToken = "dv3xjT2aXnKYOlGQjdCHO7DIFPppZ6fiWrDR1hRlumgF82Ga3eBcvyLLsWnX41xspKseYDeEWtoKqfqmHh2xWGMwwyRwzt8gbAoLcGr7cmFXgWQlcI90cohpzpEjmk4f";
+		String openId = "dwo2e2e2f0b18cc3aed";
+		String mobile = "18636611869";
+		
+		String url = "https://service.xiaowo.me/api/auth/mobile/check";
+			
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("accessToken", accessToken);
+		parameterMap.put("openId", openId);
+		parameterMap.put("mobile", mobile);
+		
+		HttpResult httpResult = HttpUtils.sendGet(url, parameterMap);
+		String resultString = httpResult.getContent();
+		System.out.println("返回信息：" + resultString);
+	}
+	
+	/**
+	 * 设置手机号
+	 */
+	@Test
+	public void testSetMobile(){
+		String accessToken = "dv3xjT2aXnKYOlGQjdCHO7DIFPppZ6fiWrDR1hRlumgF82Ga3eBcvyLLsWnX41xspKseYDeEWtoKqfqmHh2xWGMwwyRwzt8gbAoLcGr7cmFXgWQlcI90cohpzpEjmk4f";
+		String openId = "dwo2e2e2f0b18cc3aed";
+		String mobile = "18636611860";
+		
+		String url = "https://service.xiaowo.me/api/auth/mobile/set";
+			
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("accessToken", accessToken);
+		parameterMap.put("openId", openId);
+		parameterMap.put("mobile", mobile);
+		
+		HttpResult httpResult = HttpUtils.sendGet(url, parameterMap);
+		String resultString = httpResult.getContent();
+		System.out.println("返回信息：" + resultString);
+	}
+	
+	/**
+	 * 设置邮箱
+	 */
+	@Test
+	public void testSetEmail(){
+		String accessToken = "dv3xjT2aXnKYOlGQjdCHO7DIFPppZ6fiWrDR1hRlumgF82Ga3eBcvyLLsWnX41xspKseYDeEWtoKqfqmHh2xWGMwwyRwzt8gbAoLcGr7cmFXgWQlcI90cohpzpEjmk4f";
+		String openId = "dwo2e2e2f0b18cc3aed";
+		String email = "zhu.defu@163.com";
+		
+		String url = "https://service.xiaowo.me/api/auth/email/set";
+			
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("accessToken", accessToken);
+		parameterMap.put("openId", openId);
+		parameterMap.put("email", email);
+		
+		HttpResult httpResult = HttpUtils.sendGet(url, parameterMap);
+		String resultString = httpResult.getContent();
+		System.out.println("返回信息：" + resultString);
+	}
+	
+	/**
+	 * 设置头像
+	 */
+	@Test
+	public void testSetAvatar(){
+		String accessToken = "dv3xjT2aXnKYOlGQjdCHO7DIFPppZ6fiWrDR1hRlumgF82Ga3eBcvyLLsWnX41xspKseYDeEWtoKqfqmHh2xWGMwwyRwzt8gbAoLcGr7cmFXgWQlcI90cohpzpEjmk4f";
+		String openId = "dwo2e2e2f0b18cc3aed";
+		String avatar = "https://service.xiaowo.me/api/auth/avatar/set2222";
+		
+		String url = "https://service.xiaowo.me/api/auth/avatar/set";
+			
+		Map<String, Object> parameterMap = new HashMap<String, Object>();
+		parameterMap.put("accessToken", accessToken);
+		parameterMap.put("openId", openId);
+		parameterMap.put("avatar", avatar);
+		
+		HttpResult httpResult = HttpUtils.sendGet(url, parameterMap);
+		String resultString = httpResult.getContent();
+		System.out.println("返回信息：" + resultString);
+	}
+}

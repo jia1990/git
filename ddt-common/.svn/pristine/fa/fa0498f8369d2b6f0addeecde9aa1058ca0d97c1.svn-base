@@ -1,0 +1,57 @@
+/**
+ * 
+ */
+package com.rongdu.common.util;
+
+import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
+
+import com.itextpdf.text.log.SysoLogger;
+
+
+/**
+ * @描述：
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月15日 
+ */
+public class CalendarUtil {
+	
+/**
+     * 
+     * @param date1 <String>
+     * @param date2 <String>
+     * @return int
+     * @throws ParseException
+     */
+    public static int getMonthSpace(Date beginDate,Date endDate)
+            throws ParseException {
+
+    	 Calendar calbegin = Calendar.getInstance();
+    	 Calendar calend = Calendar.getInstance();
+    	 calbegin.setTime(beginDate);
+    	 calend.setTime(endDate);
+    	 int m_begin = calbegin.get(Calendar.MONTH)+1; //获得合同开始日期月份
+    	 int m_end = calend.get(Calendar.MONTH)+1;
+    	  //获得合同结束日期月份
+    	 int checkmonth = m_end-m_begin+(calend.get(Calendar.YEAR)-calbegin.get(Calendar.YEAR))*12;
+    	//获得合同结束日期于开始的相差月份
+    	 return checkmonth;
+
+    }
+    
+    
+    public static void main(String[] args) throws ParseException {
+    	
+    	//2014-12-01 09:20:45
+    	
+    	//2015-12-01 09:20:45
+    	
+        System.out.println(CalendarUtil.getMonthSpace(DateUtil.getDateByFullDateStr("2014-12-01 09:20:45"),new Date()));
+		
+	}
+
+    
+    
+
+}

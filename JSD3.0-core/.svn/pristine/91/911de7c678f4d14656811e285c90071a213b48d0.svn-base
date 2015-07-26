@@ -1,0 +1,46 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import java.util.Date;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.ActivityDao;
+import com.ddtkj.p2psys.redpacket.domain.Activity;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+
+@Repository("activityDao")
+public class ActivityDaoImpl extends BaseDaoImpl<Activity> implements ActivityDao {
+
+	@Override
+	public Activity getEntityById(long id) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("id",Operators.EQ,id);
+		return findByCriteriaForUnique(param) ;
+	}
+
+	@Override
+	public PageDataList<Activity> getEntityByName(String name,int currentPage,int pagenum) {
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pagenum);
+		param.addParam("actName",Operators.LIKE,name);
+		return findPageList(param) ;
+	}
+
+	@Override
+	public PageDataList<Activity> getEntityList(QueryParam param,int currentPage,int pagenum) {
+		// TODO Auto-generated method stub
+		param.addPage(currentPage, pagenum);
+		return  findPageList(param);
+	}
+
+	@Override
+	public PageDataList<Activity> getEntityListBetweenTime(Date date,int currentPage,int pagenum ){
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pagenum) ;
+		param.addParam("begintime",Operators.LT,date);
+		param.addParam("endtime", Operators.GT,date) ;
+		return findPageList(param);
+	}
+
+}

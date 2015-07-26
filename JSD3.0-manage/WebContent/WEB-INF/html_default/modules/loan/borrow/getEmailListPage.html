@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>借款人邮箱</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+    $(function() {
+    	dataGrid = $('#dataGrid').datagrid({
+        //$('#dataGrid').datagrid({
+           
+        	
+        	url : '/modules/loan/borrow/getEmailList.html?userType='+${userType}+'&borrowType='+${borrowType!},
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            nowrap:true,
+            rownumbers:true,
+            singleSelect:true,
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            idField : 'userId',
+            sortOrder : 'asc',
+            sortName : 'userId',
+            checkOnSelect : false,
+			selectOnCheck : false,
+            
+            title:"提示: 点击用户邮箱地址即为选中,选中后对应数据行会变色。",
+            columns : [ [
+              { field: 'userName', title: '借款人用户名', width:100, sortable:false },
+              { field: 'realName', title: '借款人姓名', width:100, sortable:false },
+              { field: 'email', title: '邮箱地址', width:100,sortable:false },
+              { field: 'mobilePhone', title: '手机', width:100,sortable:false }
+             ]]
+        }); 
+    });
+    var getSelected = function($dialog, $input) {
+    	var selected = $('#dataGrid').datagrid('getSelected');
+    	$input.val(selected.email);
+    	$dialog.dialog('destroy');
+    };
+</script>
+<style type="text/css">
+		.datagrid-row-over,.datagrid-header td.datagrid-header-over {
+		  background:#DFDFDF;/*#C1E0FF*/
+		  color: #000000;
+		  cursor: default;
+		}
+		.datagrid-row-selected {
+		  background:#C1E0FF;
+		  color: #FFF;
+		}
+</style>
+<body>
+<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false"
+			id="searchBox">
+			<a class="searchTitle" style="color: #0642A4;font-weight: 500px;font-size:14px;">提示 : 点击用户邮箱地址即为选中,选中后对应数据行会变色。</a>
+			<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+					<li>借款人邮箱：<input type="text" name="userName" class="type" autocomplete="off" /></li>
+					<li>手机：<input type="text" name="phone" class="type" autocomplete="off" /></li>
+					
+					<li><a href="javascript:void(0);" class="searchBtn"
+						onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a
+						href="javascript:void(0);" class="searchBtn"
+						onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a>
+					</li>
+				</ul>
+			</form>
+		</div>
+		<!-- 列表信息 -->
+		<div data-options="region:'center',border:false," >
+	    	<table id="dataGrid" title="提示: 点击用户邮箱地址即为选中,选中后对应数据行会变色。"></table>
+		</div>
+</div>
+</body>
+</html>
+
+

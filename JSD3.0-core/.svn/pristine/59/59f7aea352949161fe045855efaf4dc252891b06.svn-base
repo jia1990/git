@@ -1,0 +1,92 @@
+package com.ddtkj.p2psys.article.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+
+/**
+ * 
+ * @描述：文章图片实体（暂应用于风险保证金）
+ * // JSDP-131  2015年5月20日   sxy  start
+ * @作者:sunxiaoyong@ddtkj.com
+ * @创建时间: 2015年5月20日
+ */
+@Entity
+@Table(name = "t_jsd_article_pic")
+public class ArticlePic implements Serializable {
+
+	private static final long serialVersionUID = 8957749146358922186L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+
+	// 文章ID
+	private long articleId;
+
+	// 图片路径
+	private String picUrl;
+
+	// 图片显示的类型
+	private String type;
+
+	// 添加时间
+	private Date addTime;
+
+	// 添加人
+	private String addUser;
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+	
+	public long getArticleId() {
+		return articleId;
+	}
+
+	public void setArticleId(long articleId) {
+		this.articleId = articleId;
+	}
+
+	public String getPicUrl() {
+		return picUrl;
+	}
+
+	public void setPicUrl(String picUrl) {
+		this.picUrl = picUrl;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddUser() {
+		return addUser;
+	}
+
+	public void setAddUser(String addUser) {
+		this.addUser = addUser;
+	}
+
+}

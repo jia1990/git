@@ -1,0 +1,560 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+
+/**
+ * @描述:提现规则类 （已废弃）
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月15日
+ */
+public class ExtractCashChargeRuleCheck extends RuleCheck {
+
+	private int cash_status;// 提现规则开启状态:1开启,0:关闭
+	private CashMaxLimit cash_max_limit;// 最大提现金额规则
+	private TenderCashFree tender_cash_free;// 投资人免费提现规则
+	private int tender_cash_type;// 投资人提现收取费率方式 0：按照提现金额比例收取 1:固定金额收取
+	private TenderCashRate tender_cash_rate;// 投资人提现费率
+	private TenderCashFee tender_cash_fee;// 投资人提现费
+	private BorrowerCashFree borrower_cash_free;// 借款人免费提现规则
+	private int borrower_cash_type;// 借款人提现收取费率方式 0：按照提现金额比例收取 1:固定金额收取
+	private double borrower_cash_rate;// 借款人提现费率
+	private double borrower_cash_fee;// 借款人提现费
+
+	@Override
+	public boolean checkRule() {
+
+		return false;
+	}
+
+	/**
+	 * 投资人免费提现规则
+	 * 
+	 * @author xinggenwang@ddtkj.com
+	 * */
+	private class TenderCashFree implements java.io.Serializable{
+		public int status;// 1开启,0关闭
+		public int times;// 免费次数
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public int getTimes() {
+			return times;
+		}
+
+		public void setTimes(int times) {
+			this.times = times;
+		}
+
+	};
+
+	/**
+	 * 最大提现限制
+	 * 
+	 * @author xinggenwang@ddtkj.com
+	 * */
+	private class CashMaxLimit implements java.io.Serializable{
+
+		private Tender tender;// 投资人
+		private Borrow borrower;// 借款人
+
+		private class Tender implements java.io.Serializable{
+			private int status;// 1开启:0关闭
+			private double amount;// 限制金额
+
+			public int getStatus() {
+				return status;
+			}
+
+			public void setStatus(int status) {
+				this.status = status;
+			}
+
+			public double getAmount() {
+				return amount;
+			}
+
+			public void setAmount(double amount) {
+				this.amount = amount;
+			}
+
+		};
+
+		private class Borrow  implements java.io.Serializable{
+			private int status;
+			private double amount;
+
+			public int getStatus() {
+				return status;
+			}
+
+			public void setStatus(int status) {
+				this.status = status;
+			}
+
+			public double getAmount() {
+				return amount;
+			}
+
+			public void setAmount(double amount) {
+				this.amount = amount;
+			}
+
+		}
+
+		public Tender getTender() {
+			return tender;
+		}
+
+		public void setTender(Tender tender) {
+			this.tender = tender;
+		}
+
+		public Borrow getBorrower() {
+			return borrower;
+		}
+
+		public void setBorrower(Borrow borrower) {
+			this.borrower = borrower;
+		}
+
+	};
+
+	/**
+	 * 投资人按照提现金额比例收取费用规则
+	 * */
+	public static class TenderCashRate implements java.io.Serializable{
+		public double member_normal;// 普通会员
+		public MemberVIP vip;
+
+		public double getMember_normal() {
+			return member_normal;
+		}
+
+		public void setMember_normal(double member_normal) {
+			this.member_normal = member_normal;
+		}
+
+		public MemberVIP getVip() {
+			return vip;
+		}
+
+		public void setVip(MemberVIP vip) {
+			this.vip = vip;
+		}
+
+	};
+
+	/**
+	 * 投资人提现收取固定的金额
+	 * */
+	public static class TenderCashFee implements java.io.Serializable{
+		public double member_normal;// 普通会员
+		public MemberVIP vip;
+
+		public double getMember_normal() {
+			return member_normal;
+		}
+
+		public void setMember_normal(double member_normal) {
+			this.member_normal = member_normal;
+		}
+
+		public MemberVIP getVip() {
+			return vip;
+		}
+
+		public void setVip(MemberVIP vip) {
+			this.vip = vip;
+		}
+
+	}
+
+	/**
+	 * vip会员
+	 * 
+	 * */
+	public static class MemberVIP implements java.io.Serializable{
+		private Default def;
+		public double member_vip_normal;// VIP会员
+		public double member_vip_silver;// VIP银牌会员
+		public double member_vip_gold;// VIP金牌会员
+		public double member_vip_diamond;// VIP砖石会员
+
+		public Default getDef() {
+			return def;
+		}
+
+		public void setDef(Default def) {
+			this.def = def;
+		}
+
+		public double getMember_vip_normal() {
+			return member_vip_normal;
+		}
+
+		public void setMember_vip_normal(double member_vip_normal) {
+			this.member_vip_normal = member_vip_normal;
+		}
+
+		public double getMember_vip_silver() {
+			return member_vip_silver;
+		}
+
+		public void setMember_vip_silver(double member_vip_silver) {
+			this.member_vip_silver = member_vip_silver;
+		}
+
+		public double getMember_vip_gold() {
+			return member_vip_gold;
+		}
+
+		public void setMember_vip_gold(double member_vip_gold) {
+			this.member_vip_gold = member_vip_gold;
+		}
+
+		public double getMember_vip_diamond() {
+			return member_vip_diamond;
+		}
+
+		public void setMember_vip_diamond(double member_vip_diamond) {
+			this.member_vip_diamond = member_vip_diamond;
+		}
+
+	}
+
+	/**
+	 * 默认设置
+	 * */
+	public static class Default implements java.io.Serializable{
+		private int status;
+		private double value;
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public double getValue() {
+			return value;
+		}
+
+		public void setValue(double value) {
+			this.value = value;
+		}
+
+	};
+
+	/**
+	 * 借款人免费提现规则
+	 * 
+	 * @author xinggenwang@ddtkj.com
+	 * */
+	public static class BorrowerCashFree implements java.io.Serializable{
+		public int status;// 1开启,0关闭
+		public int times;// 免费次数
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public int getTimes() {
+			return times;
+		}
+
+		public void setTimes(int times) {
+			this.times = times;
+		}
+
+	};
+
+	/**
+	 * 最大提现规则
+	 * 
+	 * @param userType
+	 *            投资人、借款人
+	 * @return map key:(true,有限制,false无限制) value:限制金额
+	 * **/
+	public Map<String, Object> maxMoneyRule(String userType) {
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		if (UserConstant.USER_SORT_BORROW.equals(userType)) {
+
+			int status = cash_max_limit.borrower.getStatus();
+			double amount = cash_max_limit.borrower.getAmount();
+			boolean v = status == 1 ? true : false;
+			data.put("money", amount);
+			data.put("status", v);
+
+		} else {
+
+			int status = cash_max_limit.tender.getStatus();
+			double amount = cash_max_limit.tender.getAmount();
+			boolean v = status == 1 ? true : false;
+			data.put("money", amount);
+			data.put("status", v);
+		}
+		return data;
+	}
+
+	/**
+	 * 获取免费提现规则
+	 * 
+	 * @param userType
+	 *            投资人、借款人
+	 * @return map key:(true,有限制,false无限制) value:限制次数
+	 * **/
+	public Map<String, Object> freeRule(String userType) {
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		if (UserConstant.USER_SORT_BORROW.equals(userType)) {
+
+			int status = tender_cash_free.status;
+			int times = tender_cash_free.times;
+			boolean v = status == 1 ? true : false;
+			data.put("status", v);
+			data.put("times", times);
+
+		} else {
+			int status = borrower_cash_free.status;
+			int times = borrower_cash_free.times;
+			boolean v = status == 1 ? true : false;
+			data.put("status", v);
+			data.put("times", times);
+		}
+		return data;
+
+	}
+
+	/**
+	 * 获取提现收费规则
+	 * 
+	 * @param userType
+	 *            投资人、借款人
+	 * @param memberLevel
+	 *            投资人会员级别
+	 *            
+	 *  @return Map
+	 *                   key:fee_type (0,1)   0时：cash_rate，1、cash_fee
+	 * */
+
+	public Map<String, Object> feeRule(String userType, String memberLevel) {
+		Map<String, Object> data = new HashMap<String, Object>();
+		
+		// 借款人
+		if (UserConstant.USER_SORT_BORROW.equals(userType) || memberLevel==null||"".equals(memberLevel)) {
+			// 提现比例
+			if (borrower_cash_type == 0) {
+				data.put("fee_type", 0);
+				data.put("cash_rate", borrower_cash_rate);
+
+			} else {// 固定金额
+				data.put("fee_type", 1);
+				data.put("cash_fee", borrower_cash_fee);
+			}
+
+		} else {
+			// 投资人
+			if (tender_cash_type == 0) {
+				data.put("fee_type", 0);
+				//普通会员
+				if (UserConstant.MEMBER_LEVEL_NORMAL.equals(memberLevel)) {
+					data.put("cash_rate", tender_cash_rate.member_normal);
+					return data;
+				}
+				// 所有默认的VIP设置开启
+				if (tender_cash_rate.vip.def.status == 1) {
+					data.put("cash_rate", tender_cash_rate.vip.def.value);
+					return data;
+				} else {
+					// 普通
+					if (UserConstant.MEMBER_LEVEL_VIP_NORMAL
+							.equals(memberLevel)) {
+						data.put("cash_rate",
+								tender_cash_rate.vip.member_vip_normal);
+
+						// 银牌
+					} else if (UserConstant.MEMBER_LEVEL_VIP_SILVER
+							.equals(memberLevel)) {
+						data.put("cash_rate",
+								tender_cash_rate.vip.member_vip_silver);
+						// 金牌
+					} else if (UserConstant.MEMBER_LEVEL_VIP_GOLD
+							.equals(memberLevel)) {
+						data.put("cash_rate",
+								tender_cash_rate.vip.member_vip_gold);
+						// 钻石
+					} else if (UserConstant.MEMBER_LEVEL_VIP_DIAMOND
+							.equals(memberLevel)) {
+						data.put("cash_rate",
+								tender_cash_rate.vip.member_vip_diamond);
+					}
+
+				}
+
+			} else {// 固定金额
+				data.put("fee_type", 1);
+				if (UserConstant.MEMBER_LEVEL_NORMAL.equals(memberLevel)) {
+					data.put("cash_fee", tender_cash_fee.member_normal);
+					return data;
+				}
+
+				// 所有默认的VIP设置开启
+				if (tender_cash_fee.vip.def.status == 1) {
+					data.put("cash_fee", tender_cash_fee.vip.def.value);
+					return data;
+				} else {
+					// 普通
+					if (UserConstant.MEMBER_LEVEL_VIP_NORMAL
+							.equals(memberLevel)) {
+						data.put("cash_fee",
+								tender_cash_fee.vip.member_vip_normal);
+
+						// 银牌
+					} else if (UserConstant.MEMBER_LEVEL_VIP_SILVER
+							.equals(memberLevel)) {
+						data.put("cash_fee",
+								tender_cash_fee.vip.member_vip_silver);
+						// 金牌
+					} else if (UserConstant.MEMBER_LEVEL_VIP_GOLD
+							.equals(memberLevel)) {
+						data.put("cash_fee",
+								tender_cash_fee.vip.member_vip_gold);
+						// 钻石
+					} else if (UserConstant.MEMBER_LEVEL_VIP_DIAMOND
+							.equals(memberLevel)) {
+						data.put("cash_fee",
+								tender_cash_fee.vip.member_vip_diamond);
+					}
+
+				}
+
+			}
+
+		}
+
+		return data;
+
+	}
+
+	public int getCash_status() {
+		return cash_status;
+	}
+
+	public void setCash_status(int cash_status) {
+		this.cash_status = cash_status;
+	}
+
+	public CashMaxLimit getCash_max_limit() {
+		return cash_max_limit;
+	}
+
+	public void setCash_max_limit(CashMaxLimit cash_max_limit) {
+		this.cash_max_limit = cash_max_limit;
+	}
+
+	public TenderCashFree getTender_cash_free() {
+		return tender_cash_free;
+	}
+
+	public void setTender_cash_free(TenderCashFree tender_cash_free) {
+		this.tender_cash_free = tender_cash_free;
+	}
+
+	public int getTender_cash_type() {
+		return tender_cash_type;
+	}
+
+	public void setTender_cash_type(int tender_cash_type) {
+		this.tender_cash_type = tender_cash_type;
+	}
+
+	public TenderCashRate getTender_cash_rate() {
+		return tender_cash_rate;
+	}
+
+	public void setTender_cash_rate(TenderCashRate tender_cash_rate) {
+		this.tender_cash_rate = tender_cash_rate;
+	}
+
+	public TenderCashFee getTender_cash_fee() {
+		return tender_cash_fee;
+	}
+
+	public void setTender_cash_fee(TenderCashFee tender_cash_fee) {
+		this.tender_cash_fee = tender_cash_fee;
+	}
+
+	public BorrowerCashFree getBorrower_cash_free() {
+		return borrower_cash_free;
+	}
+
+	public void setBorrower_cash_free(BorrowerCashFree borrower_cash_free) {
+		this.borrower_cash_free = borrower_cash_free;
+	}
+
+	public int getBorrower_cash_type() {
+		return borrower_cash_type;
+	}
+
+	public void setBorrower_cash_type(int borrower_cash_type) {
+		this.borrower_cash_type = borrower_cash_type;
+	}
+
+	public double getBorrower_cash_rate() {
+		return borrower_cash_rate;
+	}
+
+	public void setBorrower_cash_rate(double borrower_cash_rate) {
+		this.borrower_cash_rate = borrower_cash_rate;
+	}
+
+	public double getBorrower_cash_fee() {
+		return borrower_cash_fee;
+	}
+
+	public void setBorrower_cash_fee(double borrower_cash_fee) {
+		this.borrower_cash_fee = borrower_cash_fee;
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = ExtractCashChargeRuleCheck.class
+				.getResourceAsStream("提现规则验证JOSN数据.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<ExtractCashChargeRuleCheck> clazz = ExtractCashChargeRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		ExtractCashChargeRuleCheck test = (ExtractCashChargeRuleCheck) jsonObj;
+
+		System.out.println(test.toString());
+
+	}
+
+}

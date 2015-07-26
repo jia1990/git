@@ -1,0 +1,63 @@
+package com.ddtkj.p2psys.award.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.award.dao.TakeWayDao;
+import com.ddtkj.p2psys.award.domain.TakeWay;
+import com.ddtkj.p2psys.award.service.TakeWayService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+
+@Repository("takeWayService")
+public class TakeWayServiceImpl implements TakeWayService{
+	@Resource
+	private TakeWayDao takeWayDao;
+	
+	/**
+	 * 查询参与方式并分页
+	 */
+	@Override
+	public PageDataList<TakeWay> getPageList(TakeWay model, int currentPage,
+			int pageSize) {
+		
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pageSize);
+		if (!StringUtil.isBlank(model.getActWay())) {
+			param.addParam("actWay", Operators.LIKE, model.getActWay());
+		}
+		param.addOrder(OrderType.DESC, "id");
+		return takeWayDao.findPageList(param);
+	}
+	
+	/**
+	 * 添加活动参与方式
+	 */
+	@Override
+	public void addTakeWay(TakeWay takeWay) {
+		
+		takeWayDao.save(takeWay);
+	}
+	
+	/**
+	 * 根据id查询参与方式
+	 */
+	@Override
+	public TakeWay findTakeWayById(int id) {
+		
+		return takeWayDao.find(id);
+	}
+	
+	/**
+	 * 更新参与方式
+	 */
+	@Override
+	public TakeWay updateTakeWay(TakeWay takeWay) {
+		
+		return takeWayDao.update(takeWay);
+	}
+	
+}

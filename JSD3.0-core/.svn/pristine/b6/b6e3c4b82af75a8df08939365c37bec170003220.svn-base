@@ -1,0 +1,117 @@
+
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpWeixinLogDao;
+import com.ddtkj.p2psys.redpacket.domain.RpWeixinLog;
+import com.ddtkj.p2psys.redpacket.exception.RpWeixinLogException;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.DateUtil;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-5-22   
+ */
+@Repository("rpWeixinLogDao")
+public class RpWeixinLogDaoImpl extends BaseDaoImpl<RpWeixinLog> implements RpWeixinLogDao {
+
+	@Override
+	public int verifyCondition(Map<String, Object> map) {
+		String sql = "SELECT COUNT(1) FROM t_jsd_rp_wx_log WHERE phone = :phone AND open_id = :openId";
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("phone", map.get("mobile"));
+		query.setParameter("openId", map.get("open_id"));
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return Integer.parseInt(obj.toString());
+		}
+		return 0;
+	}
+ 
+	@Override
+	public int saveWeixinReward(Map<String, Object> map) {
+		String sql = "INSERT INTO t_jsd_rp_wx_log (phone, money, open_id, type, add_time, sn) VALUES (?, ?, ?, ?, ?, ?) ";
+		int result = 0;
+		try {
+			Query query = em.createNativeQuery(sql).setParameter(1, map.get("mobile")).setParameter(2, map.get("money")).setParameter(3, map.get("open_id"));
+			query.setParameter(4, map.get("type"));
+			query.setParameter(5, DateUtil.getDate(map.get("add_time").toString()));
+			query.setParameter(6, map.get("sn"));
+			result = query.executeUpdate();
+		} catch (Exception e) {
+			result = 0;
+		}
+		return result;
+	}
+
+	@Override
+	public int updateWeixinLogStatus(String status, String preStatus, String sn, String phone) {
+		String sql = "UPDATE RpWeixinLog SET status = :status WHERE status = :preStatus AND sn = :sn AND phone = :phone ";
+		String[] names = {"status", "preStatus", "sn", "phone"};
+		Object[] values = {status, preStatus, sn, phone};
+		int count = updateByJpql(sql, names, values);
+		if (count < 1) {
+			throw new RpWeixinLogException("微信奖励红包产生记录更新失败");
+		}
+		return count;
+	}
+
+	@Override
+	public RpWeixinLog getRpWeixinLogByStatus(String status) {
+		return findObjByProperty("status", status);
+	}
+
+	@Override
+	public List<RpWeixinLog> getRpWeixinLogList(String status) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", status);
+		return findByCriteria(param);
+	}
+
+	@Override
+	public int updateWeixinLogStatusByPhone(RpWeixinLog rpWeixinLog) {
+		String sql = "UPDATE t_jsd_rp_wx_log SET status = :status WHERE status = :preStatus AND sn = :sn AND phone = :phone ";
+		String[] names = {"staus", "preStatus", "sn", "phone"};
+		Object[] values = {rpWeixinLog.getStatus(), RpWeixinLog.STATUS_NOUSE, rpWeixinLog.getSn(), rpWeixinLog.getPhone()};
+		int count = updateBySql(sql, names, values);
+		if (count < 1) {
+			throw new RpWeixinLogException("微信奖励红包产生记录更新失败");
+		}
+		return count;
+	}
+
+	@Override
+	public double getRpWeixinLogMoney(String phone, String sn, String status) {
+		String sql = "SELECT SUM(money) from t_jsd_rp_wx_log WHERE phone = :phone AND sn = :sn AND status = :status ";
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("phone", phone);
+		query.setParameter("sn", sn);
+		query.setParameter("status", status);
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return Double.parseDouble(obj.toString());
+		}
+		return 0;
+	}
+
+	@Override
+	public List<RpWeixinLog> getRpWeixinLogListByPhone(String phone, String sn,
+			String status) {
+		String sql = "SELECT l.* from t_jsd_rp_wx_log l WHERE phone = :phone AND sn = :sn AND status = :status ";
+		Query query = em.createNativeQuery(sql, RpWeixinLog.class);
+		query.setParameter("phone", phone);
+		query.setParameter("sn", sn);
+		query.setParameter("status", status);
+		List<RpWeixinLog> list = (List<RpWeixinLog>)query.getResultList();
+		return list;
+	}
+	
+}

@@ -1,0 +1,194 @@
+package com.ddtkj.p2psys.credit.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * 债权转让 扣除冻结 金额，生成待收本金
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class CreditReCallDecuctFreezeExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.CREDIT_RECALL;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId",
+				super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType,
+				super.toUser);
+		// 操作金额
+		log.setRechargeMoney(rechargeMoney);
+		log.setAwardMoney(awardMoney);
+		log.setInterestMoney(interestMoney);
+		log.setReturnCapitalMoney(returnCapitalMoney);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		// 账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		// 账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		/*
+		 * log.setMoney(super.money); log.setTotal(account.getTotal());
+		 * log.setUseMoney(account.getUseMoney());
+		 * log.setNoUseMoney(account.getNoUseMoney());
+		 * log.setCollection(account.getCollection());
+		 */
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte) 0);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		// 账户各类可用金额 返回
+		account.setRechargeUsable(BigDecimalUtil.add(
+				account.getRechargeUsable(), rechargeMoney));
+
+		account.setAwardUsable(BigDecimalUtil.add(account.getAwardUsable(),
+				awardMoney));
+
+		account.setInterestUsable(BigDecimalUtil.add(
+				account.getInterestUsable(), interestMoney));
+
+		account.setReturnCapitalUsable(BigDecimalUtil.add(
+				account.getReturnCapitalUsable(), returnCapitalMoney));
+
+		account.setRpDynamicTotal(BigDecimalUtil.add(
+				account.getRpDynamicTotal(), rpDynamicMoney));
+
+		// 账户各类冻结金额 解冻
+		account.setFreezeUseAward(BigDecimalUtil.add(
+				account.getFreezeUseAward(), -awardMoney));
+
+		account.setFreezeUseReturnCapital(BigDecimalUtil.add(
+				account.getFreezeUseReturnCapital(), -returnCapitalMoney));
+
+		account.setFreezeUseInterest(BigDecimalUtil.add(
+				account.getFreezeUseInterest(), -interestMoney));
+
+		account.setFreezeUseRecharge(BigDecimalUtil.add(
+				account.getFreezeUseRecharge(), -rechargeMoney));
+
+		account.setFreezeRpDynamic(BigDecimalUtil.add(
+				account.getFreezeRpDynamic(), -rpDynamicMoney));
+
+		//JSDP-35 gjh 2015-4-30 start
+		if (account.getFreezeUseRecharge() < 0) {
+			throw new AccountException("债权撤销，扣除购买者【" + user.getUserName()
+					+ "】冻结充值可用金额不足！", 1);
+		}
+		if (account.getFreezeUseInterest() < 0) {
+			throw new AccountException("债权撤销，扣除购买者【" + user.getUserName()
+					+ "】冻结利息可用金额不足！", 1);
+		}
+		if (account.getFreezeUseAward() < 0) {
+			throw new AccountException("债权撤销，扣除购买者【" + user.getUserName()
+					+ "】冻结奖励可用金额不足！", 1);
+		}
+		if (account.getFreezeUseReturnCapital() < 0) {
+			throw new AccountException("债权撤销，扣除购买者【" + user.getUserName()
+					+ "】冻结回款可用金额不足！", 1);
+		}
+		//JSDP-35 gjh 2015-4-30 end
+		// 更新
+		accountDao.update(account);
+	}
+
+	@Override
+	public void handleAccountSum() {
+		/*
+		 * // 先取出更新前的account_sum AccountSum accountSum =
+		 * accountSumDao.findByUserId(super.user.getUserId()); // 取出可能扣款的值
+		 * double huikuan = accountSum.getAccumulativeReturnedMoney(); double
+		 * usedHuikuan = accountSum.getAccumulativeUsedReturnedMoney(); double
+		 * useHuikuan = BigDecimalUtil.sub(huikuan, usedHuikuan);
+		 * 
+		 * double huikuanInterest =
+		 * accountSum.getAccumulativeReturnMoneyInterest(); double
+		 * usedHuikuanInterest =
+		 * accountSum.getAccumulativeUsedReturnMoneyInterest(); double
+		 * useHuikuanInterest = BigDecimalUtil.sub(huikuanInterest,
+		 * usedHuikuanInterest); useHuikuan = BigDecimalUtil.add(useHuikuan,
+		 * useHuikuanInterest); // 扣除回款的account_sum_log double currHuikuan = 0;
+		 * // 本次使用的回款最大不能超过可用回款， currHuikuan = (useHuikuan >= money) ? money :
+		 * (useHuikuan); if (currHuikuan > 0) { int enableHuikuan =
+		 * Global.getInt("huikuan_enable"); Map tranData = Global.getTransfer();
+		 * Borrow borrow = (Borrow) (tranData.get("borrow")); BorrowTender
+		 * tender = (BorrowTender) (tranData.get("tender"));
+		 * 
+		 * // 回款规则配置 秒标、净值标、天标投标不使用回款额度，不产生回款续投奖励 HuikuanConfRuleCheck rule =
+		 * (HuikuanConfRuleCheck) Global.getRuleCheck("huikuanConf"); if (rule
+		 * != null) { double lowestHuikuan = rule.lowest_huikuan; int miaoRefuse
+		 * = rule.miaoRefuse; int jinRefuse = rule.jinRefuse; int dayRefuse =
+		 * rule.dayRefuse; if ((miaoRefuse != 1 || borrow.getType() !=
+		 * Borrow.TYPE_SECOND) && (jinRefuse != 1 || borrow.getType() !=
+		 * Borrow.TYPE_PROPERTY) && (dayRefuse != 1 ||
+		 * borrow.getBorrowTimeType() != 1) && enableHuikuan == 1 &&
+		 *//** tender.getAutoRepurchase() == 1 && **/
+		/*
+		 * currHuikuan >= lowestHuikuan) {
+		 * 
+		 * this.huikuanManage(money); } } }
+		 */
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		//JSDP-35 gjh 2015-4-30 start
+		BaseMsg msg = new BaseMsg(NoticeConstant.CREDIT_RECALL_BUY);
+		msg.doEvent();
+		//JSDP-35 gjh 2015-4-30 end
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+
+	}
+
+	@Override
+	public void handleReturnMoney() {
+	}
+
+	@Override
+	public void extend() {
+
+	}
+}

@@ -1,0 +1,59 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record.draw;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountDrawHistoryDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountDrawHistory;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月9日 
+ */
+public class AccountDrawHistoryReturnRecord extends AbstractYmdEvent<AccountDrawHistory>{
+
+	private AccountDrawHistoryDao accountDrawHistoryDao;
+	
+	private AccountDrawHistory accountDrawHistory;
+	public AccountDrawHistoryReturnRecord(YmdCash y,User user) {
+		  init();
+          getT();
+          accountDrawHistory=accountDrawHistoryDao.findObjByProperty("tradeNo", y.getOutTradeNo());
+          if(accountDrawHistory!=null){
+        	  t=accountDrawHistory;
+        	  t.setReturnMsg(y.returnSignInfoJsonStr());
+              t.setTradeBankCode(y.getErrCode());
+          }
+	}
+
+	@Override
+	public void modifyRecord() {
+		if(accountDrawHistory!=null){
+		     accountDrawHistoryDao.update(t);
+		}
+	}
+
+	@Override
+	public void init() {
+		accountDrawHistoryDao=(AccountDrawHistoryDao) BeanUtil.getBean("accountDrawHistoryDao");
+	}
+
+	public AccountDrawHistoryDao getAccountDrawHistoryDao() {
+		return accountDrawHistoryDao;
+	}
+
+	public void setAccountDrawHistoryDao(AccountDrawHistoryDao accountDrawHistoryDao) {
+		this.accountDrawHistoryDao = accountDrawHistoryDao;
+	}
+
+	public AccountDrawHistory getAccountDrawHistory() {
+		return accountDrawHistory;
+	}
+
+	public void setAccountDrawHistory(AccountDrawHistory accountDrawHistory) {
+		this.accountDrawHistory = accountDrawHistory;
+	}
+}

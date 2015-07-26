@@ -1,0 +1,205 @@
+package com.ddtkj.manage.action.publish;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.activity.domain.SchoolRecruit;
+import com.ddtkj.p2psys.activity.model.SchoolRecruitModel;
+import com.ddtkj.p2psys.activity.service.SchoolRecruitService;
+import com.ddtkj.p2psys.schooldict.domain.SchoolDict;
+import com.ddtkj.p2psys.schooldict.service.SchoolDictService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+
+/**
+ * 校园招募
+ * @author sxy
+ * @since 2014-8-20
+ *
+ */
+public class ManageSchoolRecruitAction extends BaseAction<SchoolRecruitModel> implements ModelDriven<SchoolRecruitModel> {
+	
+	@Resource
+	private SchoolRecruitService schoolRecruitService;
+	@Resource
+	private RegionDao regionDao;
+	@Resource
+	private SchoolDictService schoolDictService;
+	
+	private SchoolRecruitModel schoolRecruitModel = new SchoolRecruitModel();
+	
+	private Map<String, Object> data = new HashMap<String, Object>();
+	
+	@Override
+	public SchoolRecruitModel getModel() {
+		return schoolRecruitModel;
+	}
+	
+	/**
+	 * 校园招募展示
+	 * @return String
+	 * @throws Exception
+	 */
+	@Action("/modules/market/schoolRecruit/schoolRecruitManager")
+	public String schoolRecruitManager() throws Exception {
+		int status = paramInt("status");
+		request.setAttribute("flag", status);
+		return "schoolRecruitManager";
+	}
+	
+	/**
+	 * 校园招募管理列表
+	 * @throws Exception
+	 */
+	@Action("/modules/market/schoolRecruit/schoolRecruitList")
+	public void schoolRecruitList() throws Exception {
+		
+		
+		PageDataList<SchoolRecruitModel> list = schoolRecruitService.list(schoolRecruitModel, paramInt("page"), paramInt("rows"));
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 校园招募管理中的excel标导出
+	 * @throws Exception
+	 */
+	@Action("/modules/market/schoolRecruit/schoolRecruitExcel")
+	public void borrowBespeakExcel() throws Exception{
+		//JSDP-116 fengguoqin 2015-05-19 start
+	/*	response.setContentType("application/msexcel;charset=UTF-8");
+		
+		PageDataList<SchoolRecruitModel> pageDataList = schoolRecruitService.list(schoolRecruitModel, 1, 99999999);
+		List<SchoolRecruitModel> list = pageDataList.getList();
+		List<SchoolRecruitModel> newList = new ArrayList<SchoolRecruitModel>();
+		for(int i=0;i<list.size();i++){
+			SchoolRecruitModel bm = list.get(i);
+			if(bm.getStatus().equals("0")){
+				bm.setStatusStr("未处理");
+			}else if(bm.getStatus().equals("1")){
+				bm.setStatusStr("已回访");
+			}else if(bm.getStatus().equals("2")){
+				bm.setStatusStr("不回访");
+			}else{
+				bm.setStatusStr("未知状态");
+			}
+			
+			
+			newList.add(bm);
+		}*/
+		List<SchoolRecruitModel> list = schoolRecruitService.excelListSchoolRecruit(schoolRecruitModel);
+		String title = "校园招募管理中的Excel表";
+
+		String[] hearders = new String[] {"编号","学校名称","用户姓名","手机号码","省","市","添加时间","添加IP","处理时间","操作员","状态"};// 表头数组
+		/*String[] fields = new String[] {"id","schoolStr","realName","phoneNo","provinceName","cityName","addTime","addIp","doTime","doUser","statusStr"};// 对象属性数组*/
+		 String[] fields = new String[] {"object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]"};
+		
+	/*	int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<SchoolRecruitModel> tdList = new ArrayList<SchoolRecruitModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				SchoolRecruitModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 fengguoqin 2015-05-19 end
+	}
+	/**
+	 * 编辑校园招募页面
+	 * @throws Exception
+	 */
+	@Action("/modules/market/schoolRecruit/schoolRecruitEditPage")
+	public String borrowBespeakEditPage() throws Exception {
+		long id = paramLong("id");
+		SchoolRecruit schoolRecruit = schoolRecruitService.find(id);
+		
+		//查询对应学校
+		SchoolDict schoolDict = schoolDictService.getSchool(schoolRecruit.getSchool());
+		Region regionProv = regionDao.findById(schoolRecruit.getProvince());
+		Region regionCity = regionDao.findById(schoolRecruit.getCity());
+		String schoolName = schoolDict.getName();
+		
+		
+		request.setAttribute("regionProv", regionProv.getName());
+		request.setAttribute("regionCity", regionCity.getName());
+		
+		request.setAttribute("schoolName", schoolName);
+		
+		request.setAttribute("schoolRecruit", schoolRecruit);
+		
+		saveToken("schoolRecruitEditToken");
+		return "schoolRecruitEditPage";
+	}
+	
+	/**
+	 * 编辑校园招募
+	 * @throws Exception
+	 */
+	@Action("/modules/market/schoolRecruit/schoolRecruitEdit")
+	public void borrowBespeakEdit() throws Exception {
+		long id = paramLong("id");
+		SchoolRecruit schoolRecruit = schoolRecruitService.find(id);
+		schoolRecruit.setDoTime(new Date());
+		schoolRecruit.setRemark(paramString("remark"));
+		schoolRecruit.setStatus(paramString("status"));
+		schoolRecruit.setDoUser(getOperatorUserName());
+		checkToken("schoolRecruitEditToken");
+		schoolRecruitService.schoolRecruitEdit(schoolRecruit);
+		data.put("result", true);
+		data.put("msg", "回访处理成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 查看校园招募页面
+	 * @throws Exception
+	 */
+	@Action("/modules/market/schoolRecruit/schoolRecruitViewPage")
+	public String borrowBespeakViewPage() throws Exception {
+		long id = paramLong("id");
+		SchoolRecruit schoolRecruit = schoolRecruitService.find(id);
+		//查询对应学校
+		SchoolDict schoolDict = schoolDictService.getSchool(schoolRecruit.getSchool());
+		Region regionProv = regionDao.findById(schoolRecruit.getProvince());
+		Region regionCity = regionDao.findById(schoolRecruit.getCity());
+		String schoolName = schoolDict.getName();
+
+		request.setAttribute("regionProv", regionProv.getName());
+		request.setAttribute("regionCity", regionCity.getName());
+
+		request.setAttribute("schoolName", schoolName);
+		request.setAttribute("schoolRecruit", schoolRecruit);
+		return "schoolRecruitViewPage";
+	}
+}

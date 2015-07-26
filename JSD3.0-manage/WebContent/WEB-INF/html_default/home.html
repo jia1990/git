@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>后台管理系统</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "./include/resources.html">
+<script type="text/javascript" src="${theme_dir}/js/home.js" charset="utf-8"></script>
+<script type="text/javascript">
+	$(function() {
+		InitLeftMenu();
+		if("${modifyPwd!}"=="yes"){
+			editCurrentUserPwd();
+		}
+	})
+	var layout_west_tree;
+	var layout_west_tree_url = '';
+	var sessionInfo_userId = '${(session_operator.id)!""}';
+	if (sessionInfo_userId) {
+		layout_west_tree_url = '/modules/system/menu/leftMenuList.html';
+	}
+	var _menus = (function() {
+		var result;
+		$.ajax({
+			type : 'post',
+			url : "/modules/system/menu/leftMenuList.html",
+			dataType : 'json',
+			async : false,
+			success : function(data) {
+				result = $.fn.treeConvert.menu(data.rows);
+			}
+		});
+		return result;
+	})();
+</script>
+
+
+<style type="text/css">
+
+	#layout_north_kzmbMenu,#layout_north_zxMenu{
+	/*处理按钮圆角*/
+	border-top-left-radius:5px;
+	border-top-right-radius:5px;
+	border-bottom-right-radius:5px;
+	border-bottom-left-radius:5px;
+	
+	}
+	
+</style>
+
+
+
+</head>
+<body class="rdbg">
+
+<script type="text/javascript" charset="utf-8">
+   function pageNest(){ //防止页面嵌套
+	   $("body").ajaxComplete(function(event,request,settings){//ajax请求处理，发布页面有嵌套首页重新加载页面
+			var responseText = request.responseText;
+			if(responseText.indexOf("ajaxComplete")>0){
+			   top.location.reload();
+			}
+	   });
+	   //if(self.location!=top.location)	   top.window.location.href =  self.location;  
+	   if (top.location != self.location) {top.location=self.location;}
+   }
+   pageNest();
+   
+   
+   
+   
+</script>
+<style>
+
+</style>
+	<div id="index_layout">
+		<div data-options="region:'north'" style="height: 80px; overflow: hidden;"  >
+			<div id="topLogo"><a title="进入晋商贷主页" href="http://www.jinshangdai.com/" style="float:left;width:125px;height:75px;" target="_blank"></a></div>
+			<div class="topRightbar">
+				<span id="sessionInfoDiv">欢迎您,${(session_operator.userName)!""}</span>
+				|<span class="contrlIco"><a href="javascript:void(0);" class="easyui-menubutton" data-options="menu:'#layout_north_kzmbMenu',iconCls:'advanced'" ondragstart="return false">控制面板</a></span>
+				|<span class="loginOutIco"><a href="javascript:void(0);" class="easyui-menubutton" data-options="menu:'#layout_north_zxMenu',iconCls:'advanced'" ondragstart="return false">注销</a></span>
+			</div>
+		</div><!-- E north -->
+		<div data-options="region:'west',split:true" title="模块导航" style="width: 220px; overflow: hidden;">
+			<div id="nav"></div>
+		</div><!-- E west -->
+		<div id="mainPanle" region="center" style="overflow-y: hidden">
+			<div id="index_tabs" class="easyui-tabs" fit="true" border="false">
+				<div title="首页" style="overflow: hidden;">
+					<div id="portal" style="position: relative; height: 500px;">
+						<div></div>
+						<div></div>
+					</div>
+				</div>
+			</div>
+		</div><!-- E center -->
+	</div>
+	<div id="index_tabsMenu" style="display: none;">
+		<div title="refresh" data-options="iconCls:'refresh'">刷新</div>
+		<div class="menu-sep"></div>
+		<div title="close" data-options="iconCls:'delete'">关闭</div>
+		<div title="closeOther" data-options="iconCls:'delete'">关闭其他</div>
+		<div title="closeAll" data-options="iconCls:'delete'">关闭所有</div>
+	</div>
+	<div id="layout_north_kzmbMenu" style="display: none;">
+		<div onclick="editCurrentUserPwd();">修改密码</div>
+		<div class="menu-sep"></div>
+		<div onclick="currentUserRole();">我的角色</div>
+		<div class="menu-sep"></div>
+		<div onclick="currentUserResource();">我的权限</div>
+	</div>
+	<div id="layout_north_zxMenu" style="width: 100px; display: none;">
+		<div onclick="logoutFun();">退出系统</div>
+	</div>	
+</body>
+</html>

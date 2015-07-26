@@ -1,0 +1,575 @@
+package com.rongdu.p2psys.web.borrow;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.model.worker.BaseBorrowWorker;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpUseLogService;
+import com.ddtkj.p2psys.returnmoney.service.ReturnMoneyService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+
+/**
+ * 我的投资
+ * 
+ * @author 李建云
+ * @version 3.0
+ * @since 2014年3月17日
+ */
+public class MyInvestAction extends BaseAction implements ModelDriven<BorrowTenderModel> {
+	private final static Logger logger = Logger.getLogger(MyInvestAction.class);
+	private BorrowTenderModel model = new BorrowTenderModel();
+
+	@Override
+	public BorrowTenderModel getModel() {
+		return model;
+	}
+
+	public void setModel(BorrowTenderModel model) {
+		this.model = model;
+	}
+
+	@Resource
+	private BorrowCollectionService borrowCollectionService;
+	@Resource
+	private BorrowTenderService tenderService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private ReturnMoneyService returnMoneyService;
+	@Resource
+	private RpUseLogService rpUseLogService;
+	@Resource
+	private RpProduceService rpProduceService;
+	@Resource
+	private CreditLogService creditLogService;
+	@Resource
+	private CreditAssignmentService creditAssignmentService;
+
+	private User user;
+	private Map<String, Object> data;
+
+	/**
+	 * 我的投资
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/invest/mine")
+	public String mine() throws Exception {
+
+		return "mine";
+	}
+
+	/**
+	 * 我的投资列表 ajax数据接口 status
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/invest/mineList")
+	public void mineList() throws Exception {
+		user = getSessionUser();
+		model.setUser(user);
+		PageDataList<BorrowTenderModel> pageDataList = tenderService.list(model);
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * @author 李建云
+	 * 我的投资代收明细
+	 * 
+	 * @return
+	 */
+	@Action("/member/invest/collection")
+	public String collection() throws Exception {
+
+		return "collection";
+	}
+
+	/**
+	 * @author 李建云
+	 * 投资人
+	 * 我的待收列表 ajax数据接口 status=0待收 1已收 start_time end_time
+	 * 
+	 * @return
+	 */
+	@Action("/member/invest/collectionList")
+	public void collectionList() throws Exception {
+		user = getSessionUser();
+		int status = paramInt("status");
+		BorrowCollectionModel m = (BorrowCollectionModel) paramModel(BorrowCollectionModel.class);
+		m.setStatus(status);
+		m.setUser(user);
+		m.setPage(model.getPage());
+		// JSDP-206  wcw 2015-07-02 start 
+		long start=System.currentTimeMillis()/1000;
+		logger.info("待收列表开始时间==="+start);
+		int count=borrowCollectionService.getCollectionListCount(m);
+		m.setCount(count);
+		PageDataList<BorrowCollectionModel> pageDataList = borrowCollectionService.getBorrowCollectionList(m);	
+		long end=System.currentTimeMillis()/1000;
+		logger.info("待收列表结束时间==="+end);
+		long ab=end-start;
+		logger.info("待收列表间隔时间==="+ab);
+		// JSDP-206  wcw 2015-07-02 end
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		pageDataList=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * @author 李建云
+	 * 我的投资
+	 * @return
+	 */
+	@Action("/member/invest/myInvest")
+	public String myInvest() throws Exception {
+		// JSDP-206  wcw 2015-07-02 start
+	/*	User user = this.getSessionUser();
+		long userId = this.getSessionUserId();
+		
+		//投资总金额
+		double tendAccountSum = tenderService.sumTenderAccount(userId);
+		//待收本金
+		double collectedCapital = borrowCollectionService.getCapitalByUser(user);
+		//待收利息
+		double collectedInterest =  borrowCollectionService.getInterestByUser(user);
+		//已赚利息	
+		double earnedInterest =	borrowCollectionService.getReceivedInterestSum(userId);
+		
+		//已赚奖励=红包奖励(动态红包已使用)+回款续投奖励 //此处去掉静态红包奖励rpProduceService.sRedPackUsedSumMoney(userId),
+		double awardAmount =BigDecimalUtil.add(
+						rpUseLogService.getAllUseDynamicTotal(userId),
+						returnMoneyService.getContinueInvestAwardCountByUserId(userId));
+		
+		//待收个数
+		int countCollect = borrowCollectionService.countCollect(userId,BorrowCollection.WAIT_COLLECTION_STATUS);
+		//已收个数
+		int countCollected = borrowCollectionService.countCollect(userId,BorrowCollection.HAS_COLLECTION_STATUS);
+		//所有
+		int countSum = countCollect + countCollected;
+
+		request.setAttribute("tendAccountSum", tendAccountSum);
+		request.setAttribute("collectedCapital", collectedCapital);
+		request.setAttribute("collectedInterest", collectedInterest);
+		request.setAttribute("earnedInterest", earnedInterest);
+		request.setAttribute("awardAmount", awardAmount);
+		request.setAttribute("countCollect", countCollect);
+		request.setAttribute("countCollected", countCollected);
+		request.setAttribute("countSum", countSum);*/
+		// JSDP-206  wcw 2015-07-02 end
+		return "myInvest";
+	}
+	// JSDP-206  wcw 2015-07-02 start
+	/**
+	 * 我的投资里面  投资总金额、待收本金、待收利息、已赚利息、已赚奖励、待收款、已收款、所有
+	 * @return
+	 */
+	@Action("/member/invest/tendAccountSum")
+	public void tendAccountSum()throws Exception{
+		long start=System.currentTimeMillis()/1000;
+		logger.info("开始时间=="+start);
+		long userId = this.getSessionUserId();
+		
+		//投资总金额
+		double tendAccountSum = tenderService.sumTenderAccount(userId);
+		long end=System.currentTimeMillis()/1000;
+		long ce=end-start;
+		logger.info("投资总金额执行间隔时间="+ce);
+		Map<String, Object> data=new HashMap<String, Object>();
+		data.put("tendAccountSum", tendAccountSum);
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	/**
+	 * 我的投资里面  投资总金额、待收本金、待收利息、已赚利息、已赚奖励、待收款、已收款、所有
+	 * @return
+	 */
+	@Action("/member/invest/collectedCapital")
+	public void collectedCapital()throws Exception{
+		long start=System.currentTimeMillis()/1000;
+		User user = this.getSessionUser();
+		//待收本金
+		double collectedCapital = borrowCollectionService.getCapitalByUser(user);
+		long end=System.currentTimeMillis()/1000;
+		long ce=end-start;
+		logger.info("待收本金执行间隔时间="+ce);
+		Map<String, Object> data=new HashMap<String, Object>();
+		data.put("collectedCapital", collectedCapital);
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	/**
+	 * 我的投资里面  投资总金额、待收本金、待收利息、已赚利息、已赚奖励、待收款、已收款、所有
+	 * @return
+	 */
+	@Action("/member/invest/collectedInterest")
+	public void collectedInterest()throws Exception{
+		long start=System.currentTimeMillis()/1000;
+		User user = this.getSessionUser();
+		//待收利息
+		double collectedInterest =  borrowCollectionService.getInterestByUser(user);
+		long end=System.currentTimeMillis()/1000;
+		long ce=end-start;
+		logger.info("待收利息执行间隔时间="+ce);
+		Map<String, Object> data=new HashMap<String, Object>();
+		data.put("collectedInterest", collectedInterest);
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	/**
+	 * 我的投资里面  投资总金额、待收本金、待收利息、已赚利息、已赚奖励、待收款、已收款、所有
+	 * @return
+	 */
+	@Action("/member/invest/earnedInterest")
+	public void earnedInterest()throws Exception{
+		long start=System.currentTimeMillis()/1000;
+		User user = this.getSessionUser();
+		//已赚利息	
+		double earnedInterest =	borrowCollectionService.getReceivedInterestSum(user.getUserId());
+		long end=System.currentTimeMillis()/1000;
+		long ce=end-start;
+		logger.info("已赚利息执行间隔时间="+ce);
+		Map<String, Object> data=new HashMap<String, Object>();
+		data.put("earnedInterest", earnedInterest);
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	/**
+	 * 我的投资里面  投资总金额、待收本金、待收利息、已赚利息、已赚奖励、待收款、已收款、所有
+	 * @return
+	 */
+	@Action("/member/invest/awardAmount")
+	public void awardAmount()throws Exception{
+		long start=System.currentTimeMillis()/1000;
+		User user = this.getSessionUser();
+		//已赚奖励=红包奖励(动态红包已使用)+回款续投奖励 //此处去掉静态红包奖励rpProduceService.sRedPackUsedSumMoney(userId),
+		double awardAmount =BigDecimalUtil.add(
+						rpUseLogService.getAllUseDynamicTotal(user.getUserId()),
+						returnMoneyService.getContinueInvestAwardCountByUserId(user.getUserId()));
+		long end=System.currentTimeMillis()/1000;
+		long ce=end-start;
+		logger.info("已赚奖励执行间隔时间="+ce);
+		data=new HashMap<String, Object>();
+		data.put("awardAmount", awardAmount);
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	/**
+	 * 我的投资里面  待收款个数、已收款个数、所有个数
+	 * @return
+	 */
+	@Action("/member/invest/countCollect")
+	public void countCollect()throws Exception{
+		long start=System.currentTimeMillis()/1000;
+		User user = this.getSessionUser();
+		//待收个数
+		int countCollect = borrowCollectionService.countCollect(user.getUserId(),BorrowCollection.WAIT_COLLECTION_STATUS);
+		long end=System.currentTimeMillis()/1000;
+		long ce=end-start;
+		logger.info("待收个数执行间隔时间="+ce);
+		//已收个数
+		int countCollected = borrowCollectionService.countCollect(user.getUserId(),BorrowCollection.HAS_COLLECTION_STATUS);
+		end=System.currentTimeMillis()/1000;
+		ce=end-start;
+		logger.info("已收个数执行间隔时间="+ce);
+		data=new HashMap<String, Object>();
+		data.put("countCollect", countCollect);
+		data.put("countCollected", countCollected);
+		int countSum = countCollect + countCollected;
+		data.put("countSum", countSum);
+		printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	// JSDP-206  wcw 2015-07-02 end
+	/**
+	 * @author 李建云
+	 *  我的投资页面
+	 * @return
+	 */
+	@Action("/member/invest/myInvestList")
+	public void myInvestList() throws Exception {
+		user = getSessionUser();
+		model.setUser(user);
+	//	PageDataList<BorrowModel> pageDataList = tenderService.getBorrowlist(model);
+		PageDataList<BorrowTenderModel> pageDataList = tenderService.list(model);
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 *@author 李建云
+	 *我的收益页面
+	 *
+	 **/
+	@Action("/member/invest/myCollection")
+	public String  myCollection()throws Exception{
+		// JSDP-206  wcw 2015-07-02 start
+		/*User user = this.getSessionUser();
+		long userId = this.getSessionUserId();
+		//收益总金额
+		double accumulatedIncome = borrowCollectionService.accumulatedNetIncome(user);
+		//已赚罚息
+		double defaultInterest = borrowCollectionService.getOverDueInterestSum(userId);
+		request.setAttribute("accumulatedIncome", accumulatedIncome);
+		request.setAttribute("defaultInterest", defaultInterest);	*/
+		// JSDP-206  wcw 2015-07-02 end
+		return "myCollection";
+	}
+	// JSDP-206  wcw 2015-07-02 start
+	/**
+	 *@author 王长伟
+	 *已赚罚息
+	 *
+	 **/
+	@Action("/member/invest/myLateInterest")
+	public void  myLateInterest()throws Exception{
+		long userId = this.getSessionUserId();
+		//已赚罚息
+		double defaultInterest = borrowCollectionService.getOverDueInterestSum(userId);
+		request.setAttribute("defaultInterest", defaultInterest);	
+		data = new HashMap<String, Object>();
+	    data.put("defaultInterest", defaultInterest);
+	    printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	/**
+	 *@author 王长伟
+	 *收益总额
+	 *
+	 **/
+	@Action("/member/invest/myEarned")
+	public void  myEarned()throws Exception{
+		long userId = this.getSessionUserId();
+		//已赚罚息
+		double defaultInterest = borrowCollectionService.getOverDueInterestSum(userId);
+		//已赚利息	
+		double earnedInterest =	borrowCollectionService.getReceivedInterestSum(userId);
+		
+		//已赚奖励=红包奖励(动态红包已使用)+回款续投奖励 //此处去掉静态红包奖励rpProduceService.sRedPackUsedSumMoney(userId),
+		double awardAmount =BigDecimalUtil.add(
+						rpUseLogService.getAllUseDynamicTotal(userId),
+						returnMoneyService.getContinueInvestAwardCountByUserId(userId));	
+		double myEarned=BigDecimalUtil.add(defaultInterest,earnedInterest,awardAmount);
+		data = new HashMap<String, Object>();
+	    data.put("myEarned", myEarned);
+	    printJson(getStringOfJpaObj(data));
+		data=null;
+		return ;
+	}
+	// JSDP-206  wcw 2015-07-02 end
+	/**
+	 *@author 李建云
+	 *投资人资产统计
+	 *
+	 **/
+	@Action("/member/invest/assetStatistics")
+	public String  assetStatistics()throws Exception{	
+		
+		return "assetStatistics";
+	}
+	
+	/**
+	 *@author 李建云
+	 * 资产统计 通过晋商贷平台已赚取 
+	 * @throws IOException 
+	 * */
+	@Action("/member/asset/assetEarnInterest")
+	public void assetEarnInterest() throws Exception{
+		data = new HashMap<String, Object>();
+		User user = this.getSessionUser();
+		//用户账户信息
+		long userId = this.getSessionUserId();
+		
+		//(投标收益)
+		//已赚利息	
+		double earnedInterest =	borrowCollectionService.getReceivedInterestSum(userId);
+		//已赚罚息
+		double defaultInterest = borrowCollectionService.getOverDueInterestSum(userId);
+		//已赚奖励=红包奖励(动态红包已使用)+回款续投奖励
+		double awardAmount =BigDecimalUtil.add(
+				rpUseLogService.getAllUseDynamicTotal(userId),
+				returnMoneyService.getContinueInvestAwardCountByUserId(userId));
+		//用户债权转让盈亏=用户转入债权盈亏 +用户债权转出盈亏
+		double  creditInterest = BigDecimalUtil.add(creditLogService.calcProfitAndLoss(user, CreditLog.CRELOG_STATUS_YEW),
+		creditAssignmentService.calcProfitAndLoss(user,CreditAssignment.CREDIT_CHECK2_SUCCESS));
+		
+		// 柱形图数据
+		Object[] object = new Object[] { earnedInterest,awardAmount, defaultInterest, creditInterest};
+		data.put("earnedInterest", earnedInterest);
+		data.put("defaultInterest", defaultInterest);
+		data.put("awardAmount", awardAmount);
+		data.put("creditInterest", creditInterest);
+		data.put("object", object);
+		data.put("sum", BigDecimalUtil.add(earnedInterest,defaultInterest,awardAmount,creditInterest));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		
+	}
+	
+	/**
+	 *@author 李建云
+	 * 资产统计 晋商贷平台累计投资
+	 * @throws IOException 
+	 * */
+	@Action("/member/asset/assetInvestTotal")
+	public void assetInvestTotal() throws Exception{
+		data = new HashMap<String, Object>();
+		User user = this.getSessionUser();
+		//用户账户信息
+		long userId = this.getSessionUserId();
+		//JSDP-158  wcw 2015-05-23 start
+		//能源宝累计投资总额
+		double energyInvestSum = tenderService.getInvesterTenderAccountByUserAndBorrowType(userId, Borrow.TYPE_MORTGAGE_ENERGY,1);
+		//车贷宝累计投资总额
+		double mortgageInvestSum = tenderService.getInvesterTenderAccountByUserAndBorrowType(userId, Borrow.TYPE_MORTGAGE,1);
+		//微商贷累计投资总额
+		double netWorkInvestSum = tenderService.getInvesterTenderAccountByUserAndBorrowType(userId, Borrow.TYPE_NETWORK,1);
+		//分期宝累计投资总额
+		double amortizeInvestSum = tenderService.getInvesterTenderAccountByUserAndBorrowType(userId, Borrow.TYPE_AMORTIZE,1);
+		//JSDP-158  wcw 2015-05-23 end
+		double creditBuySum = creditLogService.buyCreditMoneyTotal(user, CreditLog.CRELOG_STATUS_YEW);
+		// 柱形图数据
+		Object[] object = new Object[] { energyInvestSum,mortgageInvestSum, netWorkInvestSum, amortizeInvestSum,creditBuySum};
+		data.put("creditBuySum", creditBuySum);
+		data.put("energyInvestSum", energyInvestSum);
+		data.put("mortgageInvestSum", mortgageInvestSum);
+		data.put("netWorkInvestSum", netWorkInvestSum);
+		data.put("amortizeInvestSum", amortizeInvestSum);
+		data.put("object", object);
+		data.put("sum", BigDecimalUtil.add(creditBuySum,energyInvestSum,mortgageInvestSum,netWorkInvestSum,amortizeInvestSum));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 *@author 李建云
+	 * 资产统计 晋商贷的投资待收益
+	 * @throws IOException 
+	 * */
+	@Action("/member/asset/assetInvestProfit")
+	public void assetInvestProfit() throws Exception{
+		data = new HashMap<String, Object>();
+		User user = this.getSessionUser();
+		//用户账户信息
+		long userId = this.getSessionUserId();
+		//投标收益
+		double investCollectProfit = borrowCollectionService.getInterestByUser(user);
+		//购买债权能源宝待收益
+		double energyCollectProfit = borrowCollectionService.getInterestByUser(user, Borrow.TYPE_MORTGAGE_ENERGY);
+		//购买债权车贷宝待收益
+		double mortgageCollectProfit = borrowCollectionService.getInterestByUser(user, Borrow.TYPE_MORTGAGE);
+		//购买债权微商贷待收益
+		double netWorkCollectProfit = borrowCollectionService.getInterestByUser(user, Borrow.TYPE_NETWORK);
+		// 柱形图数据
+		Object[] object = new Object[] { investCollectProfit,energyCollectProfit, mortgageCollectProfit, netWorkCollectProfit};
+			data.put("investCollectProfit", investCollectProfit);
+			data.put("energyCollectProfit", energyCollectProfit);
+			data.put("mortgageCollectProfit", mortgageCollectProfit);
+			data.put("netWorkCollectProfit", netWorkCollectProfit);
+			data.put("object", object);
+			data.put("sum", BigDecimalUtil.add(investCollectProfit,energyCollectProfit,mortgageCollectProfit,netWorkCollectProfit));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 *@author 李建云
+	 * 资产统计 在晋商贷发布的债权金额
+	 * @throws IOException 
+	 * */
+	@Action("/member/asset/creditProfit")
+	public void creditProfit() throws Exception{
+		data = new HashMap<String, Object>();
+		User user = this.getSessionUser();
+		//用户账户信息
+		long userId = this.getSessionUserId();
+
+		//债权金额(债权人能源宝)
+		double energCreditMoney = creditAssignmentService.getCreditAssignmentSum(user, CreditAssignment.CREDIT_CHECK2_SUCCESS, Borrow.TYPE_MORTGAGE_ENERGY);
+		//债权金额(债权人车贷宝)
+		double mortgageCreditMoney = creditAssignmentService.getCreditAssignmentSum(user, CreditAssignment.CREDIT_CHECK2_SUCCESS, Borrow.TYPE_MORTGAGE);
+		//债权金额(债权人微商贷)
+		double networkCreditMoney = creditAssignmentService.getCreditAssignmentSum(user, CreditAssignment.CREDIT_CHECK2_SUCCESS, Borrow.TYPE_NETWORK);
+		
+		// 柱形图数据
+		Object[] object = new Object[] { energCreditMoney,mortgageCreditMoney, networkCreditMoney};
+		data.put("energCreditMoney", energCreditMoney);
+		data.put("mortgageCreditMoney", mortgageCreditMoney);
+		data.put("networkCreditMoney", networkCreditMoney);
+		
+		data.put("object", object);
+		data.put("sum", BigDecimalUtil.add(energCreditMoney,mortgageCreditMoney,networkCreditMoney));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public Map<String, Object> getData() {
+		return data;
+	}
+
+	public void setData(Map<String, Object> data) {
+		this.data = data;
+	}
+
+}

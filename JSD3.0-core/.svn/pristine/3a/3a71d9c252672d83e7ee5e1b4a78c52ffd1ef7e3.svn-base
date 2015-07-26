@@ -1,0 +1,49 @@
+package com.ddtkj.p2psys.activity.dao.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.activity.dao.SchoolRecruitDao;
+import com.ddtkj.p2psys.activity.domain.SchoolRecruit;
+import com.ddtkj.p2psys.activity.model.SchoolRecruitModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+@Repository("schoolRecruitDao")
+public class SchoolRecruitImpl extends BaseDaoImpl<SchoolRecruit> implements
+		SchoolRecruitDao {
+
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<SchoolRecruitModel> excelListSchoolRecruit(
+			SchoolRecruitModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT sr.id,sc.name,sr.real_name,sr.phone_no,reg.name regName,city.name cityName,");
+		sql.append(" DATE_FORMAT( sr.add_time, '%Y-%m-%d %T') srAddTime ,sr.add_ip,DATE_FORMAT( sr.do_time, '%Y-%m-%d %T') srDoTime ,");
+		sql.append(" sr.do_user,CASE sr.status WHEN 0 THEN '未处理' WHEN 1 THEN '已回访' WHEN 2 THEN '不回访' ELSE '未知状态' END AS scStatus ");
+		sql.append(" FROM `t_jsd_dict_school` sc ,`t_jsd_school_recruit` sr ");
+		sql.append(" LEFT JOIN t_jsd_dict_region reg ON   sr.province = reg.id  ");
+		sql.append(" LEFT JOIN  t_jsd_dict_region city  ON   sr.city = city.id  ");
+		sql.append(" WHERE sc.id = sr.school");
+		if (!StringUtil.isBlank(model.getRealName())) {
+			sql.append("  AND sr.real_name like'%" + model.getRealName()
+					+ "%'  ");
+		}
+		if (!StringUtil.isBlank(model.getStatus())) {
+			sql.append("  AND sr.status = '" + model.getStatus() + "'  ");
+		}
+		sql.append(" order by sr.add_time desc ");
+
+		Query query = em.createNativeQuery(sql.toString());
+
+		List scoreList = query.getResultList();
+		return scoreList;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+
+}

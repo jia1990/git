@@ -1,0 +1,191 @@
+package com.ddtkj.manage.action.subbranch;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.subbranch.domain.Branch;
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.ddtkj.p2psys.subbranch.model.BranchMarketerModel;
+import com.ddtkj.p2psys.subbranch.model.BranchModel;
+import com.ddtkj.p2psys.subbranch.service.BranchService;
+import com.ddtkj.p2psys.subbranch.service.MarketerBranchService;
+import com.ddtkj.p2psys.subbranch.service.MarketerBranchUnModelService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：市场专员管理
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+public class ManageMarketerAction extends BaseAction<UserModel> implements ModelDriven<UserModel> {
+	
+	@Resource
+	private BranchService branchService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private MarketerBranchService marketerBranchService;
+	@Resource
+	private MarketerBranchUnModelService marketerBranchUnModelService;
+	
+	private Map<String, Object> data;
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	
+	/**
+	 * 市场专员查询展示页面
+	 * @return
+	 */
+	@Action("/modules/sub/marketer/marketerManager")
+	public String marketerManager(){
+		return "marketerManager";
+	}
+	/**
+	 * 市场专员列表
+	 * @throws IOException 
+	 */
+	@Action("/modules/sub/marketer/marketerList")
+	public void marketerList() throws IOException{
+		data = new HashMap<String, Object>();
+		PageDataList<BranchMarketerModel> bmmList = marketerBranchService.pageDataList(model);
+		
+		
+		int totalPage = bmmList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", bmmList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 市场专员的添加页面
+	 * @return
+	 */
+	@Action("/modules/sub/marketer/marketerAddPage")
+	public String marketerAddPage(){
+		//查询全部加盟商
+		List<Branch> branchList = branchService.findAllBranch();
+		if(null !=branchList){
+			request.setAttribute("branchList", branchList);
+		}
+		saveToken("marketerAddToken");
+		return "marketerAddPage";
+	}
+	/**
+	 * 市场专员的添加方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/sub/marketer/marketerAdd")
+	public void marketerAdd() throws IOException{
+		data = new HashMap<String, Object>();
+//		model.setAddIp(getRequestIp());
+//		User u = userService.doRegisterNew(model.prototype(),null);
+		User u = null;
+		// JSDP-BUG81 20150506  sxy
+		if(StringUtil.isNotBlank(model.getMobilePhone())){
+			u = userService.getUserByMobilePhone(model.getMobilePhone());
+		}else{
+			throw new BussinessException("用户手机号不存在！");
+		}
+		// JSDP-BUG81 20150506  sxy
+		Branch branch = null;
+		if(0 != model.getBranchId()){
+			branch = branchService.findBranchById(model.getBranchId());
+		}
+		checkToken("marketerAddToken");
+		if(null != u && null != branch){
+			BranchMarketer bm = marketerBranchUnModelService.findMarketerBranchByUserId(u.getUserId());
+			if(null != bm){
+				throw new BussinessException("此用户存在所属加盟商，请删除关系后再重试！");
+			}
+			
+			BranchMarketer branchMarketer = marketerBranchService.save(new BranchMarketer( branch, u));
+			if(null != branchMarketer){
+				data.put("result", true);
+				data.put("msg", "添加成功");
+			}else{
+				data.put("result", false);
+				data.put("msg", "添加失败");
+			}
+		}else if(null == u){
+			throw new BussinessException("用户不存在！");
+		}else if(null == branch){
+			throw new BussinessException("加盟商不存在！");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 市场专员修改页面
+	 * @return
+	 */
+	@Action("/modules/sub/marketer/marketerEditPage")
+	public String marketerEditPage(){
+		User user = userService.find(model.getId());
+		BranchMarketer branchMarketer = marketerBranchUnModelService.findMarketerBranchByUserId(model.getId());
+		if(null != user){
+			request.setAttribute("user", user);
+		}
+		if(null != branchMarketer){
+			request.setAttribute("branch", branchMarketer.getBranch());
+		}
+		
+		List<Branch> branchList = branchService.findAllBranch();
+		request.setAttribute("branchList", branchList);
+		saveToken("branchEditToken");
+		return "marketerEditPage";
+	}
+	/**
+	 * 市场专员修改方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/sub/marketer/marketerEdit")
+	public void marketerEdit() throws IOException{
+		data = new HashMap<String, Object>();
+		User user = userService.find(model.getUserId());
+		Branch branch = branchService.findBranchById(model.getBranchId());
+		BranchMarketer branchMarketer = marketerBranchUnModelService.findMarketerBranchByUserId(model.getUserId());
+		checkToken("branchEditToken");
+		try {
+			if(null != user && null != branch ){
+//				
+				branchMarketer.setBranch(branch);
+				marketerBranchUnModelService.updateBranchByMarketerId(branchMarketer);
+				data.put("result", true);
+				data.put("msg", "修改成功！");
+			}else{
+				data.put("result", true);
+				data.put("msg", "同一手机号不做修改！");
+			}
+		} catch (Exception e) {
+			data.put("result", true);
+			data.put("msg", "修改失败！");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	@Action("/modules/sub/marketer/marketerDel")
+	public void marketerDel() throws IOException{
+		data = new HashMap<String, Object>();
+		try {
+			BranchMarketer bm = marketerBranchUnModelService.findMarketerBranchByUserId(model.getId());
+			marketerBranchUnModelService.delMargeterBranch(bm.getUser().getUserId());
+			data.put("result", true);
+			data.put("msg", "删除成功！");
+		} catch (Exception e) {
+			data.put("result", true);
+			data.put("msg", "删除失败！");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+}

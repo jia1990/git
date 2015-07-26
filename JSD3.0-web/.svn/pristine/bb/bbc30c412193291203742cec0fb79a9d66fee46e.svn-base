@@ -1,0 +1,107 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<!--   v1.6.6.2 RDPROJECT-140 yl 2013-10-23 start-->
+<title>${web_title!webname}</title>
+<meta name="description" content="${web_description!meta_description}" />
+<meta name="keywords" content="${meta_keywords!meta_keywords}" />
+<!--   v1.6.6.2 RDPROJECT-140 yl 2013-10-23 end-->
+<!-- <meta property="qc:admins" content="126201426074113363757" /> -->
+<link href="${webroot}${theme_dir}/media/css/base.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/button.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/style.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/jquery.slider.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/jquery-ui.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/member.css" rel="stylesheet">
+<link href="${webroot}${theme_dir}/media/css/alert.css" rel="stylesheet">
+<script type="text/javascript" src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script type="text/javascript" src="${webroot}${theme_dir}/media/js/jquery-ui.min.js"></script>
+<script type="text/javascript" src="${webroot}${theme_dir}/media/js/layer.js"></script>
+<script type="text/javascript" src="${webroot}${theme_dir}/media/js/layer.ext.js"></script>
+<script src="${webroot}${theme_dir}/media/js/jquery.form.js"></script><!-- 表单异步函数 -->
+<script src="${webroot}${theme_dir}/media/js/sea.js"></script>
+<script src="${webroot}${theme_dir}/media/js/seajs-text.js"></script>
+<script src="${webroot}${theme_dir}/media/js/handlebars-v1.3.0.js"></script><!-- json渲染的插件 -->
+<script src="${webroot}${theme_dir}/media/js/validate/validate.js"></script>
+<script src="${webroot}${theme_dir}/media/js/validate/message_cn.js"></script>
+<script src="${webroot}${theme_dir}/media/js/validate/addtional-method.js"></script>
+<script src="${webroot}${theme_dir}/media/js/formatterFunction.js"></script><!-- 添加分页的个性处理函数 -->
+ <!--日期区间拖动插件-->
+
+<script src="${webroot}${theme_dir}/media/js/json2.js"></script>
+<!-- IE6,7数据处理 -->
+
+<script>
+//禁止文本框复制粘贴及右键列表开始
+$("input").context.oncontextmenu = new Function("return false;");
+$("input").context.onpaste = new Function("return false;");
+$("input").context.oncopy = new Function("return false;");
+//禁止文本框复制粘贴及右键列表结束
+//禁止右键菜单及禁止F12开始
+oncontextmenu = new Function("return false;");
+$(window).keydown(function(event){
+	 if(event.keyCode == 123){
+		 return false;
+	 }
+});
+//禁止右键菜单及禁止F12结束
+var webroot = "${webroot}",theme = "${webroot}${theme_dir}";	
+$(function(){
+	seajs.use("${webroot}${theme_dir}/media/js/init",function(){		
+	})
+});	
+setInterval(function(){
+	location.reload()
+},1780000);//防掉线
+var reLoad = function(){
+	location.reload(); 
+};
+(function($){
+	$.fn.extend({
+		usePage:function(options){
+			var defaults = {
+				URL:"/text.html",	//数据接口地址
+				changeStatus:"",	//状态处理函数地址
+				colModel:"",
+				jsPageBox:"#js_page",
+				jsonData:"#json_data",
+				callBack:null
+			}
+			var options = $.extend(defaults,options)
+			var options= $.extend(options,{jsonUrl:options.URL})  
+			this.each(function(){
+				var that = $(this);
+				var o = options;
+				seajs.use("${webroot}${theme_dir}/media/js/jquery.ajaxPages",function(){
+					that.jsonPage(o)
+				})
+			})
+		}
+	})
+})(jQuery);
+</script>
+<!--[if lte IE 7]> 
+	<script>
+		window.location = "/browserUpgrade.html"
+	</script>
+<![endif]-->
+
+<!-- qq协同登录开始 -->
+<meta property="qc:admins" content="15444171736216301674116375" />
+<!-- qq协同登录结束 -->
+<!--百度站长工具-->
+<meta name="baidu-site-verification" content="e2b2oNeJy8" />
+<!--百度站长工具-->
+
+<!--百度统计工具新版 开始-->
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?396d9fba7c4fbb8857fbb012ad700524";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+<!--百度统计工具新版 结束-->
+
+</head>

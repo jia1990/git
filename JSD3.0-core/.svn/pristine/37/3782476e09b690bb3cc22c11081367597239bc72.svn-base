@@ -1,0 +1,115 @@
+package com.ddtkj.p2psys.webpetcard.domain;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：储值卡激活日志
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月1日
+ * @JIRA JSDP-171
+ */
+@Entity
+@Table(name = "t_jsd_pet_card_log")
+public class PetCardLog {
+	
+	public static final String TRANSFER_RECHARGE_PET_CARD_SUC = "suc";
+	public static final String TRANSFER_RECHARGE_PET_CARD_FAI = "fail";
+	//JSDP-171 xingjia 20150714 start
+	public static final String TRANSFER_RECHARGE_PET_CARD_FZEN = "fzen";
+	//JSDP-171 xingjia 20150714 end
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = "id")
+	private int id;//主键id
+	private String status;//消费成功、失败 
+	private double consumeMoney;//消费金额
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "consume_user")
+	private User consumeUser;//储值卡激活用户
+	private Date consumeTime;//消费时间
+	private String remark;//备注
+	//JSDP-171 xingjia 20150714 start
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name="consume_tid")
+	private BorrowTender consumeTid;//消费体验卡的金额
+	//JSDP-171 xingjia 20150714 end
+	private String tradeNo;//订单号
+	private String supplyNo;//批次号
+
+	
+	
+	
+
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public User getConsumeUser() {
+		return consumeUser;
+	}
+	public void setConsumeUser(User consumeUser) {
+		this.consumeUser = consumeUser;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public double getConsumeMoney() {
+		return consumeMoney;
+	}
+	public void setConsumeMoney(double consumeMoney) {
+		this.consumeMoney = consumeMoney;
+	}
+	public Date getConsumeTime() {
+		return consumeTime;
+	}
+	public void setConsumeTime(Date consumeTime) {
+		this.consumeTime = consumeTime;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public BorrowTender getConsumeTid() {
+		return consumeTid;
+	}
+	public void setConsumeTid(BorrowTender consumeTid) {
+		this.consumeTid = consumeTid;
+	}
+	public String getTradeNo() {
+		return tradeNo;
+	}
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+	public String getSupplyNo() {
+		return supplyNo;
+	}
+	public void setSupplyNo(String supplyNo) {
+		this.supplyNo = supplyNo;
+	}
+	
+	
+}

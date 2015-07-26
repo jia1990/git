@@ -1,0 +1,37 @@
+package com.ddtkj.p2psys.authorize.service;
+
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.domain.ClientUser;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * 授权应用服务层
+ * @author sxy
+ * @version 3.0
+ * @date 孙晓勇
+ *
+ */
+public interface ClientUserService{
+	
+	/**
+     * 添加用户授权信息
+     * 
+     * @param user
+     * @param client
+     */
+	ClientUser insertUserInfo(ClientUser clientUser);
+	
+	
+	public ClientUserModel selectByUserAndClient(long userId, String clientId);
+	
+	
+	/**
+	 * 插入应用端用户
+	 * @param user
+	 * @param currentClient
+	 * @return
+	 */
+	public ClientUserModel updateOauthUserInfo(User user, Client currentClient);
+	
+}

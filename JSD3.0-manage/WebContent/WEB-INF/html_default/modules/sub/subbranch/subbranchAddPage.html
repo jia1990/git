@@ -1,0 +1,133 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/sub/subbranch/subbranchAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址	
+/*
+ *初始化省份选择框
+ * */
+$.ajax({
+    type:"get",
+    url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+    dataType:"json",
+    success:function(json){
+    	
+    	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+    		 
+    		  var province=json[i];
+    		 $("#province").append("<option  value="+province.id+">"+province.name+"</option>");
+    	 }
+    }
+});
+
+//给省份下拉选择框注册change事件 
+ $("#province").change(function(){
+	 $("#city").empty();
+	 $("#city").append("<option value=''>请选择</option>");
+	 var id = $(this).val();
+	 if($(this).val() != ''){
+	 	getCity(id);
+	 }else{
+	 	 $("#area").empty();
+		 $("#area").append("<option value=''>请选择</option>");
+	 }
+ });
+
+
+/*省份发生变化
+ *AJAX一步后台获取与此省份关联的城市
+ * 
+ * */
+function  getCity(id){
+	//ajax逻辑
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",	        
+        data:{
+        	pId:id
+        },
+        success:function(json){
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		  var city=json[i];
+        		 $("#city").append("<option value="+city.id+">"+city.name+"</option>");
+        	 }
+        }
+    });
+	
+}
+
+/*给城市选择框注册change事件*/
+$("#city").change(function(){
+	 $("#area").empty();
+	 $("#area").append("<option value=''>请选择</option>");
+	var id = $(this).val();
+	if(id!=''){
+		getCounty(id);
+	}
+});
+
+/*城市发生变化
+ *AJAX一步后台获取与此市关联的县（区）
+ * 
+ * */
+function getCounty(id){
+	//ajax逻辑
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",	        
+        data:{
+        	pId:id
+        },
+        success:function(json){
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		  var county=json[i];
+        		 $("#area").append("<option value="+county.id+">"+county.name+"</option>");
+        	 }
+        }
+    });
+	
+}
+</script>
+<style>
+#form b{color: #ff0000;}
+#branchName{width:230px;}
+#content{width:450px;}
+</style>
+<form id="form" method="post" enctype="multipart/form-data">
+	<div class="borrowForm" style="border-top: none;">
+		<div class="adminUserMuti">
+
+			<span>加盟商名称：</span>
+			<input type="text" name="name"  maxlength="35" autocomplete="off" size="15" id="branchName"
+				class="borrowFormTxt2 easyui-validatebox" data-options="required: true"/><b>*</b>
+			
+		</div>
+		<div class="adminUserMuti">
+			<span style="line-height:40px;">公司地区：</span>
+			
+			
+			
+		    <select name="province" id="province" class="prov">
+				<option value="">请选择</option>
+			</select> 
+			<select name="city" id="city" class="city">
+				<option value="">请选择</option>
+			</select> 
+			<select name="area" id="area" class="area">
+				<option value="">请选择</option>
+			</select> 
+		</div>
+		
+		<div class="adminUserMuti">
+			<span style="line-height:40px;">详细地址：</span>
+			<textarea id="content" name="detail"
+				class="easyui-validatebox borrowFormTextarea"
+				data-options="required: true" maxlength="50"></textarea><b>*</b>
+			
+		</div>
+		
+	</div>
+
+
+ 	<input name="subbranchAddToken" value="${subbranchAddToken!}" type="hidden" />
+</form>
+

@@ -1,0 +1,343 @@
+package com.ddtkj.p2psys.account.service.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountLogDao;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.ddtkj.p2psys.account.service.AccountLogService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.dao.DictDao;
+import com.rongdu.p2psys.core.domain.Dict;
+@Service("accountLogService")
+public class AccountLogServiceImpl implements AccountLogService {
+
+	@Resource
+	private AccountLogDao accountLogDao;
+	@Resource
+	private DictDao dictDao;
+
+	@Override
+	public void add(AccountLog log) {
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public PageDataList<AccountLogModel> list(AccountLogModel model) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", model.getUser().getUserId());
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+			param.addParam("addTime", Operators.GTE, start);
+		}
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		if (model.getTime() == 7) {
+			param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		} else if (model.getTime()>0 && model.getTime()<4){
+			param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+			param.addParam("addTime", Operators.LTE, end);
+		}
+		if (StringUtil.isNotBlank(model.getStatus()) && !("0").equals(model.getStatus()) && !"undefined".equals(model.getStatus())) {
+			param.addParam("type", model.getStatus());
+		}
+		param.addOrder(OrderType.DESC, "id");
+		param.addPage(model.getPage());
+
+		PageDataList<AccountLog> pageDateList = accountLogDao.findPageList(param);
+		PageDataList<AccountLogModel> pageDateList_ = new PageDataList<AccountLogModel>();
+		List<AccountLogModel> list = new ArrayList<AccountLogModel>();
+		pageDateList_.setPage(pageDateList.getPage());
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountLog c = (AccountLog) pageDateList.getList().get(i);
+				AccountLogModel cm = AccountLogModel.instance(c);
+				Dict d = dictDao.find("account_type", c.getType());
+				if (d != null) {
+					cm.setTypeName(d.getName());
+				}
+				if (c.getToUser() != null) {
+					cm.setToUserName(c.getToUser().getUserName());
+				} else {
+					cm.setToUserName("");
+				}
+				cm.setToUser(null);
+				cm.setMoney(0);
+				list.add(cm);
+			}
+		}
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+
+	@Override
+	public PageDataList<AccountLogModel> accountLogList(AccountLogModel model, int pageNumber, int pageSize) {
+		return accountLogDao.accountLogList(model, pageNumber, pageSize);
+	}
+
+    @Override
+    public List<AccountLogModel> accountTransactionLog(User user) {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("user.userId", user.getUserId());
+        param.addOrder(OrderType.DESC, "id");
+        List<AccountLog> list = accountLogDao.findByCriteria(param, 0, 5);
+        List<AccountLogModel> accountLogModelList = new ArrayList<AccountLogModel>();
+        for (int i = 0; i < list.size(); i++) {
+            AccountLog c = list.get(i);
+            AccountLogModel cm = AccountLogModel.instance(c);
+            Dict d = dictDao.find("account_type", c.getType());
+            cm.setToUserName(c.getToUser().getUserName());
+            if (d != null) {
+                cm.setTypeName(d.getName());
+            }
+            if (c.getToUser() != null) {
+                cm.setToUserName(c.getToUser().getUserName());
+            } else {
+                cm.setToUserName("");
+            }
+            cm.setToUser(null);
+            accountLogModelList.add(cm);
+        }
+        return accountLogModelList;
+    }
+
+	@Override
+	public PageDataList<AccountLogModel> accountLogPageList(AccountLogModel model,
+			int pageNumber, int pageSize) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(pageNumber, pageSize);
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName", Operators.LIKE, model.getUserName());
+		}
+		if(StringUtil.isNotBlank(model.getUserType())){
+			param.addParam("user.userCache.userType", model.getUserType());
+		}
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			//Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+			Date start = DateUtil.valueOf(model.getStartTime());
+			param.addParam("addTime", Operators.GTE, start);
+		}
+		if(StringUtil.isNotBlank(model.getType())){
+			param.addParam("type", model.getType());
+		}
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		if (model.getTime() == 7) {
+			param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		} else if (model.getTime()>0 && model.getTime()<4){
+			param.addParam("addTime", Operators.GTE,DateUtil.rollMon(nowdate, -model.getTime()));
+			param.addParam("addTime", Operators.LTE, nowdate);
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+			Date end = DateUtil.valueOf(model.getEndTime());
+			param.addParam("addTime", Operators.LTE, end);
+		}
+		if(StringUtil.isNotBlank(model.getTradeNo())){
+			param.addParam("tradeNo", Operators.LIKE, model.getTradeNo());
+		}
+		if(StringUtil.isNotBlank(model.getOutTradeNo())){
+			param.addParam("outTradeNo", Operators.LIKE, model.getOutTradeNo());
+		}
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<AccountLog> pageDataList = accountLogDao.findPageList(param);
+		//将原有的分页信息封装放入新分页中
+		PageDataList<AccountLogModel> pageModelList = new PageDataList<AccountLogModel>();
+		List<AccountLogModel> list = new ArrayList<AccountLogModel>();
+		pageModelList.setPage(pageDataList.getPage());
+		if(pageDataList.getList().size()>0){
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				AccountLog c = (AccountLog) pageDataList.getList().get(i);
+				AccountLogModel cm = AccountLogModel.instance(c);
+				
+				Dict d = dictDao.find("account_type", c.getType());
+				if (d != null) {
+					cm.setTypeName(d.getName());
+				}
+				if (c.getToUser() != null) {
+					cm.setToUserName(c.getToUser().getUserName());
+				} else {
+					cm.setToUserName("");
+				}
+				if(null != c.getUser()){
+					cm.setUserName(c.getUser().getUserName());
+					cm.setUserId(c.getUser().getUserId());
+				}
+				cm.setToUser(null);
+				cm.setMoney(0);
+				DecimalFormat df =new DecimalFormat("#0.00");
+				
+				cm.setRechargeMoneyStr(df.format(cm.getRechargeMoney()));
+				cm.setBorrowerRechargeMoneyStr(df.format(cm.getBorrowerRechargeMoney()));
+				cm.setRechargeUsableStr(df.format(cm.getRechargeUsable()));
+				cm.setBorrowerEnterMoneyStr(df.format(cm.getBorrowerEnterMoney()));
+				cm.setBorrowerEnterUsableStr(df.format(cm.getBorrowerEnterUsable()));
+				cm.setBorrowerFreezeUseRechargeStr(df.format(cm.getBorrowerFreezeUseRecharge()));
+				cm.setBorrowerFreezeUseEnterStr(df.format(cm.getBorrowerFreezeUseEnter()));
+				//cm.setRepaymentTotalStr(df.format(cm.getRepaymentTotal()));
+				
+				cm.setAwardMoneyStr(df.format(cm.getAwardMoney()));
+				cm.setInterestMoneyStr(df.format(cm.getInterestMoney()));
+				cm.setReturnCapitalMoneyStr(df.format(cm.getReturnCapitalMoney()));
+				cm.setRpDynamicMoneyStr(df.format(cm.getRpDynamicMoney()));
+				cm.setInterestUsableStr(df.format(cm.getInterestUsable()));
+				cm.setAwardUsableStr(df.format(cm.getAwardUsable()));
+				cm.setRpDynamicUsableStr(df.format(cm.getRpDynamicUsable()));
+				cm.setFreezeUseInterestStr(df.format(cm.getFreezeUseInterest()));
+				cm.setFreezeUseRechargeStr(df.format(cm.getFreezeUseRecharge()));
+				cm.setFreezeUseReturnCapitalStr(df.format(cm.getFreezeUseReturnCapital()));
+				cm.setFreezeUseAwardStr(df.format(cm.getFreezeUseAward()));
+				//cm.setCollectionTotalStr(df.format(cm.getCollectionTotal()));
+				cm.setReturnCapitalUsableStr(df.format(cm.getReturnCapitalUsable()));
+				
+				cm.setAccountTotalStr(df.format(cm.getAccountTotal()));//账户总额
+				
+				cm.setCollectionTotalStr(df.format(cm.getCollectionTotal()));//待收总额
+				
+				cm.setRepaymentTotalStr(df.format(cm.getRepaymentTotal()));//待还金额
+				
+				cm.setOptMoneyTotalLogz(df.format(cm.getInvestOptMoney()));//操作金额
+				
+				cm.setOptBorrowMoneyTotalLogz(df.format(cm.getBorrowOptMoney()));//借款人操作金额
+				
+				cm.setUsableMoneyTotalLogz(df.format(cm.getInvestUseMoney()));//可用金额
+				
+				cm.setBorrowerUsableMoneyLogz(df.format(cm.getBorrowUseMoney()));//借款人可用金额
+				
+				cm.setFreezeUseMoneyTotalLogz(df.format(cm.getFreezeAccount()));//冻结金额
+				
+				cm.setFreezeBorrowerMoneyTotalLogz(df.format(cm.getBorrowerFreezeTotal()));//借款人冻结金额
+				
+				cm.setRpDynamicTotalLogz(df.format(cm.getRpDynamicTotal()));//钱袋子总额
+				
+				
+				
+				
+				if(cm.getPaymentsType()==1){
+					//1、收入2、支出 0、不变
+					cm.setPayMentDetails("收入");
+				}else if(cm.getPaymentsType()==2){
+					cm.setPayMentDetails("支出");
+				}else{
+					cm.setPayMentDetails("不变");
+				}
+				list.add(cm);
+			}
+		}
+		pageModelList.setList(list);
+		return pageModelList;
+	}
+
+	public Map<String, Object> compairAccountLog(String outTradeNo,String tradeNo)throws Exception{
+		Map<String, Object> map=new HashMap<String, Object>();
+		//本地数据
+		AccountLog accountLog=accountLogDao.findObjByProperty("outTradeNo", outTradeNo);
+		AccountLogModel accountLogModel=new AccountLogModel();
+		BeanUtils.copyProperties(accountLog, accountLogModel);
+		accountLogModel.setUserName(accountLog.getUser().getUserName());
+		accountLogModel.setToUserName(accountLog.getToUser().getUserName());
+		accountLogModel.setMoney(accountLogModel.getInvestOptMoney());
+		Dict a=dictDao.findObjByProperty("value",accountLog.getType());
+		accountLogModel.setTypeName(a.getName());
+		map.put("accountLogModel", accountLogModel);
+		//第三方数据
+		YmdQuery ymdQuery=new YmdQuery();
+		ymdQuery.setOutTradeNo(outTradeNo);
+		ymdQuery.setMode("trade");
+		YmdQueryReturn ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+		List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+		YmdQueryReturnDetails yrd=new YmdQueryReturnDetails();
+		if(list.size()>0){
+			yrd=list.get(0);
+		}
+		map.put("yrd", yrd);
+		map.put("ymdQueryReturn", ymdQueryReturn);
+		return map;
+	}
+	@Override
+	public AccountLogModel findAccountLogModelById(int id) {
+		AccountLog accountLog = accountLogDao.find(id);
+		AccountLogModel cm = AccountLogModel.instance(accountLog);
+		
+		Dict d = dictDao.find("account_type", accountLog.getType());
+		if (d != null) {
+			cm.setTypeName(d.getName());
+		}
+		
+		DecimalFormat df =new DecimalFormat("#0.00");
+		cm.setAccountTotalStr(df.format(cm.getAccountTotal()));
+		cm.setRechargeMoneyStr(df.format(cm.getRechargeMoney()));
+		cm.setBorrowerRechargeMoneyStr(df.format(cm.getBorrowerRechargeMoney()));
+		cm.setRechargeUsableStr(df.format(cm.getRechargeUsable()));
+		cm.setBorrowerEnterMoneyStr(df.format(cm.getBorrowerEnterMoney()));
+		cm.setBorrowerEnterUsableStr(df.format(cm.getBorrowerEnterUsable()));
+		cm.setBorrowerFreezeUseRechargeStr(df.format(cm.getBorrowerFreezeUseRecharge()));
+		cm.setBorrowerFreezeUseEnterStr(df.format(cm.getBorrowerFreezeUseEnter()));
+		cm.setRepaymentTotalStr(df.format(cm.getRepaymentTotal()));
+		
+		cm.setAwardMoneyStr(df.format(cm.getAwardMoney()));
+		cm.setInterestMoneyStr(df.format(cm.getInterestMoney()));
+		cm.setReturnCapitalMoneyStr(df.format(cm.getReturnCapitalMoney()));
+		cm.setRpDynamicMoneyStr(df.format(cm.getRpDynamicMoney()));
+		cm.setInterestUsableStr(df.format(cm.getInterestUsable()));
+		cm.setAwardUsableStr(df.format(cm.getAwardUsable()));
+		cm.setRpDynamicUsableStr(df.format(cm.getRpDynamicUsable()));
+		cm.setFreezeUseInterestStr(df.format(cm.getFreezeUseInterest()));
+		cm.setFreezeUseRechargeStr(df.format(cm.getFreezeUseRecharge()));
+		cm.setFreezeUseReturnCapitalStr(df.format(cm.getFreezeUseReturnCapital()));
+		cm.setFreezeUseAwardStr(df.format(cm.getFreezeUseAward()));
+		cm.setFreezeRpDynamicStr(df.format(cm.getFreezeRpDynamic()));
+		cm.setCollectionTotalStr(df.format(cm.getCollectionTotal()));
+		cm.setReturnCapitalUsableStr(df.format(cm.getReturnCapitalUsable()));
+		
+		//汇总后的总金额
+		cm.setOptMoneyTotalLogz(df.format(cm.getInvestOptMoney()));//操作金额
+		
+		cm.setOptBorrowMoneyTotalLogz(df.format(cm.getBorrowOptMoney()));//借款人操作金额
+		
+		cm.setUsableMoneyTotalLogz(df.format(cm.getInvestUseMoney()));//可用金额
+		
+		cm.setBorrowerUsableMoneyLogz(df.format(cm.getBorrowUseMoney()));//借款人可用金额
+		
+		cm.setFreezeUseMoneyTotalLogz(df.format(cm.getFreezeAccount()));//冻结金额
+		
+		cm.setFreezeBorrowerMoneyTotalLogz(df.format(cm.getBorrowerFreezeTotal()));//借款人冻结金额
+		
+		cm.setRpDynamicTotalLogz(df.format(cm.getRpDynamicTotal()));//钱袋子总额
+		
+		cm.setRemark(cm.getRemark());
+		
+		return cm;
+	}
+
+	@Override
+	public List excelLogList(AccountLogModel model) {
+		
+		return accountLogDao.excelLogList(model);
+	}
+}

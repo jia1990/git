@@ -1,0 +1,168 @@
+package com.ddtkj.common.http;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocket;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContextBuilder;
+import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.conn.ssl.X509HostnameVerifier;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
+
+/**
+ * @描述:httpclient实在用工具类
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月24日
+ */
+final public class HttpClientUtils {
+
+	/* 全局HttpClient连接池 */
+	private final static CloseableHttpClient httpClient = HttpClientBuilder
+			.create().setMaxConnTotal(50).setMaxConnPerRoute(50).build();
+	/* 超时设置 */
+	private final static RequestConfig requestConfig = RequestConfig.custom()
+			.setSocketTimeout(50000).setConnectTimeout(50000).build();// 设置请求和传输超时时间
+
+	private HttpClientUtils() {
+	}
+	
+	public static final String RETURN_STATUS="status";
+	public static final String RETURN_CONTENT="content";
+
+	/**
+	 * 返回get请求状态
+	 * 
+	 * @param url
+	 *            请求地址
+	 * @return Map key:响应状态码 value:响应内容
+	 * */
+	public static Map<String, Object> doGet(String url) {
+		Map<String, Object> result = new HashMap<String, Object>();
+		int code;
+		String content;
+		CloseableHttpResponse response = null;
+		InputStream in = null;
+		try {
+			HttpGet get = new HttpGet(url);
+			get.setConfig(requestConfig);
+			response = httpClient.execute(get);
+
+			code = response.getStatusLine().getStatusCode();
+			content = EntityUtils.toString(response.getEntity());
+          //  System.out.println(content);
+	
+			result.put(RETURN_STATUS, code);
+			result.put(RETURN_CONTENT, content);
+		} catch (ClientProtocolException e) {
+			result.put("00000", e.getMessage());
+			e.printStackTrace();
+		} catch (IOException e) {
+			result.put("00000", e.getMessage());
+			e.printStackTrace();
+		} finally {
+
+			if (response != null) {
+				try {
+					response.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+			}
+		}
+		return result;
+	}
+	
+	 public static CloseableHttpClient createSSLInsecureClient()  
+	            throws GeneralSecurityException {  
+	        try {  
+	            SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(  
+	                    null, new TrustStrategy() {  
+	                        public boolean isTrusted(X509Certificate[] chain,  
+	                                String authType) throws CertificateException {  
+	                            return true;  
+	                        }  
+	                    }).build();  
+	            SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(  
+	                    sslContext, new X509HostnameVerifier() {  
+	  
+	                        @Override  
+	                        public boolean verify(String arg0, SSLSession arg1) {  
+	                            return true;  
+	                        }  
+	  
+	                        @Override  
+	                        public void verify(String host, SSLSocket ssl)  
+	                                throws IOException {  
+	                        }  
+	  
+	                        @Override  
+	                        public void verify(String host, X509Certificate cert)  
+	                                throws SSLException {  
+	                        }  
+	  
+	                        @Override  
+	                        public void verify(String host, String[] cns,  
+	                                String[] subjectAlts) throws SSLException {  
+	                        }  
+	  
+	                    });  
+	            return HttpClients.custom().setSSLSocketFactory(sslsf).build();  
+	        } catch (GeneralSecurityException e) {  
+	            throw e;  
+	        }  
+	    }  
+	
+	
+	public static void main(String[] args) {
+		
+		
+		try {
+			HttpGet get = new HttpGet();
+			CloseableHttpClient httpClient = HttpClientUtils.createSSLInsecureClient();
+			get.setURI(new URI("https://api.yemadai.com"));
+			CloseableHttpResponse  response =httpClient.execute(get);
+			int statusCode =response.getStatusLine().getStatusCode();
+			System.out.println(statusCode);
+			HttpEntity entity = response.getEntity();
+			if (entity != null) {
+				String resCode = EntityUtils.toString(entity);
+				System.out.println("请求结果===="+resCode);
+				}
+		} catch (GeneralSecurityException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+}

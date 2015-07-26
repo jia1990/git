@@ -1,0 +1,433 @@
+package com.ddtkj.p2psys.user.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountOpenHistory;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述:用户信息实体类
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间:  2014年12月8日 
+ */
+@Entity
+@Table(name = "t_jsd_user")
+public class User implements Serializable {
+
+	private static final long serialVersionUID = -8221342177305177934L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = "user_id")
+	private long userId;
+	private String userName;// 平台用户名
+	private String nickname;// 平台昵称
+	private String realName;// 真实姓名
+	private String password;// 平台 用户密码
+	private String paypwd ;
+	private String email;// 电子邮件
+	private String cardType;//证件类型:身份证件60 ,公司注册号:61
+	@Column(name="card_no")
+	private String cardNO;// 证件号码
+	private String mobilePhone;// 手机号码
+	//----------第三方相关 start
+	//@Column(name="third_party_useable")
+	private String thirdPartyUseable="N";// 第三方是否可用	Y:可用;N:不可用
+	private String thirdPartyIsOpen="N"; //第三方是否开通   N：没有  Y ：开通
+	private String thirdPartyAccount;//第三方登录账户(第三方绑定账户名称) 投资人，个人借款显示手机号，商户显示邮箱
+	//----------第三方相关 end
+	@Column(name="islocked")
+	private String isLocked="NN";// 用户锁定状态	用户登录锁定：UY; 后台管理员锁定：AY; 用户注销锁定：FF; 账户未锁定：NN;
+	private String lockRemark;//用户锁定备注
+	private Date lockTime;//锁定时间
+	private String addIp;// 添加IP
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime;// 添加时间
+	private String memberLevel ;
+	private int loginCount;//登录次数
+	private String loginIp;//登录IP
+	private Date loginTime;//登录时间
+	//李建云加 
+	private int thirdPartyOpenCount = 0;//第三方开户次数
+	
+	
+	private String realType;  //实名类型  ：00 本地ID5  01 汇潮ID5认证
+	//JSDP-123 gjh 2015-5-19 start
+	private String openId;
+	//JSDP-123 gjh 2015-5-19 end
+	
+	/** 用户注册方式 */
+	private String registerWay; 	// 用户注册方式 ： P：PC端	    M：mobilephone手机端
+	
+	public String getRegisterWay() {
+		return registerWay;
+	}
+	public void setRegisterWay(String registerWay) {
+		this.registerWay = registerWay;
+	}
+	
+	
+	
+	public String getRealType() {
+		return realType;
+	}
+	public void setRealType(String realType) {
+		this.realType = realType;
+	}
+	public User(){}
+	public User(long id){
+		this.userId = id ;
+	}
+	
+	
+	
+    /**
+	 * @param userId
+	 * @param userName
+	 * @param nickname
+	 * @param realName
+	 * @param password
+	 * @param email
+	 * @param cardType
+	 * @param cardNO
+	 * @param mobilePhone
+	 * @param thirdPartyUseable
+	 * @param isLocked
+	 * @param lockRemark
+	 * @param lockTime
+	 * @param addIp
+	 * @param addTime
+	 * @param memberLevel
+	 * @param userCache
+	 * @param userIdentify
+	 */
+	public void userOff(long userId,String userName, String nickname, String realName,
+			String email, String cardType, String cardNO,String password,String paypwd,
+			String mobilePhone, String thirdPartyUseable,  String addIp, Date addTime,
+			String memberLevel, UserCache userCache, UserIdentify userIdentify,String isLocked,
+			int loginCount,String loginIp,Date loginTime) {
+		this.userId = userId;
+		this.userName = userName;
+		this.nickname = nickname;
+		this.realName = realName;
+		this.email = email;
+		this.cardType = cardType;
+		this.cardNO = cardNO;
+		this.password = password;
+		this.paypwd = paypwd;
+		this.mobilePhone = mobilePhone;
+		this.thirdPartyUseable = thirdPartyUseable;
+		this.addIp = addIp;
+		this.addTime = addTime;
+		this.memberLevel = memberLevel;
+		this.userCache = userCache;
+		this.userIdentify = userIdentify;
+		this.isLocked = isLocked;
+		this.loginCount = loginCount;
+		this.loginIp = loginIp;
+		this.loginTime = loginTime;
+	}
+
+
+
+	/*
+     * 一对一关联UserCache(用户附属信息)
+     * */
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private UserCache userCache;
+	/*
+	 *一对一关联UserIdentify(用户认证信息)
+	 * */
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private UserIdentify userIdentify;
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private UserInvitedSummary userInvitedSummary;
+	
+	
+	/**
+	 * 一对一关联AccountOpenHistory(第三方账户)
+	 */
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private AccountOpenHistory accountOpenHistory;
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private MemberVip memberVip;
+
+	
+	public AccountOpenHistory getAccountOpenHistory() {
+		return accountOpenHistory;
+	}
+	public void setAccountOpenHistory(AccountOpenHistory accountOpenHistory) {
+		this.accountOpenHistory = accountOpenHistory;
+	}
+	
+	public long getUserId() {
+		return userId;
+	}
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	/**
+	 * 获取姓与平台前端显示
+	 * 
+	 * @return 隐藏的电子邮件
+	 */
+	public String getHideRealName() {
+		if (StringUtil.isNotBlank(realName)) {
+		return "*"+ realName.substring(1, realName.length());
+		}
+		return "";
+	}
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	/**
+	 * 获取(隐藏一定位数的)的电子邮件 用与平台前端显示
+	 * 
+	 * @return 隐藏的电子邮件
+	 */
+	public String getHideEmail() {
+		if (StringUtil.isNotBlank(email)&&email.length()>3) {
+			if(email.contains(".")){
+				return email.substring(0, 2) + "****"+ email.substring(email.indexOf("."), email.length());
+			}else{
+				return email.substring(0, 2) + "****";
+			}
+		}
+		return "";
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	/**
+	 * 获取(隐藏一定位数的)的证件号码 用于前端显示
+	 * 
+	 * @return 隐藏的证件号码
+	 */
+	public String getHideCardNO() {
+		if (StringUtil.isNotBlank(cardNO) && cardNO.length() == 18) {
+			return cardNO.substring(0, 6) + "********"
+					+ cardNO.substring(14, 18);
+		}
+		return cardNO;
+	}
+
+	public String getCardNO() {
+		return cardNO;
+	}
+
+	public void setCardNO(String cardNO) {
+		this.cardNO = cardNO;
+	}
+
+	/**
+	 * 获取(隐藏一定位数的)手机号码 用与平台前端显示
+	 * 
+	 * @return 隐藏的手机号码
+	 */
+	public String getHideMobilePhone() {
+		if (StringUtil.isNotBlank(mobilePhone) && mobilePhone.length() == 11) {
+			return mobilePhone.substring(0, 4) + "****"
+					+ mobilePhone.substring(7, 11);
+		}
+		return mobilePhone;
+	}
+
+	public String getMobilePhone() {
+		return mobilePhone;
+	}
+
+	public void setMobilePhone(String mobilePhone) {
+		this.mobilePhone = mobilePhone;
+	}
+
+	public String getThirdPartyUseable() {
+		return thirdPartyUseable;
+	}
+
+	public void setThirdPartyUseable(String thirdPartyUseable) {
+		this.thirdPartyUseable = thirdPartyUseable;
+	}
+
+	public String getIsLocked() {
+		return isLocked;
+	}
+
+	public void setIsLocked(String isLocked) {
+		this.isLocked = isLocked;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getLockRemark() {
+		return lockRemark;
+	}
+
+	public void setLockRemark(String lockRemark) {
+		this.lockRemark = lockRemark;
+	}
+
+	public Date getLockTime() {
+		return lockTime;
+	}
+
+	public void setLockTime(Date lockTime) {
+		this.lockTime = lockTime;
+	}
+
+	public String getCardType() {
+		return cardType;
+	}
+
+	public void setCardType(String cardType) {
+		this.cardType = cardType;
+	}
+
+	public UserCache getUserCache() {
+		return userCache;
+	}
+
+	public void setUserCache(UserCache userCache) {
+		this.userCache = userCache;
+	}
+	public UserIdentify getUserIdentify() {
+		return userIdentify;
+	}
+	public void setUserIdentify(UserIdentify userIdentify) {
+		this.userIdentify = userIdentify;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public String getMemberLevel() {
+		return memberLevel;
+	}
+	public void setMemberLevel(String memberLevel) {
+		this.memberLevel = memberLevel;
+	}
+	public String getPaypwd() {
+		return paypwd;
+	}
+	public void setPaypwd(String paypwd) {
+		this.paypwd = paypwd;
+	}
+	public String getThirdPartyIsOpen() {
+		return thirdPartyIsOpen;
+	}
+	public void setThirdPartyIsOpen(String thirdPartyIsOpen) {
+		this.thirdPartyIsOpen = thirdPartyIsOpen;
+	}
+	public String getThirdPartyAccount() {
+		return thirdPartyAccount;
+	}
+	public void setThirdPartyAccount(String thirdPartyAccount) {
+		this.thirdPartyAccount = thirdPartyAccount;
+	}
+	public int getLoginCount() {
+		return loginCount;
+	}
+	public void setLoginCount(int loginCount) {
+		this.loginCount = loginCount;
+	}
+	public String getLoginIp() {
+		return loginIp;
+	}
+	public void setLoginIp(String loginIp) {
+		this.loginIp = loginIp;
+	}
+	public Date getLoginTime() {
+		return loginTime;
+	}
+	public void setLoginTime(Date loginTime) {
+		this.loginTime = loginTime;
+	}
+	public UserInvitedSummary getUserInvitedSummary() {
+		return userInvitedSummary;
+	}
+	public void setUserInvitedSummary(UserInvitedSummary userInvitedSummary) {
+		this.userInvitedSummary = userInvitedSummary;
+	}
+	public MemberVip getMemberVip() {
+		return memberVip;
+	}
+	public void setMemberVip(MemberVip memberVip) {
+		this.memberVip = memberVip;
+	}
+	public int getThirdPartyOpenCount() {
+		return thirdPartyOpenCount;
+	}
+	public void setThirdPartyOpenCount(int thirdPartyOpenCount) {
+		this.thirdPartyOpenCount = thirdPartyOpenCount;
+	}
+	//JSDP-123 gjh 2015-5-19 start
+	public String getOpenId() {
+		return openId;
+	}
+	public void setOpenId(String openId) {
+		this.openId = openId;
+	}
+	//JSDP-123 gjh 2015-5-19 end
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>后台企业开户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+
+<script type="text/javascript">
+
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'redPackList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			 			{ field: 'id', title: '编号', width: 50, fixed :true,checkbox : false},
+						{ field: 'name', title: '活动名称', width: 80, fixed :true,checkbox : false},
+						{ field: 'validtime', title: '有效时间', width: 80, fixed :true,sortable: false,
+							formatter:function(value,row,index){
+								return value+"天";
+							}	
+						},
+						{ field: 'isopen', title: '是否开启', width: 40, sortable: false,
+							formatter: function(value,row,index){
+								if(value == 'Y'){
+									return "开启";
+								}else if(value == 'N'){
+									return "关闭";
+								}
+								return "";
+							} 
+						},
+						{ field: 'createtime', title: '添加时间', width: 80, sortable: false, 
+			          	  	formatter: function(value,row,index){
+			          	  		return getLocalTime(value,4);
+							}
+						},
+						{ field: 'userName', title: '添加人',fixed :true, width: 80, sortable: false }
+						 ] ]
+
+			
+		});
+		
+	});
+	var getSelected = function($dialog, $redPackName, $validtime, $redId) {
+    	var selected = $('#dataGrid').datagrid('getSelected');
+    	$redPackName.val(selected.name);
+    	$validtime.val(selected.validtime);
+    	$redId.val(selected.id);
+    	$dialog.dialog('destroy');
+    };
+</script>
+</head>
+<body style="padding:0 20px;">
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	
+</body>
+</html>

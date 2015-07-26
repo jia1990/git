@@ -1,0 +1,90 @@
+<script type="text/javascript">
+    $(function() {
+    	//JSDP-159 XINGJIA 2015-05-25 START
+    	$.fn.dataGridOptions.formSubTransferFun("#form",'/modules/account/transfer/accountTransferMendYungou.html',"补单成功！","补单失败！");
+    	//JSDP-159 XINGJIA 2015-05-25 END
+    });
+</script>
+
+本地
+<div class="popForm sForm">
+	<div class="formitm">
+		<label class="lab">交易状态：</label>
+		<div class="ipt">
+			<#if transfer.transferStatus == "00">
+			转账成功
+			<#elseif transfer.transferStatus =="66">
+			转账申请中
+			<#elseif transfer.transferStatus =="99">
+			转账失败
+			<#elseif transfer.transferStatus =="77">
+			转账审核不通过
+			<#elseif transfer.transferStatus =="01">
+			其他异常
+			<#elseif transfer.transferStatus =="02">
+			第三方成功
+			<#elseif transfer.transferStatus =="05">
+			第三方成功，本地成功
+			</#if>
+		</div>
+	</div>
+	
+	<div class="formitm" >
+		<label class="lab">转入人：</label>
+		<div class="ipt">
+		${transfer.user.userName}
+		</div>
+		
+	</div>
+	<div class="formitm" >
+		<label class="lab">转出人：</label>
+		<div class="ipt">
+		${(transfer.popUser.userName)!"平台"}
+		</div>
+		
+	</div>
+	<div class="formitm" >
+		<label class="lab">批次号：</label>
+		<div class="ipt">
+		${transfer.transferNo}
+		</div>
+		
+	</div>
+	<div class="formitm" >
+		<label class="lab">交易金额：</label>
+		<div class="ipt">
+		${(transfer.transferAmount)?string('0.00')}
+		</div>
+		
+	</div>
+</div>
+云购
+<div class="popForm sForm">
+<form id="form"  method="post">
+	<#if transfer.transferStatus == "05">
+	<div class="formitm" >
+		<label class="lab">是否补单：</label>
+		<div class="ipt">
+			<input type="radio" name="mendYungou" value="1">是
+			<input type="radio" name="mendYungou" checked="checked"  value="0">否
+			<input type="hidden" name="mendTypeYunGou" value="yungou"/>
+		</div>
+	</div>
+	<#elseif transfer.transferStatus == "00">
+	转账成功
+	<#elseif transfer.transferStatus =="66">
+	转账申请中
+	<#elseif transfer.transferStatus =="99">
+	转账失败
+	<#elseif transfer.transferStatus =="77">
+	转账审核不通过
+	<#elseif transfer.transferStatus =="01">
+	其他异常
+	<#elseif transfer.transferStatus =="02">
+	第三方成功
+	</#if>
+
+	<input name="transferNo" value="${transfer.transferNo!}" type="hidden">
+	<input name="accountTransferContrast2Token" value="${accountTransferContrast2Token!}" type="hidden">
+</form>
+</div>

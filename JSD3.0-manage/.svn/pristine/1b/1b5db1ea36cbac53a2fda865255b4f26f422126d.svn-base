@@ -1,0 +1,294 @@
+package com.rongdu.manage.action.loan;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 借贷管理-待收信息管理
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年4月17日
+ */
+public class ManageCollectionAction extends BaseAction implements ModelDriven<BorrowCollectionModel> {
+
+	BorrowCollectionModel model = new BorrowCollectionModel();
+
+	public BorrowCollectionModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private BorrowCollectionService borrowCollectionService;
+	@Resource
+	private AutoBorrowService autoBorrowService;
+
+	private Map<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * 待收信息展示
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/collection/collectionManager")
+	public String collectionManager() throws Exception {
+
+		return "collectionManager";
+	}
+
+	/**
+	 * 待收信息列表
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/collection/collectionList")
+	public void collectionList() throws Exception {
+		model.setSize(paramInt("rows"));
+		String collectionTotal = null;
+		//JSDP-85 gjh 2015-5-6 start
+		if(model.getBorrowId()!=0 || StringUtil.isNotBlank(model.getBorrowName()) || StringUtil.isNotBlank(model.getInvestUserName())
+				|| model.getStatus() != 0 || model.getType() != 0 || StringUtil.isNotBlank(model.getContractNo()) || StringUtil.isNotBlank(model.getStartTime()) || StringUtil.isNotBlank(model.getRegisterStartTime())){
+			if(model.getStatus() == 99){
+				model.setStatus(0);
+			}
+			//JSDP-85 gjh 2015-5-6 end
+			PageDataList<BorrowCollectionModel> list = borrowCollectionService.list(model);
+			// 根据同样查询得到查询总记录数
+			int pageTotal = borrowCollectionService.listPageTotal(model);
+			collectionTotal = borrowCollectionService.collectionTotal(model);
+			/*data.put("total", list.getPage().getTotal());*/
+			data.put("total", pageTotal);
+			data.put("rows", list.getList());
+		}
+		//获取汇总数据
+		List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+		if(null != collectionTotal){
+			String[] collectionTotals = collectionTotal.split(",");
+			Map<String,String> footerMap = new HashMap<String,String>();
+			footerMap.put("typeName", "待收本息总金额");
+    		footerMap.put("capitalStr", collectionTotals[0]);
+    		footerMap.put("interestStr", collectionTotals[1]);
+    		footerMap.put("repaymentAccountStr", collectionTotals[2]);
+    		footerList.add(footerMap);
+    		data.put("footer", footerList);
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 投资人待收导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/collection/collectionExcel")
+	public void collectionExcel() throws Exception {
+		// 原导出
+		/*response.setContentType("application/msexcel;charset=UTF-8");
+		
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if(model.getStatus() == 99){
+			model.setStatus(0);
+		}
+		PageDataList<BorrowCollectionModel> pageDataList = borrowCollectionService.list(model);
+		List<BorrowCollectionModel> list = pageDataList.getList();
+		List<BorrowCollectionModel> newList = new ArrayList<BorrowCollectionModel>();
+		for(int i=0;i<list.size();i++){
+			BorrowCollectionModel bcm = list.get(i);
+			bcm.setPeriod(bcm.getPeriod()+1);
+			newList.add(bcm);
+		}
+		String title = "投资人待收的Excel表";
+
+		String[] hearders = new String[] {"编号","投资人","标名","借款期限","本期期数","标类型","合同编号","预计收款时间","预收金额","本金","利息" };// 表头数组
+		String[] fields = new String[] {"id","investUserName","borrowName","validTime","period", "typeName","contractNo","repaymentTime","repaymentAccountStr","capitalStr","interestStr" };// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+		int sheetPage = newList.size() / sheetRows;
+		if (newList.size() % sheetRows > 0) {
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowCollectionModel> tdList = new ArrayList<BorrowCollectionModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				BorrowCollectionModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		
+		// 新导出
+		// ---------------------2015年5月15日 10:48:03  sxy--------------------------------------------
+		
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if (model.getStatus() == 99) {
+			model.setStatus(0);
+		}
+
+		// JSDP-116 sxy 2015-05-15 start
+		List<BorrowCollection> newList = borrowCollectionService
+				.excelBorrowCollectionList(model);
+		String title = "投资人待收的Excel表";
+		String[] hearders = new String[] { "编号", "投资人", "标编号", "标名", "借款期限", "本期期数",
+				"标类型", "预收金额", "本金", "利息", "合同编号", "状态", "类型", "预计收款时间", "对账结果" };// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]", "object[12]", "object[13]", "object[14]", "object[15]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-116 sxy 2015-05-15 start
+		
+	}
+	
+	//JSDP-85 gjh 2015-5-6 start
+	/**
+	 * 代收对账页面
+	 * @throws Exception 
+	 */
+	@Action("/modules/loan/collection/collectionContrastPage")
+	public String collectionContrastPage() throws Exception{
+		long collectionId = paramLong("id");
+		BorrowCollection bc = borrowCollectionService.find(collectionId);
+		if(bc != null){
+			request.setAttribute("collection", bc);
+			YmdQuery ymdQuery=new YmdQuery();
+			ymdQuery.setTradeNo(bc.getRepayTradeNo());
+			ymdQuery.setMode("trade");
+			YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+			ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+			List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+			System.out.println(queryDetaillist.size()>0?queryDetaillist.get(0):"空");
+			request.setAttribute("capitalList", queryDetaillist);
+			/*if(bc.getCapital() != 0){
+				YmdQuery ymdQuery=new YmdQuery();
+				ymdQuery.setOutTradeNo(bc.getRepayCapitalOutTradeNo());
+				ymdQuery.setMode("trade");
+				YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+				ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+				List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+				System.out.println(queryDetaillist.size()>0?queryDetaillist.get(0):"空");
+				request.setAttribute("ymdCapital", queryDetaillist.size()>0?queryDetaillist.get(0):null);
+			}
+			if(bc.getInterest() != 0){
+				YmdQuery ymdQuery=new YmdQuery();
+				ymdQuery.setOutTradeNo(bc.getRepayInterestOutTradeNo());
+				ymdQuery.setMode("trade");
+				YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+				ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+				List<YmdQueryReturnDetails> queryDetaillist=ymdQueryReturn.getList();
+				System.out.println(queryDetaillist.size()>0?queryDetaillist.get(0):"空");
+				request.setAttribute("ymdInterest", queryDetaillist.size()>0?queryDetaillist.get(0):null);
+			}*/
+		}
+		//if(repayment.getBorrow().getType() == Borrow.TYPE_NETWORK || repayment.getBorrow().getType() == Borrow.TYPE_MORTGAGE_ENERGY){
+			return "collectionContrastPage";
+		/*}else{
+			return "repaymentDetailPage";
+		}*/
+	}
+	/**
+	 * 代收补单
+	 * @throws Exception 
+	 */
+	@Action("/modules/loan/collection/collectionPatch")
+	public void collectionPatch() throws Exception{
+		long collectionId = paramLong("collectionId");
+		int status = paramInt("status");
+		data = new HashMap<String,Object>();
+		BorrowCollection bc = borrowCollectionService.find(collectionId);
+		if(status == 1){
+			if(bc.getBorrow().getType() == Borrow.TYPE_MORTGAGE_ENERGY || bc.getBorrow().getType() == Borrow.TYPE_NETWORK){
+				autoBorrowService.autoInstantLiveBorrowRepayPatch(bc);
+				data.put("msg", "补单成功");
+				data.put("result", true);
+			}else{
+				//BorrowRepayment br = borrowRepaymentService.findById(repay_id);
+				autoBorrowService.autoBorrowRepayPatch(bc);
+				data.put("msg", "补单成功");
+				data.put("result", true);
+			}
+		}else{
+			data.put("msg", "操作成功");
+			data.put("result", true);
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	//JSDP-85 gjh 2015-5-6 end
+	
+	//JSDP-85 gjh 2015-5-7 start
+	/**
+	 * 代收按条件对比
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/collection/collectionContrastList")
+	public void collectionContrastList() throws Exception {
+		model.setSize(1);
+		model.setPage(1);
+		if(model.getStatus() == 99){
+			model.setStatus(0);
+		}
+		PageDataList<BorrowCollectionModel> list = borrowCollectionService.list(model);
+		// 根据同样查询得到查询总记录数
+		//int pageTotal = borrowCollectionService.listPageTotal(model);
+		//model.setSize(pageTotal);
+		//model.setSize(list.getPage().getTotal());
+		//list = borrowCollectionService.list(model);
+		list = borrowCollectionService.contrast(list);
+		
+		data.put("result", true);
+		data.put("msg", "对账成功!");
+		printJson(getStringOfJpaObj(data));
+		return;
+	}
+	//JSDP-85 gjh 2015-5-7 end
+}

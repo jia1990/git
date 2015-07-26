@@ -1,0 +1,112 @@
+package com.rongdu.p2psys.user.dao;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.user.domain.KefuRecord;
+import com.rongdu.p2psys.user.model.KefuModel;
+
+/**
+ * 更换客服Dao层
+ * @author xingjia
+ * @date 20141205
+ *
+ */
+public interface KefuChangeDao extends BaseDao<KefuRecord> {
+
+	/**
+	 * 统计待审核更换客服数量
+	 * 
+	 * @return
+	 */
+	int count(QueryParam param);
+
+	
+	/**
+	 * 审核待更换客服申请
+	 * @param userId 用户id
+	 * @param newKefuId 被更换客服id
+	 */
+    void verifyKefuRecord(long userId, long newKefuId) throws Exception;
+
+
+
+	/**
+	 * 获得更换客服记录
+	 * 
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<KefuModel> kefuRecordList(int pageNumber, int pageSize, KefuRecord model) throws Exception;
+	
+	
+	/**
+	 * 获得更换客服记录(加入查询条件)
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param map
+	 * @return
+	 * @throws Exception
+	 */
+	PageDataList<KefuModel> kefuRecordListByMap(int pageNumber, int pageSize,  Map<String, Object> map) throws Exception;
+
+	/**
+	 * 通过记录编号获取整条记录数
+	 * 
+	 * @param userName
+	 * @return
+	 */
+	KefuRecord getKefuRecordById(long id) throws Exception;
+
+	/**
+	 * 查看全部信息(分页的方式)
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 * @throws Exception
+	 */
+	PageDataList<KefuRecord> findKefuList(int pageNumber, int pageSize,KefuRecord model) throws Exception;
+	
+	
+	/**
+	 *  查看全部信息(增加条件查询)(分页的方式)
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	PageDataList<KefuRecord> findKefuListByMap(int pageNumber, int pageSize, Map<String, Object> map) throws Exception;
+	/**
+	 * 更新客服审核记录
+	 * @param kefuRecord
+	 * @throws Exception
+	 */
+	void updateKefuRecord(KefuRecord kefuRecord)throws Exception;
+	/**
+	 * 查询某个用户是否正在更换客服
+	 * @param userid
+	 * @param kefuid
+	 * @param type
+	 * @return
+	 * @throws Exception
+	 */
+	KefuRecord getKefuByUserIdAndType(Long userid,Long kefuid,int type) throws Exception ;
+
+    
+	//JSDP-116 fengguoqin 2015-05-18 start
+	/**
+	 * excel导出查询更改客服信息
+	 * @return
+	 * @author 冯国琴
+	 */
+	public List<KefuModel> excelListChangeKF(KefuModel model);
+	//JSDP-116 fengguoqin 2015-05-18 end
+}

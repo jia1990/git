@@ -1,0 +1,1164 @@
+package com.rongdu.p2psys;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.InterceptorRef;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowHelper;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.ddtkj.p2psys.goods.service.GoodsPicService;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.ddtkj.p2psys.webpetcard.service.PetCardLogService;
+import com.ddtkj.p2psys.webpetcard.service.PetCardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.MoneyUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowMortgage;
+import com.rongdu.p2psys.borrow.domain.BorrowMortgageModel;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.domain.BorrowUpload;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.interest.InstallmentRepaymentCalculator;
+import com.rongdu.p2psys.borrow.model.interest.InterestCalculator;
+import com.rongdu.p2psys.borrow.model.interest.MonthlyInterestCalculator;
+import com.rongdu.p2psys.borrow.model.interest.OnetimeRepaymentCalculator;
+import com.rongdu.p2psys.borrow.service.BorrowMortgageService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.borrow.service.BorrowUploadService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.rule.RedPacketConsumeRuleCheck;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.user.domain.UserFreeze;
+import com.rongdu.p2psys.user.domain.UserUpload;
+import com.rongdu.p2psys.user.model.UserCertificationModel;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserCertificationService;
+import com.rongdu.p2psys.user.service.UserFreezeService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+import com.rongdu.p2psys.user.service.UserUploadService;
+
+/**
+ * 我要投资页面
+ * 
+ * @author xx
+ * @version 1.0
+ * @since 2014年1月27日
+ */
+public class InvestAction extends BaseAction<BorrowModel> implements
+		ModelDriven<BorrowModel> {
+	Logger logger = Logger.getLogger(InvestAction.class);
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowTenderService tenderService;
+	@Resource
+	private UserCertificationService attestationService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserUploadService userUploadService;
+	@Resource
+	private BorrowMortgageService borrowMortgageService;
+	@Resource
+	private BorrowUploadService borrowUploadService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private VerifyLogService verifyLogService;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private RegionService regionServcie;
+	@Resource
+	private UserFreezeService freezeService;
+	@Resource
+	private DictService  dictService; 
+	@Resource
+	private GoodsOrderService goodsOrderService; 
+	@Resource
+	private GoodsPicService goodsPicService; 
+	@Resource
+	private ScoreRuleAwardService scoreRuleAwardService; 
+	@Resource
+	private PetCardService petCardService;
+	@Resource
+	private PetCardLogService petCardLogService;
+	
+	private User user;
+	private Map<String, Object> data;
+	private RedPacketProduceRuleCheck spRuleCheck = (RedPacketProduceRuleCheck) Global
+			.getRuleCheck("redPacketProduce");
+
+	/**
+	 * 我要投资页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/invest/index")
+	public String index() throws Exception {
+		// 今日成交额
+		double tadayTotal = tenderService.tenderTodayAccount();
+		getRequest().setAttribute("tadayTotal", tadayTotal);
+		
+		// 累计投资人收益
+		double tenderInv = tenderService.tenderAllInterest();
+		getRequest().setAttribute("tenderInv", tenderInv);
+		// 借款人融资
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  start
+		double borrowTotalN = borrowService.getMomenyByStatusType(1,Borrow.TYPE_MORTGAGE_ENERGY);
+		double borrowTotalW = borrowService.getMomenyByStatusType(1,Borrow.TYPE_NETWORK);
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  end
+		double borrowTotal = borrowService.getMomenyByStatus(6);
+		double borrowTotal1 = borrowService.getMomenyByStatus(7);
+		double borrowTotal2 = borrowService.getMomenyByStatus(8);
+		getRequest().setAttribute("borrowTotalM",
+				borrowTotal + borrowTotal1 + borrowTotal2 + borrowTotalN + borrowTotalW);
+		getRequest().setAttribute("borrowtype", 113);
+		return "investIndex";
+	}
+
+	/**
+	 * 债权转让测试
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/invest/credit")
+	public String credit() throws Exception {
+		// 今日成交额
+		System.out.println();
+		return "investIndex";
+	}
+	
+	/**
+	 * 
+	 * 我要投资能源宝
+	 * 
+	 * @author 冯国琴
+	 * @return 能源宝路径
+	 * @throws Exception
+	 */
+	@Action("/invest/goEnergy")
+	public String goEnergy() throws Exception {
+		// 今日成交额
+		double tadayTotal = tenderService.tenderTodayAccount();
+		getRequest().setAttribute("tadayTotal", tadayTotal);
+		// 累计投资人收益
+		double tenderInv = tenderService.tenderAllInterest();
+		getRequest().setAttribute("tenderInv", tenderInv);
+		// 借款人融资
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  start
+		double borrowTotalN = borrowService.getMomenyByStatusType(1,Borrow.TYPE_MORTGAGE_ENERGY);
+		double borrowTotalW = borrowService.getMomenyByStatusType(1,Borrow.TYPE_NETWORK);
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  end
+		double borrowTotal = borrowService.getMomenyByStatus(6);
+		double borrowTotal1 = borrowService.getMomenyByStatus(7);
+		double borrowTotal2 = borrowService.getMomenyByStatus(8);
+		getRequest().setAttribute("borrowTotalM",
+				borrowTotal + borrowTotal1 + borrowTotal2 + borrowTotalN + borrowTotalW);
+		return "energy";
+	}
+
+	/**
+	 * 
+	 * 我要投资车宝宝
+	 * 
+	 * @author 于俊斐
+	 * @return 车宝宝路径
+	 * @throws Exception
+	 */
+	@Action("/invest/goCar")
+	public String goCar() throws Exception {
+		// 今日成交额
+		double tadayTotal = tenderService.tenderTodayAccount();
+		getRequest().setAttribute("tadayTotal", tadayTotal);
+		// 累计投资人收益
+		double tenderInv = tenderService.tenderAllInterest();
+		getRequest().setAttribute("tenderInv", tenderInv);
+		// 借款人融资
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  start
+		double borrowTotalN = borrowService.getMomenyByStatusType(1,Borrow.TYPE_MORTGAGE_ENERGY);
+		double borrowTotalW = borrowService.getMomenyByStatusType(1,Borrow.TYPE_NETWORK);
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  end
+		double borrowTotal = borrowService.getMomenyByStatus(6);
+		double borrowTotal1 = borrowService.getMomenyByStatus(7);
+		double borrowTotal2 = borrowService.getMomenyByStatus(8);
+		getRequest().setAttribute("borrowTotalM",
+				borrowTotal + borrowTotal1 + borrowTotal2 + borrowTotalN + borrowTotalW);
+		return "car";
+	}
+	
+	
+	
+	/**
+	 * 
+	 * 我要投资分期宝
+	 * 
+	 * @author 冯国琴
+	 * @return 分期宝路径
+	 * @throws Exception
+	 */
+	@Action("/invest/stages")
+	public String goStages() throws Exception {
+		// 今日成交额
+		double tadayTotal = tenderService.tenderTodayAccount();
+		getRequest().setAttribute("tadayTotal", tadayTotal);
+		// 累计投资人收益
+		double tenderInv = tenderService.tenderAllInterest();
+		getRequest().setAttribute("tenderInv", tenderInv);
+		// 借款人融资
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  start
+		double borrowTotalN = borrowService.getMomenyByStatusType(1,Borrow.TYPE_MORTGAGE_ENERGY);
+		double borrowTotalW = borrowService.getMomenyByStatusType(1,Borrow.TYPE_NETWORK);
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  end
+		double borrowTotal = borrowService.getMomenyByStatus(6);
+		double borrowTotal1 = borrowService.getMomenyByStatus(7);
+		double borrowTotal2 = borrowService.getMomenyByStatus(8);
+		getRequest().setAttribute("borrowTotalM",
+				borrowTotal + borrowTotal1 + borrowTotal2 + borrowTotalN + borrowTotalW);
+		return "stages";
+	}
+	
+
+	/**
+	 * 
+	 * 我要投资微企贷
+	 * 
+	 * @author 冯国琴
+	 * @return 微企贷路径
+	 * @throws Exception
+	 */
+	@Action("/invest/netLoan")
+	public String goNetLoan() throws Exception {
+		// 今日成交额
+		double tadayTotal = tenderService.tenderTodayAccount();
+		getRequest().setAttribute("tadayTotal", tadayTotal);
+		// 累计投资人收益
+		double tenderInv = tenderService.tenderAllInterest();
+		getRequest().setAttribute("tenderInv", tenderInv);
+		// 借款人融资
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  start
+		double borrowTotalN = borrowService.getMomenyByStatusType(1,Borrow.TYPE_MORTGAGE_ENERGY);
+		double borrowTotalW = borrowService.getMomenyByStatusType(1,Borrow.TYPE_NETWORK);
+		//修改累计帮助企业和个人融资金额添加及投机生息标种  end
+		double borrowTotal = borrowService.getMomenyByStatus(6);
+		double borrowTotal1 = borrowService.getMomenyByStatus(7);
+		double borrowTotal2 = borrowService.getMomenyByStatus(8);
+		getRequest().setAttribute("borrowTotalM",
+				borrowTotal + borrowTotal1 + borrowTotal2 + borrowTotalN + borrowTotalW);
+		return "netLoan";
+	}
+
+
+	/**
+	 * 我要投资列表页（输出json字符串）
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@SuppressWarnings("static-access")
+	@Action("/invest/investJson")
+	public void investJson() throws Exception {
+		data = new HashMap<String, Object>();
+		int size = paramInt("size");
+		if (size != 0) {
+			model.setSize(size);
+		} else {
+			model.setSize(16);
+		}
+		Borrow borrow = BorrowHelper.getWorker(model).prototype();
+		model = model.instanceCurr(borrow, model);
+		PageDataList<BorrowModel> list = borrowService.getList(model);
+		data.put("data", list);
+		data.put("path",getRequest().getSession().getServletContext().getAttribute("webroot")+""+getRequest().getSession().getServletContext().getAttribute("theme_dir")) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 标详情页面
+	 * 
+	 * @return String
+	 * @throws Exception
+	 */
+	@Action(value = "/invest/detail", interceptorRefs = { @InterceptorRef("globalStack") })
+	public String detail() throws Exception {
+		//Borrow borrow = borrowService.findNotFlow(paramLong("id"));
+		Borrow borrow = borrowService.find(paramLong("id"));
+		if(borrow == null){
+			//throw new BorrowException("当前借款标不存在或已流标");
+			message("当前借款标不存在或已流标");
+			return MSG;
+		}
+		String borrowPreview = request.getParameter("borrowPreview");
+		//JSDBET-894 gjh 2015-3-30 start
+		saveToken("tenderToken");
+		//JSDBET-894 gjh 2015-3-30 end
+		boolean flag = false;
+		if (borrow.getFixedTime() == null) {
+			flag = true;
+		} else {
+			// 定时标是否到了投标时间
+			long fd = borrow.getFixedTime().getTime() - new Date().getTime();
+			if (fd <= 0) { // 没开始呢
+				flag = true;
+			}
+		}
+		if (borrowPreview == null) {
+			if (borrow.getStatus() != 1 && borrow.getStatus() != 3
+					&& borrow.getStatus() != 4 && borrow.getStatus() != 49
+					&& borrow.getStatus() != 6 && borrow.getStatus() != 7
+					) {
+				if(borrow.getStatus() == 8){
+					//throw new BorrowException("当前借款标已还款无权查看");
+					message("当前借款标已还款无权查看");
+					return MSG;
+				}else{
+					//throw new BorrowException("当前借款标不存在或已流标");
+					message("当前借款标不存在或已流标");
+					return MSG;
+				}
+			}
+		}
+		request.setAttribute("borrowPreview", borrowPreview);
+		request.setAttribute("borrowtype", borrow.getType());
+		// JSDP-206  wcw 2015-07-02 start   borrowDetail方法中已经定义
+		/*ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+		request.setAttribute("ruleAward", ruleAward);*/
+		// JSDP-206  wcw 2015-07-02 end
+		if (getSessionUser() != null) {
+			if(borrow.getType() == Borrow.TYPE_AMORTIZE){
+				return "stagesDetail";
+			}else{
+				return "detail";
+			}
+		}
+		if(borrow.getType() == Borrow.TYPE_AMORTIZE){
+			return "stagesDetailnoLogin";
+		}else{
+			return "detailnoLogin";
+		}
+	}
+
+	/**
+	 * 标详情JSON数据
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/invest/borrowDetail")
+	public void borrowDetail() throws Exception {
+		//this.saveToken("tenderToken");
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		long borrowId = paramLong("id");
+		Borrow b = borrowService.find(borrowId);
+		if(b == null){
+			throw new BorrowException("当前借款标不存在或已流标");
+		}
+		List<BorrowUpload> borrowUploads = borrowUploadService
+				.findByBorrowId(borrowId);
+		data.put("borrowUploads", borrowUploads);
+		if (user != null && user.getPaypwd() != null) {
+			data.put("birthYM", b.getUser().getCardNO().substring(6,10)+"年"+b.getUser().getCardNO().substring(10,12)+"月"+b.getUser().getCardNO().substring(12,14)+"日");
+			data.put("IsPayPwdNull", "NO");
+			// 判断投标功能是否被冻结
+			UserFreeze freeze = freezeService.getByUserId(user.getUserId());
+			if (freeze != null && freeze.getStatus()==1) {
+				String[] freezeMarks = freeze.getMark().split(",");
+				for (String mark : freezeMarks) {
+					if ("tender".equals(mark)) {
+						data.put("tenderFreeze", 1);// 冻结
+						break;
+					} else {
+						data.put("tenderFreeze", 2);// 功能正常
+					}
+				}
+			} else {
+				data.put("tenderFreeze", 2);// 功能正常
+			}
+		}
+		// JSDP-206  wcw 2015-07-02 start   分期宝才开启
+		if(Borrow.TYPE_AMORTIZE==b.getType()){
+			GoodsOrder goodsOrder = goodsOrderService.findOrderByBorrowId(borrowId);//获取分期宝订单
+			if(goodsOrder!=null){//根据订单获取图片路径
+				List<DdtkjGoodsPic> goodsPic = goodsPicService.getGoodsPicByGoodsId(goodsOrder.getGoods().getId());
+				data.put("goodsPic",goodsPic.get(0).getPicUrl()) ;
+			}
+		}
+		// JSDP-206  wcw 2015-07-02 end
+		data.put("nickName",b.getUser().getNickname()) ;
+		data.put("addTime", b.getUser().getAddTime()) ;
+		Dict dic = dictService.find("borrow_use", b.getBorrowUse());
+		data.put("borrowUse", dic!=null?dic.getName():null) ;
+		if (b.getType() != Borrow.TYPE_SECOND) {
+			List<BorrowMortgage> borrowMortgageList = borrowMortgageService
+					.findByBorrowId(b.getId(), 1);
+			double totalAssessPrice = borrowMortgageService
+					.getTotalAssessPriceByBorrowId(borrowId ); // 总评估价
+			double totalMortgagePrice = borrowMortgageService
+					.getTotalMortgagePriceByBorrowId(borrowId); // 总抵押价
+			data.put("totalAssessPrice", totalAssessPrice);
+			data.put("totalMortgagePrice", totalMortgagePrice);
+			double difference = BigDecimalUtil.add(totalAssessPrice,
+					-totalMortgagePrice); // 差额
+			double overPercent=0;
+			if(totalMortgagePrice>0){
+		        overPercent = BigDecimalUtil.round(BigDecimalUtil.div(
+				difference, totalMortgagePrice) * 100); // 超出比例
+			}
+			data.put("overPercent", overPercent);
+			data.put("borrowMortgageList", borrowMortgageList);
+		}
+		data.put("size", borrowUploadService.findByBorrowId(borrowId)
+				.size());
+		double interest = BigDecimalUtil.mul(b.getApr(), b.getTimeLimit()) * 100 / 30;
+		// JSDP-206  wcw 2015-07-02 start  投标记录不需要在此定义，在js中异步加载最近
+		/*PageDataList<BorrowTenderModel> list = this.tenderService.list(
+				b.getId(), this.model.getPage(), 0);*/
+		// JSDP-206  wcw 2015-07-02 end
+		BorrowModel borrow = BorrowModel.instance(b);
+		VerifyLog log = verifyLogService
+				.findByType(borrow.getId(), "borrow", 1);
+		if (log != null) {
+			borrow.setStartTime(DateUtil.dateStr2(log.getTime()));
+			borrow.setEndTime(DateUtil.dateStr2(DateUtil.rollDay(log.getTime(),
+					borrow.getValidTime())));
+		}
+		borrow.setUser(null);
+		if (!StringUtil.isBlank(borrow.getPwd())) {
+			data.put("isDirectional", true);
+		} else {
+			data.put("isDirectional", false);
+		}
+		data.put("borrow", borrow);
+		data.put("accountWait", BigDecimalUtil.round(BigDecimalUtil.sub(
+				borrow.getAccount(), borrow.getAccountYes())));
+		data.put("interest", BigDecimalUtil.round(interest));
+		/*data.put("data", list);*/
+		data.put("url", Global.getValue("adminurl"));
+		UserCache userCache = userCacheService.findByUserId(b.getUser()
+				.getUserId());
+		UserCacheModel uc = UserCacheModel.instance(userCache);
+		uc.setMaritalStatus("1".equals(uc.getMaritalStatus())?"已婚":("2".equals(uc.getMaritalStatus())?"未婚":"保密"));
+		Dict dic2 = dictService.find("professional",uc.getProfessional()) ;
+		if(uc.getCity() != null && !uc.getCity().contains("X")){
+			uc.setProvinceName(this.regionServcie.getRegionById(
+					Long.parseLong(uc.getProvince())).getName());
+			uc.setCityName(this.regionServcie.getRegionById(
+					Long.parseLong(uc.getCity())).getName());
+			uc.setAreaName(this.regionServcie.getRegionById(
+					Long.parseLong(uc.getArea())).getName());
+		}
+		uc.setUser(null);
+		if(dic2!=null){
+			uc.setProfessional(dic2.getName());
+		}
+		Dict dic3 = dictService.find("repayment_source",uc.getSourceRepay()) ;
+		if(dic3!=null){
+			uc.setSourceRepay(dic3.getName());
+		}
+		String companyName = uc.getCompanyName();
+		if (companyName != null && companyName.length() > 5) {
+			uc.setCompanyName(companyName.substring(0, 2) + "****"
+					+ companyName.substring(companyName.length() - 4));
+		}
+		uc.setSex("M".equals(uc.getSex())?"男":("F".equals(uc.getSex())?"女":"保密"));
+		data.put("uc", uc);
+		UserIdentify userIdentify = userIdentifyService.findByUserId(b
+				.getUser().getUserId());
+		UserIdentifyModel attestationModel = UserIdentifyModel
+				.instance(userIdentify);
+		attestationModel.setUserName(userIdentify.getUser().getUserName());
+		attestationModel.setUser(null);
+		data.put("attestationModel", attestationModel);
+		if (user != null) {
+			data.put("userStates", user.getUserCache().getUserNature());
+			data.put("userType", user.getUserCache().getUserType());
+			UserIdentify userInvestIdentify = userIdentifyService
+					.findByUserId(user.getUserId());
+			data.put("userInvestIdentify", userInvestIdentify);
+			Account account = accountService.findByUser(user.getUserId());
+			data.put("account", account);
+			//JSDP-171 xingjia 20150609 start
+			//判断是否有晋商贷体验卡
+			double petCardProduceMoney = petCardService.getSumPetCardProduce(user.getUserId());
+			double petCardConsumeMoney = petCardLogService.petCardConsumeMoney(user.getUserId());
+			double petCardFreeze = BigDecimalUtil.sub(petCardProduceMoney, petCardConsumeMoney);
+			data.put("petCardFreeze", petCardFreeze);
+			//JSDP-171 xingjia 20150609 end
+			if ("".equals(paramString("borrowPreview"))) {
+				if (borrow.getFixedTime() != null) {
+					data.put("borrowFiexed", 3);// 代表定时标没到时见呢
+				} else {
+					data.put("borrowPreview", 2);
+				}
+			} else {
+				data.remove("borrowFiexed");
+			}
+		}
+		// 注册送的红包
+		Map<String, Object> map = spRuleCheck.registerRP();
+			//判断是平日还是活动日
+		int  ordinaryStatus = 0;
+		int  activityStatus = 0;
+		if(null != map.get("ordinary_day")){
+			ordinaryStatus = (Integer) map.get("ordinary_day");
+		}
+		if(null != map.get("activity_day")){
+			activityStatus = (Integer) map.get("activity_day");
+		}
+		  
+		 if(ordinaryStatus==1 && activityStatus ==0){//平日开启，活动日不开启
+			  data.put("rpCount", map.get("rp_value"));
+		  }else if(ordinaryStatus==0 && activityStatus ==1){//平日不开启，活动日开启
+			  data.put("rpCount", map.get("rp_value_activity"));
+		  }else if(ordinaryStatus==1 && activityStatus ==1){//平日开启，活动日开启，以活动日为准
+			  data.put("rpCount", map.get("rp_value_activity"));
+		  }else{
+			  
+		  }
+		
+		int cmCount = getFileCount(uc);
+		// 实物照数量
+		int swCount = 0;
+		// 档案照数量
+		int daCount = 0;
+		// 担保函数量
+		int dbCount = 0;
+		for (BorrowUpload bo : borrowUploads) {
+			if (bo.getType() == 1) {
+				swCount++;
+			}
+			if (bo.getType() == 2) {
+				daCount++;
+			}
+			if (bo.getType() == 3) {
+				dbCount++;
+			}
+		}
+		data.put("path",getRequest().getSession().getServletContext().getAttribute("webroot")+""+getRequest().getSession().getServletContext().getAttribute("theme_dir")) ;
+		data.put("swCount", swCount);
+		data.put("daCount", daCount + cmCount);
+		data.put("dbCount", dbCount);
+		data.put("filetotal", (cmCount + borrowUploads.size()));
+		// JSDP-206  wcw 2015-07-02 start   还款计划不需要在此定义，js异步加载最佳
+		/*PageDataList<BorrowRepayment> repmentlist = borrowRepaymentService
+				.getRepaymentByBId(b.getId(),model.getPage(),model.getSize());
+		data.put("repment", repmentlist);*/
+		// JSDP-206  wcw 2015-07-02 end
+		data.put(
+				"imagepath",
+				getRequest().getSession().getServletContext()
+						.getAttribute("webroot")
+						+ ""
+						+ getRequest().getSession().getServletContext()
+								.getAttribute("theme_dir"));
+		String resultFlag = System.currentTimeMillis() + "" + Math.random()
+				* 10000;
+        if(log!=null){
+			Date endTime = new Date();
+			//endTime = log.getTime();
+			endTime.setDate(log.getTime().getDate() + borrow.getValidTime());
+			data.put("endDate", endTime);
+		}
+        
+        ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+        data.put("ruleAward", ruleAward);
+      //JSDBET-894 gjh 2015-3-30 start
+		data.put("tenderToken", (String)session.get("tenderToken"));
+		//JSDBET-894 gjh 2015-3-30 end
+		data.put("resultFlag", resultFlag);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 统计公司证件照数量
+	 */
+	private int getFileCount(UserCache uc) {
+		int i = 0;
+		if (StringUtils.isNotEmpty(uc.getJyzzPicPath())) {
+			i++;
+		}
+		if (StringUtils.isNotEmpty(uc.getSwdjPicPath())) {
+			i++;
+		}
+		if (StringUtils.isNotEmpty(uc.getZzjgPicPath())) {
+			i++;
+		}
+		if (StringUtils.isNotEmpty(uc.getKhxkPicPath())) {
+			i++;
+		}
+		if (StringUtils.isNotEmpty(uc.getDkkPicPath())) {
+			i++;
+		}
+		if (StringUtils.isNotEmpty(uc.getGrzxPicPath())) {
+			i++;
+		}
+		return i;
+	}
+
+	/**
+	 * 投标记录详细
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/detailTenderForJson")
+	public String detailTenderForJson() throws Exception {
+		long borrowId = paramLong("id");
+		data = new HashMap<String, Object>();
+		PageDataList<BorrowTenderModel> list = this.tenderService.list(
+				borrowId, this.model.getPage(), 0);
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	/**
+	 * 还款记录详细
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/detailRepayForJson")
+	public String detailRepayForJson() throws Exception {
+		long borrowId = paramLong("id");
+		data = new HashMap<String, Object>();
+		long start=System.currentTimeMillis()/1000;
+		PageDataList<BorrowRepayment> repmentlist = borrowRepaymentService.getRepaymentByBId(borrowId,model.getPage(),model.getSize());
+		BorrowModel borrow = BorrowModel.instance(borrowService.find(borrowId));
+		long end =System.currentTimeMillis()/1000;
+		long jg=end-start;
+		logger.info("还款计划执行时间===="+jg);
+		data.put("borrow", borrow);
+		data.put("repment", repmentlist);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	
+	/**
+	 * 资料审核
+	 * 
+	 * @return String
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/detailForAuditInfo")
+	public String detailForAuditInfo() throws Exception {
+		long userId = paramLong("userId");
+		data = new HashMap<String, Object>();
+		PageDataList<UserCertificationModel> attestationList = attestationService
+				.findByUserId(userId, 1, this.model.getPage());
+		data.put("data", attestationList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 投标
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/tender")
+	public void tender() throws Exception {
+		try {
+			data = new HashMap<String, Object>();
+			user = getSessionUser();
+			//System.out.println(paramString("mdAccountUse"));
+			// 处理使用红包 如果不用那么获取到的是 "" 否则 1
+			Account ac = this.accountService.findByUser(getSessionUserId());
+			RedPacketConsumeRuleCheck rpcrc = (RedPacketConsumeRuleCheck) Global
+					.getRuleCheck("redPacketConsume");
+			Borrow borrow = borrowService.find(this.model.getId());
+			double mdAccount = rpcrc.investUseDynamicRP(ac.getUsableAccount(),
+					model.getMoney(),borrow.getBorrowTimeType(),borrow.getTimeLimit());
+			if ("1".equals(paramString("mdAccountUse"))) {
+				/**晋商贷3.0_生产JSDP-8 start 20150413 xingjia*/
+				if (mdAccount >= ac.getRpDynamicTotal() && mdAccount >0) {
+					mdAccount = ac.getRpDynamicTotal();
+				}else if(mdAccount <=0){
+					mdAccount = 0;
+				}
+				/**晋商贷3.0_生产JSDP-8 end 20150413 xingjia*/
+				model.setMdAccount(mdAccount);
+			}
+			// 投标前model值校验
+			model.checkTenderModel(borrow, user);
+			// 回款续投标记，为1说明此次为回款续投
+			/*
+			 * tenderService.addTender(user, borrow,
+			 * model.getMoney(),this.getRequestIp(),model.getMdAccount());
+			 */
+			
+			this.checkToken("tenderToken");
+			//JSDBET-802 wcw 2015-3-12 start
+			//本地账户余额与一麻袋账户余额对账
+			//accountService.accountCompare(this.getSessionUserId());
+			//JSDBET-802 wcw 2015-3-12 end
+			
+			
+			BorrowTender tender=new BorrowTender();
+			tender.setTenderType((byte)0);
+			tender.setAddIp(this.getRequestIp());
+			//投标前校验
+			tender=tenderService.validTender(user, borrow, tender, model);
+			//JSDP-171 xingjia 20150717 start 三次修改
+			double petCardMoney = tenderService.getPetCardTenderMoney(tender, borrow);
+			model.setPetCardMoney(petCardMoney);
+			//JSDP-171 xingjia 20150717 end 三次修改
+			//投标核心方法
+			// JSDP-161  wcw 20150525 start
+			/*DisruptorUtils.doAddTender(user, model, borrow,
+					tender, paramString("resultFlag"));*/
+			DisruptorUtils.tender(paramString("resultFlag"), user, borrow, model, tender);
+			// JSDP-161  wcw 20150525 end
+			data.put("code", "01");
+			data.put("msg", "投标成功");
+			data.put("result", true);
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			logger.error("异常1");
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		} catch (Exception e) {
+			logger.error("异常1"+e.getMessage());
+			data.put("code", "02");
+			data.put("msg", e.getMessage());
+			data.put("result", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 当前标收益
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/invest/getInv")
+	public void getInv() throws Exception {
+		double money = paramDouble("money");
+		Borrow borrow = borrowService.find(this.model.getId());
+		//borrow.setScales(10); // 用于标记是投标的情况
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		BorrowTender tender = new BorrowTender();
+		tender.setMoney(money);
+		double validAccount = worker.validAccount(tender);
+		InterestCalculator ic = worker.interestCalculator(validAccount);
+		data = new HashMap<String, Object>();
+		double inv = 0;
+		if (validAccount != money) {
+			inv = ic.repayTotal() - validAccount;
+			data.put("maxAcc", validAccount);
+			data.put("isMach", true);
+		} else {
+			inv = ic.repayTotal() - money;
+			data.put("isMach", false);
+		}
+
+		data.put("inv", String.format("%.2f", inv));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 计算器
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/invest/getCalculator")
+	public void getCalculator() throws Exception {
+		double validAccount = paramDouble("account"); // 借款金额
+		double apr = (double) paramDouble("apr") / 100;
+		int periods = paramInt("periods");
+		int flagstatus = paramInt("status"); // 1天标 2一次性还款 3 每月还息到期还本 4 等额本息
+		data = new HashMap<String, Object>();
+		//计算器校验问题 start
+		boolean falg = false;
+		if(validAccount <= 5000000 && apr <= 24 && ((periods <= 36 && flagstatus != 1) || (periods <= 90 && flagstatus == 1))){
+			falg = true;
+		}else{
+			if(validAccount > 5000000){
+				data.put("msg", "投资金额最高为5000000元");
+			}
+			if(apr > 24){
+				data.put("msg", "年利率最高24%");
+			}
+			if(periods > 36 && flagstatus != 1){
+				data.put("msg", "投资期限-月标最大为36个月");
+			}
+			if(periods > 90 && flagstatus == 1){
+				data.put("msg", "投资期限-天标最大为90天");
+			}
+		}
+		if(falg){
+			Date date = new Date();
+			if (flagstatus == 1) { // 天标,一次性还款
+				OnetimeRepaymentCalculator ic = new OnetimeRepaymentCalculator(
+						validAccount, apr, date, 1, 0);
+				ic.calculator(periods); // 代表六天
+				data.put("ic", ic);
+			} else if (flagstatus == 2) { // 一次性还款
+				OnetimeRepaymentCalculator ic = new OnetimeRepaymentCalculator(
+						validAccount, apr, date, periods, 0);
+				ic.calculator();
+				data.put("ic", ic);
+			} else if (flagstatus == 3) { // 每月还息到期还本
+				MonthlyInterestCalculator ic = new MonthlyInterestCalculator(
+						validAccount, apr, date, periods, true, 0);
+				ic.calculator();
+				data.put("ic", ic);
+			} else if (flagstatus == 4) { // 等额本息
+				InstallmentRepaymentCalculator ic = new InstallmentRepaymentCalculator(
+						validAccount, apr, date, periods, 0);
+				ic.calculator();
+				data.put("ic", ic);
+			}
+		}else{
+			data.put("result", false);
+		}
+		//计算器校验问题 end
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 汇潮投标 较为特殊需要跳转页面
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	/*
+	 * @Action(value="/invest/tender",interceptorRefs = {
+	 * 
+	 * @InterceptorRef("session"), @InterceptorRef("globalStack") },
+	 * results={@Result(name = "ipsTender", type = "ftl", location =
+	 * "/tpp/ipstender.html")}) public String tender() throws Exception { data =
+	 * new HashMap<String, Object>(); user =
+	 * userService.find(getSessionUser().getUserId()); if
+	 * (user.getUserCache().getUserNature() != 1) { throw new
+	 * UserException("非投资人不能投标", 1); } Borrow borrow =
+	 * borrowService.find(this.model.getId()); if(borrow.getFixedTime()!=null){
+	 * if(new Date().before(borrow.getFixedTime())){ throw new
+	 * UserException("标还未到定时时间", 1); } } // 投标前model值校验 BorrowWorker worker =
+	 * BorrowHelper.getWorker(borrow); BorrowModel m =
+	 * BorrowModel.instance(worker.prototype()); worker.checkTender(m,
+	 * model.getMoney(), user,StringUtil.isNull(model.getPwd())); String name =
+	 * Global.getValue("cooperation_interface"); AccountRechargeModel arm =new
+	 * AccountRechargeModel(); arm.setAddIp(getRequestIp()); TPPWay way =
+	 * TPPFactory.getTPPWay(null, user, arm, model.getMoney()+"",borrow); Object
+	 * tender = way.doTender(); request.setAttribute(name, tender); return name
+	 * + "Tender"; }
+	 */
+	/**
+	 * 抵押物图片
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 * @Action("/invest/getMortgagePics") public void getMortgagePics() throws
+	 *                                    Exception { data = new HashMap<String,
+	 *                                    Object>(); long id = paramLong("id");
+	 *                                    long type = paramLong("type");
+	 *                                    List<BorrowUpload> list =
+	 *                                    borrowUploadService
+	 *                                    .findByMortgageIdAndType(id, type);
+	 *                                    data.put("list", list);
+	 *                                    printJson(getStringOfJpaObj(data)); }
+	 */
+	/**
+	 * 资产包更新记录
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/getMortgageRecord")
+	public void getMortgageRecord() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		Borrow b = borrowService.find(id);
+		data.put("account", b.getAccount());
+		List<BorrowMortgage> initList = borrowMortgageService
+				.findByBorrowIdAndNum(id, 0);
+		data.put("initList", initList);
+		Object[] initTotalPrice = borrowMortgageService
+				.getTotalPriceByBorrowIdAndNum(id, 0);
+		data.put("initTotalAssessPrice", initTotalPrice[0]);
+		data.put("initTotalMortgagePrice", initTotalPrice[1]);
+		int num = borrowMortgageService.getMaxNumByBorrowId(id);
+		double totalAssessPrice = (Double) initTotalPrice[0];
+		double totalMortgagePrice = (Double) initTotalPrice[1];
+		List<BorrowMortgageModel> list = new ArrayList<BorrowMortgageModel>();
+		for (int i = 1; i < num + 1; i++) {
+			List<BorrowMortgage> inList = borrowMortgageService
+					.findInByBorrowIdAndNum(id, i);
+			BorrowMortgageModel bmm = new BorrowMortgageModel();
+			double inTotalAssessPrice = 0;
+			double inTotalMortgagePrice = 0;
+			for (BorrowMortgage bm : inList) {
+				inTotalAssessPrice = BigDecimalUtil.add(inTotalAssessPrice,
+						bm.getAssessPrice());
+				inTotalMortgagePrice = BigDecimalUtil.add(inTotalMortgagePrice,
+						bm.getMortgagePrice());
+			}
+			List<BorrowMortgage> outList = borrowMortgageService
+					.findByBorrowIdAndNumAndStatus(id, i, 2);
+			double outTotalAssessPrice = 0;
+			double outTotalMortgagePrice = 0;
+			for (BorrowMortgage bm : outList) {
+				outTotalAssessPrice = BigDecimalUtil.add(outTotalAssessPrice,
+						bm.getAssessPrice());
+				outTotalMortgagePrice = BigDecimalUtil.add(
+						outTotalMortgagePrice, bm.getMortgagePrice());
+			}
+			totalAssessPrice = BigDecimalUtil.add(totalAssessPrice,
+					inTotalAssessPrice, -outTotalAssessPrice);
+			totalMortgagePrice = BigDecimalUtil.add(totalMortgagePrice,
+					inTotalMortgagePrice, -outTotalMortgagePrice);
+			bmm.setInTotalAssessPrice(inTotalAssessPrice);
+			bmm.setInTotalMortgagePrice(inTotalMortgagePrice);
+			bmm.setOutTotalAssessPrice(outTotalAssessPrice);
+			bmm.setOutTotalMortgagePrice(outTotalMortgagePrice);
+			bmm.setTotalAssessPrice(totalAssessPrice);
+			bmm.setTotalMortgagePrice(totalMortgagePrice);
+			bmm.setUpdateTime(inList.get(0).getAddTime());
+			bmm.setInList(inList);
+			bmm.setOutList(outList);
+			list.add(bmm);
+		}
+		data.put("list", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 用户实物照
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/getUserUpload")
+	public void getUserUpload() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		Borrow borrow = borrowService.find(id);
+		User user = borrow.getUser();
+		List<UserUpload> list = userUploadService.findByUser(user);
+		data.put("list", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 判断交易密码是否正确
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/checkPayPwd")
+	public void checkPayPwd() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		data = new HashMap<String, Object>();
+		String paypwd = paramString("paypwd");
+		UserModel u = UserModel.instance(user);
+		String re = u.validPayPwd(paypwd);
+		if ("OK".equals(re)) {
+			data.put("code", "01");
+			data.put("msg", "验证成功");
+			data.put("result", true);
+		} else {
+			data.put("code", "02");
+			data.put("msg", "验证失败");
+			data.put("result", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 判断定向密码是否正确
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/checkRpwd")
+	public void checkRpwd() throws Exception {
+		user = userService.find(getSessionUser().getUserId());
+		data = new HashMap<String, Object>();
+		String pwd = paramString("pwd");
+		long bid = paramLong("bid");
+		Borrow b = this.borrowService.find(bid);
+		if (b != null) {
+			if (b.getPwd() != null) {
+				if (b.getPwd().equals(pwd)) {
+					data.put("code", "01");
+					data.put("msg", "验证成功");
+					data.put("result", true);
+				} else {
+					data.put("code", "02");
+					data.put("msg", "定向密码错误");
+					data.put("result", false);
+				}
+			} else {
+				data.put("code", "04");
+				data.put("msg", "不是定向标");
+				data.put("result", false);
+			}
+		} else {
+			data.put("code", "03");
+			data.put("msg", "该标已不存在");
+			data.put("result", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 
+	 * 获取可用红包 于俊斐
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/invest/getUsableRPMD")
+	public void getUsableRPMD() throws Exception {
+		data = new HashMap<String, Object>();
+		Account account = this.accountService.findByUser(getSessionUserId());
+		double money = paramDouble("money");
+		int borrowTimeType = paramInt("borrowTimeType");
+		int timeLimit = paramInt("timeLimit");
+		// 获取红包，因为 静态红包用于体现 所以只获取钱袋子
+		RedPacketConsumeRuleCheck rpcrc = (RedPacketConsumeRuleCheck) Global
+				.getRuleCheck("redPacketConsume");
+		double mdAccount = rpcrc.investUseDynamicRP(account.getUsableAccount(),
+				money,borrowTimeType,timeLimit);
+		/**晋商贷3.0_生产JSDP-8 start 20150413 xingjia*/
+		// 如果钱袋子中金额不足则消费全部的
+		if (mdAccount >= account.getRpDynamicTotal() && mdAccount >0) {
+			mdAccount = account.getRpDynamicTotal();
+		}else if(mdAccount <=0){
+			mdAccount = 0;
+		}
+		/**晋商贷3.0_生产JSDP-8 end 20150413 xingjia*/
+		data.put("mdAccount", mdAccount);
+		data.put("code", "01");
+		data.put("msg", "验证成功");
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 协议预览
+	 * 
+	 * @throws Exception
+	 *             if has error
+	 */
+	@Action("/invest/protocolPreview")
+	public String protocolPreview() throws Exception {
+		long id = paramLong("id");
+		Borrow borrow = borrowService.find(id);
+		request.setAttribute("borrow", borrow);
+		request.setAttribute("bUser", borrow.getUser());
+		request.setAttribute("userCache", borrow.getUser().getUserCache());
+
+		String frdbNo = borrow.getUser().getUserCache().getCompanyLawPerson();
+		if (StringUtils.isNotBlank(frdbNo) && frdbNo.length() > 8)
+			request.setAttribute("frdbNo", frdbNo.substring(0, 4)
+					+ "**********" + frdbNo.substring(frdbNo.length() - 4));
+		else
+			request.setAttribute("frdbNo", frdbNo);
+		VerifyLog verifyLog = verifyLogService.findByType(id, "borrow", 1);
+		request.setAttribute("verifyTime", verifyLog.getTime());
+		request.setAttribute("bigMoney",
+				MoneyUtil.convert(String.valueOf(borrow.getAccount())));
+		String repayStyle;
+		if (borrow.getStyle() == Borrow.STYLE_MONTHLY_INTEREST) {
+			repayStyle = "每月付息";
+		} else if (borrow.getStyle() == Borrow.STYLE_ONETIME_REPAYMENT) {
+			repayStyle = "一次性还";
+		} else {
+			repayStyle = "等额本息";
+		}
+		request.setAttribute("repayStyle", repayStyle);
+		List<BorrowRepayment> list = borrowRepaymentService
+				.getRepaymentByBorrowId(id);
+		request.setAttribute("list", list);
+		// printJson(getStringOfJpaObj(data));
+		return "protocolPreview";
+	}
+}

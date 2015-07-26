@@ -1,0 +1,312 @@
+package com.ddtkj.p2psys.tpp.ymd.model;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.log4j.Logger;
+
+import com.alibaba.fastjson.JSONObject;
+import com.ips.security.utility.IpsCrypto;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.tpp.ips.model.IpsModel;
+
+
+/**
+ * 
+ * 汇潮开户（一麻袋）
+ * 
+ * @author wcw
+ * @version 3.0
+ * @since 2014年11月25日
+ */
+public class YmdRegister extends YmdModel {
+    private static Logger logger = Logger.getLogger(YmdRegister.class); 
+	/**
+	 * 请求类型(类型为：个人，企业) ----(personal/company)
+	 */
+	private String mode;
+	/**
+	 * 账户名(个人为手机号，企业为邮箱)
+	 */
+	private String accountName;
+	/**
+	 * 用户名称(会根据该名称来创建麻袋账户)
+	 */
+	private String realName;
+	/**
+	 * 证件号码
+	 */
+	private String cardNo;
+
+	 /**
+     * 服务器通知地址(服务器异步通知地址，一麻袋会将结果发送到该地址)
+     */
+    private String adviceUrl;
+    /**
+     * 页面通知地址(页面通知地址，一麻袋会将结果发送到该地址)
+     */
+    private String returnUrl;
+	
+    private String memo1;  // 备注
+    
+    private String memo2;  //
+    
+    private String memo3;  //
+	
+    
+    
+    public YmdRegister() {
+        super();
+    }
+
+
+    /**
+     * 签名方法
+     */
+    public void createSign() {
+        StringBuffer str = new StringBuffer();
+        if (StringUtil.isNotBlank(this.getNumberId())) {
+            str.append("number_id=").append(this.getNumberId()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMode())) {
+            str.append("mode=").append(this.getMode()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getAccountName())) {
+            str.append("account_name=").append(this.getAccountName()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getRealName())) {
+            str.append("real_name=").append(this.getRealName()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getCardNo())) {
+            str.append("card_no=").append(this.getCardNo()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getNickName())) {
+            str.append("nick_name=").append(this.getNickName()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getAdviceUrl())) {
+            str.append("advice_url=").append(this.getAdviceUrl()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getReturnUrl())) {
+            str.append("return_url=").append(this.getReturnUrl()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getRemark())) {
+            str.append("remark=").append(this.getRemark()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMerchantKey())) {
+            str.append("merchantKey=").append(this.getMerchantKey());
+        }
+        String signInfo=str.toString();
+        logger.info("需要加密字符串======="+signInfo);
+        try {
+            signInfo = DigestUtils.md5Hex(signInfo.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            logger.info("签名异常信息====" + e.getMessage());
+           // e.printStackTrace();
+        }
+        logger.info("加密后字符串======="+signInfo);
+        this.setSignInfo(signInfo);
+        
+    }
+    /**
+     * 获取开户提交json格式签名明文
+     * @return
+     */
+   public String  SumitSignInfoJsonStr(){
+	   chineseDecoder();
+	   JSONObject jsonObject=new JSONObject();
+       if (StringUtil.isNotBlank(this.getNumberId())) {
+           jsonObject.put("number_id", this.getNumberId());
+       }
+       if (StringUtil.isNotBlank(this.getMode())) {
+    	   jsonObject.put("mode", this.getMode());
+       }
+       if (StringUtil.isNotBlank(this.getAccountName())) {
+    	   jsonObject.put("account_name", this.getAccountName());
+       }
+       if (StringUtil.isNotBlank(this.getRealName())) {
+    	   jsonObject.put("real_name", this.getRealName());
+       }
+       if (StringUtil.isNotBlank(this.getCardNo())) {
+    	   jsonObject.put("card_no", this.getCardNo());
+       }
+       if (StringUtil.isNotBlank(this.getNickName())) {
+    	   jsonObject.put("nick_name", this.getNickName());
+       }
+       if (StringUtil.isNotBlank(this.getAdviceUrl())) {
+    	   jsonObject.put("advice_url", this.getAdviceUrl());
+       }
+       if (StringUtil.isNotBlank(this.getReturnUrl())) {
+    	   jsonObject.put("return_url", this.getReturnUrl());
+       }
+       if (StringUtil.isNotBlank(this.getRemark())) {
+    	   jsonObject.put("remark", this.getRemark());
+       }
+       if (StringUtil.isNotBlank(this.getMerchantKey())) {
+    	   jsonObject.put("merchantKey", this.getMerchantKey());
+       }
+       return  jsonObject.toJSONString();
+   }
+   
+   /**
+    * 获取开户回调json格式签名明文
+    * @return
+    */
+  public String  returnSignInfoJsonStr(){
+	  chineseDecoder();
+	  JSONObject jsonObject=new JSONObject();
+      if (StringUtil.isNotBlank(this.getNumberId())) {
+    	  jsonObject.put("number_id", this.getNumberId());
+      }
+      if (StringUtil.isNotBlank(this.getMode())) {
+    	  jsonObject.put("mode", this.getMode());
+      }
+      if (StringUtil.isNotBlank(this.getNickName())) {
+    	  jsonObject.put("nick_name", this.getNickName());
+      }
+      if (StringUtil.isNotBlank(this.getErrCode())) {
+    	  jsonObject.put("status", this.getErrCode());
+    	  jsonObject.put("errorMsg", this.getErrMsg(this.getErrCode(), "一麻袋请求失败"));
+      }
+      if (StringUtil.isNotBlank(this.getMerchantKey())) {
+    	  jsonObject.put("merchantKey", this.getMerchantKey());
+      }
+      return  jsonObject.toJSONString();
+  }
+    
+    /**
+     * 
+     */
+    public void checkSign(){
+        StringBuffer str = new StringBuffer();
+        if (StringUtil.isNotBlank(this.getNumberId())) {
+            str.append("number_id=").append(this.getNumberId()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMode())) {
+            str.append("mode=").append(this.getMode()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getNickName())) {
+            str.append("nick_name=").append(this.getNickName()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getErrCode())) {
+            str.append("status=").append(this.getErrCode()).append("&");
+        }
+        if (StringUtil.isNotBlank(this.getMerchantKey())) {
+            str.append("merchantKey=").append(this.getMerchantKey());
+        }
+        String localSign=str.toString();
+        logger.info("需要加密字符串======="+localSign);
+        try {
+            localSign = DigestUtils.md5Hex(localSign.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            logger.info("签名异常信息====" + e.getMessage());
+        }
+        logger.info("加密后字符串======="+localSign);
+        if (localSign.equals(this.getSignInfo())) {
+            logger.info("MD5验签通过！");
+        }else{
+            logger.info("验证签名失败：本地签名localSign" + localSign + "，汇潮签名:pSign"+this.getSignInfo()+"!!!");
+            throw new BussinessException("验证签名失败！");
+        }
+    }
+    /**
+     * 对中文参数进行加密
+     */
+    public void chineseEncoder(){
+    	if(!StringUtil.isNotBlank(this.getNickName())){
+           this.setNickName(urlEncoder(this.getNickName()));
+        }
+    	if(!StringUtil.isNotBlank(this.getNickName())){
+    		this.setRealName(urlEncoder(this.getRealName()));
+         }
+    	if(!StringUtil.isNotBlank(this.getNickName())){
+    		 this.setRemark(urlEncoder(this.getRemark()));
+         }
+     
+       
+    }
+    
+    
+    /**
+     * 对中文参数进行解密
+     */
+    public void chineseDecoder(){
+		if (!StringUtil.isNotBlank(this.getNickName())) {
+			this.setNickName(urlDecoder(this.getNickName()));
+		}
+		if (!StringUtil.isNotBlank(this.getNickName())) {
+			this.setRealName(urlDecoder(this.getRealName()));
+		}
+		if (!StringUtil.isNotBlank(this.getNickName())) {
+			this.setRemark(urlDecoder(this.getRemark()));
+		}
+        
+       
+    }
+   
+    public String getMemo1() {
+        return memo1;
+    }
+    public void setMemo1(String memo1) {
+        this.memo1 = memo1;
+    }
+    public String getMemo2() {
+        return memo2;
+    }
+    public void setMemo2(String memo2) {
+        this.memo2 = memo2;
+    }
+    public String getMemo3() {
+        return memo3;
+    }
+    public void setMemo3(String memo3) {
+        this.memo3 = memo3;
+    }
+    public String getMode() {
+        return mode;
+    }
+    public void setMode(String mode) {
+        this.mode = mode;
+    }
+    public String getAccountName() {
+        return accountName;
+    }
+    public void setAccountName(String accountName) {
+        this.accountName = accountName;
+    }
+    public String getRealName() {
+        return realName;
+    }
+    public void setRealName(String realName) {
+        this.realName = realName;
+    }
+    public String getCardNo() {
+        return cardNo;
+    }
+    public void setCardNo(String cardNo) {
+        this.cardNo = cardNo;
+    }
+
+
+	public String getAdviceUrl() {
+		return adviceUrl;
+	}
+
+
+	public void setAdviceUrl(String adviceUrl) {
+		this.adviceUrl = adviceUrl;
+	}
+
+
+	public String getReturnUrl() {
+		return returnUrl;
+	}
+
+
+	public void setReturnUrl(String returnUrl) {
+		this.returnUrl = returnUrl;
+	}
+   
+}

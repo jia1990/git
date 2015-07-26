@@ -1,0 +1,129 @@
+package com.ddtkj.manage.action.returnmoney;
+
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+import com.ddtkj.p2psys.returnmoney.model.ReturnMoneyModel;
+import com.ddtkj.p2psys.returnmoney.service.ReturnMoneyService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * @描述：
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2014年12月30日 
+ */
+public class ManageReturnMoneyAction extends BaseAction<ReturnMoneyModel> implements ModelDriven<ReturnMoneyModel>{
+
+	@Resource
+	private OperatorService operatorService;
+	
+	@Resource
+	private ReturnMoneyService returnMoneyService;
+	private Map<String, Object> data = new HashMap<String, Object>();
+	@Action("/modules/return/returnManage")
+	public String returnManage(){
+		return "returnManage";
+	}
+	
+	@Action("/modules/return/returnAuditManage")
+	public String returnAuditManage(){
+		return "returnAuditManage";
+	}
+	
+	@Action("/modules/return/returnAuditList")
+	public String returnAuditList() throws Exception{
+		model.setStatus(1);
+		PageDataList<ReturnMoneyModel> plist=returnMoneyService.list(model);
+		data.put("total", plist.getPage().getTotal());
+		data.put("rows", plist.getList());
+		printJson(getStringOfJpaObj(data));
+		return null;
+	}
+	
+	@Action("/modules/return/returnList")
+	public String returnList() throws Exception{
+		PageDataList<ReturnMoneyModel> plist=returnMoneyService.list(model);
+		data.put("total", plist.getPage().getTotal());
+		data.put("rows", plist.getList());
+		printJson(getStringOfJpaObj(data));
+		return null;
+	}
+	
+	@Action("/modules/return/auditReturnView")
+	public String auditReturnView()throws Exception{
+		saveToken("auditReturnToken");
+		ReturnMoneyUse r=returnMoneyService.auditReturnView(model.getId());
+		request.setAttribute("r", r);
+		return "auditReturnView";
+	}
+	
+	/**
+	 * 回款续投审核
+	 * 
+	 * @throws Exception
+	 */
+	
+	@Action("/modules/return/auditReturn")
+	public void auditReturn()throws Exception{
+		String remark = paramString("remark");
+		model.setRemark(remark);
+		model.setOperatorId((int)getOperatorId());
+		checkToken("auditReturnToken");
+		returnMoneyService.auditReturn(model);
+		//JSDBET-820 sgp 2015-3-16 start
+		//sendReturnMoneyAuditMsg(model);
+		//JSDBET-820 sgp 2015-3-16 end
+		data.put("result", true);
+		data.put("msg", "审核成功");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	private void sendReturnMoneyAuditMsg(ReturnMoneyModel model){
+		BaseMsg msg = null;
+		if(ReturnMoneyUse.CONTINUED_INVEST_AUDIT_SUCCESS_STATUS == model.getStatus()){
+			msg = new BaseMsg(NoticeConstant.RETURN_MONEY_VERIFY_SUCC);
+		}else if(ReturnMoneyUse.COMTINUED_INVEST_AUDIT_FAIL_STATUS == model.getStatus()){
+			msg = new BaseMsg(NoticeConstant.RETURN_MONEY_VERIFY_FAIL);
+		}
+		Global.setTransfer("user", model.getUser());
+		Global.setTransfer("addTime", model.getAddTime());
+		Global.setTransfer("money", model.getContinuedInvestMoney());
+		msg.doEvent();
+	}
+
+	
+	/**
+	 * 回款续投详情
+	 * 
+	 * @author sunxiaoyong
+	 * @return
+	 * @throws Exception
+	 */
+	
+	@Action("/modules/return/auditReturnViewDetails")
+	public String auditReturnViewDetails()throws Exception{
+		saveToken("auditReturnToken");
+		ReturnMoneyUse r=returnMoneyService.auditReturnView(model.getId());
+		
+		Operator operator = operatorService.getUserById(r.getOperatorId());
+		
+		request.setAttribute("operator", operator);
+		request.setAttribute("r", r);
+		return "auditReturnViewDetails";
+	}
+}

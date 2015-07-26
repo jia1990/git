@@ -1,0 +1,235 @@
+
+package com.ddtkj.p2psys.credit.model;
+
+import java.util.Date;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述: 债权转让记录
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-22   
+ */
+public class CreditLogModel extends CreditLog {
+
+	private static final long serialVersionUID = -666068603382105803L;
+	
+	/** 当前页码 */
+	private int page = 1;
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	/** 债权转让ID **/
+	private long caId;
+	/** 债权名 **/
+	private String caName;
+	/** 出售债权用户名 **/
+	private String sellUserName;
+	/** 购买债权用户名 **/
+	private String buyUserName;
+	/** 债权相关借款标ID **/
+	private long caBorrowId;
+	/** 债权相关借款标记录时间 **/
+	private Date caBorrowAddTime;
+	/** 债权相关借款标年利率 **/
+	private double caApr;
+	/** 债权转让开始期数 **/
+	private int creditStartPeriod;
+	/** 债权转让结束期数 **/
+	private int creditEndPeriod;
+	
+	// 时间类型   孙晓勇  2015年5月5日
+	private String timeType;
+	
+	public String getTimeType() {
+		return timeType;
+	}
+	public void setTimeType(String timeType) {
+		this.timeType = timeType;
+	}
+
+	/** 以下参数用于报表导出 **/
+	private String buyFeeStatusExport;  
+	private String sellFeeStatusExport;  
+	private String isSellExport;
+	
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getSize() {
+		return size;
+	}
+	public void setSize(int size) {
+		this.size = size;
+	}
+	public String getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+	public String getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	public int getTime() {
+		return time;
+	}
+	public void setTime(int time) {
+		this.time = time;
+	}
+	public long getCaId() {
+		return caId;
+	}
+	public void setCaId(long caId) {
+		this.caId = caId;
+	}
+	public String getCaName() {
+		return caName;
+	}
+	public void setCaName(String caName) {
+		this.caName = caName;
+	}
+	public String getSellUserName() {
+		return sellUserName;
+	}
+	public void setSellUserName(String sellUserName) {
+		this.sellUserName = sellUserName;
+	}
+	public String getBuyUserName() {
+		return buyUserName;
+	}
+	public void setBuyUserName(String buyUserName) {
+		this.buyUserName = buyUserName;
+	}
+	public long getCaBorrowId() {
+		return caBorrowId;
+	}
+	public void setCaBorrowId(long caBorrowId) {
+		this.caBorrowId = caBorrowId;
+	}
+	public Date getCaBorrowAddTime() {
+		return caBorrowAddTime;
+	}
+	public void setCaBorrowAddTime(Date caBorrowAddTime) {
+		this.caBorrowAddTime = caBorrowAddTime;
+	}
+	public double getCaApr() {
+		return caApr;
+	}
+	public void setCaApr(double caApr) {
+		this.caApr = caApr;
+	}
+	public int getCreditStartPeriod() {
+		return creditStartPeriod;
+	}
+	public void setCreditStartPeriod(int creditStartPeriod) {
+		this.creditStartPeriod = creditStartPeriod;
+	}
+	public int getCreditEndPeriod() {
+		return creditEndPeriod;
+	}
+	public void setCreditEndPeriod(int creditEndPeriod) {
+		this.creditEndPeriod = creditEndPeriod;
+	}
+	
+	
+	
+	public String getBuyFeeStatusExport() {
+		return buyFeeStatusExport;
+	}
+	public void setBuyFeeStatusExport(String buyFeeStatusExport) {
+		this.buyFeeStatusExport = buyFeeStatusExport;
+	}
+	public String getSellFeeStatusExport() {
+		return sellFeeStatusExport;
+	}
+	public void setSellFeeStatusExport(String sellFeeStatusExport) {
+		this.sellFeeStatusExport = sellFeeStatusExport;
+	}	
+	public String getIsSellExport() {
+		return isSellExport;
+	}
+	public void setIsSellExport(String isSellExport) {
+		this.isSellExport = isSellExport;
+	}
+	
+	
+	public CreditLogModel() {
+		super();
+	}
+	
+	public static CreditLogModel instance (CreditLog creditLog) {
+		CreditLogModel model = new CreditLogModel();
+		BeanUtils.copyProperties(creditLog, model);
+		return model;
+	}
+	
+	public CreditLog prototype(){
+		CreditLog creditLog = new CreditLog();
+		BeanUtils.copyProperties(this, creditLog);
+		return creditLog;
+	}
+	
+	public static String convertBuyFeeStatus(int buyFeeStatus){
+		if(buyFeeStatus == CreditLog.CRELOG_BUYFEE_STATUS_CHARGE){
+			return "已收取";
+		}else if(buyFeeStatus == CreditLog.CRELOG_BUYFEE_STATUS_FREEZE){
+			return "冻结中";
+		}else if(buyFeeStatus == CreditLog.CRELOG_BUYFEE_STATUS_BACK){
+			return "已退回";
+		}else{
+			return "未指定的购买手续费状态";
+		}
+	}
+	
+	public static String convertSellFeeStatus(int sellFeeStatus){
+		if(sellFeeStatus == CreditLog.CRELOG_SELLFEE_STATUS_CHARGE){
+			return "已收取";
+		}else if(sellFeeStatus == CreditLog.CRELOG_SELLFEE_STATUS_FREEZE){
+			return "冻结中";
+		}else if(sellFeeStatus == CreditLog.CRELOG_SELLFEE_STATUS_BACK){
+			return "已退回";
+		}else{
+			return "未指定的出售手续费状态";
+		}
+	}
+	
+	public static String convertBuyCreditStatus(String status){
+		if(CreditLog.CRELOG_STATUS_NO.equals(status)){
+			return "未成交";
+		}else if(CreditLog.CRELOG_STATUS_YEW.equals(status)){
+			return "已成交";
+		}else if(CreditLog.CRELOG_STATUS_RE.equals(status)){
+			return "撤回";
+		}else{
+			return "未指定的购买记录状态";
+		}
+	}
+	
+	public static String convertIsSell(int isSell){
+		if(isSell == CreditLog.CRELOG_ISSELL_YES){
+			return "售出";
+		}else if(isSell == CreditLog.CRELOG_ISSELL_NO){
+			return "未出售";
+		}else{
+			return "未指定的状态";
+		}
+	}
+	
+	
+}

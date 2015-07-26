@@ -1,0 +1,48 @@
+package com.ddtkj.p2psys.member.service;
+
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.member.model.MemberVipSubModel;
+import com.rongdu.common.model.jpa.PageDataList;
+/**
+ * 
+ * @描述：会员Service接口
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年2月28日
+ */
+public interface MemberVipService {
+	
+	public double calculateBuyVipMoney(MemberVipSubModel model) throws Exception;
+	
+
+	/**
+	 * 购买VIP 转账
+	 * @author 李建云
+	 * @param member
+	 * @return
+	 */
+	public void buyVipTransfer(MemberVipSubModel model) throws Exception;
+	/**
+	 * 分页查询用户会员记录
+	 * @param member
+	 * @param currentPage
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<MemberVip> getPageDataList(MemberVip memberVip,int currentPage,int pageSize);
+	/**
+	 * @author 李建云
+	 * 查询此用户的会员状态
+	 * @param userId
+	 * @return
+	 */
+	public MemberVip findMemberByUserId(long userId)throws Exception;
+	
+	/**
+	 * @author 李建云
+	 * VIP到期提醒
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	public void doVIPExpireNotice();
+	
+}

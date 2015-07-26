@@ -1,0 +1,91 @@
+package com.ddtkj.p2psys.activity.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.activity.domain.ActivityPublish;
+import com.ddtkj.p2psys.activity.model.ActivityPublishModel;
+import com.ddtkj.p2psys.activity.dao.ActivityPublishDao;
+import com.ddtkj.p2psys.activity.service.ActivityPublishService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.p2psys.core.Global;
+
+
+@Service("ActivityService")
+public class ActivityPublishServiceImpl implements ActivityPublishService {
+
+	@Resource
+	private ActivityPublishDao ActivityPublishDao;
+
+	@Override
+	public List<ActivityPublishModel> listBySize(String type, int size) {
+		return ActivityPublishDao.listBySize(type, size);
+	}
+
+	@Override
+	public PageDataList<ActivityPublishModel> list(String type, int page) {
+		return ActivityPublishDao.list(type, page);
+	}
+	
+	@Override
+	public PageDataList<ActivityPublishModel> list(ActivityPublishModel model) {
+	    QueryParam param = QueryParam.getInstance();
+        param.addParam("type", model.getType());
+        param.addParam("status", 1);
+        param.addOrder(OrderType.DESC, "isTop");
+        param.addOrder(OrderType.DESC, "isRecommend");
+        param.addOrder(OrderType.ASC, "sort");
+        param.addOrder(OrderType.DESC, "id");
+        param.addPage(model.getPage(), model.getSize());
+        PageDataList<ActivityPublish> pageDataList = ActivityPublishDao.findPageList(param);
+        PageDataList<ActivityPublishModel> pageDataList_ = new PageDataList<ActivityPublishModel>();
+        List<ActivityPublishModel> list = new ArrayList<ActivityPublishModel>();
+        List<ActivityPublish> Activitys =  pageDataList.getList();
+        pageDataList_.setPage(pageDataList.getPage());
+        if (Activitys.size() > 0) {
+            for (int i = 0; i < Activitys.size(); i++) {
+                ActivityPublish an = Activitys.get(i);
+                ActivityPublishModel anm = ActivityPublishModel.instance(an);
+                anm.setPicPath(Global.getValue("adminurl") + an.getPicPath());
+                
+                list.add(anm);
+            }
+        }
+        pageDataList_.setList(list);
+        return pageDataList_;
+	}
+
+	@Override
+	public PageDataList<ActivityPublishModel> activityList(ActivityPublishModel model, int pageNumber, int pageSize) {
+		return ActivityPublishDao.activityList(model, pageNumber, pageSize);
+	}
+	
+	@Override
+	public void activityAdd(ActivityPublish activity) {
+		ActivityPublishDao.save(activity);
+	}
+
+	@Override
+	public ActivityPublish find(long id) {
+		return ActivityPublishDao.find(id);
+	}
+
+	@Override
+	public void activityEdit(ActivityPublish activity) {
+		ActivityPublishDao.activityEdit(activity);
+	}
+
+	@Override
+	public void update(ActivityPublish Activity) {
+		
+		ActivityPublishDao.merge(Activity);
+	}
+
+	
+
+}

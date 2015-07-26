@@ -1,0 +1,122 @@
+
+package com.ddtkj.p2psys.cardaward.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.cardaward.domain.MemberCardAward;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述: 购物卡model
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+public class MemberCardAwardModel extends MemberCardAward {
+
+	private static final long serialVersionUID = 9147639278615800430L;
+	
+	/** 当前页码 **/
+	private int page = 1;
+
+	/** 每页数据条数 **/
+	private int size = Page.ROWS;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	private String userName;				//用户名
+	private String realName;				//真实姓名
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+
+	public MemberCardAward prototype(){
+		MemberCardAward cardAward = new MemberCardAward();
+		BeanUtils.copyProperties(this, cardAward);
+		return cardAward;
+	}
+	
+	public static MemberCardAwardModel instance(MemberCardAward cardAward){
+		MemberCardAwardModel model = new MemberCardAwardModel();
+		BeanUtils.copyProperties(cardAward, model);
+		return model;
+	}
+	
+	public String convertCardAwardStatus(String status) {
+		if(MemberCardAward.CONVERT_STATUS_ALL.equals(status)){
+			return "全部";
+		}else if(MemberCardAward.CONVERT_STATUS_YES.equals(status)){
+			return "已兑换";
+		}else if(MemberCardAward.CONVERT_STATUS_NO.equals(status)){
+			return "未兑换";
+		}else{
+			return "未指定的转账状态";
+		}
+	}
+	
+	public String convertCardAwardResource(String resource) {
+		if(MemberCardAward.CARD_AWARD_RESOURCE_SCOREAWARD.equals(resource)){
+			return "积分抽奖";
+		}else{
+			return "未指定的奖励来源";
+		}
+	}
+	
+}

@@ -1,0 +1,267 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.io.Serializable;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.util.DateUtil;
+
+/**
+ * @描述:红包产生规则
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月18日
+ */
+public class RpActivityProduceAndConsumeRuleCheck extends RuleCheck {
+
+	private static final long serialVersionUID = 5359222401258454972L;
+	
+	private IndianaJones indianaJones;//夺宝骑兵活动规则
+
+	public RpActivityProduceAndConsumeRuleCheck() {
+	}
+	
+	public static class AwardFormula implements Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 7565750138382911546L;
+		private int tenderMoneyA;//投标累计金额
+		private int awardMoneyA;//奖励金额
+		private int tenderMoneyB;
+		private int awardMoneyB;
+		private int tenderMoneyC;
+		private int awardMoneyC;
+		private int tenderMoneyD;
+		private int awardMoneyD;
+		private int tenderMoneyE;
+		private int awardMoneyE;
+		private int tenderMoneyF;
+		private int awardMoneyF;
+		private int tenderMoneyG;
+		private int awardMoneyG;
+		
+		public int getTenderMoneyA() {
+			return tenderMoneyA;
+		}
+		public void setTenderMoneyA(int tenderMoneyA) {
+			this.tenderMoneyA = tenderMoneyA;
+		}
+		public int getAwardMoneyA() {
+			return awardMoneyA;
+		}
+		public void setAwardMoneyA(int awardMoneyA) {
+			this.awardMoneyA = awardMoneyA;
+		}
+		public int getTenderMoneyB() {
+			return tenderMoneyB;
+		}
+		public void setTenderMoneyB(int tenderMoneyB) {
+			this.tenderMoneyB = tenderMoneyB;
+		}
+		public int getAwardMoneyB() {
+			return awardMoneyB;
+		}
+		public void setAwardMoneyB(int awardMoneyB) {
+			this.awardMoneyB = awardMoneyB;
+		}
+		public int getTenderMoneyC() {
+			return tenderMoneyC;
+		}
+		public void setTenderMoneyC(int tenderMoneyC) {
+			this.tenderMoneyC = tenderMoneyC;
+		}
+		public int getAwardMoneyC() {
+			return awardMoneyC;
+		}
+		public void setAwardMoneyC(int awardMoneyC) {
+			this.awardMoneyC = awardMoneyC;
+		}
+		public int getTenderMoneyD() {
+			return tenderMoneyD;
+		}
+		public void setTenderMoneyD(int tenderMoneyD) {
+			this.tenderMoneyD = tenderMoneyD;
+		}
+		public int getAwardMoneyD() {
+			return awardMoneyD;
+		}
+		public void setAwardMoneyD(int awardMoneyD) {
+			this.awardMoneyD = awardMoneyD;
+		}
+		public int getTenderMoneyE() {
+			return tenderMoneyE;
+		}
+		public void setTenderMoneyE(int tenderMoneyE) {
+			this.tenderMoneyE = tenderMoneyE;
+		}
+		public int getAwardMoneyE() {
+			return awardMoneyE;
+		}
+		public void setAwardMoneyE(int awardMoneyE) {
+			this.awardMoneyE = awardMoneyE;
+		}
+		public int getTenderMoneyF() {
+			return tenderMoneyF;
+		}
+		public void setTenderMoneyF(int tenderMoneyF) {
+			this.tenderMoneyF = tenderMoneyF;
+		}
+		public int getAwardMoneyF() {
+			return awardMoneyF;
+		}
+		public void setAwardMoneyF(int awardMoneyF) {
+			this.awardMoneyF = awardMoneyF;
+		}
+		public int getTenderMoneyG() {
+			return tenderMoneyG;
+		}
+		public void setTenderMoneyG(int tenderMoneyG) {
+			this.tenderMoneyG = tenderMoneyG;
+		}
+		public int getAwardMoneyG() {
+			return awardMoneyG;
+		}
+		public void setAwardMoneyG(int awardMoneyG) {
+			this.awardMoneyG = awardMoneyG;
+		}
+		
+		
+	}
+	
+	/**
+	 * 夺宝骑兵活动
+	 * */
+	public static class IndianaJones implements Serializable{
+	
+		private static final long serialVersionUID = -8779407747835671996L;
+		
+		private int status;//1为开启 0为关闭
+		private AwardFormula award_formula;//奖励界限和奖励金额
+		private String activity_start;
+		private String acitivty_end;
+		private String activity_consume;//此活动的红包消费公式
+		
+		
+		public int getStatus() {
+			return status;
+		}
+		public void setStatus(int status) {
+			this.status = status;
+		}
+		public AwardFormula getAward_formula() {
+			return award_formula;
+		}
+		public void setAward_formula(AwardFormula award_formula) {
+			this.award_formula = award_formula;
+		}
+		public String getActivity_start() {
+			return activity_start;
+		}
+		public void setActivity_start(String activity_start) {
+			this.activity_start = activity_start;
+		}
+		public String getAcitivty_end() {
+			return acitivty_end;
+		}
+		public void setAcitivty_end(String acitivty_end) {
+			this.acitivty_end = acitivty_end;
+		}
+		public String getActivity_consume() {
+			return activity_consume;
+		}
+		public void setActivity_consume(String activity_consume) {
+			this.activity_consume = activity_consume;
+		}
+		
+	}
+
+
+	
+
+	public Map<String,Object> IndianaJonesRp(){
+		Map<String, Object> data = new HashMap<String, Object>();
+		if(indianaJones.status == 1){
+			String format = "yyyy-MM-dd";
+			Date startDate = DateUtil.getDate10ByStr(
+					indianaJones.activity_start, format);
+
+			Date endDate = DateUtil.getDate10ByStr(
+					indianaJones.acitivty_end, format);
+
+			long now = System.currentTimeMillis();
+			if (now >= startDate.getTime() && endDate.getTime() >= now) {
+				data.put("activityRp_status", 1);
+				data.put("activityRp_start_time", startDate);
+				data.put("activityRp_end_time", endDate);
+				data.put("activityRp_tender_formula_a", indianaJones.award_formula.tenderMoneyA);
+				data.put("activityRp_tender_formula_b", indianaJones.award_formula.tenderMoneyB);
+				data.put("activityRp_tender_formula_c", indianaJones.award_formula.tenderMoneyC);
+				data.put("activityRp_tender_formula_d", indianaJones.award_formula.tenderMoneyD);
+				data.put("activityRp_tender_formula_e", indianaJones.award_formula.tenderMoneyE);
+				data.put("activityRp_tender_formula_f", indianaJones.award_formula.tenderMoneyF);
+				data.put("activityRp_tender_formula_g", indianaJones.award_formula.tenderMoneyG);
+				
+				data.put("activityRp_award_formula_a", indianaJones.award_formula.awardMoneyA);
+				data.put("activityRp_award_formula_b", indianaJones.award_formula.awardMoneyB);
+				data.put("activityRp_award_formula_c", indianaJones.award_formula.awardMoneyC);
+				data.put("activityRp_award_formula_d", indianaJones.award_formula.awardMoneyD);
+				data.put("activityRp_award_formula_e", indianaJones.award_formula.awardMoneyE);
+				data.put("activityRp_award_formula_f", indianaJones.award_formula.awardMoneyF);
+				data.put("activityRp_award_formula_g", indianaJones.award_formula.awardMoneyG);
+			}
+		}
+		
+		return data;
+	}
+	
+	
+	
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = RpActivityProduceAndConsumeRuleCheck.class
+				.getResourceAsStream("红包产生规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll("\\s* ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(json);
+		Object jsonObj = JSON
+				.parseObject(json, RpActivityProduceAndConsumeRuleCheck.class);
+		RpActivityProduceAndConsumeRuleCheck test = (RpActivityProduceAndConsumeRuleCheck) jsonObj;
+
+		// System.out.println(test);
+
+		double r = Math.floor(8900 * 3 * (2 / 10000d) * 1.0d);
+		System.out.println(r);
+
+	}
+	
+	public IndianaJones getIndianaJones() {
+		return indianaJones;
+	}
+
+	public void setIndianaJones(IndianaJones indianaJones) {
+		this.indianaJones = indianaJones;
+	}
+
+
+
+	/* (non-Javadoc)
+	 * @see com.rongdu.p2psys.core.rule.RuleCheck#checkRule()
+	 */
+	@Override
+	public boolean checkRule() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+}

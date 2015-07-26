@@ -1,0 +1,1267 @@
+package com.ddtkj.p2psys.borrow.service.impl;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowHelper;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.credit.dao.CreditAssignmentDao;
+import com.ddtkj.p2psys.credit.dao.CreditLogDao;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.worker.CreditWorker;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.goods.dao.GoodsOrderDao;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowAutoDao;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.dao.BorrowRepaymentDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowAuto;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.interest.InterestCalculator;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.dao.VerifyLogDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+@Service("autoBorrowService")
+public class AutoBorrowServiceImpl implements AutoBorrowService {
+
+	private static final Logger logger = Logger.getLogger(AutoBorrowServiceImpl.class);
+	@Resource
+	private BorrowRepaymentDao borrowRepaymentDao;
+	@Resource
+	private BorrowDao borrowDao;
+	@Resource
+	private BorrowAutoDao borrowAutoDao;
+	@Resource
+	private BorrowTenderDao tenderDao;
+	@Resource
+	private AccountDao accountDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private BorrowCollectionDao borrowCollectionDao;
+	@Resource
+	private UserCacheDao userCacheDao;
+	@Resource
+	private BorrowTenderDao borrowTenderDao;
+	@Resource
+	private CreditLogDao creditLogDao ;
+	@Resource
+	private CreditAssignmentDao creditAssignmentDao ;
+	@Resource
+	private GoodsOrderDao goodsOrderDao;
+	
+	@Resource 
+	private VerifyLogDao verifyLogDao;
+	
+	
+	@Override
+	public void autoBorrowRepay(BorrowRepayment repay) throws Exception {
+		BorrowRepayment borrowRepayment=borrowRepaymentDao.find(repay.getId());
+		Borrow borrow = borrowDao.find(borrowRepayment.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		// 债权处理  撤回所有 该标的 转让中债权
+		List<CreditAssignment> calist = creditAssignmentDao.getListByBorrowId(borrow.getId()) ;
+		try {
+			for (CreditAssignment ca : calist) {
+				if (Borrow.TYPE_MORTGAGE == ca.getBorrow().getType()) {
+					QueryParam param = QueryParam.getInstance();
+					param.addParam("creditAssignment", ca);
+					List<CreditLog> clList = this.creditLogDao.findByCriteria(param);
+					CreditWorker caworker = new CreditWorker(ca);
+					try{
+						caworker.creditFullVerifyFail(clList);
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+					// 发送通知
+					User user = ca.getUser();
+					Global.setTransfer("creditAssignment", ca);
+					Global.setTransfer("user", user);
+					AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifyFailExecuter");
+					succExecuter.execute(0, user);
+					ca.setStatus("05");  // 标识为已撤销
+					// 给购买者发送通知
+					for (CreditLog creditLog : clList) {
+						AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifyBuyFailExecuter");
+			            Global.setTransfer("creditLog", creditLog);
+			            Global.setTransfer("user", creditLog.getBuyUser());
+			            succBuyExecuter.execute(0, creditLog.getBuyUser());
+					}
+					creditAssignmentDao.update(ca);
+				}
+			}
+			//----------汇潮第三方交易处理开始======
+			//网站方自身业务逻辑
+			logger.info("网站还款逻辑业务执行");
+			// 处理借款人资金
+			worker.borrowRepayHandleBorrow(borrowRepayment);
+			if(borrowRepayment.getLateDays()>0&&borrowRepayment.getLateInterest()>0){
+				// 处理担保人资金  借款人还给担保公司和投资人
+				worker.borrowRepayHandleTenderAndCompensatory(borrowRepayment);
+			}else{
+				// 处理投资人资金
+				worker.borrowRepayHandleTender(borrowRepayment);
+			}
+			borrowRepayment.setStatus(1);
+			borrowRepayment.setRepaymentYesTime(new Date());
+			borrowRepayment.setRepaymentYesAccount(BigDecimalUtil.add(borrowRepayment.getCapital(),
+					borrowRepayment.getInterest()));
+	        // 还款类型1：正常还款
+	        borrowRepayment.setType(Constant.REPAYMENT_TYPE_NORAML);
+	        // 实际还款者
+	        borrowRepayment.setRealRepayer(borrow.getUser());
+			borrowRepaymentDao.updateBorrowRepaymentByStatus(borrowRepayment);
+			int status = worker.isLastPeriod(borrowRepayment.getPeriod()) ? 8 : 7;
+			borrow.setStatus(status);
+			// borrow.setRepaymentAccount(0);去掉将应还本金置为0的效果
+			double total = BigDecimalUtil.add(borrowRepayment.getCapital(), borrowRepayment.getInterest()); // 还款表本金+利息
+			borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+			borrow.setRepaymentYesInterest(BigDecimalUtil.add(borrow.getRepaymentYesInterest() ,borrowRepayment.getInterest()));
+			borrowDao.update(borrow);
+			
+			
+			//处理一麻袋转账
+			if(borrowRepayment.getLateDays()>0&&borrowRepayment.getLateInterest()>0){
+				//一麻袋转账处理    借款人还给担保公司
+				worker.borrowRepayCompensateYmdHandle(repay);
+			}else{
+				//一麻袋转账处理    借款人还给投资人
+			   worker.borrowRepayYmdHandle(repay);
+			}
+			
+	        // 向借款人发送还款成功通知
+	        Global.setTransfer("repay", borrowRepayment);
+	        Global.setTransfer("user", borrow.getUser());
+	        AbstractExecuter successExecuter = ExecuterHelper.doExecuter("borrowRepaySuccessExecuter");
+	        successExecuter.execute(0, borrow.getUser());
+			logger.info("汇潮第三方交易还款转账处理结束");
+			
+			
+		} catch (Exception e) {
+			logger.error("还款失败");
+			if(e.getMessage()==null){
+				//throw new BorrowException("还款失败,请联系管理员");
+			  //JSDBET-812 sgp 2015-3-14 start
+				throw new HandleException("还款失败,请联系管理员", "还款异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_MANUAL_SYS, borrow.getUser(), ErrorLogConstant.MODULE_BORROW_REPAYMENT, repay.getId(), 1);
+				//JSDBET-812 sgp 2015-3-14 end
+			}else{
+				//throw new BorrowException("还款失败"+e.getMessage());
+				//JSDBET-812 sgp 2015-3-14 start
+				throw new HandleException("还款失败，异常信息："+e.getMessage()+e.getCause(), "还款异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_MANUAL_SYS, borrow.getUser(), ErrorLogConstant.MODULE_BORROW_REPAYMENT, repay.getId(), 1);
+				//JSDBET-812 sgp 2015-3-14 end
+			}
+		}
+		
+	}
+	//JSDP-85 gjh 2015-5-4 start
+	@Override
+	public void autoBorrowRepayPatch(BorrowCollection collection) throws Exception {
+		//BorrowRepayment borrowRepayment=borrowRepaymentDao.find(repay.getId());
+		BorrowRepayment borrowRepayment=null;
+		if(collection.getBorrow().getType() == Borrow.TYPE_MORTGAGE_ENERGY || collection.getBorrow().getType() ==  Borrow.TYPE_NETWORK){
+			throw new HandleException("还款失败,请联系管理员[标种有误]", "还款异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_MANUAL_SYS, collection.getBorrow().getUser(), ErrorLogConstant.MODULE_BORROW, collection.getBorrow().getId(), 1);
+		}
+		List<BorrowRepayment> borrowRepayments=borrowRepaymentDao.findByProperty("borrow", collection.getBorrow());
+		for(BorrowRepayment br:borrowRepayments){
+			if(br.getPeriod() == collection.getPeriod()){
+				borrowRepayment = br;
+			}
+		}
+		Borrow borrow = borrowDao.find(borrowRepayment.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		// 债权处理  撤回所有 该标的 转让中债权
+		List<CreditAssignment> calist = creditAssignmentDao.getListByBorrowId(borrow.getId()) ;
+		try {
+			for (CreditAssignment ca : calist) {
+				if (Borrow.TYPE_MORTGAGE == ca.getBorrow().getType()) {
+					QueryParam param = QueryParam.getInstance();
+					param.addParam("creditAssignment", ca);
+					List<CreditLog> clList = this.creditLogDao.findByCriteria(param);
+					CreditWorker caworker = new CreditWorker(ca);
+					try{
+						caworker.creditFullVerifyFail(clList);
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+					// 发送通知
+					User user = ca.getUser();
+					Global.setTransfer("creditAssignment", ca);
+					Global.setTransfer("user", user);
+					AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifyFailExecuter");
+					succExecuter.execute(0, user);
+					ca.setStatus("05");  // 标识为已撤销
+					// 给购买者发送通知
+					for (CreditLog creditLog : clList) {
+						AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifyBuyFailExecuter");
+						Global.setTransfer("creditLog", creditLog);
+						Global.setTransfer("user", creditLog.getBuyUser());
+						succBuyExecuter.execute(0, creditLog.getBuyUser());
+					}
+					creditAssignmentDao.update(ca);
+				}
+			}
+			//----------汇潮第三方交易处理开始======
+			//网站方自身业务逻辑
+			logger.info("网站还款逻辑业务执行");
+			// 处理借款人资金
+			worker.borrowRepayHandleBorrow(borrowRepayment);
+			if(borrowRepayment.getLateDays()>0&&borrowRepayment.getLateInterest()>0){
+				// 处理担保人资金  借款人还给担保公司和投资人
+				worker.borrowRepayHandleTenderAndCompensatory(borrowRepayment);
+			}else{
+				// 处理投资人资金
+				worker.borrowRepayHandleTender(borrowRepayment);
+			}
+			borrowRepayment.setStatus(1);
+			borrowRepayment.setRepaymentYesTime(new Date());
+			borrowRepayment.setRepaymentYesAccount(BigDecimalUtil.add(borrowRepayment.getCapital(),
+					borrowRepayment.getInterest()));
+			// 还款类型1：正常还款
+			borrowRepayment.setType(Constant.REPAYMENT_TYPE_NORAML);
+			// 实际还款者
+			borrowRepayment.setRealRepayer(borrow.getUser());
+			borrowRepaymentDao.updateBorrowRepaymentByStatus(borrowRepayment);
+			int status = worker.isLastPeriod(borrowRepayment.getPeriod()) ? 8 : 7;
+			borrow.setStatus(status);
+			// borrow.setRepaymentAccount(0);去掉将应还本金置为0的效果
+			double total = BigDecimalUtil.add(borrowRepayment.getCapital(), borrowRepayment.getInterest()); // 还款表本金+利息
+			borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+			borrow.setRepaymentYesInterest(BigDecimalUtil.add(borrow.getRepaymentYesInterest() ,borrowRepayment.getInterest()));
+			borrowDao.update(borrow);
+			
+			
+			//处理一麻袋转账  ---补单无需第三方转账
+			/*if(borrowRepayment.getLateDays()>0&&borrowRepayment.getLateInterest()>0){
+				//一麻袋转账处理    借款人还给担保公司
+				//worker.borrowRepayCompensateYmdHandle(repay);
+			}else{
+				//一麻袋转账处理    借款人还给投资人
+				//worker.borrowRepayYmdHandle(repay);
+			}*/
+			
+			// 向借款人发送还款成功通知
+			Global.setTransfer("repay", borrowRepayment);
+			Global.setTransfer("user", borrow.getUser());
+			AbstractExecuter successExecuter = ExecuterHelper.doExecuter("borrowRepaySuccessExecuter");
+			successExecuter.execute(0, borrow.getUser());
+			logger.info("汇潮第三方交易还款转账处理结束");
+			
+			
+		} catch (Exception e) {
+			logger.error("还款失败");
+			if(e.getMessage()==null){
+				//throw new BorrowException("还款失败,请联系管理员");
+				//JSDBET-812 sgp 2015-3-14 start
+				throw new HandleException("还款失败,请联系管理员", "还款异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_MANUAL_SYS, borrow.getUser(), ErrorLogConstant.MODULE_BORROW_REPAYMENT, borrowRepayment.getId(), 1);
+				//JSDBET-812 sgp 2015-3-14 end
+			}else{
+				//throw new BorrowException("还款失败"+e.getMessage());
+				//JSDBET-812 sgp 2015-3-14 start
+				throw new HandleException("还款失败，异常信息："+e.getMessage()+e.getCause(), "还款异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_MANUAL_SYS, borrow.getUser(), ErrorLogConstant.MODULE_BORROW_REPAYMENT, borrowRepayment.getId(), 1);
+				//JSDBET-812 sgp 2015-3-14 end
+			}
+		}
+		
+	}
+	//JSDP-85 gjh 2015-5-4 end
+	
+	@Override
+	public void overdue(BorrowRepayment borrowRepayment) {
+		Borrow borrow = borrowRepayment.getBorrow();
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		try {
+			// 处理投资人资金
+			worker.borrowRepayHandleTender(borrowRepayment);
+			borrowRepayment.setStatus(2);
+			borrowRepayment.setRepaymentYesTime(new Date());
+			borrowRepayment.setRepaymentYesAccount(BigDecimalUtil.add(borrowRepayment.getCapital(),
+					borrowRepayment.getInterest()));
+			borrowRepaymentDao.updateBorrowRepaymentByStatus(borrowRepayment);
+//			int status = worker.isLastPeriod(borrowRepayment.getPeriod()) ? 8 : 7;
+//			borrow.setStatus(status);
+			double total = BigDecimalUtil.add(borrowRepayment.getCapital(), borrowRepayment.getInterest()); // 还款表本金+利息
+			borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+			borrow.setRepaymentYesInterest(borrow.getRepaymentYesInterest() + borrowRepayment.getInterest());
+			borrowDao.update(borrow);
+		} catch (Exception e) {
+			logger.error(e.getMessage());
+			//e.printStackTrace();
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("逾期还款失败，异常信息："+e.getMessage()+e.getCause(), "逾期还款异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_OVERDUE_SYS, borrowRepayment.getUser(), ErrorLogConstant.MODULE_BORROW_REPAYMENT, borrowRepayment.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+	}
+	
+	@Override
+	public void overduePayment(BorrowRepayment borrowRepayment) {
+		Borrow borrow = borrowDao.find(borrowRepayment.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		try {
+			// 处理借款人资金
+			worker.borrowRepayHandleBorrow(borrowRepayment);
+			borrowRepayment.setStatus(1);
+			//处理逾期垫付的状态才2更新到1
+			borrowRepaymentDao.updateBorrowRepaymentStatus(borrowRepayment);
+			int status = worker.isLastPeriod(borrowRepayment.getPeriod()) ? 8 : 7;
+			borrow.setStatus(status);
+			double total = BigDecimalUtil.add(borrowRepayment.getCapital(), borrowRepayment.getInterest()); // 还款表本金+利息
+			borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+			borrow.setRepaymentYesInterest(borrow.getRepaymentYesInterest() + borrowRepayment.getInterest());
+			borrowDao.update(borrow);
+		} catch (Exception e) {
+			logger.error("还款失败");
+			//throw new BorrowException("还款失败");
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("逾期还款失败，异常信息："+e.getMessage()+e.getCause(), "逾期还款异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_OVERDUE_SYS, borrowRepayment.getUser(), ErrorLogConstant.MODULE_BORROW_REPAYMENT, borrowRepayment.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+
+	}
+	
+	@Override
+	public void doPriorRepay(BorrowRepayment borrowRepayment) {
+		/*Borrow borrow = borrowDao.find(borrowRepayment.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		TradePayPoolReverse tpr = null;
+		String resultCode = null;
+		boolean isOpenApi = BaseTPPWay.isOpenApi();
+		double waitRemainderRepayCapital = borrowRepaymentDao.getRemainderCapital(borrow.getId()); // 计算剩余待还本金
+		double waitRemainderRepayInterest = borrowRepaymentDao.getwaitRpayInterest(borrow.getId(),
+				borrowRepayment.getPeriod()); // 本次提前还款待还利息总和
+		double money = BigDecimalUtil.add(waitRemainderRepayCapital, waitRemainderRepayInterest);
+		YmdTransfer ymdTransfer=new YmdTransfer();
+		if (isOpenApi) {
+			List<YmdTransferDetails> yList=new ArrayList<YmdTransferDetails>();
+			YmdTransferDetails y=new YmdTransferDetails();
+			List<BorrowCollection> collectionlist = borrowCollectionDao.list(borrowRepayment.getBorrow().getId(),
+					borrowRepayment.getPeriod());
+			for(BorrowCollection c:collectionlist){
+				y.setOutTradeNo(OrderNoUtils.getSerialNumber());
+				y.setOutName(borrow.getUser().getUserName());
+				y.setInName(c.getUser().getUserName());
+				y.setAmount(c.getRepaymentAccount()+"");
+				y.setRemark("转账");
+				yList.add(y);
+			}
+			ymdTransfer=YmdTPPWay.transfer(YmdConstant.YMD_TYPE_1,YmdConstant.YMD_TRADE_REPAY, yList);
+		}
+		if ("0000".equals(ymdTransfer.getErrCode()) || !isOpenApi) {
+			try {
+				// 处理借款人资金（提前还款）
+				worker.borrowPriorRepayHandleBorrow(borrowRepayment);
+				// 处理投资人资金（提前还款）
+				worker.borrowPriorRepayHandleTender(borrowRepayment);
+				borrowRepayment.setStatus(1);
+				borrowRepayment.setRepaymentYesTime(new Date());
+				borrowRepayment.setRepaymentYesAccount(BigDecimalUtil.add(borrowRepayment.getCapital(),
+						borrowRepayment.getInterest()));
+				borrowRepaymentDao.updateBorrowRepaymentStatusAndWebStatus(borrowRepayment);
+				// 提前还款完成状态变成8
+				borrow.setStatus(8);
+				double total = BigDecimalUtil.add(borrowRepayment.getCapital(), borrowRepayment.getInterest()); // 还款本金+利息
+				
+				borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+				borrow.setRepaymentYesInterest(borrow.getRepaymentYesInterest() + borrowRepayment.getInterest());
+				
+				borrowDao.update(borrow);
+			} catch (Exception e) {
+				throw new BorrowException("提前还款失败"+e.getMessage());
+			}
+		} else {
+			Global.setTransfer("tenderAccount", money);
+			Global.setTransfer("borrow", borrow);
+			Global.setTransfer("repay", borrowRepayment);
+			AbstractExecuter executer = ExecuterHelper.doExecuter("borrowRepayFreezeExecuter");
+			executer.execute(money, borrow.getUser());
+		}
+*/
+	}
+	/**
+	 * 还款
+	 * 
+	 * @param tradeNo
+	 * @param payerUserId
+	 * @param tendersArray
+	 * @return
+	 *//*
+	public TradePayPoolReverse tradePayPoolReverse(String tradeNo, String payerUserId, String subOrders, String money) {
+		TradePayPoolReverse tpr = PayModelHelper.tradePayPoolReverse(tradeNo, payerUserId, subOrders, money);
+		return tpr;
+	}*/
+
+	/**
+	 * 集资借款交易完成 tradeFinishPool
+	 */
+	/*
+	 * public static TradeClosePoolTogether tradeFinishPoolReverse(String tradeNo){ TradeClosePoolTogether tc =
+	 * PayModelHelper.tradePayPoolReverse(tradeNo); return tfr; }
+	 */
+	/**
+	 * 自动投标功能
+	 */
+	@Override
+	public void autoDealTender(BorrowModel model) throws Exception {
+
+		Borrow borrow = model.prototype();
+
+		if (StringUtil.isBlank(borrow.getPwd()) && borrow.getStatus() == 19) {
+			String enableAutoTender = Global.getValue("enableAutoTender");
+
+			logger.info("标ID：" + borrow.getId() + "进入自动投标流程， status:" + borrow.getStatus());
+
+			if (StringUtil.toDouble(enableAutoTender) == 1) { // 是否启用自动投标
+				if (model.getType() == Borrow.TYPE_MORTGAGE || model.getType() == Borrow.TYPE_CREDIT
+						|| model.getType() == Borrow.TYPE_OFFVOUCH) {
+					//List<BorrowAuto> autoList = borrowAutoDao.list(model); // 自动投标的投资人
+					//autoTenderHelper(autoList, borrow);
+				}
+			}
+		} else {
+			logger.info("标ID：" + borrow.getId() + "标不符合自动投标条件， status:" + borrow.getStatus());
+		}
+		// 自动投标结束，还原标状态
+		borrowDao.updateStatus(borrow.getId(), 1, 19);
+	}
+
+	/**
+	 * 自动投标业务处理
+	 * 
+	 * @param auto
+	 * @param borrow
+	 */
+	public void autoTenderHelper(List<BorrowAuto> autoList, Borrow borrow) {
+		/*
+		 * 自动投标条件判断... 1、必须开启 2、可用金额必须大于50，投标金额大于 调用投标业务，处理用户投标
+		 */
+		String auto_tender_max_apr = Global.getValue("auto_tender_max_apr");
+		double auto_tender_max_account = borrow.getAccount() * StringUtil.toDouble(auto_tender_max_apr);
+		double total_account_yes = 0;
+		for (BorrowAuto borrowAuto : autoList) {	
+			String pwd = StringUtil.isNull(borrow.getPwd());
+			if (!StringUtil.isBlank(pwd)) {
+				logger.error("该标【id为" + borrow.getId() + "】设置了定向标密码，不能自动投标！");
+				break;
+			}
+			// 一个标一个人只能投一次
+			int auto_times = tenderDao.getAutoTenderByUserId(borrowAuto.getUser().getUserId(), Byte.parseByte("1"), borrow.getId(), 19);
+			if (auto_times > 0) {
+				logger.error("该标【id为" + borrow.getId() + "】你已经投过一次，不能再自动投标！");
+				continue;
+			}
+			double tender_max_account = borrowAuto.getMoney();// 设置的自动投标金额
+			User user = userDao.find(borrowAuto.getUser().getUserId());
+			if (auto_tender_max_account <= total_account_yes) {
+				logger.error("该标【id为" + borrow.getId() + "】已经投标金额不能超过最大自动投标额度！");
+				break;
+			}
+			if (auto_tender_max_account - total_account_yes <= tender_max_account) {
+				tender_max_account = auto_tender_max_account - total_account_yes;
+			}
+			double account_num = borrow.getAccount();
+			double account_yes_num = total_account_yes;
+			// 此标已满!
+			if (account_yes_num >= account_num) {
+				logger.error("此标【id为" + borrow.getId() + "】已满！");
+				break;
+			}
+			// 自动投标状态
+			if (!borrowAuto.getEnable()) {
+				logger.error("【标id为" + borrow.getId() + "】该用户【" + user.getUserName() + "】未设置自动投标！");
+				continue;
+			}
+			if (borrowAuto.getMoney() == 0) {
+				logger.error("【标id为" + borrow.getId() + "】该用户【" + user.getUserName() + "】设置的自动投标投标额度为0！");
+				continue;
+			}
+			// 自动投标还款方式校验
+			if (borrowAuto.getStyleEnable()) {
+				if (borrowAuto.getStyle() != borrow.getStyle()) {
+					logger.error("该标【id为" + borrow.getId() + "】设置的还款方式与自动投标设置的还款方式不一致！");
+					continue;
+				}
+			}
+			// 自动投标年率
+			if (borrowAuto.getAprEnable()) {
+				if (borrowAuto.getAprUp() < borrow.getApr() || borrowAuto.getAprDown() > borrow.getApr()) {
+					logger.error("该标【id为" + borrow.getId() + "】年利率不在该用户【" + user.getUserName() + "】设置的自动投标年利率的范围之内！");
+					continue;
+				}
+			}
+			// 自动投标借款期限校验
+			if (borrowAuto.getTimelimitMonthEnable()) {
+				if (borrow.getBorrowTimeType() != 1) { // 月标
+					if (borrowAuto.getTimelimitMonthUp() < borrow.getTimeLimit()
+							|| borrowAuto.getTimelimitMonthDown() > borrow.getTimeLimit()) {
+						logger.error("该标【id为" + borrow.getId() + "】月借款期限不在该用户【" + user.getUserName()
+								+ "】设置的自动投标月借款期限的范围之内！");
+						continue;
+					}
+				}
+			}
+			if (borrowAuto.getTimelimitDayEnable()) {
+				if (borrow.getBorrowTimeType() == 1) { // 天标
+					if (borrowAuto.getTimelimitDayUp() < borrow.getTimeLimit()
+							|| borrowAuto.getTimelimitDayDown() > borrow.getTimeLimit()) {
+						logger.error("该标【id为" + borrow.getId() + "】天借款期限不在该用户【" + user.getUserName()
+								+ "】设置的自动投标日借款期限的范围之内！");
+						continue;
+					}
+				}
+			}
+			// 自动投标奖励
+			if (borrowAuto.getAwardEnable()) {
+				double part_account = 0;
+				if (borrow.getAward() == 1) {
+					part_account = borrow.getPartAccount();
+					if (borrowAuto.getAwardUp() < part_account || borrowAuto.getAwardDown() > part_account) {
+						logger.error("该标【id为" + borrow.getId() + "】设置投标奖励不在该用户【" + user.getUserName()
+								+ "】设置的自动投标投标奖励的范围之内！");
+						continue;
+					}
+				}
+			}
+			// 标种
+			if (borrowAuto.getBorrowTypes() != null && borrowAuto.getBorrowTypes().length() > 0) {
+				if (!borrowAuto.getBorrowTypes().contains(borrow.getType() + "")) {
+					logger.error("【标id为" + borrow.getId() + "】该用户【" + user.getUserName() + "】未设置此标种进行自动投标！");
+					continue;
+				}
+			}
+			// 您账号已经被锁定，不能进行投标，请跟管理员联系!
+			UserCache userCache = userCacheDao.findObjByProperty("user.userId", user.getUserId());
+			if ("N".equals(user.getIsLocked())) {
+				logger.error("该用户【" + user.getUserName() + "】已经被锁定！");
+				continue;
+			}
+			// 自己不能投自己发布的标！
+			if (borrow.getUser().getUserId() == user.getUserId()) {
+				logger.error("自己不能投自己发布的标【id为" + borrow.getId() + "】！");
+				continue;
+			}
+			// 投资金额不能大于你的可用余额！
+			Account act = accountDao.findObjByProperty("user.userId", borrowAuto.getUser().getUserId());
+			/*if (tender_max_account > act.getUseMoney()) {
+				tender_max_account = act.getUseMoney();
+			}*/
+			// 投资金额不能大于最大限制金额额度
+			double most_account_num = borrow.getMostAccount();
+			if (tender_max_account > most_account_num && most_account_num > 0) {
+				tender_max_account = most_account_num;
+			}
+			// 投资金额不能小于最小限制金额额度！
+			double lowest_account_num = borrow.getLowestAccount();
+			if (lowest_account_num == 0.0) {
+				lowest_account_num = 50;
+			}
+			if (tender_max_account < lowest_account_num) {
+				logger.error("【标id为" + borrow.getId() + "】自动投标金额不能小于该标最小限制额度！");
+				continue;
+			}
+			total_account_yes += tender_max_account;
+			// 冻结投资人本金
+			Global.setTransfer("borrow", borrow);
+			Global.setTransfer("money", tender_max_account);
+			Global.setTransfer("user", borrowAuto.getUser());
+			Global.setTransfer("noticeTime", new Date());
+			AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("autoBorrowTenderFreezeExecuter");
+			borrowTenderExecuter.execute(tender_max_account, user, borrow.getUser());
+
+			borrowDao.update(tender_max_account, total_account_yes / borrow.getAccount() * 100, borrow.getStatus(),
+					borrow.getId());
+			BorrowTender tender = new BorrowTender();
+			tender.setBorrow(borrow);
+			tender.setMoney(tender_max_account);
+			tender.setAccount(tender_max_account);
+			tender.setStatus(0);
+			tender.setAddTime(new Date());
+			tender.setAddIp(Global.getIP());
+			tender.setUser(user);
+			//tender.setAutoRepurchase(1);
+			tender.setTenderType(Byte.parseByte("1"));
+			tender = tenderDao.addBorrowTender(tender);
+
+			BorrowWorker worker = BorrowHelper.getWorker(borrow);
+			double validAccount = tender.getAccount();
+			InterestCalculator ic = worker.interestCalculator(validAccount);
+			List<BorrowCollection> collectList = worker.createCollectionList(tender, ic);
+			borrowCollectionDao.save(collectList);
+			worker.tenderSuccess(tender, ic);
+			// 更新auto时间
+			borrowAuto.setUpdateTime(new Date());
+			borrowAutoDao.update(borrowAuto);
+		}
+		logger.info("自动投标业务逻辑完成.....");
+
+	}
+	
+	@Override
+	public void autoVerifyFull(BorrowModel borrow) throws Exception {
+		 logger.info("标ID："+borrow.getId()+",满标复审成功，第三方转账准备");
+        BorrowWorker worker = BorrowHelper.getWorker(borrow);
+        worker.handleVerifyFull();
+        // 标的状态改为3，满标复审中
+        worker.skipReview();
+	}	
+	/*@Override
+	public void autoVerifyFull(Borrow borrow) throws Exception {
+
+        BorrowWorker worker = BorrowHelper.getWorker(borrow);
+        worker.handleVerifyFull();
+        // 标的状态改为3，满标复审中
+        worker.skipReview();
+	}*/	
+	@Override
+	public void autoVerifyFullSuccess(BorrowModel model) throws Exception {
+		//复审成功，状态改变
+		borrowDao.updateStatus(model.getId(), 3, 1);
+        Borrow borrow = borrowDao.find(model.getId());
+        model = BorrowModel.instance(borrow);
+        try {
+	        BorrowWorker worker = BorrowHelper.getWorker(borrow);
+	        // 标的状态改为3，满标复审中
+	        worker.skipReview();
+	        if (model != null && model.getId() > 0) {
+	            BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+	            model = BorrowModel.instance(borrowDao.find(model.getId()));
+	        }		
+			
+			Global.setTransfer("borrow", model);
+			if (model.getStatus() == 6) {
+				logger.error("该借款标的状态已经处在放款状态！");
+				return;
+			}
+			worker.secondUnVerifyFreeze();
+			worker.handleTenderAfterFullSuccess();
+			worker.handleActivityRpAfterFullSuccess();//满标复审成功后处理活动红包的产生
+			worker.handleBorrowAfterFullSuccess();
+			// 借款手续费
+			deductFee(model, worker);
+			// 提前付息
+			freezeFirstRepay(model);
+			// 修改状态
+			borrowDao.updateStatus(model.getId(), 6, 3);
+			
+			//JSDBET-789  xingjia 20150307 start
+			//满标复审成功后将订单的状态修改为cd
+			GoodsOrder goodsOrder = goodsOrderDao.findOrderByBorrowId(model.getId());
+			if(null !=goodsOrder && goodsOrder.getStatus().equals(GoodsOrder.VERIFY_ORDER_PASS)){
+				goodsOrder.setStatus(GoodsOrder.ORDER_SUC);
+				goodsOrderDao.update(goodsOrder);
+			}
+			//JSDBET-789  xingjia 20150307 end
+			logger.info("标ID："+borrow.getId()+",满标复审成功，第三方转账准备");
+	        //本地处理第三方转账
+	        worker.handleVerifyFull(); 	
+		} catch (Exception e) {	
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("满标复审通过失败，异常信息："+e.getMessage()+e.getCause(), "满标复审通过异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_BORROW, ErrorLogConstant.CODE_BORROW_RECHECKED_SUCC_SYS, borrow.getUser(), ErrorLogConstant.MODULE_BORROW, model.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+		// 给借款人发送通知
+		User user = model.getUser();
+        user.getUserId();
+		Global.setTransfer("borrow", model);
+		Global.setTransfer("user", user);
+		AbstractExecuter succExecuter = ExecuterHelper.doExecuter("borrowFullVerifySuccExecuter");
+		succExecuter.execute(0, user);
+		
+		//JSDBET-850 gjh 2015-3-27 start
+		if(borrow.getType() == Borrow.TYPE_AMORTIZE){
+			GoodsOrder goodsOrder = goodsOrderDao.findOrderByBorrowId(borrow.getId());
+			goodsOrder.getUser().getUserId();
+			Global.setTransfer("user", goodsOrder.getUser());
+            succExecuter.execute(0, goodsOrder.getUser());
+		}
+		//JSDBET-850 gjh 2015-3-27 end
+		
+		// 给投资人发送通知
+		List<BorrowTender> list = tenderDao.getTenderByBorrowId(model.getId());
+        for (BorrowTender bt : list) {
+            User btUser = bt.getUser();
+            btUser.getUserId();
+            Global.setTransfer("user", btUser);
+            succExecuter.execute(0, btUser);
+        }
+        /*// 标的状态改为3，满标复审中
+        worker.skipReview();*/
+	}
+	
+	//JSDP-53  wcw 2015-04-21 start
+	@Override
+	public void autoVerifyFullRepairSuccess(BorrowModel model,Operator operator) throws Exception {
+		//复审补单成功，状态改变
+		borrowDao.updateStatus(model.getId(), 3, 1);
+        Borrow borrow = borrowDao.find(model.getId());
+        if(StringUtil.isNotBlank(borrow.getTradeNo())){
+	        VerifyLog verifyLog = new VerifyLog(operator, "borrow", borrow.getId(), 2, borrow.getStatus()+"", model.getRemark());
+	        verifyLogDao.save(verifyLog);
+	        model = BorrowModel.instance(borrow);
+	        BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		    //本地处理第三方转账
+	        YmdQuery ymdQuery=new YmdQuery();
+			List<BorrowTender> btList=borrowTenderDao.getTenderByBorrowId(model.getId());
+			String outTradeNo="";
+			if(btList.size()>0){
+				BorrowTender bt_=btList.get(0);
+				outTradeNo=bt_.getTenderBilNo();
+				ymdQuery.setOutTradeNo(outTradeNo);
+				ymdQuery.setMode("trade");
+				YmdQueryReturn ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+				List<YmdQueryReturnDetails> list_=ymdQueryReturn.getList();
+				YmdQueryReturnDetails yrd=new YmdQueryReturnDetails();
+				if(list_.size()>0){
+					yrd=list_.get(0);
+				}else{
+					throw new BussinessException("一麻袋请求数据为空",1);
+				}
+			    if(!"00".equals(yrd.getTradeStatus())){
+			    	throw new BussinessException(yrd.getErrMsg(yrd.getTradeStatus()==null?"":yrd.getTradeStatus(), "一麻袋请求失败，请重新请求"), 1);
+			    }
+		        // 标的状态改为3，满标复审中
+		        worker.skipReview();
+		        if (model != null && model.getId() > 0) {
+		            BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+		            model = BorrowModel.instance(borrowDao.find(model.getId()));
+		        }		
+				
+				Global.setTransfer("borrow", model);
+				if (model.getStatus() == 6) {
+					logger.error("该借款标的状态已经处在放款状态！");
+					return;
+				}
+				worker.secondUnVerifyFreeze();
+				worker.handleTenderAfterFullSuccess();
+				worker.handleBorrowAfterFullSuccess();
+				// 借款手续费
+				deductFee(model, worker);
+				// 提前付息
+				freezeFirstRepay(model);
+				// 修改状态
+				borrowDao.updateStatus(model.getId(), 6, 3);
+				
+				//JSDBET-789  xingjia 20150307 start
+				//满标复审成功后将订单的状态修改为cd
+				GoodsOrder goodsOrder = goodsOrderDao.findOrderByBorrowId(model.getId());
+				if(null !=goodsOrder && goodsOrder.getStatus().equals(GoodsOrder.VERIFY_ORDER_PASS)){
+					goodsOrder.setStatus(GoodsOrder.ORDER_SUC);
+					goodsOrderDao.update(goodsOrder);
+				}
+				//JSDBET-789  xingjia 20150307 end
+				// 给借款人发送通知
+				User user = model.getUser();
+		        user.getUserId();
+				Global.setTransfer("borrow", model);
+				Global.setTransfer("user", user);
+				AbstractExecuter succExecuter = ExecuterHelper.doExecuter("borrowFullVerifySuccExecuter");
+				succExecuter.execute(0, user);
+				
+				//JSDBET-850 gjh 2015-3-27 start
+				if(borrow.getType() == Borrow.TYPE_AMORTIZE){
+					goodsOrder = goodsOrderDao.findOrderByBorrowId(borrow.getId());
+					goodsOrder.getUser().getUserId();
+					Global.setTransfer("user", goodsOrder.getUser());
+		            succExecuter.execute(0, goodsOrder.getUser());
+				}
+				//JSDBET-850 gjh 2015-3-27 end
+				
+				// 给投资人发送通知
+				List<BorrowTender> list = tenderDao.getTenderByBorrowId(model.getId());
+		        for (BorrowTender bt : list) {
+		            User btUser = bt.getUser();
+		            btUser.getUserId();
+		            Global.setTransfer("user", btUser);
+		            succExecuter.execute(0, btUser);
+		        }
+			}else{
+				throw new BussinessException("满标复审补单异常，补单失败", 1);
+			}
+			
+        }else{
+        	throw new BussinessException("满标复审补单商户批次号为空，补单失败", 1);
+        }
+        
+        /*// 标的状态改为3，满标复审中
+        worker.skipReview();*/
+	}
+	//JSDP-53  wcw 2015-04-21 end
+	@Override
+	public void autoInstantLive(BorrowModel model,BorrowTender tender) throws Exception {
+		
+        if (model != null && model.getId() > 0) {
+            BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+            model = BorrowModel.instance(borrowDao.find(model.getId()));
+        }		
+		
+		BorrowWorker worker = BorrowHelper.getWorker(model);
+
+		Global.setTransfer("borrow", model);
+		//即投即生息投资人业务处理
+		worker.handleInvesterInstantLive(tender);
+		//即投即生息借款人业务处理
+		worker.handleBorrowerInstantLive(tender);
+		// 借款手续费
+		deductFee(model, worker,tender);
+		// 提前付息
+		freezeFirstRepay(model);
+		/*// 修改状态
+		borrowDao.updateStatus(model.getId(), 6, 3);*/
+		// 给借款人发送通知
+		User user = model.getUser();
+        user.getUserId();
+		Global.setTransfer("borrow", model);
+		Global.setTransfer("user", user);
+		AbstractExecuter succExecuter = ExecuterHelper.doExecuter("borrowFullVerifySuccExecuter");
+		succExecuter.execute(0, user);
+		// 给投资人发送通知
+        User btUser = tender.getUser();
+        btUser.getUserId();
+        Global.setTransfer("user", btUser);
+        succExecuter.execute(0, btUser);
+        
+        
+        //第三方转账
+        worker.handleYmdInstantLive(tender);
+	}
+	private void deductFee(BorrowModel model, BorrowWorker worker) {
+		if (model != null && model.getId() > 0) {
+			BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+			model = BorrowModel.instance(borrowDao.find(model.getId()));
+		}
+		// 扣除借款手续费
+		//JSDBET-803  wcw 2015-3-14 start
+		User user = model.getUser();
+		Map<String, Object> map=new HashMap<String, Object>();
+		double fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.round(Global.getValue("stages_fee"),4),model.getAccount()),2) ;
+		map.put("outTradeNo", model.getBorrowManageFeeTradeNo());//交易流水号（订单号）
+		map.put("tradeNo", model.getTradeNo());//交易批次号
+		Global.setTransfer("deduct", model);
+		if(Borrow.TYPE_AMORTIZE==model.getType()){  
+			// 分期宝充值金额  扣除冻结手续费
+			fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.round(Global.getValue("stages_fee"),4),model.getAccount()),2) ;
+			if(fee>0){
+				Global.setTransfer("money", fee);
+				map.put("money", fee);
+				AbstractExecuter deductExecuter = ExecuterHelper.doExecuter("deductGoodesBorrowExecuter");
+				deductExecuter.execute(map, user);
+			}
+		}else{
+			//车贷宝扣除冻结手续费
+			fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(model.getAccount(), BigDecimalUtil.div(model.getBorrowManageRate(),100)), 2);
+			if (fee > 0) {
+				Global.setTransfer("money", fee);
+				//---wcw----账户表拆分----start----
+				map.put("money", fee);
+				AbstractExecuter deductExecuter = ExecuterHelper.doExecuter("deductBorrowExecuter");
+			    deductExecuter.execute(map, user);
+			    //---wcw----账户表拆分----end----
+		    }
+		}
+		//JSDBET-803  wcw 2015-3-14 end
+		//担保服务费
+		 //JSDBET-872 wcw 2015-3-28 start
+		if (model.getVouchFirm()!=null) {
+			fee = model.getGuaranteeFee();
+			if(fee>0){
+				Global.setTransfer("deduct", model);
+				Global.setTransfer("money", fee);
+				map=new HashMap<String, Object>();
+				map.put("money", fee);
+				AbstractExecuter tranExecuter = ExecuterHelper.doExecuter("deductTransactionFeeExecuter");
+				tranExecuter.execute(map, user,model.getVouchFirm());
+			}
+		}
+		 //JSDBET-872 wcw 2015-3-28 end
+	}
+	/**
+	 * 即时生息计算借款手续费
+	 * @param model
+	 * @param worker
+	 */
+	private void deductFee(BorrowModel model, BorrowWorker worker,BorrowTender bt) {
+		if (model != null && model.getId() > 0) {
+			BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+			model = BorrowModel.instance(borrowDao.find(model.getId()));
+		}
+		// 扣除交易手续费
+		double fee = worker.getManageFee(bt);
+		User user = model.getUser();
+		if (fee > 0) {
+			Global.setTransfer("deduct", model);
+			Global.setTransfer("money", fee);
+			//---wcw----账户表拆分----start----
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("money", fee);
+			AbstractExecuter deductExecuter = ExecuterHelper.doExecuter("deductBorrowExecuter");
+			//deductExecuter.execute(fee, user);
+			deductExecuter.execute(map, user);
+			//---wcw----账户表拆分----end----
+		}
+
+		fee = BigDecimalUtil.round(BigDecimalUtil.mul(bt.getAccount(), Global.getDouble("transaction_fee")));
+		if (fee > 0) {
+			Global.setTransfer("deduct", model);
+			Global.setTransfer("money", fee);
+			//---wcw----账户表拆分----start----
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("money", fee);
+			AbstractExecuter tranExecuter = ExecuterHelper.doExecuter("deductTransactionFeeExecuter");
+			//tranExecuter.execute(fee, user);
+			tranExecuter.execute(map, user);
+			//---wcw----账户表拆分----end----
+		}
+	}
+	/**
+	 * 满标复审-提前付息
+	 */
+	private void freezeFirstRepay(BorrowModel model) {
+		// Borrow borrow = borrowDao.find(model.getId());
+		// 提前付息的还款方式一期不做
+		// if (model.getType() == Borrow.TYPE_SECOND
+		// || (model.getStyle() == InterestCalculator.REPAY_ADVANCE_INTEREST_END_CAPITAL || model.getStyle() ==
+		// InterestCalculator.REPAY_MONADVANCE_INTEREST_END_CAPITAL)) {
+		// BorrowRepaymentDao repaymentDao = (BorrowRepaymentDao) BeanUtil.getBean("borrowRepaymentDao");
+		// BorrowRepayment repayment = repaymentDao.find(model.getId(), 0);
+		// // 冻结资金
+		// double freezeVal = repayment.getRepaymentAccount();
+		// Global.setTransfer("money", freezeVal);
+		// AbstractExecuter repayExecuter = ExecuterHelper.doExecuter("borrowRepayFreezeExecuter");
+		// repayExecuter.execute(freezeVal, borrow.getUser());
+		// repayment.setWebStatus(1);
+		// // 秒标满标还款
+		// }
+	}
+
+	@Override
+	public void autoVerifyFullFail(BorrowModel model) throws Exception {
+		borrowDao.updateStatus(model.getId(), 4, 1);
+		BorrowWorker worker = BorrowHelper.getWorker(model);
+		Global.setTransfer("borrow", model);
+		if (model.getStatus() == 49) {
+			logger.error("该借款标满标审核未通过!");
+			return;
+		}
+		if (model != null && model.getId() > 0) {
+			BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+			model = BorrowModel.instance(borrowDao.find(model.getId()));
+		}
+		try {
+			worker.secondUnVerifyFreeze();
+			worker.handleTenderAfterFullFail();//更改投标状态时将每笔的冻结金额也解冻了
+			//JSDBET-827 wcw 2015-3-17 start
+			worker.handleBorrowAfterFullFail();//分期宝借款人冻结资金解冻
+			//JSDBET-827 wcw 2015-3-17 end
+			
+			// 更改标的状态 49
+			borrowDao.updateStatus(model.getId(), 49, 4);
+			model.setStatus(49);
+			model.setRepaymentAccount(BigDecimalUtil.sub(model.getRepaymentAccount(), model.getRepaymentAccount()));
+			model.setRepaymentYesAccount(BigDecimalUtil.sub(model.getRepaymentYesAccount(), model.getRepaymentYesAccount()));
+			model.setRepaymentYesInterest(BigDecimalUtil.sub(model.getRepaymentYesInterest(),
+					model.getRepaymentYesInterest()));
+			borrowDao.update(model.prototype());
+		} catch (Exception e) {
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("满标复审不通过失败，异常信息："+e.getMessage()+e.getCause(), "满标复审不通过异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_BORROW, ErrorLogConstant.CODE_BORROW_RECHECKED_FAIL_SYS, model.getUser(), ErrorLogConstant.MODULE_BORROW, model.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+		/**复审不通过时在worker.handleTenderAfterFullFail中已经修改了*/
+	}
+
+	@Override
+	public void autoCancel(Borrow borrow) {
+		borrow = borrowDao.find(borrow.getId());
+		if (borrow.getStatus() == 59) {
+			logger.error("借款标的已经撤回并退款了!");
+			return;
+		}
+		List<BorrowTender> tenderList = tenderDao.findByProperty("borrow.id", borrow.getId());
+		Global.setTransfer("borrow", borrow);
+		for (int i = 0; i < tenderList.size(); i++) {
+			BorrowTender t = tenderList.get(i);
+			Global.setTransfer("tenderAccount", t.getAccount());
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("rechargeMoney", t.getUseRecharge());
+			map.put("awardMoney", t.getUseAward());
+			map.put("interestMoney", t.getUseInterest());
+			map.put("returnCapitalMoney", t.getUseReturnedMoney());
+			AbstractExecuter cancelExecuter = ExecuterHelper.doExecuter("cancelTenderUnFeezeExcuter");
+			cancelExecuter.execute(map, t.getUser());
+			tenderDao.updateStatus(t.getId(), 2);
+		}
+		// 更改标的状态 59
+		borrowDao.updateStatus(borrow.getId(), 59, 5);
+		//用户撤回借款标消息通知
+//		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+//        worker.secondUnVerifyFreeze();
+		
+		//给借款人发送通知
+		Global.setTransfer("user", borrow.getUser());
+		AbstractExecuter executer = ExecuterHelper.doExecuter("borrowCancelNoticeExecuter");
+		executer.execute(0, borrow.getUser());
+		
+		//给投资人发送通知
+		for(int i=0;i<tenderList.size();i++){
+			BorrowTender borrowTender = tenderList.get(i);
+			User user = borrowTender.getUser();
+			Global.setTransfer("user", user);
+			Global.setTransfer("tender", borrowTender);
+			AbstractExecuter executerTender = ExecuterHelper.doExecuter("borrowCancelNoticeExecuter");
+			executerTender.execute(0, user);
+		}
+		
+//		borrow.setRepaymentAccount(0.00);
+//		borrow.setRepaymentYesAccount(0.00);
+//		borrow.setRepaymentYesInterest(0.00);
+
+	}
+	/**
+	 * 代偿还款前校验
+	 */
+	@Override
+	public void autoCompensate(BorrowRepayment repayment) {
+		BorrowRepayment repay = borrowRepaymentDao.find(repayment.getId());
+		long borrowId = repayment.getBorrow().getId();
+        Borrow borrow = borrowDao.find(repayment.getBorrow().getId());
+        User user = borrow.getUser();
+		Account account = accountDao.findObjByProperty("user.userId", user.getUserId());
+		if(repay == null && repay.getStatus() != BorrowRepayment.STATUS_MANAGE_COMPENSATE){
+			//throw new BussinessException("该待还记录有误", 1);
+			//JSDBET-812 gjh 2015-3-16 start
+			throw new HandleException("该待还记录有误",
+					"该待还记录有误",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_REPAYMENT,
+					ErrorLogConstant.CODE_REPAYMENT_MANUAL_SYS,repay.getUser(),ErrorLogConstant.MODULE_BORROW_REPAYMENT,
+					repay.getId(),1);
+			//JSDBET-812 gjh 2015-3-16 end 
+		}
+		if(repay.getRepaymentAccount()>account.getBorrowerUsableTotal()){
+        	throw new BussinessException("本期还款金额可用不足", 1);
+        }
+        if(repay.getStatus()==1){
+        	throw new BussinessException("本期已经还款成功，请勿重复还款", 1);
+        }
+        BorrowWorker worker = BorrowHelper.getWorker(borrow);
+        worker.validBeforeRepayment(repayment, account);
+        autoCompensateSuccess(repayment);
+	}
+	/*
+	 * 代偿成功后处理
+	 * @param borrowRepayment
+	 */
+	@Override
+	public void autoCompensateSuccess(BorrowRepayment borrowRepayment) {
+        Borrow borrow = borrowDao.find(borrowRepayment.getBorrow().getId());
+        BorrowWorker worker = BorrowHelper.getWorker(borrow);
+        try {
+            // 担保公司
+            User user = borrow.getVouchFirm();
+            // 处理投资人资金
+            worker.compensatoryRepayHandleTender(borrowRepayment,user);
+            borrowRepayment.setStatus(1);
+            borrowRepayment.setRepaymentYesTime(new Date());
+            borrowRepayment.setRepaymentYesAccount(BigDecimalUtil.add(borrowRepayment.getCapital(),
+                    borrowRepayment.getInterest(), borrowRepayment.getLateInterest()));
+            // 还款类型1：代偿
+            borrowRepayment.setType(Constant.REPAYMENT_TYPE_COMPENSATE);
+            // 实际还款者
+            borrowRepayment.setRealRepayer(user);
+            borrowRepaymentDao.updateBorrowRepaymentByStatus(borrowRepayment);
+            int status = worker.isLastPeriod(borrowRepayment.getPeriod()) ? 8 : 7;
+            borrow.setStatus(status);
+            double total = BigDecimalUtil.add(borrowRepayment.getCapital(), borrowRepayment.getInterest()); // 还款表本金+利息
+            borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+            borrow.setRepaymentYesInterest(BigDecimalUtil.add(borrow.getRepaymentYesInterest(), borrowRepayment.getInterest()));
+            borrowDao.update(borrow);
+
+          //第三方处理
+            worker.compensateRepayInvesterYmdHandle(borrowRepayment);
+            
+            // 向担保公司发送担保还款成功通知
+            Global.setTransfer("borrow", borrow);
+            Global.setTransfer("repay", borrowRepayment);
+            Global.setTransfer("user", user);
+            AbstractExecuter successExecuter = ExecuterHelper.doExecuter("borrowCompensateSuccessExecuter");
+            successExecuter.execute(0, user);
+            
+        } catch (Exception e) {
+            logger.error("代偿失败" + e.getMessage());
+            //throw new BorrowException("代偿失败"+e.getMessage());
+            //JSDBET-812 sgp 2015-3-14 start
+            throw new HandleException("代偿失败，异常信息："+e.getMessage()+e.getCause(), "代偿失败异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_COMPENSATE_SYS, borrowRepayment.getUser(), ErrorLogConstant.MODULE_BORROW_REPAYMENT, borrowRepayment.getId(), 1);
+            //JSDBET-812 sgp 2015-3-14 end
+        }
+	    
+	}
+	@Override
+	public void autoInstantLiveBorrowRepay(BorrowCollection collection)throws Exception{
+		BorrowCollection borrowCollection=borrowCollectionDao.find(collection.getId());
+		Borrow borrow = borrowDao.find(borrowCollection.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		try {
+			//----------汇潮第三方交易处理开始======
+			//网站方自身业务逻辑
+			logger.info("网站还款逻辑业务执行");
+			// 处理借款人资金
+			worker.borrowRepayHandleBorrow(borrowCollection);
+			// 处理投资人资金
+			worker.borrowRepayHandleTender(borrowCollection);
+			//更新repayment表
+			if(collection.getId()!=294717&&collection.getId()!=306127&&collection.getId()!=355676){
+				BorrowRepayment repay=borrowRepaymentDao.getRepayByTenderIdAndPeriod(borrowCollection.getTender().getId(), borrowCollection.getPeriod());
+				repay.setRepaymentYesTime(borrowCollection.getRepaymentYesTime());
+				repay.setRepaymentYesAccount(BigDecimalUtil.add(repay.getRepaymentYesAccount(),borrowCollection.getRepaymentAccount()));
+				repay.setStatus(1);
+				// 实际还款者
+				repay.setRealRepayer(borrow.getUser());
+				borrowRepaymentDao.updateBorrowRepaymentByStatus(repay);
+			}
+			QueryParam param=QueryParam.getInstance();
+			param.addParam("status", 1);
+			param.addParam("borrow.id", borrowCollection.getBorrow().getId());
+			/*int yesRepayCount=borrowCollectionDao.countByCriteria(param);
+			if(yesRepayCount>0&&borrow.getStatus()!=7){
+				//该标部分还款更新标状态为7
+				int status = yesRepayCount==1 ? 7 : 1;
+				borrow.setStatus(status);
+			}*/
+			param=QueryParam.getInstance();
+			param.addParam("status", 0);
+			param.addParam("borrow.id", borrowCollection.getBorrow().getId());
+			//该标最后一条待收记录
+			int noRepayCount=borrowCollectionDao.countByCriteria(param);
+			if(noRepayCount>0&&borrow.getStatus()!=8){
+				//全部还款更新标状态为8
+				int status = noRepayCount==1 ? 8 : borrow.getStatus();
+				borrow.setStatus(status);
+			}
+			// borrow.setRepaymentAccount(0);去掉将应还本金置为0的效果
+			double total = BigDecimalUtil.add(borrowCollection.getCapital(), borrowCollection.getInterest()); // 还款表本金+利息
+			borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+			borrow.setRepaymentYesInterest(BigDecimalUtil.add(borrow.getRepaymentYesInterest(),borrowCollection.getInterest()));
+			borrowDao.update(borrow);
+			
+			
+			//第三方转账
+			worker.borrowRepayYmdHandle(collection);
+			
+			
+	        // 向借款人发送还款成功通知
+	        Global.setTransfer("repay", borrowCollection);
+	        Global.setTransfer("user", borrow.getUser());
+	        AbstractExecuter successExecuter = ExecuterHelper.doExecuter("borrowRepaySuccessExecuter");
+	        successExecuter.execute(0, borrow.getUser());
+			logger.info("网站还款转账处理结束");
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("还款失败");
+			//throw new BorrowException("还款失败"+e.getMessage());
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("即投即生息还款失败，异常信息："+e.getMessage()+e.getCause(), "即投即生息还款失败异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_AUTO_IMMEDIATE_SYS, collection.getUser(), ErrorLogConstant.MODULE_BORROW_COLLECTION, collection.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+	}
+	//JSDP-85 gjh 2015-5-4 start
+	@Override
+	public void autoInstantLiveBorrowRepayPatch(BorrowCollection collection){
+		BorrowCollection borrowCollection=borrowCollectionDao.find(collection.getId());
+		Borrow borrow = borrowDao.find(borrowCollection.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		try {
+			//----------汇潮第三方交易处理开始======
+			//网站方自身业务逻辑
+			logger.info("网站还款逻辑业务执行");
+			// 处理借款人资金
+			worker.borrowRepayHandleBorrow(borrowCollection);
+			// 处理投资人资金
+			worker.borrowRepayHandleTender(borrowCollection);
+			//更新repayment表
+			BorrowRepayment repay=borrowRepaymentDao.getRepayByTenderIdAndPeriod(borrowCollection.getTender().getId(), borrowCollection.getPeriod());
+			repay.setRepaymentYesTime(borrowCollection.getRepaymentYesTime());
+			repay.setRepaymentYesAccount(BigDecimalUtil.add(repay.getRepaymentYesAccount(),borrowCollection.getRepaymentAccount()));
+			repay.setStatus(1);
+			// 实际还款者
+			repay.setRealRepayer(borrow.getUser());
+			borrowRepaymentDao.updateBorrowRepaymentByStatus(repay);
+			QueryParam param=QueryParam.getInstance();
+			param.addParam("status", 1);
+			param.addParam("borrow.id", borrowCollection.getBorrow().getId());
+			int yesRepayCount=borrowCollectionDao.countByCriteria(param);
+			if(yesRepayCount>0&&borrow.getStatus()!=7){
+				//该标部分还款更新标状态为7
+				int status = yesRepayCount==1 ? 7 : 1;
+				borrow.setStatus(status);
+			}
+			param=QueryParam.getInstance();
+			param.addParam("status", 0);
+			param.addParam("borrow.id", borrowCollection.getBorrow().getId());
+			//该标最后一条待收记录
+			int noRepayCount=borrowCollectionDao.countByCriteria(param);
+			if(noRepayCount>0&&borrow.getStatus()!=8){
+				//全部还款更新标状态为8
+				int status = noRepayCount==1 ? 8 : borrow.getStatus();
+				borrow.setStatus(status);
+			}
+			// borrow.setRepaymentAccount(0);去掉将应还本金置为0的效果
+			double total = BigDecimalUtil.add(borrowCollection.getCapital(), borrowCollection.getInterest()); // 还款表本金+利息
+			borrow.setRepaymentYesAccount(BigDecimalUtil.add(borrow.getRepaymentYesAccount(), total));
+			borrow.setRepaymentYesInterest(BigDecimalUtil.add(borrow.getRepaymentYesInterest(),borrowCollection.getInterest()));
+			borrowDao.update(borrow);
+			
+			
+			//第三方转账(补单无需第三方转账)
+			//worker.borrowRepayYmdHandle(collection);
+			
+			
+			// 向借款人发送还款成功通知
+			Global.setTransfer("repay", borrowCollection);
+			Global.setTransfer("user", borrow.getUser());
+			AbstractExecuter successExecuter = ExecuterHelper.doExecuter("borrowRepaySuccessExecuter");
+			successExecuter.execute(0, borrow.getUser());
+			logger.info("网站还款转账处理结束");
+			
+		} catch (Exception e) {
+			logger.error("还款失败");
+			//throw new BorrowException("还款失败"+e.getMessage());
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("即投即生息还款失败，异常信息："+e.getMessage()+e.getCause(), "即投即生息还款失败异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_REPAYMENT, ErrorLogConstant.CODE_REPAYMENT_AUTO_IMMEDIATE_SYS, collection.getUser(), ErrorLogConstant.MODULE_BORROW_COLLECTION, collection.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+	}
+	//JSDP-85 gjh 2015-5-4 end
+}

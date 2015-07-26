@@ -1,0 +1,52 @@
+package com.rongdu.p2psys.core.disruptor;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.lmax.disruptor.RingBuffer;
+import com.rongdu.p2psys.core.Global;
+
+public class Producer implements Runnable {
+	private static Logger logger = Logger.getLogger(Producer.class);
+	private ValueEvent event = null;
+	private RingBuffer<ValueEvent> ringBuffer = null;
+
+	public Producer(ValueEvent e, RingBuffer<ValueEvent> rb) {
+		this.event = e;
+		this.ringBuffer = rb;
+	}
+
+	@Override
+	public void run() {
+		// Publishers claim events in sequence
+		if (this.event != null) {
+			if (ringBuffer.remainingCapacity() < Integer.parseInt(Global.getValue("disruptor_ringbuffer_size")) * 0.1) {
+				logger.info("容量不足");
+			} else {
+				long sequence = ringBuffer.next();
+				ValueEvent e = ringBuffer.get(sequence);
+				e.setOperate(event.getOperate());
+				e.setValue(event.getValue());
+				e.setUser(event.getUser());
+				e.setBorrowModel(event.getBorrowModel());
+				e.setBorrowRepayment(event.getBorrowRepayment());
+				e.setBorrow(event.getBorrow());
+				e.setAccountLog(event.getAccountLog());
+				e.setRechargeModel(event.getRechargeModel());
+				e.setDrawModel(event.getDrawModel());
+				e.setResultFlag(event.getResultFlag());
+				e.setYmdRegister(event.getYmdRegister());
+				e.setTender(event.getTender());
+				e.setYmdCash(event.getYmdCash());
+				e.setCreditAssignment(event.getCreditAssignment());
+				e.setMemberVipSubModel(event.getMemberVipSubModel());
+				e.setMemberVipAwardSubModel(event.getMemberVipAwardSubModel());
+				e.setBorrowCollection(event.getBorrowCollection());
+				e.setCl(event.getCl());
+				e.setGoodsOrder(event.getGoodsOrder());
+				e.setGm(event.getGm());
+				ringBuffer.publish(sequence);
+			}
+		}
+	}
+}

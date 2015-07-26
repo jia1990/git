@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>后台管理系统</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "./include/resources.html">
+<script>
+if (window.parent != window){
+	parent.location.reload();
+}
+
+$(function(){
+	$("#userName").focus(function(){
+		$(".msgTip").hide();
+	});
+	$("#password").focus(function(){
+		$(".msgTip").hide();
+	});
+	$("#validCode").focus(function(){
+		$(".msgTip").hide();
+	});
+	$("#telCode").focus(function(){
+		$(".msgTip").hide();
+	});
+});
+function loginFun() {
+	
+	//将用户名全部小写后判断是否含有非法字符
+	if($('.loginTxt').val().toLowerCase().indexOf("select") >= 0 
+			|| $('.loginTxt').val().toLowerCase().indexOf("update") >= 0  
+			|| $('.loginTxt').val().toLowerCase().indexOf("insert") >= 0  
+			|| $('.loginTxt').val().toLowerCase().indexOf("delete") >= 0
+		){
+		//parent.$.messager.alert('提示','用户名中包含非法字符,请重新输入！', 'info');
+		$(".msgTip").show().html("用户名或密码错误！");
+		//$('#userName').val("");
+		//$('#password').val("");
+	}else{
+		$.ajax({
+			type: "post",
+			url: "/modules/validCodeTrue.html",
+			dataType:'json',
+			data:"valicode="+$("#validCode").val(),
+			success:function(data){
+				if(data.result){
+					$.ajax({
+						type: "post",
+						url: "/modules/login.html",
+						dataType:'json',
+						//data:"userName="+$("#userName").val()+"&password="+$("#password").val()+"&telCode="+$("#telCode").val(),
+						data: $('#loginForm').serialize(),
+						success:function(data){
+							if (data.result && !data.modifyPwd) {
+								location.href="/home.html";
+							} else if(data.result && data.modifyPwd){
+								location.href="/homep.html";
+							} else {
+								$(".msgTip").show().html(data.msg);
+								$("#validCode").val("");
+				    			$("#img").each(function(){$(this).attr("src",'${webroot}/modules/validCode.html?t=' + Math.random());});
+							}
+						}
+					});
+				}else{
+					$(".msgTip").show().html(data.msg);
+					$("#validCode").val("");
+	    			$("#img").each(function(){$(this).attr("src",'${webroot}/modules/validCode.html?t=' + Math.random());});
+				}
+			}
+		}); 
+	}
+}
+
+
+function loginCode(){
+	//短信验证码处理
+	var hq = true;
+	var userName = $("#userName").val();
+	if(userName != ""){
+			 var time = 120; 
+			 if (hq) {
+				hq = false;
+				$.ajax({
+			        type:"get",
+			        url:"/modules/adminLoginCode.html?userName=" + userName + "&id="+Math.random(),
+			        dataType:"json",
+			        success:function(json){
+				        if(json.result== true){
+				        	/* $(".msgTip").show().html("发送成功!"); */
+				        }else if(json.result== false){
+				        	$(".msgTip").show().html("发送失败!");
+				        }
+			        }
+			    });
+				
+				var t = setInterval(function() {
+					time--;	
+					$(".verify_code").addClass("verify_code_on");
+					$(".verify_code_on").removeClass("verify_code");
+					$(".verify_code_on").val(time +"秒后重新获取");
+					if (time == 0) {
+						clearInterval(t);
+						$(".verify_code_on").addClass("verify_code");
+						$(".verify_code").removeClass("verify_code_on");
+						$(".verify_code").val("重新获取");
+						$(".msgTip").show().html("");
+						hq = true;
+					}
+				}, 1000)
+			} 
+	}else{
+		$(".msgTip").show().html("用户名不能为空!");
+	}
+}
+	
+ $(document).keydown(function(event){ 
+	 if(event.keyCode == 13){
+		 loginFun();
+   	}
+ });
+ // 解决屏幕自适应
+ $(function(){
+	 $(window).resize(function(){
+		 $("body").width($(window).width());
+		 $("body").height($(window).height());
+	 })
+	 $(window).resize();
+ }) 
+</script>
+</head>
+<body class="loginBg">
+<div class="loginBox">
+	<h1></h1>
+	<div class="loginBd">
+		<h2></h2>
+		<form  id="loginForm">
+		<ul>
+			<li class="msgTip" style="display:none;"></li>
+			<li><span class="userIco"></span><input type="text" name="userName" id="userName" autocomplete="off" placeholder="用户名" class="loginTxt" onkeyup="value=value.replace(/[^\w]/g,'')" maxlength="21" /></li>
+			<li><span class="pwdIco"></span><input type="password" name="password" id="password" autocomplete="off" placeholder="密码" class="loginTxt"  onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" maxlength="21" /></li>
+			<li><span class="pwdIco"></span><input type="text" name="validCode" id="validCode" autocomplete="off" placeholder="验证码" class="loginTxt" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"
+						style="width:93px;border-bottom-right-radius: 0;border-top-right-radius: 0; border-right:solid 1px #999; " />
+				<span onClick="document.getElementById('img').src='${webroot}/modules/validCode.html?t=' + Math.random();">
+						<img src="${webroot}/modules/validCode.html" id="img" onClick="this.src='${webroot}/modules/validCode.html?t=' + Math.random();" border="0" alt="" style="width: 80px;border-bottom-right-radius: 5px; border-top-right-radius: 5px;height:36px;">
+				</span>
+			</li>
+			<!-- <li><span class="userIco"></span><input type="text" name="code" id="telCode" autocomplete="off" placeholder="短信码" class="loginTxt" onkeyup="value=value.replace(/[^\w]/g,'')" 
+					style="width:58px;border-bottom-right-radius: 5px;border-top-right-radius: 5px; border-right:solid 1px #999; margin-right: 10px;" />
+			 	<input type="button" name="telCode" class="verify_code" value="获取验证码" onclick="loginCode();" style="display: inline-block;float: right;font-size: 12px;height: 36px;line-height: 36px;text-align: center;width: 105px;border-radius:5px;background: #fff"/>
+				
+			</li> -->
+			<li><input type="button" value="立即登录" class="loginBtn" onclick="loginFun()"/></li>
+		</ul>
+		</form>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,376 @@
+package com.ddtkj.p2psys.goods.model;
+
+import java.util.Date;
+import java.util.List;
+
+import org.bouncycastle.asn1.x509.UserNotice;
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.enums.EnumRuleNid;
+import com.rongdu.p2psys.core.rule.AutoTenderConfRuleCheck;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+
+public class GoodsOrderModel extends GoodsOrder {
+
+	private static final long serialVersionUID = 6533977120017199318L;
+
+	/** 当前页数 **/
+	private int page;
+	/** 每页总数 **/
+	private int rows = 10;
+	private String orderNo;// 订单号
+	private String goodsNo;// 商品编码
+	private String goodsName;// 商品名称
+	private String userName;// 用户名
+	private String userAddress;// 收货人地址
+	private long borrowId;// 分期宝标id
+	private String borrowName;// 分期宝名称
+	private String orderStatus;// 订单状态
+	private Date addTime;// 订单生成时间
+	private Date updateTime;// 订单审核通过时间
+	private String updateUser;// 审核人
+	private double onePay;// 支付金额
+	private double stagePay;// 分期支付金额
+	private String payWay;// 购买方式
+	private Date startTime;// 查询条件中开始时间
+	private Date endTime;// 查询条件中结束时间
+	/**JSDBET-789 xingjia 20150307 start*/
+	private String status;//订单状态
+	/**JSDBET-789 xingjia 20150307 end*/
+
+	// 时间查询状态值
+	private int timeSearch;
+	// 状态查询
+	private int statusSearch;
+	// 默认收货地址
+	private UserLogisticsAddress address;
+	// 产品图片
+	private List<DdtkjGoodsPic> picList;
+
+	private String startTimeF;
+	private String endTimeF;
+
+	// 收货地址
+	private String addressDetail;
+	// 收货人姓名
+	private String addressDetailUserName;
+	// 商品价格
+	private Double goodsCost;
+   
+	//图片路径
+	private   String picPath;
+	public String getPicPath() {
+		return picPath;
+	}
+
+	public void setPicPath(String picPath) {
+		this.picPath = picPath;
+	}
+
+	public String getAddressDetail() {
+		return addressDetail;
+	}
+
+	public void setAddressDetail(String addressDetail) {
+		this.addressDetail = addressDetail;
+	}
+
+	public String getAddressDetailUserName() {
+		return addressDetailUserName;
+	}
+
+	public void setAddressDetailUserName(String addressDetailUserName) {
+		this.addressDetailUserName = addressDetailUserName;
+	}
+
+	public Double getGoodsCost() {
+		return goodsCost;
+	}
+
+	public void setGoodsCost(Double goodsCost) {
+		this.goodsCost = goodsCost;
+	}
+
+	public String getStartTimeF() {
+		return startTimeF;
+	}
+
+	public void validPublish() {
+		if ("11".equals(getUser().getUserCache().getUserType())
+				&& "20".equals(getUser().getUserCache().getUserNature())) {
+			//JSDBET-788 gjh 2015-3-12 start
+			UserIdentify attestation = getUser().getUserIdentify();
+			if (!UserConstant.USER_IDENTIFY_REAL_NAME_SUCCESS
+							.equals(attestation.getRealNameStatus())) {
+				throw new BorrowException("您还未通过实名认证，购买失败！", 1);
+			}
+			if (!UserConstant.USER_IDENTIFY_EMAIL_SUCCESS
+							.equals(attestation.getEmailStatus())) {
+				throw new BorrowException("您还未通过邮箱认证，购买失败！", 1);
+			}
+			if (!UserConstant.USER_IDENTIFY_PHONE_SUCCESS
+							.equals(attestation.getMobilePhoneStatus())) {
+				throw new BorrowException("您还未通过手机认证，购买失败！", 1);
+			}
+			//JSDBET-788 gjh 2015-3-12 end
+			if(this.getOnePay()<0){
+				throw new BorrowException("首付不能为负数！", 1);
+			}
+		} else {
+			throw new BorrowException("您不能购买分期宝", 1);
+		}
+	}
+
+	public void setStartTimeF(String startTimeF) {
+		this.startTimeF = startTimeF;
+	}
+
+	public String getEndTimeF() {
+		return endTimeF;
+	}
+
+	public void setEndTimeF(String endTimeF) {
+		this.endTimeF = endTimeF;
+	}
+
+	public UserLogisticsAddress getAddress() {
+		return address;
+	}
+
+	public void setAddress(UserLogisticsAddress address) {
+		this.address = address;
+	}
+
+	public List<DdtkjGoodsPic> getPicList() {
+		return picList;
+	}
+
+	public void setPicList(List<DdtkjGoodsPic> picList) {
+		this.picList = picList;
+	}
+
+	public int getStatusSearch() {
+		return statusSearch;
+	}
+
+	public void setStatusSearch(int statusSearch) {
+		this.statusSearch = statusSearch;
+	}
+
+	public int getTimeSearch() {
+		return timeSearch;
+	}
+
+	public void setTimeSearch(int timeSearch) {
+		this.timeSearch = timeSearch;
+	}
+
+	/**
+	 * 将domain转为model
+	 * 
+	 * @param item
+	 * @return
+	 */
+	public static GoodsOrderModel instance(GoodsOrder item) {
+		GoodsOrderModel model = new GoodsOrderModel();
+		BeanUtils.copyProperties(item, model);
+		return model;
+	}
+
+	public GoodsOrder prototype() {
+		GoodsOrder item = new GoodsOrder();
+		BeanUtils.copyProperties(this, item);
+		return item;
+	}
+
+	/**
+	 * 转换订单状态方法
+	 * 
+	 * @param status
+	 * @return
+	 */
+	public String convertOrderSatus(String status) {
+
+		if (status.equals("cd")) {
+			return "订单已完成";
+		} else if (status.equals("ck")) {
+			return "订单审核通过(已发标)";
+		} else if (status.equals("dw")) {
+			return "订单未审核";
+		} else {
+			return "订单被撤销";
+		}
+	}
+
+	public String convertOrderPayWay(String payWay) {
+		if (payWay.equals("11")) {
+			return "首付";
+		} else if (payWay.equals("12")) {
+			return "首付+分期";
+		} else {
+			return "零首付";
+		}
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+	public String getOrderNo() {
+		return orderNo;
+	}
+
+	public void setOrderNo(String orderNo) {
+		this.orderNo = orderNo;
+	}
+
+	public String getGoodsNo() {
+		return goodsNo;
+	}
+
+	public void setGoodsNo(String goodsNo) {
+		this.goodsNo = goodsNo;
+	}
+
+	public String getGoodsName() {
+		return goodsName;
+	}
+
+	public void setGoodsName(String goodsName) {
+		this.goodsName = goodsName;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public long getBorrowId() {
+		return borrowId;
+	}
+
+	public void setBorrowId(long borrowId) {
+		this.borrowId = borrowId;
+	}
+
+	public String getBorrowName() {
+		return borrowName;
+	}
+
+	public void setBorrowName(String borrowName) {
+		this.borrowName = borrowName;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public double getOnePay() {
+		return onePay;
+	}
+
+	public void setOnePay(double onePay) {
+		this.onePay = onePay;
+	}
+
+	public String getUserAddress() {
+		return userAddress;
+	}
+
+	public void setUserAddress(String userAddress) {
+		this.userAddress = userAddress;
+	}
+
+	public String getUpdateUser() {
+		return updateUser;
+	}
+
+	public void setUpdateUser(String updateUser) {
+		this.updateUser = updateUser;
+	}
+
+	public String getOrderStatus() {
+		return orderStatus;
+	}
+
+	public void setOrderStatus(String orderStatus) {
+		this.orderStatus = orderStatus;
+	}
+
+	public double getStagePay() {
+		return stagePay;
+	}
+
+	public void setStagePay(double stagePay) {
+		this.stagePay = stagePay;
+	}
+
+	public String getPayWay() {
+		return payWay;
+	}
+
+	public void setPayWay(String payWay) {
+		this.payWay = payWay;
+	}
+
+	public Date getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+
+	public Date getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+
+	//JSDBET-789 xingjia 20150307 start
+	public String getStatus() {
+		return status;
+	}
+	
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	//JSDBET-789 xingjia 20150307 end
+}

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>活动奖励管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  800;
+	var winHeight = 500;
+	var addTitle = "添加活动奖励"; //添加窗口标题
+	var addUrl =  "/modules/reward/arAddPage.html"; // 添加窗口链接地址
+	var editTitle = "修改活动奖励";
+	var editUrl =  "/modules/reward/arEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"','确定'";
+	
+	deleteUrl = "/modules/reward/arDelete.html";
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : "arList.html",
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			 			{ field: 'id', title: '编号', width: 50, fixed :true,checkbox : false},
+						{ field: 'activity.actName', title: '活动名称', width: 200, fixed :true,checkbox : false},
+						{ field: 'activity.begintime', title: '活动开始时间', width: 200, fixed :true,checkbox : false,
+							formatter:function(value,row,index){
+								return getLocalTime(value,4);
+							}	
+						},
+						{ field: 'activity.endtime', title: '活动结束时间', width: 200, fixed :true,checkbox : false,
+							formatter:function(value,row,index){
+								return getLocalTime(value,4);
+							}	
+						},
+						{ field: 'rp.name', title: '红包用途', width: 100,sortable: false},
+						{ field: 'rp.validtime', title: '红包有效期', width: 100,sortable: false,
+							formatter:function(value,row,index){
+								return value+"天";
+							}	
+						},
+						{ field: 'account', title: '金额',fixed :true, width: 100, sortable: false },
+						{ field : 'action',title : '操作',width :80,fixed :true,
+							formatter : function(value, row, index) {
+								var str = '';
+								
+								str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="修改活动奖励"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+								str += '&nbsp;';
+								return str;
+							}
+						} ] ],
+						
+						toolbar : '#toolbar',
+
+			
+		});
+	});
+</script>
+</head>
+<body style="padding:0 20px;">
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+	           		<li>活动名称：<input type="text" name="activity.actName" autocomplete="off"/></li>
+            		<li>时间：
+            		 <input type="text" name="activity.begintime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;
+            		 <input type="text" name="activity.endtime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">		
+		<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加活动奖励</a>				
+	</div>
+</body>
+</html>

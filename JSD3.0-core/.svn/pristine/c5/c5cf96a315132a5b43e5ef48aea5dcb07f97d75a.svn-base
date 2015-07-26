@@ -1,0 +1,250 @@
+package com.ddtkj.p2psys.errorlog.exception;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.struts2.ServletActionContext;
+
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.dao.ErrorLogDao;
+import com.ddtkj.p2psys.errorlog.domain.ErrorLog;
+import com.ddtkj.p2psys.errorlog.service.ErrorLogService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.dao.OperatorDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.sms.sendMsg.ErrorLogMsg;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+public class HandleException extends BussinessException{
+	private static final long serialVersionUID = 2286432127777674865L;
+	
+	ErrorLogService errorLogService=(ErrorLogService) BeanUtil.getBean("errorLogService");
+	BorrowService borrowService=(BorrowService) BeanUtil.getBean("borrowService");
+	OperatorService operatorService=(OperatorService) BeanUtil.getBean("managerService");
+	
+	
+	ErrorLogDao errorLogDao=(ErrorLogDao) BeanUtil.getBean("errorLogDao");
+	BorrowDao borrowDao=(BorrowDao) BeanUtil.getBean("borrowDao");
+	OperatorDao operatorDao=(OperatorDao) BeanUtil.getBean("operatorDao");
+	
+	private String name;
+	private String level;
+	private String module;
+	private String errorCode;
+	private User addUser;
+	private String errorModuleName;
+	private long eid;
+	
+	public HandleException() {
+		super();
+	}
+	
+	public HandleException(String message){
+		super(message);
+	}
+	
+	public HandleException(String message, int type){
+		super(message,type);
+	}
+	
+	public HandleException(String message, RuntimeException ex){
+		super(message,ex);
+	}
+	
+	public HandleException(String message, String url){
+		super(message,url);
+	}
+	
+	public HandleException(String message, String name,
+			String level, String module, String errorCode, 
+			User addUser, String errorModuleName, long eid, int type){
+		super(message);
+		setName(name);
+		setLevel(level);
+		setModule(module);
+		setErrorCode(errorCode);
+		setAddUser(addUser);
+		setErrorModuleName(errorModuleName);
+		setEid(eid);
+		this.type = type;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getLevel() {
+		return level;
+	}
+
+	public void setLevel(String level) {
+		this.level = level;
+	}
+
+	public String getModule() {
+		return module;
+	}
+
+	public void setModule(String module) {
+		this.module = module;
+	}
+
+	public String getErrorCode() {
+		return errorCode;
+	}
+
+	public void setErrorCode(String errorCode) {
+		this.errorCode = errorCode;
+	}
+
+	public User getAddUser() {
+		return addUser;
+	}
+
+	public void setAddUser(User addUser) {
+		this.addUser = addUser;
+	}
+
+	public String getErrorModuleName() {
+		return errorModuleName;
+	}
+
+	public void setErrorModuleName(String errorModuleName) {
+		this.errorModuleName = errorModuleName;
+	}
+
+	public long getEid() {
+		return eid;
+	}
+
+	public void setEid(long eid) {
+		this.eid = eid;
+	}
+	//JSDBET-812 gjh 2015-3-17 start
+	public void saveExceptionActionLog(HandleException e){
+		HttpServletRequest request = null;
+		String reqUrl = "";
+		try{
+			request = ServletActionContext.getRequest(); 
+			if(request!=null){
+			   reqUrl = request.getServerName();
+			}
+		} catch (Exception e1) {
+			reqUrl="sdd";
+		}
+		try{
+			ErrorLog errorLog = new ErrorLog();
+			errorLog.setEid(e.getEid());
+			errorLog.setAddUser(e.getAddUser());
+			errorLog.setErrorCode(e.getErrorCode());
+			errorLog.setErrorModuleName(e.getErrorModuleName());
+			errorLog.setException(e.getMessage());
+			errorLog.setLevel(e.getLevel());
+			errorLog.setName(e.getName());
+			errorLog.setType(e.getModule());
+			errorLog.setAddIp(Global.getIP());
+			errorLog.setAddTime(new Date());
+			if(Global.getValue("weburl").contains(reqUrl)){
+				errorLog.setPlatform(ErrorLogConstant.PLATFORM_WEB);
+			}else if(Global.getValue("adminurl").contains(reqUrl)){
+				errorLog.setPlatform(ErrorLogConstant.PLATFORM_MANAGE);
+			}else{
+				errorLog.setPlatform(ErrorLogConstant.PLATFORM_OTHER);
+			}
+			errorLogService.addErrorLog(errorLog);
+			if(errorLog.getErrorCode().equals(ErrorLogConstant.CODE_TENDER_AUTO_FAIL_SYS)){//自动投标异常修改标状态
+				borrowService.updateStatus(e.getEid(), 1, 19);
+			}
+			if(e.getLevel().equals(ErrorLogConstant.LEVEL_SERIOUS) || e.getLevel().equals(ErrorLogConstant.LEVEL_IMPORTANCE)
+					|| e.getLevel().equals(ErrorLogConstant.LEVEL_DANGER)){
+				QueryParam param = QueryParam.getInstance(); 
+				
+				param.addPage(0, 1000);
+				Map<String,Object> map = new HashMap<String,Object>();
+				map.put("roleName", "运维");
+				List<Operator> operators = operatorService.getAOperatorListByRole(map,param).getList();
+				Global.setTransfer("e", e);
+				for(Operator o:operators){
+					Global.setTransfer("o", o);
+					BaseMsg msg = new ErrorLogMsg(NoticeConstant.ERROR_NOTICE_CPIS,o.getEmail(),null);
+					msg.sendMsg();
+				}
+			}
+		}catch (Exception e1) {
+			e1.printStackTrace();
+		}
+	}
+	//JSDBET-812 gjh 2015-3-17 end
+	
+	
+	public void saveExceptionLog(HandleException e){
+		HttpServletRequest request = null;
+		String reqUrl = "";
+		try {
+			request = ServletActionContext.getRequest(); 
+			reqUrl = request.getServerName();
+		} catch (Exception e1) {
+			reqUrl="sdd";
+		}
+		//String reqUrl = request.getServerName();
+		try {
+			ErrorLog errorLog = new ErrorLog();
+			errorLog.setEid(e.getEid());
+			errorLog.setAddUser(e.getAddUser());
+			errorLog.setErrorCode(e.getErrorCode());
+			errorLog.setErrorModuleName(e.getErrorModuleName());
+			errorLog.setException(e.getMessage());
+			errorLog.setLevel(e.getLevel());
+			errorLog.setName(e.getName());
+			errorLog.setType(e.getModule());
+			errorLog.setAddIp(Global.getIP());
+			errorLog.setAddTime(new Date());
+			if(Global.getValue("weburl").contains(reqUrl)){
+				errorLog.setPlatform(ErrorLogConstant.PLATFORM_WEB);
+			}else if(Global.getValue("adminurl").contains(reqUrl)){
+				errorLog.setPlatform(ErrorLogConstant.PLATFORM_MANAGE);
+			}else{
+				errorLog.setPlatform(ErrorLogConstant.PLATFORM_OTHER);
+			}
+			errorLogDao.save(errorLog);
+			if(errorLog.getErrorCode().equals(ErrorLogConstant.CODE_TENDER_AUTO_FAIL_SYS)){//自动投标异常修改标状态
+				borrowDao.updateStatus(e.getEid(), 1, 19);
+			}
+			if(e.getLevel().equals(ErrorLogConstant.LEVEL_SERIOUS) || e.getLevel().equals(ErrorLogConstant.LEVEL_IMPORTANCE)
+					|| e.getLevel().equals(ErrorLogConstant.LEVEL_DANGER)){
+				QueryParam param = QueryParam.getInstance(); 
+				
+				param.addPage(0, 1000);
+				Map<String,Object> map = new HashMap<String,Object>();
+				map.put("roleName", "运维");
+				List<Operator> operators = operatorDao.getAOperatorListByRole(map,param).getList();
+				Global.setTransfer("e", e);
+				for(Operator o:operators){
+					Global.setTransfer("o", o);
+					BaseMsg msg = new ErrorLogMsg(NoticeConstant.ERROR_NOTICE_CPIS,o.getEmail(),null);
+					msg.sendMsg();
+				}
+			}
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+			
+	}
+}

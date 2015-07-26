@@ -1,0 +1,52 @@
+<div id="header">
+	<!--S 头部信息显示-->
+	<div id="header_info">
+		<div  class="clearfix header_top">
+	        <div class="float_left">
+	        	<span class="sprite home">欢迎您来2.0托管版网站</span>
+	        	<span class="tel">客服热线：<em>400-080-3000</em></span>
+	        	<span class="attention">
+	        		关注我们：
+	        		<em title="微博" class="sprite i_weibo">微博<div class="topTipsWrap"><i></i><div class="topTips"><h2>官方微博：</h2><a href="http://weibo.com/zotohui" target="_blank">@2.0托管版</a></div></div></em>
+	        		<em title="微信" class="sprite i_weixin">微信<div class="topTipsWrap"><i></i><div class="topTips" style="width: 160px;height: 160px;"><img src="${webroot}${theme_dir}/images/wx.jpg" /></div></div></em>
+	        		<em title="QQ" class="sprite i_qq">QQ<div class="topTipsWrap"><i></i><div class="topTips"><h2>理财QQ群：</h2><a target="_blank" title="2.0托管版投资交流1群" href="http://shang.qq.com/wpa/qunwpa?idkey=b845f87a04f23c6f1a5bdb2d38662c56f24a57eca4e4488c441c5bc62b53f26f"><span><b>①</b>384010934</span></a></div></div></em>
+	        	</span>
+	        	<span><a href="javascript:;" title="收藏本站" id="fav">收藏本站</a></span>&nbsp;&nbsp;
+	   			<span><a href="${webroot}/desktop.html" title="添加到桌面快捷方式" >添加到桌面快捷方式</a></span>
+			</div>
+	        <div class="float_right">
+	        	<span class="loginStatus">
+	        	<#if session_user?exists >
+	        	<a href="${webroot}/help/guide.html" class="guide">新手指引</a>&nbsp;&nbsp;
+	        	欢迎您，
+	        	<a href="${webroot}/member/main.html">${session_user.userName}</a>&nbsp;&nbsp;<a href="${webroot}/user/logout.html" title="退出登录">退出登录</a>
+				<#else>
+				<a href="${webroot}/help/guide.html" class="guide">新手指引</a>&nbsp;&nbsp;
+				<a href="${webroot}/user/login.html">立刻登录</a>&nbsp;&nbsp;<a href="${webroot}/user/register.html" >免费注册</a>
+				</#if>
+				</span>
+			</div>
+	    </div>
+	</div>
+    <!--E 头部信息显示-->
+	<div class="header_con_wrapper">
+		<div class="header_con clearfix">
+			<div class="logo">
+				<a href="/"><img src="${webroot}${theme_dir}/images/logo.png"></a>
+			</div>
+			<div id="nav" class="clearfix navSet">
+        		<#if !nid??><#assign nid="index"></#if> <#macro showSiteUrl site>
+				${webroot}${site.url!} </#macro> <#if tree??&&tree.hasChild()>
+				<#list tree.child as item> 
+				
+				<#if
+				(item.model.status)??&&item.model.status==1><span class="<#if !item_has_next>myAccount</#if>"><a class="<#if ((item.model.nid)??&&(item.model.nid)==nid)>hover<#else></#if>"
+					href="<@showSiteUrl site=item.model/>">${item.model.name!}</a></span>
+				</#if> 
+				</#list>
+				</#if>
+	        </div>
+		</div>
+	</div>
+
+</div>

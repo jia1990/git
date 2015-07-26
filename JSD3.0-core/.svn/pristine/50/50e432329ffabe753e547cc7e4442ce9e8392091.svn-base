@@ -1,0 +1,243 @@
+package com.rongdu.p2psys.core.dao.jdbc;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.dao.RoleDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.Role;
+import com.rongdu.p2psys.core.model.RoleModel;
+
+@Repository
+public class RoleDaoImpl extends BaseDaoImpl<Role> implements RoleDao {
+
+	public PageDataList<Role> list(RoleModel model) {
+		
+		
+		QueryParam param = QueryParam.getInstance().addPage(model.getPage(), model.getRows()).addOrder(OrderType.DESC, "r.id");
+//		if (StringUtil.isNotBlank(model.getName())) {
+//			param.addParam("name", Operators.LIKE, model.getName());
+//		}
+//		if(null != model.getIdlist() && model.getIdlist().size()>0){
+//			param.addParam("pid", Operators.IN, model.getIdlist());
+//			param.addParam("id", Operators.IN, model.getIdlist());
+//		}
+		
+		
+		
+		StringBuffer sql = new StringBuffer("SELECT r.* FROM  s_role r where 1=1 ");
+		
+		if( StringUtil.isNotBlank(model.getIsDelete()) && !"99".equals(model.getIsDelete())){
+			if(model.getIsDelete().equals("Y")){
+				sql.append(" and r.is_delete = "+true+"");
+			}else{
+				sql.append(" and r.is_delete = "+false+"");
+			}
+		}else if(StringUtil.isBlank(model.getIsDelete())){
+			sql.append(" and r.is_delete = "+false+"");
+		}
+		
+		List<Integer> pid = model.getIdlist();
+		if(null != pid && pid.size()!=0){
+			sql.append(" and ( r.pid in (?1)  OR r.pid IN (SELECT id FROM s_role WHERE pid IN (?2) and is_delete=false) ) ");
+		}
+		
+		String name = model.getName();
+		if(StringUtil.isNotBlank(name)){
+			sql.append(" and r.name like '%"+name+"%'");
+		}
+		
+		sql.append(" ORDER BY r.add_time desc ");
+		Query query = em.createNativeQuery(sql.toString(), Role.class);
+		
+		if(null != pid && pid.size()!=0){
+			query.setParameter(1, pid);
+			query.setParameter(2, pid);
+		}
+		
+		
+		Page page = new Page(query.getResultList().size(),param.getPage().getCurrentPage(),param.getPage().getPernum());
+		query.setFirstResult((param.getPage().getCurrentPage() - 1) * param.getPage().getPernum());
+		query.setMaxResults(param.getPage().getPernum());
+		List<Role> list = query.getResultList();
+		PageDataList<Role> rolePageList = new PageDataList<Role>();
+		rolePageList.setList(list);
+		rolePageList.setPage(page);
+		
+		
+		return rolePageList;
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<Role> roleList() {
+		String jpql = "from Role where isDelete = ?1";
+		Query query = em.createQuery(jpql);
+		query.setParameter(1, false);
+		List<Role> list = query.getResultList();
+		return list;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Role roleFind(long id) {
+		String jpql = "from Role where isDelete = ?1 and id=?2";
+		Query query = em.createQuery(jpql);
+		query.setParameter(1, false);
+		query.setParameter(2, id);
+		List<Role> list = query.getResultList();
+		if (list != null && list.size() > 0) {
+			return (Role) list.get(0);
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * 根据角色id查询子角色
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 */
+	@SuppressWarnings("unchecked")
+	public Role sonRoleFind(int id) {
+		String jpql = "from Role where isDelete = ?1 and pid=?2";
+		Query query = em.createQuery(jpql);
+		query.setParameter(1, false);
+		query.setParameter(2, id);
+		List<Role> list = query.getResultList();
+		if (list != null && list.size() > 0) {
+			return (Role) list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<Role> getRoleList(long userId) {
+		
+		StringBuffer sql = new StringBuffer("SELECT p1.* from s_role p1 , s_operator_role p2 where");
+		sql.append(" p1.id = p2.role_id and p2.operator_id = ?1 and p1.is_delete = ?2");
+		Query query = em.createNativeQuery(sql.toString(), Role.class);
+		query.setParameter(1, userId);
+		query.setParameter(2, false);
+		List<Role> list = query.getResultList();
+		return list;
+	}
+	
+	/**
+	 * 查询用户所对应的角色
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * 
+	 */
+	@SuppressWarnings("unchecked")
+	public Role getRole(long userId) {
+		
+		StringBuffer sql = new StringBuffer("SELECT p1.* from s_role p1 , s_operator_role p2 where");
+		sql.append(" p1.id = p2.role_id and p2.operator_id = ?1 and p1.is_delete = ?2");
+		Query query = em.createNativeQuery(sql.toString(), Role.class);
+		query.setParameter(1, userId);
+		query.setParameter(2, false);
+		Role role = (Role)query.getSingleResult();
+		return role;
+	}
+	
+	/**
+	 * 根据用户名查询用户所对应的角色
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 * 
+	 */
+	@SuppressWarnings("unchecked")
+	public Role getRoleByName(String name) {
+		String jpql = "from Role where name = ?1 and isDelete = ?2";
+		Query query = em.createQuery(jpql);
+		query.setParameter(1, name);
+		query.setParameter(2, false);
+		List list = query.getResultList();
+		if (list != null && list.size() >= 1) {
+			return (Role) list.get(0);
+		} else {
+			return null;
+		}
+		
+		//
+		/*StringBuffer sql = new StringBuffer("SELECT p1.* from s_role p1, s_operator_role p2 where");
+		sql.append(" p1.id = p2.role_id and p1.name = ?1 and p1.is_delete = ?2");
+		Query query = em.createNativeQuery(sql.toString(), Role.class);
+		query.setParameter(1, name);
+		query.setParameter(2, false);
+		Role role = null;
+		if(null != query.getSingleResult()){
+			role = (Role)query.getSingleResult();
+			return role;
+		}else{
+			return null;
+		}*/
+		
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<Role> getRoleList(Map<String, Object> paramMap) {
+		// TODO Auto-generated method stub
+		
+		StringBuffer sql = new StringBuffer("SELECT r.* FROM  s_role r ");
+		sql.append(" where r.is_delete = 0 ");
+		
+		List<Integer> pid = (List<Integer>) paramMap.get("pidList");
+		if(null != pid && pid.size()!=0){
+			sql.append(" and r.pid in (?1) or r.id in (?2) ");
+		}
+		
+		String name = (String) paramMap.get("name");
+		if(null != name){
+			sql.append(" and r.name like '%"+name+"%'");
+		}
+		
+		sql.append(" ORDER BY r.id ");
+		Query query = em.createNativeQuery(sql.toString(), Role.class);
+		
+		if(null != pid && pid.size()!=0){
+			query.setParameter(1, pid);
+			query.setParameter(2, pid);
+		}
+		
+		List<Role> list = query.getResultList();
+		
+		return list;
+	}
+
+	/**
+	 * 查询操作员-角色关系表中某角色的数量
+	 * @author sunxiaoyong@ddtkj.com
+	 * @param id
+	 * @return
+	 */
+	@Override
+	public int getRoleId(int id) {
+		
+		String sql = "SELECT COUNT(*) FROM s_operator s1,s_operator_role s2 WHERE s1.id = s2.operator_id AND s1.is_delete = FALSE AND s2.role_id = ?1";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter(1, id);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return (int) Double.parseDouble(obj.toString());
+        }
+        return 0;
+        
+	}
+	
+}

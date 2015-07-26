@@ -1,0 +1,77 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/account/draw/accountDraw/recheckDraw.html');
+	    $("#isDS").click(function(){
+	    	if($('#isDS').attr("checked"))
+			{	
+		        $('#fixedTime').attr("disabled",false);
+		    }else{
+		        $('#fixedTime').attr("disabled",true);
+		        $('#fixedTime').val("");
+		    }
+	    });
+	});
+</script>
+
+<div class="popForm" style="padding-top:0;">
+<form id="form" method="post" >
+	<div>&nbsp;</div>
+	<div class="formitm">
+		<label class="lab">提现订单号：</label>
+		<div class="ipt">
+		    ${draw.drawTradeNo!}
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">提现金额：</label>
+		<div class="ipt">
+		    ${draw.drawAmount!}&nbsp;元
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">提现状态：</label>
+		<div class="ipt">
+		   <#if draw.drawHandleStatus=="00">
+				用户提现申请中
+			<#elseif draw.drawHandleStatus=="11">
+				初审通过
+			<#elseif draw.drawHandleStatus=="10">
+				初审未通过
+			<#elseif draw.drawHandleStatus=="21">
+				复审通过
+			<#elseif draw.drawHandleStatus=="20">
+				复审未通过
+			<#elseif draw.drawHandleStatus=="99">
+				取消体现
+			<#elseif draw.drawHandleStatus=="88">
+				银行处理失败
+			<#elseif draw.drawHandleStatus=="30">
+				提现成功
+			<#elseif draw.drawHandleStatus=="41">
+				提现第三方请求失败
+			<#elseif draw.drawHandleStatus=="42">
+				提现第三方请求成功
+			<#elseif draw.drawHandleStatus=="31">
+				提现补单成功
+			<#else>
+				无
+			</#if>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">审核状态：</label>
+		<div class="ipt">
+		   	<label><input type="radio" name="drawHandleStatus" class="easyui-validatebox" value="21" data-options="required: true"  />复审通过</label>
+		    <label><input type="radio" name="drawHandleStatus" class="easyui-validatebox" value="20" data-options="required: true" checked="checked" />复审未通过</label>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">备注信息：</label>
+		<div class="ipt">
+		   <textarea name="recheckFailRemark" class="w400 easyui-validatebox" data-options="required: true"></textarea>
+		</div>
+	</div>
+	<input name="id" value="${draw.id!}" type="hidden"/>
+	<input type="hidden" name="recheckDrawToken" value="${recheckDrawToken!}"/>
+</form>
+</div>

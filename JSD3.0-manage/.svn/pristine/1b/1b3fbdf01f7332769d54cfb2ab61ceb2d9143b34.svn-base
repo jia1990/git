@@ -1,0 +1,55 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/user/openAccount/openAccountEdit.html');	
+</script>
+<form id="form"  method="post">
+<div class="popForm sForm">
+	<div class="formitm">
+		<label class="lab">真实姓名：</label>
+		<div class="ipt">
+		    ${userRealnameApplication.user.realName!}
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">身份证号：</label>
+		<div class="ipt">
+		    ${userRealnameApplication.user.cardNO!}
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">正面照片：</label>
+		<div class="ipt">
+		<a href="${weburl}${userRealnameApplication.positivePhoto!}" class="fileshow"  rel="group1" ondragstart="return false">
+		    <img src="${weburl}${userRealnameApplication.positivePhoto!}" style="width:200px;height:115px;"/>
+		</a> 
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">反面照片：</label>
+		<div class="ipt">
+		    <a href="${weburl}${userRealnameApplication.reversePhoto!}" class="fileshow"  rel="group1" ondragstart="return false">
+		    	<img src="${weburl}${userRealnameApplication.reversePhoto!}" style="width:200px;height:115px;"/>
+		    </a> 
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">状态：</label>
+		<div class="ipt">
+		    <input type="radio" id="true" name="status" value="1" checked="checked" />&nbsp;&nbsp;<label for="true">审核通过</label>  
+			<input type="radio" id="false" name="status" value="2"/>&nbsp;&nbsp;<label for="false">审核未通过</label>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">备注：</label>
+		<div class="ipt">
+		    <textarea id="remark" name="remark" style="width:300px" maxlength="1000" class="easyui-validatebox borrowFormTextarea"  >${userRealnameApplication.remark!}</textarea>
+		</div>
+	</div>
+	
+</div>
+<input type="hidden" name="id" value="${userRealnameApplication.user.userId!}">
+</form>
+
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>

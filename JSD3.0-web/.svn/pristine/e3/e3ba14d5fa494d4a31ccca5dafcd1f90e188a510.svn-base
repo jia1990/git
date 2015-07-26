@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<#include "../../include/resource1.html">
+<body>
+	<#assign nid="my_account"> 
+	<#include "../../include/headerMemberCenter.html">
+	<!--header-end-->
+	<!--用户中心的主栏目 开始-->
+	<div id="container" class="clearfix">
+		<div class="usermain clearfix">
+			<!--左边的导航 开始-->
+			<div class="user_left"> 
+				<#assign mid="m_invest">
+			    <#include "../account_menu.html">
+			</div>
+			<!--左边的导航 结束-->
+			<!--右边的内容 开始-->
+			<div class="user_right">
+				<h2 class="user_title">资产统计</h2>
+				<div class="user_right_main">
+					<div class="assets_total clearfix">
+						<span class="assets_all">账户总资产<b>${total}元</b></span>
+						<span class="assets_symbol">=</span>
+						<span class="assets_item"><a href="javascript:;" title="所有未收回的利息总和。" class="textTips"><i class="iconfont">&#xe61c;</i></a>待收利息<b>${interest}元</b></span>
+						<span class="assets_symbol">+</span>
+						<span class="assets_item"><a href="javascript:;" title="所有未收回的本金总和。" class="textTips"><i class="iconfont">&#xe61c;</i></a>待收本金<b>${capital}元</b></span>
+						<span class="assets_symbol">+</span>
+						<span class="assets_item"><a href="javascript:;" title="账户余额=可用金额+冻结金额。" class="textTips"><i class="iconfont">&#xe61c;</i></a>账户余额<b>${account.useMoney+account.noUseMoney}元</b><em>可用${account.useMoney}元</em></span>
+					</div>
+					<div class="assets_box clearfix">
+						<div>待收利息表
+							<select id="collectInterestSelect">
+								<#list dates as date>
+								<option value="${date}">${date}</option>
+								</#list>
+							</select>
+						</div>
+						<div id="collectInterest" style="height:300px"></div>
+					</div>
+					<div class="assets_box clearfix">
+						<div>待收本金表
+							<select id="collectPrincipalSelect">
+								<#list dates as date>
+								<option value="${date}">${date}</option>
+								</#list>
+							</select>
+						</div>
+						<div id="collectPrincipal" style="height:300px"></div>
+					</div>
+				</div>	
+			</div>
+		</div>
+			<!--右边的内容 结束-->
+	</div>
+	<!--用户中心的主栏目 结束-->
+	<script>
+		seajs.use("${webroot}${theme_dir}/media/js/member/account_assets");
+	</script>
+	<#include "../../include/footer.html">
+</body>
+</html>

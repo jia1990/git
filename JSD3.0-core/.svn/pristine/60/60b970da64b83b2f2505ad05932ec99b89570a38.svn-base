@@ -1,0 +1,42 @@
+package com.ddtkj.p2psys.authorize.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.authorize.dao.ClientDao;
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.service.ClientService;
+
+/**
+ * 授权应用service层
+ * @author sxy
+ * @version 3.0
+ * @date 2015年3月18日
+ *
+ */
+@Service("clientService")
+public class ClientServiceImpl implements ClientService{
+	
+	@Resource
+	public ClientDao clientDao;
+	
+	@Override
+	public Client findByClientId(String clientId) {
+		return clientDao.selectByClientId(clientId);
+	}
+	@Override
+	public boolean checkClientId(String clientId) {
+		return clientDao.countByClientId(clientId) > 0;
+	}
+
+	public ClientDao getClientDao() {
+		return clientDao;
+	}
+
+	public void setClientDao(ClientDao clientDao) {
+		this.clientDao = clientDao;
+	}
+	
+	
+}

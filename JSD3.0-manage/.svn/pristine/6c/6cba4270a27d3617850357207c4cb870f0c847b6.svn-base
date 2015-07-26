@@ -1,0 +1,172 @@
+package com.ddtkj.manage.action.redPackage;
+
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.model.RpActivityModel;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpActivityService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * JSDP-184
+ */
+public class ManageRpActivityConfigAction extends BaseAction implements ModelDriven<RpActivityModel>{
+
+	private RpActivityModel model = new RpActivityModel();
+	@Resource
+	private RpActivityProduceService rpActivityProduceService;
+	@Resource
+	private DictService dictService;
+	@Resource
+	private RpActivityService rpActivityService;
+	@Resource
+	private OperatorService operatorService;
+	
+	private Map<String, Object> data;
+	
+	/**
+	 * 活动红包产生记录展示的页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/rpActivityConfigPage")
+	public String rpActivityConfigPage(){
+		
+	
+		return "rpActivityManage";
+	}
+	/**
+	 * 活动红包产生的查询方法
+	 * @throws IOException
+	 */
+	@Action("/modules/redPackage/rpActivityConfigList")
+	public void rpActivityConfigList() throws IOException{
+		data = new HashMap<String, Object>();
+		PageDataList<RpActivityModel> pageDataList = rpActivityService.pageDataList(model);
+		
+		data.put("total", pageDataList.getPage().getTotal()); // 总行数
+		data.put("rows", pageDataList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+	
+	/**
+	 * 添加红包活动的页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/addRpActivityConfigPage")
+	public String addActivityConfigPage(){
+		saveToken("rpActivityAddToken");
+		return "addActivityConfigPage";
+	}
+	/**
+	 * 添加红包活动的方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/redPackage/addRpActivityConfig")
+	public void addActivityConfig() throws IOException{
+		
+		data = new HashMap<String, Object>();
+		RpActivity rpa = model.prototype();
+		rpa.setAddTime(Calendar.getInstance().getTime());
+		rpa.setOperator(getOperator());
+		RpActivity rpActivity = rpActivityService.addRpActivity(rpa);
+		data.put("result", true);
+		if(null != rpActivity){
+			data.put("msg", "保存成功");
+		}else{
+			data.put("msg", "保存失败");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 红包活动修改页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/editRpActivityConfigPage")
+	public String editActivityConfigPage(){
+		saveToken("rpActivityEditToken");
+		RpActivity rpActivity = rpActivityService.findRpActivityById(model.getId());
+		request.setAttribute("rpActivity", rpActivity);
+		return "editActivityConfigPage";
+	}
+	/**
+	 * 红包活动修改方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/redPackage/editRpActivityConfig")
+	public void editActivityConfig() throws IOException{
+		checkToken("rpActivityEditToken");
+		data = new HashMap<String, Object>();
+		RpActivity rpActivity = model.prototype();
+		if(null != rpActivity){
+			rpActivity.setUpdateOperator(getOperator());
+			rpActivity.setUpdateTime(Calendar.getInstance().getTime());
+		}
+		if(StringUtil.isNotBlank(model.getOptName())){
+			Operator operator = operatorService.getUserByUserName(model.getOptName());
+			rpActivity.setOperator(operator);
+		}else{
+			rpActivity.setOperator(getOperator());
+		}
+		RpActivity rpa = rpActivityService.updateRpActivity(rpActivity);
+		data.put("result", true);
+		if(null != rpa){
+			data.put("msg", "修改成功！");
+		}else{
+			data.put("msg", "修改失败！");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	/**
+	 * 红包产生导出excel
+	 * @throws Exception 
+	 */
+	@Action("/modules/redPackage/rpActivityExcel")
+	public void rpActivityExcel() throws Exception{
+		
+//		response.setContentType("application/msexcel;charset=UTF-8");
+//		
+//		String title = "活动红包产生Excel表";
+//
+//		String[] hearders = new String[] { "编号","用户名", "真实姓名", "活动类型", "产生金额", "产生时间", "备注"};// 表头数组
+//		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]"};// 对象属性数组
+//		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+//		String downloadFile = "";
+//		downloadFile = title + System.currentTimeMillis() + ".xls";
+//		String infile = contextPath + "/data/export/" + downloadFile;
+//		List newList = rpActivityProduceService.excelListRpProduce(model);
+//		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+//		this.export(infile, downloadFile);
+	}
+	
+	
+	public RpActivityModel getModel() {
+		return model;
+	}
+	public void setModel(RpActivityModel model) {
+		this.model = model;
+	}
+
+}

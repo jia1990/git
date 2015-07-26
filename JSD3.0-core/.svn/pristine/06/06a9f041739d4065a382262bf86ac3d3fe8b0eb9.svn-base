@@ -1,0 +1,252 @@
+package com.rongdu.p2psys.user.dao.jdbc;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.rongdu.p2psys.user.exception.UserException;
+import com.ddtkj.p2psys.user.model.UserIdentifyModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+
+/**
+ * 认证信息
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月17日17:27:02
+ */
+@Repository("userIdentifyDao")
+public class UserIdentifyDaoImpl extends BaseDaoImpl<UserIdentify> implements UserIdentifyDao {
+
+	@SuppressWarnings("unused")
+	private static Logger logger = Logger.getLogger(UserCreditDaoImpl.class);
+
+	@Override
+	public UserIdentify findByUserId(long userId) {
+		return this.findObjByProperty("user.userId", userId);
+	}
+
+	/**
+	 * 更具主键查询
+	 * 
+	 * @param userIdentifyId
+	 * @return
+	 */
+	@Override
+	public UserIdentify findById(long userIdentifyId) {
+		return find(userIdentifyId);
+	}
+
+	@Override
+	public int modifyRealnameStatus(long userId, String status, String preStatus) {
+		String nativeSql = "UPDATE t_jsd_user_identify " + "SET real_name_status = :status " + "WHERE user_id = :userId "
+				+ "AND real_name_status = :preStatus";
+		/*String[] names = new String[] { "status", "userId", "preStatus" };
+		Object[] values = new Object[] { status, userId, preStatus };
+		int count = updateBySql(nativeSql, names, values);*/
+		Query query = em.createNativeQuery(nativeSql.toString());
+		query.setParameter("status", status);
+		query.setParameter("userId", userId);
+		query.setParameter("preStatus", preStatus);
+		int result = query.executeUpdate();
+		return result;
+	}
+	
+	@Override
+    public void modifyRealnameStatus(long userId, String status) {
+        String nativeSql = "UPDATE t_jsd_user_identify " + "SET real_name_status = :status , real_name_verify_time = now() " + "WHERE user_id = :userId ";
+        String[] names = new String[] { "status", "userId"};
+        Object[] values = new Object[] { status, userId};
+        int count = updateBySql(nativeSql, names, values);
+        if (count != 1) {
+            throw new UserException("更新用户实名认证状态失败！", 1);
+        }
+        this.refresh(this.findByUserId(userId));
+    }
+	
+	// JSDP-104 BUG邮箱认证时间  孙晓勇  2015年4月28日
+	@Override
+	public void modifyEmailStatus(long userId, String status, String preStatus) {
+		String nativeSql = "UPDATE t_jsd_user_identify " + "SET email_status = :status , email_verify_time = now() " + "WHERE user_id = :userId "
+				+ "AND email_status = :preStatus";
+		String[] names = new String[] { "status", "userId", "preStatus" };
+		Object[] values = new Object[] { status, userId, preStatus };
+		int count = updateBySql(nativeSql, names, values);
+		if (count != 1) {
+			throw new UserException("更新用户邮箱激活状态失败！", 1);
+		}
+		this.refresh(this.findByUserId(userId));
+	}
+	// JSDP-104 BUG邮箱认证时间  孙晓勇  2015年4月28日
+
+	@Override
+	public void modifyMobilePhoneStatus(long userId, String status, String preStatus) {
+		String nativeSql = "UPDATE t_jsd_user_identify " + "SET mobile_phone_status = :status "
+				+ "WHERE user_id = :userId " + "AND mobile_phone_status = :preStatus";
+		String[] names = new String[] { "status", "userId", "preStatus" };
+		Object[] values = new Object[] { status, userId, preStatus };
+		int count = updateBySql(nativeSql, names, values);
+		if (count != 1) {
+			throw new UserException("更新用户手机绑定状态失败！", 1);
+		}
+		this.refresh(this.findByUserId(userId));
+	}
+	@Override
+    public void modifyMobilePhoneStatus(long userId, String status) {
+        String nativeSql = "UPDATE t_jsd_user_identify " + "SET mobile_phone_status = :status , mobile_phone_verify_time =now() "
+                + "WHERE user_id = :userId " ;
+        String[] names = new String[] { "status", "userId" };
+        Object[] values = new Object[] { status, userId};
+        int count = updateBySql(nativeSql, names, values);
+        if (count != 1) {
+            throw new UserException("更新用户手机绑定状态失败！", 1);
+        }
+        this.refresh(this.findByUserId(userId));
+    }
+	@Override
+	public UserIdentifyModel getUserIdentifyByUserId(long userId) {
+		String sql = "SELECT user.user_name,attestation.* FROM t_jsd_user AS  user," + "t_jsd_user_identify AS attestation "
+				+ "WHERE user.user_id=attestation.user_id AND attestation.user_id =:userId";
+		String[] names = new String[] { "userId" };
+		Object[] values = new Object[] { userId };
+		return findForUniqueBySql(sql, names, values, UserIdentifyModel.class);
+	}
+
+	@Override
+	public void userAttestationEdit(long id, String realNameVerifyRemark, String realNameStatus, Operator operator) {
+		String jpql = "UPDATE UserIdentify SET realNameStatus = :realNameStatus, realNameVerfiyTime = NOW() "
+				+ "realNameVerifyTime= :realNameVerifyTime WHERE id = :id";
+		Query query = em.createQuery(jpql);
+		query.setParameter("realNameStatus", realNameStatus);
+		query.setParameter("realNameVerifyTime", new Date());
+		query.setParameter("id", id);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("实名认证审核失败！");
+		}
+	}
+
+	@Override
+	public int countByRealName(String status) {
+		QueryParam param = QueryParam.getInstance().addParam("realNameStatus", status);
+		return countByCriteria(param);
+	}
+
+	@Override
+	public int countByMobilePhone(String mobilePhone) {
+		QueryParam param = QueryParam.getInstance().addParam("user.mobilePhone", mobilePhone)
+				.addParam("mobilePhoneStatus", 1);
+		return countByCriteria(param);
+	}
+
+	@Override
+	public int countByEmail(String email) {
+		QueryParam param = QueryParam.getInstance().addParam("user.email", email).addParam("emailStatus", 1);
+		return countByCriteria(param);
+	}
+
+	@Override
+	public int countByVerifyOkCardNo(String cardId) {
+		QueryParam param = QueryParam.getInstance().addParam("user.cardNO", cardId)
+				.addParam("realNameStatus", 83);
+		return countByCriteria(param);
+	}
+	@Override
+	public int countByCardNo(String cardId) {
+		QueryParam param = QueryParam.getInstance().addParam("user.cardNO", cardId);
+		return countByCriteria(param);
+	}
+	
+	/**
+	 * 查询实名认证用户数——投资人(加注销用户)
+	 * @author 孙晓勇
+	 */
+	@Override
+	public int countTenderByRealName(String status) {
+
+		String sql = "SELECT COUNT(*) FROM t_jsd_user_identify t1,t_jsd_user_cache t3 WHERE t1.user_id = t3.user_id AND t1.real_name_status = :Status AND t3.user_type = '10'";
+		Query query = em.createNativeQuery(sql).setParameter(
+				"Status", status);
+		Object totalObj = query.getSingleResult();
+		if (totalObj != null) {
+			
+			return (int)Double.parseDouble(query.getSingleResult().toString());
+			
+		}
+		return 0;
+		
+	}
+
+	@Override
+	public boolean findFinishIdentify(long userId) {
+		String sql = "SELECT ui.* FROM t_jsd_user_identify ui WHERE ui.real_name_status = '83' "
+					+"AND ui.email_status = '81' "
+      				+"AND ui.mobile_phone_status = '86' and ui.user_id=:userId ";
+		Query query = em.createNamedQuery(sql);
+		query.setParameter("userId", userId);
+		Object object = query.getSingleResult();
+		if(null != object){
+			return true;
+		}
+		return false;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<UserIdentifyModel> excelListUserIdentifyInfo(UserIdentifyModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT u.user_id,u.user_name,u.real_name,");
+		sql.append(" CASE  ui.email_status  WHEN  '80' THEN '未认证' WHEN  '81' THEN '已认证' WHEN  '89' THEN '认证未通过' ELSE '不确定' END AS userEmailStatus,");
+		sql.append(" CASE  ui.mobile_phone_status  WHEN  '85' THEN '未认证' WHEN  '86' THEN '已认证'   WHEN  '87' THEN '认证未通过' ELSE '不确定' END AS  userPhoneStatus,");
+		sql.append(" DATE_FORMAT(ui.mobile_phone_verify_time,'%Y-%m-%d %T') phoneVerifyTime,  ");
+		sql.append(" CASE  ui.real_name_status  WHEN  '82' THEN '未认证' WHEN  '83' THEN '已认证' WHEN  '88' THEN '认证待审核'  WHEN  '84' THEN '认证未通过' ELSE '不确定' END AS userRealName, ");
+		sql.append(" DATE_FORMAT(ui.real_name_verify_time,'%Y-%m-%d %T') realNameVerifyTime ");
+		sql.append(" FROM `t_jsd_user` u,`t_jsd_user_identify` ui ");
+		sql.append(" WHERE u.user_id = ui.user_id");
+		
+		if(!StringUtil.isBlank(model.getUserName())){
+			sql.append("  AND u.user_name  like '%"+model.getUserName()+"%'  ");
+		}
+		if(!StringUtil.isBlank(model.getRealName())){
+			sql.append("  AND u.real_name ='"+model.getRealName()+"'  ");
+		}
+		if (StringUtils.isNotEmpty(model.getEmailStatus()) && !"99".equals(model.getEmailStatus())) {
+			sql.append("  AND ui.email_status ='"+model.getEmailStatus()+"'  ");
+		}
+		if (StringUtils.isNotEmpty(model.getMobilePhoneStatus()) && !"99".equals(model.getMobilePhoneStatus())) {
+			sql.append("  AND ui.mobile_phone_status ='"+model.getMobilePhoneStatus()+"'  ");
+		}
+		if (StringUtils.isNotEmpty(model.getRealNameStatus()) && !"99".equals(model.getRealNameStatus())) {
+			sql.append("  AND ui.real_name_status ='"+model.getRealNameStatus()+"'  ");
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append("  AND u.add_time >= '"+model.getStartTime()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getEndTime())){
+			sql.append("  AND u.add_time < '"+model.getEndTime()+"'  ");
+		}
+		sql.append("  ORDER BY u.user_id DESC");
+		
+	      Query query = em.createNativeQuery(sql.toString());
+	     
+			List userList = query.getResultList();
+			return userList;
+			//JSDP-116 fengguoqin 2015-05-19 end
+	}
+	
+	
+}

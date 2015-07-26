@@ -1,0 +1,75 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.worker;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.dao.AccountRechargeDao;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：平台给借款人转账【作为还款之用】
+ * @作者：wangchangwei@ddtkj.com  JSDBET-943   JSDP-37
+
+ * @创建时间：2015年4月14日 
+ */
+public class BorrowRepayTransferWorker extends BaseTransferWorker{
+
+	/**
+	 * @param atm
+	 */
+	public BorrowRepayTransferWorker(AccountTransferModel atm) {
+		super(atm);
+	}
+
+	/**
+	 * @param atm
+	 * @param ac
+	 */
+	public BorrowRepayTransferWorker(AccountTransferModel atm,
+			AccountTransfer ac) {
+		super(atm, ac);
+	}
+
+	@Override
+	public void transfer() {
+	    double amountIn =at.getTransferAmount();
+		AccountRechargeDao accountRechargeDao = (AccountRechargeDao) BeanUtil.getBean("ymdAccountRechargeDao");
+		AccountRecharge existRecharge=accountRechargeDao.getRechargeByTradeno(at.getTransferNo());
+		existRecharge.setTradeStatus(AccountRecharge.RECHARGE_SUCCESS_STATUS);
+		accountRechargeDao.update(existRecharge);
+		if(existRecharge!=null&&existRecharge.getInAccountAmount()>0){
+			Map<String, Object> map=new HashMap<String, Object>();
+			User u=existRecharge.getUser();
+			if(u!=null){
+				if(UserConstant.USER_SORT_INVESTOR.equals(u.getUserCache().getUserType())){
+					//投资人
+				}else{
+					//借款人
+					map.put("borrowerRechargeMoney", amountIn);
+					Global.setTransfer("transferAmount", existRecharge.getInAccountAmount());
+					Global.setTransfer("transferNo", existRecharge.getTradeNo());
+					Global.setTransfer("user", existRecharge.getUser());
+					AbstractExecuter executer = ExecuterHelper.doExecuter("accountTransferBorrowerExecuter");
+					executer.execute(map, atm.getUser(),atm.getPopUser());
+				}
+				super.transfer();  //第三方转账
+			}else{
+				throw new BussinessException("收款人不存在，请联系管理员",1);
+			}
+		}else{
+			throw new BussinessException("平台转账金额不能小于等于0",1);
+		}
+	}
+}

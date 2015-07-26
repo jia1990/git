@@ -1,0 +1,40 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.dao.impl;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.user.dao.UserRealnameApplicationDao;
+import com.ddtkj.p2psys.user.domain.UserRealnameApplication;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.ddtkj.p2psys.user.model.UserRealnameApplicationModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+/**
+ * @描述：用户实名认证申请Dao
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月29日 
+ */
+@Repository("userRealnameApplicationDao")
+public class UserRealnameApplicationDaoImpl extends BaseDaoImpl<UserRealnameApplication> implements UserRealnameApplicationDao{
+
+	@Override
+	public void modifyUserRealnameApplicationStatus(UserRealnameApplicationModel model)
+			throws Exception {
+
+		String sql = "UPDATE UserRealnameApplication SET status = :status, remark = :remark, operateUser = :operateUser,operateTime =now() WHERE user.userId = :userId";
+		Query query = em.createQuery(sql);
+		query.setParameter("status", model.getStatus());
+		query.setParameter("remark", model.getRemark());
+		query.setParameter("userId", model.getUser().getUserId());
+		query.setParameter("operateUser",model.getOperateUser() );
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new UserException("更新审核状态失败！", 1);
+		}
+	}
+
+}

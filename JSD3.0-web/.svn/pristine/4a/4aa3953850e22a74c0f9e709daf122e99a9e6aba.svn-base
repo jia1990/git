@@ -1,0 +1,384 @@
+
+package com.rongdu.p2psys.web.score;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.activity.domain.ActivityGoods;
+import com.ddtkj.p2psys.activity.service.ActivityGoodsService;
+import com.ddtkj.p2psys.score.constant.EnumAwardErrorType;
+import com.ddtkj.p2psys.score.domain.AwardDisplay;
+import com.ddtkj.p2psys.score.domain.AwardResult;
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.service.ScoreAwardService;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.Base64;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述: 前台抽奖核心action
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-31   
+ */
+public class ScoreAwardAction extends BaseAction implements ModelDriven<ScoreRuleAward> {
+
+	@Resource
+	private ScoreRuleAwardService scoreRuleAwardService;
+	@Resource
+	private ScoreAwardService scoreAwardService;
+	@Resource
+	private UserScoreAwardService userScoreAwardService;
+	@Resource
+	private ScoreService scoreService;
+	@Resource
+	private UserService userService;
+
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private ActivityGoodsService activityGoodsService;
+	
+	
+	ScoreRuleAward model = new ScoreRuleAward();
+	Map<String, Object> data = new HashMap<String, Object>();
+	private User user;
+	
+	public ScoreRuleAward getModel() {
+		return model;
+	}
+	
+
+	/**
+	 * 抽奖核心方法
+	 * @return 抽奖结果信息
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/award")
+	public String award() throws Exception {
+		// 1. 判断用户是否登录
+		user = getSessionUser();
+		if (user == null) {
+			awardPrintJson(EnumAwardErrorType.RESULT_NO_LOGIN);
+			return null;
+		}
+		
+		// 2. 判断ruleId	
+		String id = paramString("id");
+		String paramId = "";
+		if (StringUtil.isNotBlank(id)) {
+			paramId = new String(Base64.decode(id.toCharArray()));	
+		}
+		long ruleId = StringUtil.toLong(paramId);
+		if (ruleId == 0) {
+			awardPrintJson(EnumAwardErrorType.RESULT_INVALID_RULE_ID);
+			return null;
+		}
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByRuleId(ruleId);
+		if(!ScoreRuleAward.ACTIVITY_TYPE_SCOREAWARD.equals(ruleAward.getActivityType())){
+			awardPrintJson(EnumAwardErrorType.RESULT_INVALID_ACTIVITY_TYPE);
+			return null;
+		}
+		// 3. 判断用户认证
+		/*AutoTenderConfRuleCheck check = (AutoTenderConfRuleCheck) Global
+				.getRuleCheck(EnumRuleNid.AUTO_TENDER_CONF.getValue());
+		UserIdentify attestation = userIdentifyService.findByUserId(user.getUserId());
+		if (check != null && check.getTender_valid() != null) {
+			if (check.getTender_valid().getStatus() == AutoTenderConfRuleCheck.STATUS_VALID_ENABLE) {
+				if (check.getTender_valid().getReal_enable() == AutoTenderConfRuleCheck.STATUS_REAL_ENABLE
+						&& !"83".equals(attestation.getRealNameStatus())) {
+					awardPrintJson(EnumAwardErrorType.RESULT_REAL_NO_AUTHENTICATION);
+					return null;
+				}
+				if (check.getTender_valid().getEmail_enable() == AutoTenderConfRuleCheck.STATUS_EMAIL_ENABLE
+						&& !"81".equals(attestation.getEmailStatus())) {
+					awardPrintJson(EnumAwardErrorType.RESULT_EMAIL_NO_AUTHENTICATION);
+					return null;
+				}
+				if (check.getTender_valid().getPhone_enable() == AutoTenderConfRuleCheck.STATUS_PHONE_ENABLE
+						&& !"86".equals(attestation.getMobilePhoneStatus())) {
+					awardPrintJson(EnumAwardErrorType.RESULT_PHONE_NO_AUTHENTICATION);
+					return null;
+				}
+			}
+		}*/
+		
+		// 开始抽奖
+		AwardResult result = scoreAwardService.award(ruleId, user, 0);
+		data.put("data", result);
+		printJson(getStringOfJpaObj(data));	
+		//JSDP-86 wcw 2015-05-05 start
+		data = null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 抽奖页面初始化
+	 * @return 抽奖规则
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/index")
+	public String index() throws Exception {
+		long ruleId = paramLong("id");
+		ScoreRuleAward ruleAward = null;
+		Score score = null;
+		if (ruleId != 0) {
+			ruleAward = scoreRuleAwardService.getRuleAwardByRuleId(ruleId);
+		}
+		if(isSession()){
+			score = scoreService.getScoreByUserId(getSessionUserId());
+		}
+		List<ScoreAward> list = scoreAwardService.getAwardObjectListByRuleId(ruleId);
+		request.setAttribute("ruleAward", ruleAward);
+		request.setAttribute("awardObjectList", list);
+		request.setAttribute("score", score);
+		return "detailPage";
+	}
+	
+	/**
+	 * 显示所有中奖记录
+	 * @return forward信息
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/getAwardList")
+	public void getAwardList() throws Exception {
+		long ruleId = paramLong("id");
+		int luxuryAward = paramInt("luxuryAward");
+		boolean isOrderByLevel = false;
+		if (!"".equals(paramString("level"))) {
+			isOrderByLevel = true;
+		}
+		List<AwardDisplay> list = getScoreAwardedList(ruleId, isOrderByLevel, luxuryAward);
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 取得中奖名单
+	 * @param ruleId 规则ID
+	 * @param isOrderByLevel 是否按中奖级别排序
+	 * @param luxuryAward 豪华大奖
+	 * @return 中奖名单列表
+	 */
+	private List<AwardDisplay> getScoreAwardedList(long ruleId, boolean isOrderByLevel, int luxuryAward) {
+		List<UserScoreAward> list = userScoreAwardService.getScoreAwardedList(ruleId, 20, isOrderByLevel);
+	//	List<UserScoreAward> list = userScoreAwardService.getScoreAwardedList(ruleId, 30, isOrderByLevel, luxuryAward);
+		List<AwardDisplay> result = new ArrayList<AwardDisplay>();
+		for (UserScoreAward userAward : list) {
+			AwardDisplay awardDisplay = new AwardDisplay();
+			String userName = userAward.getUser().getNickname();
+			if(userName.length() > 8){
+				awardDisplay.setUserName(StringUtil.hideLastChar(userName.substring(0, 8), 3));
+			}else{
+				awardDisplay.setUserName(StringUtil.hideLastChar(userName, 3));
+			}
+			awardDisplay.setAward(userAward.getAwardName());
+			awardDisplay.setTime(DateUtil.dateStr(userAward.getAddTime(),"yyyy-MM-dd&hh:mm:ss"));
+			result.add(awardDisplay);
+		}
+		return result;
+	}
+	
+	
+	/**
+	 * 输出JSON对象
+	 * @param EnumAwardErrorType 错误类型
+	 * @throws Exception 异常
+	 */
+	private void awardPrintJson(EnumAwardErrorType type) throws Exception {
+		AwardResult result = new AwardResult();
+		result.setError(type);
+		data.put("data", result);
+		printJson(getStringOfJpaObj(data));	
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 金锤子页面初始化
+	 * @return 抽奖规则
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/goldIndex")
+	public String goldHammerIndex() throws Exception {
+		long ruleId = paramLong("id");
+		user = getSessionUser();
+		ScoreRuleAward ruleAward = null;
+		ActivityGoods goldHammer = null;
+		if (ruleId != 0) {
+			ruleAward = scoreRuleAwardService.getRuleAwardByRuleId(ruleId);
+		}
+		if(isSession()){
+			goldHammer = activityGoodsService.findActivityGoodsByUserId(getSessionUserId(), ActivityGoods.GOODS_TYPE_ID_JCZ);
+		}
+		if(goldHammer == null && user != null){
+			goldHammer = new ActivityGoods(user, ActivityGoods.GOODS_TYPE_ID_JCZ, ActivityGoods.GOODS_TYPE_NAME_JCZ);
+			goldHammer = activityGoodsService.saveActivityGoods(goldHammer);
+		}
+		List<ScoreAward> list = scoreAwardService.getAwardObjectListByRuleId(ruleId);
+		request.setAttribute("ruleAward", ruleAward);
+		request.setAttribute("awardObjectList", list);
+		request.setAttribute("goldHammer", goldHammer);
+		return "goldHammer";
+	}
+	
+	/**
+	 * 抽奖核心方法
+	 * @return 抽奖结果信息
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/goldAward")
+	public String goldHammerAward() throws Exception {
+		// 1. 判断用户是否登录
+		user = getSessionUser();
+		if (user == null) {
+			awardPrintJson(EnumAwardErrorType.RESULT_NO_LOGIN);
+			return null;
+		}
+		
+		// 2. 判断ruleId 和  抽奖活动类型
+		String id = paramString("id");
+	/*	String paramId = "";
+		if (StringUtil.isNotBlank(id)) {
+			paramId = new String(Base64.decode(id.toCharArray()));	
+		}
+		long ruleId = StringUtil.toLong(paramId);*/
+		long ruleId = StringUtil.toLong(id);
+		if (ruleId == 0) {
+			awardPrintJson(EnumAwardErrorType.RESULT_INVALID_RULE_ID);
+			return null;
+		}
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByRuleId(ruleId);
+		if(!ScoreRuleAward.ACTIVITY_TYPE_GOLDHAMMER.equals(ruleAward.getActivityType())){
+			awardPrintJson(EnumAwardErrorType.RESULT_INVALID_ACTIVITY_TYPE);
+			return null;
+		}
+		
+		// 开始砸金蛋
+		AwardResult result = scoreAwardService.goldHammerAward(ruleId, user, 0);
+		data.put("data", result);
+		printJson(getStringOfJpaObj(data));	
+		data = null;
+		return null;
+	}
+	
+	/**
+	 * 显示所有砸金蛋中奖记录
+	 * @return forward信息
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/getGeAwardList")
+	public void getGoldEggAwardList() throws Exception {
+		long ruleId = paramLong("id");
+		boolean isOrderByLevel = false;
+		int displayNum = paramInt("displayNum");
+		if (!"".equals(paramString("level"))) {
+			isOrderByLevel = true;
+		}
+		List<AwardDisplay> list = getGoldEggAwardedList(ruleId, isOrderByLevel, displayNum);
+		data.put("gedata", list);
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+
+	/**
+	 * 取得中奖名单
+	 * @param ruleId 规则ID
+	 * @param isOrderByLevel 是否按中奖级别排序
+	 * @param displayNum 显示条数
+	 * @return 中奖名单列表
+	 */
+	private List<AwardDisplay> getGoldEggAwardedList(long ruleId, boolean isOrderByLevel, int displayNum) {
+		if (displayNum >= 50 || displayNum <= 0) {
+			displayNum = 50;
+		}
+		List<UserScoreAward> list = userScoreAwardService.getScoreAwardedList(ruleId, displayNum, isOrderByLevel);
+		List<AwardDisplay> result = new ArrayList<AwardDisplay>();
+		if (list != null && list.size() > 0) {
+			for (UserScoreAward userAward : list) {
+				AwardDisplay awardDisplay = new AwardDisplay();
+				String userName = userAward.getUser().getNickname();
+				if(userName.length() > 8){
+					awardDisplay.setUserName(StringUtil.hideLastChar(userName.substring(0, 8), 3));
+				}else{
+					awardDisplay.setUserName(StringUtil.hideLastChar(userName, 3));
+				}
+				awardDisplay.setAward(userAward.getAwardName());
+				awardDisplay.setTime(DateUtil.dateStr(userAward.getAddTime(),"yyyy-MM-dd&hh:mm:ss"));
+				result.add(awardDisplay);
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * 显示登录用户砸金蛋中奖记录
+	 * @return forward信息
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/getMyGeAwardList")
+	public void getMyGoldEggAwardList() throws Exception {
+		long ruleId = paramLong("id");
+		int displayNum = paramInt("num");
+		if (ruleId >= 0) {
+			ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByRuleId(ruleId);
+			if(ruleAward != null && ScoreRuleAward.ACTIVITY_TYPE_GOLDHAMMER.equals(ruleAward.getActivityType())){
+				List<AwardDisplay> list = getMyGoldEggAwardedList(ruleId, getSessionUserId(), displayNum);
+				data.put("mygedata", list);
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+
+	/**
+	 * 取得中奖名单
+	 * @param ruleId 规则ID
+	 * @param userId 用户ID
+	 * @return 中奖名单列表
+	 */
+	private List<AwardDisplay> getMyGoldEggAwardedList(long ruleId, long userId, int displayNum) {
+		if (displayNum >= 20 || displayNum <= 0) {
+			displayNum = 20;
+		}
+		List<UserScoreAward> list = userScoreAwardService.getMyAwardList(ruleId, userId, displayNum);
+		List<AwardDisplay> result = new ArrayList<AwardDisplay>();
+		if (list != null && list.size() > 0) {
+			for (UserScoreAward userAward : list) {
+				AwardDisplay awardDisplay = new AwardDisplay();
+				String userName = userAward.getUser().getNickname();
+				if(userName.length() > 8){
+					awardDisplay.setUserName(StringUtil.hideLastChar(userName.substring(0, 8), 3));
+				}else{
+					awardDisplay.setUserName(StringUtil.hideLastChar(userName, 3));
+				}
+				awardDisplay.setAward(userAward.getAwardName());
+				awardDisplay.setTime(DateUtil.dateStr(userAward.getAddTime(),"yyyy-MM-dd&hh:mm:ss"));
+				result.add(awardDisplay);
+			}
+		}
+		return result;
+	}
+	
+}

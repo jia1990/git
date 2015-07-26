@@ -1,0 +1,1333 @@
+package com.ddtkj.mobile.action;
+
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.common.fastjson.FastjsonMobileUtil;
+import com.ddtkj.mobile.MobileBaseAction;
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.ddtkj.p2psys.redpacket.model.RpUserLogModel;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpUseLogService;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.domain.UserLoginHisotry;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.account.model.accountlog.BaseAccountLog;
+import com.rongdu.p2psys.account.model.accountlog.noac.GetCodeLog;
+import com.rongdu.p2psys.account.service.AccountBankService;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.cooperation.service.CooperationLoginService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.rule.LoginRuleCheck;
+import com.rongdu.p2psys.core.rule.ScoreProduceRuleCheck;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.score.constant.ScoreTypeConstant;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.score.model.ScoreLogModel;
+import com.rongdu.p2psys.score.service.ScoreLogService;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserLoginHisotryService;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class UserPageAction extends MobileBaseAction{
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserLoginHisotryService  userLoginHisotryService;
+	@Resource
+	private BorrowCollectionService borrowCollectionService;
+	@Resource
+	private RpProduceService rpProduceService;
+	@Resource
+	private RpUseLogService rpUseLogService;
+	@Resource
+	private AccountBankService accountBankService;
+	@Resource
+	private DictService dictService;
+	@Resource
+	private NoticeService noticeService;
+	@Resource
+	private RegionService regionServcie;
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	
+	@Resource
+	private YmdService ymdService;
+	
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private CooperationLoginService cooperationLoginService;
+	@Resource
+	private ScoreService scoreService ;
+	@Resource
+	private ScoreLogService scoreLogService ;
+	@Resource
+	private BorrowTenderService tenderService;
+	User user;
+	
+	/** 积分规则 */
+	private ScoreProduceRuleCheck spRuleCheck = (ScoreProduceRuleCheck) Global.getRuleCheck("scoreProduce");
+
+	
+	UserModel model=new UserModel();
+	//我的账号 - 取得或校验图片验证码
+	public String pic_code() throws Exception {
+		return null;
+	}
+
+	//我的账号 - 取得或校验短信验证码（郭俊辉）
+	@Action("/jsdmobile/sms_code")
+	public String sms_code() throws Exception {
+		String flag = paramString("flag") ;
+		data = new HashMap<String, Object>() ;
+		String sms_code = paramString("sms_code");
+		String mobliePhone = paramString("phone");
+		String nid = paramString("purpose");
+		
+		Long userId = paramLong("uid");
+		user = userService.find(userId);
+		if(null == user){
+			user = userService.getUserByMobilePhone(mobliePhone);
+		}
+		
+		if(sms_code == null || sms_code.equals("")){//判断是否存在验证码,不存在表示进行发送验证码,存在表示校验验证码
+			try{
+				if(StringUtils.isNotEmpty(flag) && "voice".equals(flag)){
+					// TODO  于俊斐   发送语音验证码
+					
+				}else{
+					if(user == null){
+						BaseAccountLog blog = new GetCodeLog(null, null, null, mobliePhone,nid);
+						blog.initCode(nid);
+						blog.doEvent();
+					}else{
+						BaseAccountLog blog = new GetCodeLog(user, user.getUserName(), null, mobliePhone,nid);
+						blog.initCode(nid);
+						blog.doEvent();
+					}
+				}
+				data.put("res_code", "1");
+				data.put("res_msg", "发送成功");
+				
+			}catch(Exception e){
+				data.put("res_code", "0");
+				data.put("res_msg", "发送失败");
+			}
+		}else{
+			UserModel um = (UserModel) paramModel(UserModel.class);
+			try{
+				if(user != null){
+					um.setCode(sms_code);
+					um.findPaypwdValidMobile(nid,user);
+					data.put("res_code", "1");
+					data.put("res_msg", "验证成功");
+				}else{
+					Map<String, Object> map = (Map<String, Object>) request.getSession().getAttribute(nid + "_code");
+					
+					long verifyTime = noticeService.getNoticeAddTime(nid,mobliePhone);//获取发送时间
+					long vtime = StringUtil.toLong(Global.getValue("verify_code_time"));//获取系统时间
+					String todo_ = StringUtil.isNull(map.get("todo"));
+					String code_ = StringUtil.isNull(map.get("code"));
+					if(code_.equals(sms_code) && (System.currentTimeMillis() - verifyTime < vtime * 1000)){
+						data.put("res_code", "1");
+						data.put("res_msg", "验证成功");
+					}else{
+						data.put("res_code", "0");
+						data.put("res_msg", "验证失败");
+					}
+				}
+				
+			}catch(Exception e){
+				data.put("res_code", "0");
+				data.put("res_msg", "验证失败");
+			}
+		}
+		printMap(data); 
+		return null;
+	}
+	
+	//我的账号 - 取得或校验邮箱验证码（郭俊辉）
+	@Action("/jsdmobile/email_code")
+	public String email_code() throws Exception {		
+		String flag = paramString("flag") ;
+		data = new HashMap<String, Object>() ;
+		String email_code = paramString("email_code");
+		String email = paramString("email");
+		String nid = paramString("purpose");
+		
+		Long userId = paramLong("uid");
+		user = userService.find(userId);
+		if(null == user){
+			user = userService.getUserByEmail(email);
+		}
+		
+		if(email_code == null || email_code.equals("")){//判断是否存在验证码,不存在表示进行发送验证码,存在表示校验验证码
+			/*if(user == null){
+				UserModel userModel = (UserModel) request.getSession().getAttribute("userModel");
+				if(userModel != null){
+					
+				}else{
+					data.put("res_code", "0");
+					data.put("res_msg", "注册失败");
+				}
+			}else{
+				
+			}*/
+			try{
+				if(StringUtils.isNotEmpty(flag) && "voice".equals(flag)){
+					// TODO  于俊斐   发送语音验证码
+					
+				}else{
+					if(user == null){
+						BaseAccountLog blog = new GetCodeLog(null, null, email, null,nid);
+						blog.initCode(nid);
+						blog.doEvent();
+					}else{
+						BaseAccountLog blog = new GetCodeLog(user, user.getUserName(), email, null,nid);
+						blog.initCode(nid);
+						blog.doEvent();
+					}
+				}
+				data.put("res_code", "1");
+				data.put("res_msg", "发送成功");
+				
+			}catch(Exception e){
+				data.put("res_code", "0");
+				data.put("res_msg", "发送失败");
+			}
+		}else{
+			UserModel um = (UserModel) paramModel(UserModel.class);
+			try{
+				um.setCode(email_code);
+				um.findPaypwdNewValidEmail(nid,user,email);
+				data.put("res_code", "1");
+				data.put("res_msg", "验证成功");
+				
+			}catch(Exception e){
+				data.put("res_code", "0");
+				data.put("res_msg", "验证失败");
+			}
+		}
+		printMap(data); 
+		return null;
+	}
+	
+	// 我的账号 - 登录或获取账户信息
+	@Action("/jsdmobile/user_login")
+	public String user_login() throws IOException  {
+		data = new HashMap<String, Object>();
+		User loginUser = null;
+		//新登录
+		Long userId = paramLong("uid");
+		String userName = paramString("username");
+		String password = paramString("password");
+		String userToken = paramString("oauth_token");
+		model.setUserName(userName);
+		model.setPassword(password);
+		
+		DecimalFormat df = new DecimalFormat("0.##");
+		
+	    //用户名或密码为空验证
+		try {
+			if(StringUtil.isNotBlank(userName) && StringUtil.isNotBlank(password)){
+				model.validLoginModel();
+				loginUser=userService.getUserByInfo(model.getUserName());
+			}else{
+				loginUser = userService.find(userId);
+			}
+			UserLoginHisotry userLoginHisotry=null;
+			if (loginUser != null) {
+				User user =null;
+				
+				//通过用户名与密码进行登录
+				if(StringUtil.isNotBlank(userName) && StringUtil.isNotBlank(password)){
+					user = userService.doLogin(model.prototype(),paramInt("encrypt"));
+					
+				}else{ //通过uid与token进行登录
+					if(MD5.encode(loginUser.getUserId() + this.getRequest().getSession(true).getId()).equals(userToken)){
+						user = loginUser;					
+					}else{
+						throw new Exception("会话已过期,请退出后重新登录!");
+					}
+				}
+				if(user != null){
+					
+					//只有投资人可以登录
+					if(!"10".equals(user.getUserCache().getUserType())){
+						throw new Exception("只有投资用户可以通过手机客户端登录!");
+					}
+									
+					//判断登录方式,是否账户已锁定
+					//userCorrectOperation(user);
+					if(!"NN".equals(user.getIsLocked())){
+						throw new Exception("您的账户已被锁定,请联系客服!");
+					}
+					
+					//添加用户登录日志
+					userLoginHisotry = new UserLoginHisotry(user, model.getUserName(), new Date(), "A", getRequestIp(), "Y", null);
+					userLoginHisotryService.save(userLoginHisotry);
+					
+					//构造json响应消息
+					data.put("userId", user.getUserId());
+					data.put("userName", user.getUserName());
+					
+					String oauth_token = MD5.encode(user.getUserId() + this.getRequest().getSession(true).getId());
+					data.put("oauth_token", oauth_token);
+					
+					data.put("expires_in", "7200");
+					
+					if("86".equals(user.getUserIdentify().getMobilePhoneStatus())){
+						data.put("mobilePhone", user.getMobilePhone());
+					}else{
+						data.put("mobilePhone", "");
+					}
+					
+					if("81".equals(user.getUserIdentify().getEmailStatus())){
+						data.put("email", user.getEmail());
+					}else{
+						data.put("email", "");
+					}
+					
+					data.put("realName", user.getRealName());
+					data.put("cardNO", user.getCardNO());
+					
+					if("83".equals(user.getUserIdentify().getRealNameStatus())){
+						String thirdPartyAccount = user.getThirdPartyAccount();
+						if(null == thirdPartyAccount){
+							thirdPartyAccount="";
+						}
+						data.put("thirdPartyAccount", thirdPartyAccount);
+					}else{
+						data.put("thirdPartyAccount", "");
+					}					
+					
+					data.put("thirdPartyAddress", Global.getValue("ymd_submit_test_url"));
+					data.put("thirdPartyIsOpen", user.getThirdPartyIsOpen());
+					data.put("thirdPartyOpenCount", user.getThirdPartyOpenCount());
+					data.put("thirdPartyUseable", user.getThirdPartyUseable());
+					
+					data.put("paypwd_state", StringUtils.isNotEmpty(user.getPaypwd()));
+					
+					Score score = scoreService.getScoreByUserId(user.getUserId());		
+					
+					UserCache userCache = userCacheService.findByUserId(user.getUserId());
+					data.put("secondContactRealname", userCache.getSecondContactRealname());
+					data.put("secondContactPhone", userCache.getSecondContactPhone());
+					data.put("relationships", userCache.getRelationships());
+									
+					Account account= accountService.findByUser(user.getUserId());
+					data.put("leijishouyi",df.format(borrowCollectionService.accumulatedNetIncome(user)));        //累计收益
+				    data.put("accountTotal", df.format(account.getAccountTotal()));                    //账户总额 = 可用余额+冻结总额+待收总额
+					data.put("chongzhizonge", df.format(accountRechargeService.getRechargeSummary(user.getUserId()).getRechargeTotal()));        //充值总额
+					data.put("collectionTotal", df.format(account.getCollectionTotal()));              //待收总额  = 待收本金+待收利息
+				    data.put("usableAccount", df.format(account.getUsableAccount()));                  //可用余额
+					data.put("freezeAccount",df.format(account.getFreezeAccount()));                   //冻结总额
+					data.put("totalScore", score.getTotalScore());                          //积分总额
+	           					
+					String nid = "account_bank";				
+					List<Dict> dictList = dictService.list(nid);
+					List<AccountBank> bankList = accountBankService.list(user.getUserId());	
+					List<HashMap<String, Object>> bankArray = new ArrayList<HashMap<String, Object>>();
+					for(int i=0; i<bankList.size(); i++){
+						HashMap<String, Object> bankMap = new HashMap<String, Object>();
+						bankArray.add(bankMap);
+						bankMap.put("id", bankList.get(i).getId());
+						String bank = bankList.get(i).getBank();
+						for(int j=0; j<dictList.size(); j++){
+							if(dictList.get(j).getValue().equals(bank)){
+								bank = dictList.get(j).getName();
+								break;
+							}
+						}
+						bankMap.put("bank", bank);
+						bankMap.put("bankNo", bankList.get(i).getBankNo());
+						bankMap.put("branch", bankList.get(i).getBranch());
+						bankMap.put("bankProvince", bankList.get(i).getProvince());
+						bankMap.put("bankCity", bankList.get(i).getCity());	
+					}
+					data.put("bankcard_array", bankArray);
+					
+					data.put("res_code", "1");
+					data.put("res_msg", "登录成功");
+			
+				}else{
+					//添加用户登录日志
+					userLoginHisotry = new UserLoginHisotry(loginUser, model.getUserName(), new Date(), "A", getRequestIp(), "N", "密码错误！");
+					userLoginHisotryService.save(userLoginHisotry);
+					
+					data.put("res_code", "0");
+					data.put("res_msg", "登录失败,用户名或密码错误!");
+				}
+			} else {
+				//userCorrectOperation(loginUser);//用户名密码正确操作
+				data.put("res_code", "0");
+				data.put("res_msg", "登录失败,该用户不存在!");
+			}
+		
+		} catch (Exception e) {
+			e.printStackTrace();
+			data.put("res_code", "0");
+			data.put("res_msg","登录失败 "+e.getMessage());
+		}
+		printMap(data);
+		return null;
+	}
+	
+	/**
+	 * @author 郭俊辉
+	 * 用户名密码正确操作，判断用户锁定状态，未锁定添加用户登录状态
+	 * 
+	 * @param u
+	 *            User对象
+	 * @throws Exception 
+	 */
+	private void userCorrectOperation(User u) throws Exception {
+		UserLoginHisotry userLoginHisotry=null;
+		UserCache userCache = u.getUserCache();
+		UserIdentify userIdentify = userIdentifyService.findByUserId(u
+				.getUserId());
+		LoginRuleCheck loginRule = new LoginRuleCheck();
+		if (UserConstant.USER_LOCK_ADMIN.equals(u.getIsLocked())){//用户被后台管理员锁定不能登录
+			data.put("result", false);
+			data.put("code", "13");
+			data.put("msg", "该账户" + u.getUserName() + "已经被后台管理员锁定！请联系客服！");
+		}else if (UserConstant.USER_LOCK_LOGIN.equals(u.getIsLocked())) {//用户登录错误次数过多锁定
+			//long userLoginNowDayCount = userLoginHisotryService.getLoginNowDayCount(u);
+			long userLoginNowDayCount = userLoginHisotryService.getLoginNowDayCount(u);
+			if(loginRule.getNext_day_auto_unlock_status() == 1){//是否开启第二天清除用户锁定
+				//if(userLoginNowDayCount == 0){//判断当天是否有登录记录，没有的话说明是当天第一次登录那么为用户解锁
+				int lastLoginDate = DateUtil.getTimeDay(u.getLoginTime());
+				int lastLoginMonth =  DateUtil.getTimeMonth(u.getLoginTime());
+				int lastLoginYear =  DateUtil.getTimeYear(u.getLoginTime());
+				Date date = new Date();//当前日期
+				int currentDate =  DateUtil.getTimeDay(date);
+				int currentMonth =  DateUtil.getTimeMonth(date);
+				int currentYear =  DateUtil.getTimeYear(date);
+				if(currentYear >= lastLoginYear && currentMonth >= lastLoginMonth && currentDate > lastLoginDate){//判断当天是否有登录记录，没有的话说明是当天第一次登录那么为用户解锁
+					u.setIsLocked(UserConstant.USER_LOCK_NO);
+					u.setLockRemark(null);
+					u.setLockTime(null);
+					userService.updateUser(u);
+					data.put("result", false);
+					data.put("code", "14");
+					data.put("msg", "该账户" + u.getUserName() + "已经解锁！请重新登录！");
+				}else{
+					data.put("result", false);
+					data.put("code", "12");
+					data.put("msg", "该账户" + u.getUserName() + "已经被锁定！请点击忘记密码激活用户,或明天再试！");
+				}
+			}else{//为开启第二天清除用户锁定
+				data.put("result", false);
+				data.put("code", "15");
+				data.put("msg", "该账户" + u.getUserName() + "已经被锁定！请点击忘记密码激活用户,或联系客服！");
+			}
+		} else {//未锁定
+			session.put(Constant.SESSION_USER, u);//添加登录状态
+			session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+			session.put("logintime", System.currentTimeMillis());
+			
+			u.setLoginCount(0);//修改登录次数
+			u.setLoginIp(getRequestIp());
+			u.setLoginTime(new Date());
+			UserLoginHisotry userLh = userLoginHisotryService.getLastTimeLogin(u.getUserId()) ;
+			if(userLh!=null){
+				String userlhdate = DateUtil.dateStr2(userLh.getLoginTime()) ;
+				String today = DateUtil.dateStr2(new Date()) ;
+				// 判断今天是否登录过
+				if(!userlhdate.equals(today)){
+					// 添加用户登录 积分奖励
+					  if(spRuleCheck!=null){
+						  Score score = scoreService.getScoreByUserId(u.getUserId()) ;
+						  int scoreCount = (int) spRuleCheck.signScore() ;
+						  // 添加积分
+						  score.setTotalScore(score.getTotalScore()+scoreCount);
+						  score.setValidScore(score.getValidScore()+scoreCount);
+						  scoreService.update(score) ;
+						  // 添加积分日志记录
+						  ScoreLog sl = new ScoreLog(score) ;
+						  sl.setUser(u);
+						  sl.setAddTime(new Date());
+						  sl.setScore(scoreCount);
+						  sl.setScoreTypeName("用户登录");
+						  sl.setScoreTypeNid(ScoreTypeConstant.SCORE_USER_LOGIN);
+						  sl.setType(ScoreTypeConstant.SCORE_USER_LOGIN);
+						  sl.setRemark("用户登录成功，获得"+scoreCount+"个积分。");
+						  scoreLogService.save(sl) ;
+					 }
+				}
+			}
+			userLoginHisotry = new UserLoginHisotry(u, model.getUserName(), new Date(), "A", getRequestIp(), "Y", null);
+			userLoginHisotryService.save(userLoginHisotry);//添加用户登录日志
+			//data.put("result", true);
+			//data.put("code","01" );
+			//data.put("msg", "登录成功！");
+			data.put("userName", u.getUserName());
+			data.put("userType", u.getUserCache().getUserType());//返回用户类型（借款人，投资人，担保公司）
+			data.put("imgurl", "/imgurl.html?userId=" + u.getUserId()
+					+ "&size=middle");//头部图片？
+		}
+	}
+	
+	//我的账号 - 忘记密码（郭俊辉）
+	@Action("/jsdmobile/user_reset_password")
+	public String user_reset_password() throws Exception {
+		User user = userService.getUserByMobilePhone(paramString("mobile"));
+		data = new HashMap<String,Object>();
+		if(user == null){
+			data.put("res_code", "0");
+			data.put("res_msg", "密码重设失败");
+		}else{
+			user.setPassword(com.rongdu.common.util.code.MD5.encode(paramString("newpassword")));
+			userService.save(user);
+			data.put("res_code", "1");
+			data.put("res_msg", "密码重设成功");
+		}
+		printMap(data);
+		return null;
+	}
+	
+	//我的账号 - 注册（郭俊辉）
+	@Action("/jsdmobile/user_register")
+	public String user_register() throws Exception {
+		data = new HashMap<String, Object>();
+		// 判断账户号类型
+		User inviteUser = null;
+		if(StringUtil.isNotBlank(paramString("referrer"))){
+			inviteUser = userService.getUserByInfo(paramString("referrer"));//获取推荐人
+		}
+		model.setUserName(paramString("username"));
+		model.setMobilePhone(paramString("phone"));
+		model.setPassword(paramString("password"));
+		model.setConfirmNewPwd(paramString("password"));
+		model.setAddIp(getRequestIp());
+		
+
+		//JSDP - BUG110  sxy
+		// 增加用户注册方式   2015年5月8日  孙晓勇  start
+		model.setRegisterWay("M");
+		// 增加用户注册方式   2015年5月8日  孙晓勇  end
+		//JSDP - BUG110  sxy
+		
+		
+		UserModel userModel = UserModel.instance(model);
+		try{
+			userModel.validRegModel();
+			userModel.validRegPwdModel();
+			User u = userService.doRegisterNew(userModel.prototype(),inviteUser);
+			if(u != null){
+				data.put("res_code", "1");
+				data.put("res_msg", "注册成功");
+			}else{
+				data.put("res_code", "0");
+				data.put("res_msg", "注册失败");
+			}
+		}catch (Exception e) {
+			data.put("res_code", "0");
+			data.put("res_msg", e.getMessage());
+		}
+		printMap(data);
+		return null;
+	}
+	
+	/**
+	 *@author 李建云 
+	 *我的账号 - 绑定银行卡 
+	 * */
+	@Action("/jsdmobile/user_bankcard")
+	public String user_bankcard() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		long userId = this.paramInt("uid");
+		String fetchbank = this.paramString("fetchbank");
+		String bank = this.paramString("bank");
+		String bankNo = this.paramString("bankNo");
+		String branch = this.paramString("branch");
+		String bankProvince = this.paramString("bankProvince");
+		String bankCity = this.paramString("bankCity");
+		String bankArea = this.paramString("bankArea");
+		
+		//查询银行列表
+		if("true".equals(fetchbank)){
+			String nid = "account_bank";
+			List<Dict> dictList = dictService.list(nid);	
+			if(dictList != null){
+				
+				List<HashMap<String, Object>> banklist = new ArrayList<HashMap<String, Object>>();
+				for(int i=0; i<dictList.size(); i++){
+					HashMap<String, Object> bankMap = new HashMap<String, Object>();
+					banklist.add(bankMap);
+					bankMap.put("bank", dictList.get(i).getName());			
+				}			
+				data.put("banklist", banklist);
+				data.put("res_code", "1");
+				data.put("res_msg", "查询成功");
+			}else{
+				data.put("res_code", "0");
+				data.put("res_msg", "查询失败");
+			}
+		}else{ //执行添加银行卡
+			try{
+				user = userService.find(userId);
+				AccountBank accountBank = new AccountBank();
+				accountBank.setUser(user);
+				accountBank.setStatus(1);
+				
+				
+				String nid = "account_bank";
+				List<Dict> dictList = dictService.list(nid);	
+				if(dictList != null){
+					int i=0; 
+					for(; i<dictList.size(); i++){
+						if(dictList.get(i).getName().equals(bank)){
+							bank = dictList.get(i).getValue();
+							break;
+						}
+					}	
+					if(i == dictList.size()){
+						bank = null;
+					}
+				}
+				if(null==bank || "".equals(bank)){
+					throw new Exception("未找到该银行卡的英文缩写!");
+				}
+				
+				accountBank.setBank(bank);				
+				accountBank.setBankNo(bankNo);				
+				accountBank.setBranch(branch);
+				accountBank.setProvince(bankProvince);
+				accountBank.setCity(bankCity);
+				accountBank.setArea(bankArea);				
+				accountBankService.save(accountBank);
+			}catch(Exception e){
+				data.put("res_code", "0");
+				data.put("res_msg", "添加银行卡失败 "+e.getMessage());
+				printMap(data);
+				return null;
+			}
+			data.put("res_code", "1");
+			data.put("res_msg", "添加银行卡成功");
+		}
+
+		printMap(data);
+		return null;
+	}
+	
+	/**
+	 *@author 李建云 
+	 *我的账号 - 删除银行卡 
+	 * */
+	@Action("/jsdmobile/user_bankcard_delete")
+	public String user_bankcard_delete() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		long userId = this.paramInt("uid");
+		String bankcardid = this.paramString("bankcardid");
+		
+		try{
+			accountBankService.disable(userId, Long.valueOf(bankcardid));
+			data.put("res_code", "1");
+			data.put("res_msg", "删除银行卡成功");
+		}catch(Exception e){
+			data.put("res_code", "0");
+			data.put("res_msg", "删除银行卡失败 "+e.getMessage());
+		}
+
+		printMap(data);
+		return null;
+	}
+	
+	/**
+	 *@author 李建云 
+	 *我的账号 - 查询地区列表 
+	 * */
+	@Action("/jsdmobile/user_area")
+	public String user_area() throws Exception {
+		data = new HashMap<String, Object>();
+		long userId = this.paramInt("uid");
+		String type = this.paramString("type");
+		String id = this.paramString("id");
+
+		try {
+
+			// 查询省份
+			if ("p".equals(type)) {
+				List<Region> provinceList = this.regionServcie.getRegionList(1);
+				Region province = null;
+				List<HashMap<String, Object>> provArray = new ArrayList<HashMap<String, Object>>();					
+				for (Region temp : provinceList) {
+					HashMap<String, Object> provMap = new HashMap<String, Object>();
+					provArray.add(provMap);
+					provMap.put("id", temp.getId());
+					provMap.put("name", temp.getName());
+				}
+				data.put("province_list", provArray);
+			} else if ("c".equals(type)) { // 查询城市
+				List<Region> cityList = this.regionServcie.getRegionList(Long.valueOf(id));
+				Region city = null;
+				List<HashMap<String, Object>> cityArray = new ArrayList<HashMap<String, Object>>();		
+				for (Region temp : cityList) {
+					HashMap<String, Object> cityMap = new HashMap<String, Object>();
+					cityArray.add(cityMap);
+					cityMap.put("id", temp.getId());
+					cityMap.put("name", temp.getName());
+				}
+				data.put("city_list", cityArray);
+			} else { // 查询地区				
+				List<Region> areaList = this.regionServcie.getRegionList(Long.valueOf(id));
+				Region area = null;
+				List<HashMap<String, Object>> areaArray = new ArrayList<HashMap<String, Object>>();		
+				for (Region temp : areaList) {
+					HashMap<String, Object> areaMap = new HashMap<String, Object>();
+					areaArray.add(areaMap);
+					areaMap.put("id", temp.getId());
+					areaMap.put("name", temp.getName());
+				}	
+				data.put("area_list", areaArray);
+			}
+			data.put("res_code", "1");
+			data.put("res_msg", "查询地区成功");
+		} catch (Exception e) {
+			data.put("res_code", "0");
+			data.put("res_msg", "查询地区失败 " + e.getMessage());
+		}
+
+		printMap(data);
+		return null;
+	}
+	
+	//我的账号 - 提现
+	@Action("/jsdmobile/user_withdraw")
+	public String user_withdraw() throws Exception {
+		data = new HashMap<String, Object>();
+        AccountDrawModel model=new AccountDrawModel();
+		try {
+			user = userService.find(paramInt("uid"));
+			//model.setVerifyCode(paramString("verifyCode"));
+			//model.findDrawpwdValidMobile(NoticeConstant.CASH_VERIFY_CODE,user);
+			
+			//提现金额不能小于100元
+			double drawAmount = paramDouble("drawAmount");
+			if(drawAmount < 100.0){
+				throw new Exception("提现金额不能小于100元!");
+			}	
+						
+			model.setPayPwd(paramString("payPwd"));
+			model.setDrawAmount(paramDouble("drawAmount"));
+			model.validPaypwdModel(user,0);
+			model.setBankNo(paramString("bankNo"));
+			AccountBank bank = accountBankService.find(user.getUserId(), model.getBankNo());
+			Dict dict=dictService.find("account_bank", bank.getBank());
+			AccountDraw accountDraw = model.prototype(bank);
+			accountDraw.setBankName(dict.getName());
+			accountDraw.setDrawAmount(model.getDrawAmount());
+			accountDraw.setUser(user);
+			accountDraw.setDrawWay(AccountTradeConstant.TRADE_WAY_APP);
+			//JSDP-117 wcw 2015-05-15 start
+			accountDraw.setDrawApplyRpTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_APP, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+			accountDraw.setDrawHandleStatus("0");
+			accountDraw.setDrawTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_APP, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_DRAW_CASH));
+			accountDrawCashService.saveDrawCash(accountDraw);
+			//JSDP-117 wcw 2015-05-15 end
+			accountDrawCashService.doApplyDrawCash(accountDraw);
+			data.put("res_code", 1);
+			data.put("res_msg", "申请提现成功，请等待管理员审核");
+
+		} catch (Exception e) {
+			data.put("res_code", 0);
+			data.put("res_msg", e.getMessage());
+		}	
+		printMap(data);
+		return null;
+	}
+	
+	//我的账号 - 充值
+	@Action("/jsdmobile/user_recharge")
+	public String user_recharge() throws Exception {
+		try{
+			Map<String, Object> map = new HashMap<String, Object>();
+
+			String amount = this.paramString("rechargeAmount"); // 充值金额
+			String remark = this.paramString("userRemark"); // 备注
+
+			//从数据库获取数据
+			AccountRechargeModel model=new AccountRechargeModel();
+			user = userService.find(paramLong("uid"));
+			UserIdentify userIdentify = userIdentifyService.findById(paramLong("uid"));
+			session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+			model.setRechargeAmount(new Double(amount));
+			model.setRechargeWay(AccountTradeConstant.TRADE_WAY_APP);
+			model.setUserRemark(remark);
+			//校验是否三项认证通过
+			//model.validIdentifyForRecharge(userIdentify);
+			//model.validNewRecharge();
+			YmdRecharge recharge = ymdService.doRecharge(model, user);
+					
+			String nick_name = recharge.getNickName(); // 昵称
+			String call_back_url = getWebsiteUrl()+"/jsdmobile/yemadai_recharge_return.html";
+			String return_url = call_back_url; 
+			String number_id = recharge.getNumberId(); // 商户数字账号
+			String out_trade_no = recharge.getOutTradeNo();// 商户订单号
+			String fee = recharge.getFee(); // 手续费
+			String advice_url = call_back_url;
+			String merchantKey = recharge.getMerchantKey();
+			
+			String urlPara = "number_id=" + number_id + "&" + "out_trade_no=" + out_trade_no + "&" + "amount=" + amount + "&" + "fee=" + fee + "&" + "nick_name=" + nick_name + "&" + "advice_url=" + advice_url + "&" + "return_url=" + return_url + "&" + "remark=" + remark + "&" + "merchantKey=" + merchantKey;
+			System.out.println(urlPara);
+			String sign_info = com.ddtkj.mobile.common.MD5.crypt(urlPara).toLowerCase();
+			System.out.println(sign_info);
+
+			map.put("nick_name", nick_name);
+			map.put("number_id", number_id);
+			map.put("out_trade_no", out_trade_no);
+			map.put("fee", fee);
+			map.put("advice_url", advice_url); // 服务器通知地址
+			map.put("return_url", return_url);
+			map.put("sign_info", sign_info); // 签名
+			map.put("res_code", "1");
+			map.put("res_msg", "");
+			printMap(map);
+			return null;
+		}catch(Throwable t){
+			this.printResult("充值失败:"+t.getMessage(), "0");
+			return null;
+		}
+	}
+	
+	//我的账号 - 汇潮服务器回调URL, 接收用户充值信息,返回操作状态HTML页面
+	@Action(value = "/jsdmobile/yemadai_recharge_return", results = { 
+			@Result(name = "yemadai_result", type="ftl", location = "phone/pages/yemadai_result.html") })
+	public String yemadai_recharge_return() throws Exception{
+		
+		System.out.println("/jsdmobile/yemadai_recharge_return  接收到汇潮一麻袋充值回调信息........");
+		request.setAttribute("result", "操作成功!");
+		try {
+			//处理汇潮操作参数
+			YmdModel ymd=new YmdModel();
+			String pMerCode = paramString("number_id");  //获取处理状态
+			String pErrCode = paramString("status");  //获取处理状态
+			String pNickName = paramString("nick_name");  //平台用户唯一昵称
+			String pmode = paramString("mode");  //类型
+			String pSign = paramString("sign_info");//加密签名
+			ymd.setNumberId(pMerCode);
+			ymd.setErrCode(pErrCode);
+			ymd.setErrMsg(ymd.getErrMsg(pErrCode, "开户失败，请检查输入是否符合要求"));
+			ymd.setNickName(pNickName);
+			ymd.setMode(pmode);
+			ymd.setSignInfo(pSign);
+			User user = userService.getUserByUserName(ymd.getNickName());
+			YmdRecharge ymdRecharge=new YmdRecharge();
+			BeanUtils.copyProperties(ymd, ymdRecharge);
+			ymdRecharge.setOutTradeNo(paramString("out_trade_no"));
+			ymdRecharge.setAmount(paramString("amount"));
+			ymdRecharge.setFee(paramString("fee"));
+			ymdRecharge.checkSign(); //验签
+			ymdRecharge.setErrCode(ymd.getErrCode());
+			ymdRecharge.setErrMsg(ymd.getErrMsg());
+			RechargeModel reModel = new RechargeModel(); // 对通用javabean进行参数封装
+			reModel.setOrderAmount(ymdRecharge.getAmount());
+			reModel.setOrderId(ymdRecharge.getOutTradeNo());
+			reModel.setResultMsg(ymdRecharge.getErrMsg());
+			reModel.setResult(ymdRecharge.getErrCode());
+			reModel.setSerialNo(ymd.getOutTradeNo());
+			
+			accountRechargeService.doRechargeTask(reModel);
+		} catch (Exception e) {
+			e.printStackTrace();
+			request.setAttribute("result", e.getMessage());
+		}
+		//返回静态页面
+		return "yemadai_result";
+	}
+
+	//我的账号 - 充值提现记录
+	@Action("/jsdmobile/user_recharge_withdraw_record")
+	public String user_recharge_withdraw_record() throws Exception {
+
+		long userId = paramLong("uid");
+		int page=paramInt("page"); //当前页数
+		String type=paramString("type");
+		Map<String, Object> data = new HashMap<String, Object>();
+		data = new HashMap<String, Object>();
+		if("recharge".equals(type)||"all".equals(type)){
+			AccountRechargeModel rechargeModel=new AccountRechargeModel();
+			rechargeModel.setPage(page);
+			
+			PageDataList<AccountRechargeModel> rechargeDataList = accountRechargeService
+					.list(userId, rechargeModel);
+			data.put("recharge_array", rechargeDataList.getList());
+		}
+		if("withdraw".equals(type)||"all".equals(type)){
+			AccountDrawModel drawModel=new AccountDrawModel();
+			drawModel.setPage(page);
+			PageDataList<AccountDrawModel> drawDataList = accountDrawCashService.list(userId, drawModel);
+			data.put("withdraw_array", drawDataList.getList());
+		}
+		data.put("res_code", 1);
+		data.put("res_msg", "");
+		this.printMap(data);
+		//printMap(data);
+		return null;
+	}
+	
+	/**
+	 *@author 李建云
+	 * 我的账号 - 待收明细 
+	 * 0待收 1已收
+	 * */
+	@Action("/jsdmobile/user_earnings_record")
+	public String user_earnings_record() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		
+		long userId = this.paramInt("uid");
+		int page = this.paramInt("page");
+		String type = paramString("type");
+		user = userService.find(userId);
+
+		try{
+			
+			if("tendered".equals(type) || "all".equals(type)){
+				BorrowTenderModel model = new BorrowTenderModel();
+				model.setUser(user);
+				model.setPage(page);
+				PageDataList<BorrowTenderModel> pageDataList = tenderService.list(model);
+				data = new HashMap<String, Object>();
+				
+				List<HashMap<String, Object>> tenderArray = new ArrayList<HashMap<String, Object>>();
+				for(int i=0; i<pageDataList.getList().size(); i++){
+					HashMap<String, Object> tenderMap = new HashMap<String, Object>();
+					tenderArray.add(tenderMap);	
+					
+					SimpleDateFormat sdf_long =   new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					tenderMap.put("addTime", sdf_long.format(pageDataList.getList().get(i).getAddTime()));
+					tenderMap.put("borrowName", pageDataList.getList().get(i).getBorrowName());
+					String btype = pageDataList.getList().get(i).getType();
+					if (btype.equals("113")) {
+						btype= "能源宝";
+					} else if (btype.equals("103")) {
+						btype= "车贷宝";
+					} else if (btype.equals("115")) {
+						btype= "微商贷";
+					} else if (btype.equals("105")) {
+						btype= "分期宝";
+					}
+					tenderMap.put("type", btype);
+					tenderMap.put("account", pageDataList.getList().get(i).getAccount());
+					tenderMap.put("scales", pageDataList.getList().get(i).getScales());
+					tenderMap.put("userName", pageDataList.getList().get(i).getBorrowUserName());
+					
+					/*double scales = pageDataList.getList().get(i).getScales();
+					boolean flow = false; //判断是否已流标, 取值字段待定, 此处暂时用false
+					int bstatus = Integer.valueOf(pageDataList.getList().get(i).getBorrowStatus());
+					String bstatus_name = null;
+					if (bstatus == 0) {
+						bstatus_name= "等待初审";
+					} else if (bstatus == 1 && flow == true) {
+						bstatus_name= "已流标";
+					} else if (bstatus == 1 && scales != 100) {
+						bstatus_name= "初审通过";
+					} else if (bstatus == 1 && scales == 100) {
+						if(btype.equals("113") || btype.equals("115") ){
+							bstatus_name= "还款中" ;
+						}else{
+							bstatus_name= "满标待审";
+						}
+					} else if (bstatus == 2) {
+						bstatus_name= "初审未通过";
+					} else if (bstatus == 3) {
+						bstatus_name= "复审通过";
+					} else if (bstatus == 4 || bstatus == 49) {
+						bstatus_name= "复审未通过";
+					} else if (bstatus == -2) {
+						bstatus_name= "撤回处理中";
+					} else if (bstatus == 5 || bstatus == 59) {
+						bstatus_name= "管理员撤回";
+					} else if (bstatus == 6) {
+						bstatus_name= "还款中";
+					} else if (bstatus == 7) {
+						bstatus_name= "部分还款";
+					} else if (bstatus == 8) {
+						if (btype.equals("110")) {
+							bstatus_name= "停止流转";
+						} else {
+							bstatus_name= "还款成功";
+						}
+					} else {
+						bstatus_name= "已撤回";
+					}*/
+					// JSDP-187 20150611 sxy 更新投标记录状态显示
+					int status = pageDataList.getList().get(i).getStatus();
+					
+					String statusStr = "";
+					if(0 == status){
+						statusStr = "处理中";
+					}else if(1 == status){
+						statusStr = "投资成功";
+					}else if(2 == status){
+						statusStr = "投资失败";
+					}else{
+						statusStr = "未知";
+					}
+					tenderMap.put("status", statusStr);
+					
+					int tenderType = ((BorrowTender)pageDataList.getList().get(i)).getTenderType();
+					String tenderType_name = "";
+					if(0 == tenderType){ //网页投标
+						tenderType_name="网页投标";
+					}else if(1 == tenderType){ //自动投标
+						tenderType_name="自动投标";
+					}else if(2 == tenderType){ //手机投标
+						tenderType_name="手机投标";
+					}else{
+						tenderType_name="未知";
+					}
+					tenderMap.put("tenderType", tenderType_name);
+				}
+				
+				data.put("earnings_tendered_array", tenderArray);
+			}
+			
+			
+			BorrowCollectionModel m = (BorrowCollectionModel) paramModel(BorrowCollectionModel.class);
+			m.setUser(user);
+			m.setPage(page);
+			m.setSize(10);
+			
+			if("received".equals(type) || "all".equals(type)){				
+				m.setStatus(1);			
+				PageDataList<BorrowCollectionModel> pageDataList = borrowCollectionService.list(m);		
+				
+				List<HashMap<String, Object>> earningArray = new ArrayList<HashMap<String, Object>>();
+				for(int i=0; i<pageDataList.getList().size(); i++){
+					HashMap<String, Object> earningMap = new HashMap<String, Object>();
+					earningArray.add(earningMap);		
+					earningMap.put("id", pageDataList.getList().get(i).getId());
+					earningMap.put("borrow", pageDataList.getList().get(i).getBorrowName());				
+					earningMap.put("user", pageDataList.getList().get(i).getUserName());
+					earningMap.put("repaymentYesAccount", pageDataList.getList().get(i).getRepaymentYesAccount());
+					earningMap.put("capital", pageDataList.getList().get(i).getCapital());	
+					earningMap.put("interest", pageDataList.getList().get(i).getInterest());	
+					earningMap.put("lateInterest", pageDataList.getList().get(i).getLateInterest());	
+					earningMap.put("period", pageDataList.getList().get(i).getPeriod());	
+					earningMap.put("repaymentTime", pageDataList.getList().get(i).getRepaymentTime());	
+					earningMap.put("status", pageDataList.getList().get(i).getStatus());		
+				}	
+				data.put("earnings_received_array", earningArray);
+			
+			}
+			
+			if("receiving".equals(type) || "all".equals(type)){
+				m.setStatus(0);	
+				PageDataList<BorrowCollectionModel> pageDataList = borrowCollectionService.list(m);		
+				
+				List<HashMap<String, Object>> earningArray = new ArrayList<HashMap<String, Object>>();
+				for(int i=0; i<pageDataList.getList().size(); i++){
+					HashMap<String, Object> earningMap = new HashMap<String, Object>();
+					earningArray.add(earningMap);		
+					earningMap.put("id", pageDataList.getList().get(i).getId());
+					earningMap.put("borrow", pageDataList.getList().get(i).getBorrowName());				
+					earningMap.put("user", pageDataList.getList().get(i).getUserName());
+					earningMap.put("repaymentYesAccount", pageDataList.getList().get(i).getRepaymentAccount());
+					earningMap.put("capital", pageDataList.getList().get(i).getCapital());	
+					earningMap.put("interest", pageDataList.getList().get(i).getInterest());	
+					earningMap.put("lateInterest", pageDataList.getList().get(i).getLateInterest());	
+					earningMap.put("period", pageDataList.getList().get(i).getPeriod());	
+					earningMap.put("repaymentTime", pageDataList.getList().get(i).getRepaymentTime());	
+					earningMap.put("status", pageDataList.getList().get(i).getStatus());		
+				}	
+				data.put("earnings_receiving_array", earningArray);
+			}	
+			
+			data.put("res_code", "1");
+			data.put("res_msg", "取得待收明细列表成功");
+			data.put("page", page);
+			
+		}catch(Exception e){
+			data.put("res_code", "0");
+			data.put("res_msg", "取得待收明细列表失败");
+		}
+		
+		printMap(data);
+		return null;
+	}
+	
+	/**
+	 *@author 李建云 
+	 *我的账号 - 获取红包与钱袋
+	 * */
+	@Action("/jsdmobile/user_award")
+	public String user_award() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		int page = this.paramInt("page");
+		long userId = this.paramInt("uid");
+		String type = this.paramString("type");
+		String fetch = this.paramString("fetch");
+		
+		DecimalFormat df = new DecimalFormat("0.##");
+		
+		user = userService.find(userId);
+		
+		if(StringUtil.isNotBlank(fetch)){
+			
+			if("gift".equals(fetch)){
+				
+				RpProduceModel rpProduceModel = new RpProduceModel();
+				rpProduceModel.setPage(page);
+				rpProduceModel.setUser(user);
+				//ready-未使用 finish-已使用 overtime-已过期 all-全部
+				//1-已使用, 2-未使用, 3-已过期,
+				if("ready".equals(type) || "all".equals(type)){
+					rpProduceModel.setRpStaticStatus(2);	
+					rpProduceModel.setPage(page);
+					rpProduceModel.setUser(user);
+					rpProduceModel.setRpType(1);
+					PageDataList<RpProduceModel> pageDataList = rpProduceService.getPageDataList(rpProduceModel);
+					
+					List<HashMap<String, Object>> rpArray = new ArrayList<HashMap<String, Object>>();
+					for(int i=0; i<pageDataList.getList().size(); i++){
+						HashMap<String, Object> rpMap = new HashMap<String, Object>();
+						rpArray.add(rpMap);		
+						rpMap.put("id", pageDataList.getList().get(i).getId());
+						
+						String rpStaticRes = pageDataList.getList().get(i).getRpStaticRes();
+						if (rpStaticRes.equals("dynamic_rp_invest")) {
+							rpStaticRes = "投资成功";
+						} else if (rpStaticRes.equals("static_rp_identify")) {
+							rpStaticRes = "注册认证通过";
+						}else if(rpStaticRes.equals("static_rp_invited_first_invest")){
+							rpStaticRes = "被邀请人首次投标超过一定金额";
+						}
+						
+						rpMap.put("rpStaticRes", rpStaticRes);	
+						rpMap.put("rpCreateTime", pageDataList.getList().get(i).getRpCreateTime());
+						rpMap.put("rpStaticValidTime", pageDataList.getList().get(i).getDeadTime());
+						rpMap.put("rpStaticMoney", df.format(pageDataList.getList().get(i).getRpStaticMoney()));
+						rpMap.put("rpStaticStatus", pageDataList.getList().get(i).getRpStaticStatus());	
+					}						
+					data.put("rp_ready_array", rpArray);
+				}
+				if("finish".equals(type) || "all".equals(type)){
+					rpProduceModel.setRpStaticStatus(1);	
+					rpProduceModel.setPage(page);
+					rpProduceModel.setUser(user);
+					rpProduceModel.setRpType(1);
+					PageDataList<RpProduceModel> pageDataList = rpProduceService.getPageDataList(rpProduceModel);
+					
+					List<HashMap<String, Object>> rpArray = new ArrayList<HashMap<String, Object>>();
+					for(int i=0; i<pageDataList.getList().size(); i++){
+						HashMap<String, Object> rpMap = new HashMap<String, Object>();
+						rpArray.add(rpMap);		
+						rpMap.put("id", pageDataList.getList().get(i).getId());
+						
+						String rpStaticRes = pageDataList.getList().get(i).getRpStaticRes();
+						if (rpStaticRes.equals("dynamic_rp_invest")) {
+							rpStaticRes = "投资成功";
+						} else if (rpStaticRes.equals("static_rp_identify")) {
+							rpStaticRes = "注册认证通过";
+						}else if(rpStaticRes.equals("static_rp_invited_first_invest")){
+							rpStaticRes = "被邀请人首次投标超过一定金额";
+						}
+						
+						rpMap.put("rpStaticRes", rpStaticRes);	
+						rpMap.put("rpCreateTime", pageDataList.getList().get(i).getRpCreateTime());
+						rpMap.put("rpStaticValidTime", pageDataList.getList().get(i).getDeadTime());
+						rpMap.put("rpStaticMoney", df.format(pageDataList.getList().get(i).getRpStaticMoney()));
+						rpMap.put("rpStaticStatus", pageDataList.getList().get(i).getRpStaticStatus());	
+					}						
+					data.put("rp_finish_array", rpArray);
+				}
+				if("overtime".equals(type) || "all".equals(type)){	
+					rpProduceModel.setRpStaticStatus(3);		
+					rpProduceModel.setPage(page);
+					rpProduceModel.setUser(user);
+					rpProduceModel.setRpType(1);
+					PageDataList<RpProduceModel> pageDataList = rpProduceService.getPageDataList(rpProduceModel);
+					
+					List<HashMap<String, Object>> rpArray = new ArrayList<HashMap<String, Object>>();
+					for(int i=0; i<pageDataList.getList().size(); i++){
+						HashMap<String, Object> rpMap = new HashMap<String, Object>();
+						rpArray.add(rpMap);		
+						rpMap.put("id", pageDataList.getList().get(i).getId());
+
+						String rpStaticRes = pageDataList.getList().get(i).getRpStaticRes();
+						if (rpStaticRes.equals("dynamic_rp_invest")) {
+							rpStaticRes = "投资成功";
+						} else if (rpStaticRes.equals("static_rp_identify")) {
+							rpStaticRes = "注册认证通过";
+						}else if(rpStaticRes.equals("static_rp_invited_first_invest")){
+							rpStaticRes = "被邀请人首次投标超过一定金额";
+						}
+						
+						rpMap.put("rpStaticRes", rpStaticRes);	
+						rpMap.put("rpCreateTime", pageDataList.getList().get(i).getRpCreateTime());
+						rpMap.put("rpStaticValidTime", pageDataList.getList().get(i).getDeadTime());
+						rpMap.put("rpStaticMoney", df.format(pageDataList.getList().get(i).getRpStaticMoney()));
+						rpMap.put("rpStaticStatus", pageDataList.getList().get(i).getRpStaticStatus());	
+					}						
+					data.put("rp_overtime_array", rpArray);
+				}
+				
+				data.put("res_code", "1");
+				data.put("res_msg", "成功");
+				data.put("page", page);
+
+			}else if("fund".equals(fetch)){
+				
+				if("ready".equals(type) || "all".equals(type)){
+					//钱袋子未使用
+					RpProduceModel rpProduceModel = new RpProduceModel();	
+					rpProduceModel.setPage(page);
+					rpProduceModel.setUser(user);
+					rpProduceModel.setRpType(2);
+					PageDataList<RpProduceModel> pageDataList = rpProduceService.getPageDataList(rpProduceModel);
+					List<HashMap<String, Object>> rpArray = new ArrayList<HashMap<String, Object>>();
+					for(int i=0; i<pageDataList.getList().size(); i++){
+						HashMap<String, Object> rpMap = new HashMap<String, Object>();
+						rpArray.add(rpMap);		
+						rpMap.put("id", pageDataList.getList().get(i).getId());
+						
+						String rpDynamicRes = pageDataList.getList().get(i).getRpDynamicRes();
+						if (rpDynamicRes.equals("dynamic_rp_invest")) {
+							rpDynamicRes = "投资成功";
+						} else if (rpDynamicRes.equals("static_rp_identify")) {
+							rpDynamicRes = "注册认证通过";
+						}else if(rpDynamicRes.equals("static_rp_invited_first_invest")){
+							rpDynamicRes = "被邀请人首次投标超过一定金额";
+						}else{
+							rpDynamicRes = "未知";
+						}
+						
+						rpMap.put("rpDynamicRes", rpDynamicRes);				
+						rpMap.put("rpDynamicMoney", df.format(pageDataList.getList().get(i).getRpDynamicMoney()));
+						rpMap.put("rpCreateTime", pageDataList.getList().get(i).getRpCreateTime());
+					}	
+					data.put("dRp_ready_array", rpArray);
+				}
+				if("finish".equals(type) || "all".equals(type)){
+					// 钱袋子已使用
+					RpUserLogModel rpUserLogModel = new RpUserLogModel();
+					rpUserLogModel.setPage(page);
+					rpUserLogModel.setUser(user);
+					PageDataList<RpUserLogModel> usedRpList = rpUseLogService.getPageDataList(rpUserLogModel, user.getUserId());
+					List<HashMap<String, Object>> rpArray = new ArrayList<HashMap<String, Object>>();
+					for(int i=0; i<usedRpList.getList().size(); i++){
+						HashMap<String, Object> rpMap = new HashMap<String, Object>();
+						rpArray.add(rpMap);		
+						rpMap.put("id", usedRpList.getList().get(i).getId());
+						rpMap.put("rpDynamicRes", usedRpList.getList().get(i).getBorrow().getName());				
+						rpMap.put("rpDynamicMoney", df.format(usedRpList.getList().get(i).getAccount()));
+						rpMap.put("rpCreateTime", usedRpList.getList().get(i).getAddTime());
+					}	
+					data.put("dRp_finish_array", rpArray);
+				}
+				
+				data.put("res_code", "1");
+				data.put("res_msg", "成功");
+				data.put("page", page);
+			}
+			
+		}else{
+			
+			data.put("res_code", "0");
+			data.put("res_msg", "失败");
+		}
+		printMap(data);
+		return null;
+	}
+	
+	
+	/**
+	 *@author 杨晓波
+	 *我的账号 - 获取积分
+	 * */
+	@Action("/jsdmobile/user_score")
+	public String user_score() throws Exception {
+		try{
+			int page = this.paramInt("page");
+			long userId = this.paramInt("uid");
+			user = userService.find(userId);
+			ScoreLogModel model = new ScoreLogModel();
+			model.setUser(user);
+			model.setPage(page);
+			PageDataList<ScoreLogModel> list = scoreLogService.getWebScoreLogPage(model);
+			data = new HashMap<String, Object>();
+			
+			List<HashMap<String, Object>> scArray = new ArrayList<HashMap<String, Object>>();
+			for(int i=0; i<list.getList().size(); i++){
+			    HashMap<String, Object> scMap = new HashMap<String, Object>();
+			    scArray.add(scMap);
+			    scMap.put("scoreTypeName", list.getList().get(i).getScoreTypeName());
+			    scMap.put("score", list.getList().get(i).getScore());
+			    scMap.put("validScore", list.getList().get(i).getValidScore());
+			    scMap.put("freezeScore", list.getList().get(i).getFreezeScore());
+			    SimpleDateFormat sdf_long =   new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			    scMap.put("addTime", sdf_long.format(list.getList().get(i).getAddTime()));
+			    scMap.put("remark", list.getList().get(i).getRemark());
+			}
+			
+			data.put("score_log_list", scArray);
+			data.put("res_code", "1");
+			data.put("res_msg", "取得积分记录成功");
+		}catch(Exception e){
+			data.put("res_code", "0");
+			data.put("res_msg", "取得积分记录失败!"+e.getMessage());
+		}
+		printMap(data);
+		return null;
+	}
+}

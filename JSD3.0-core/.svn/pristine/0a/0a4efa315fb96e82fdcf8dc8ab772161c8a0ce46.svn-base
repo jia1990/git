@@ -1,0 +1,122 @@
+
+package com.ddtkj.p2psys.errorlog.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.errorlog.dao.ErrorLogDao;
+import com.ddtkj.p2psys.errorlog.domain.ErrorLog;
+import com.ddtkj.p2psys.errorlog.model.ErrorLogModel;
+import com.ddtkj.p2psys.errorlog.service.ErrorLogService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述: 错误异常日志service实现
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-12   
+ */
+@Service("errorLogService")
+public class ErrorLogServiceImpl implements ErrorLogService {
+
+	private static Logger logger = Logger.getLogger(ErrorLogServiceImpl.class);
+
+	@Resource
+	private ErrorLogDao errorLogDao;
+	@Resource
+	private UserDao userDao;
+	
+	
+	@Override
+	public void addErrorLog(ErrorLog errorLog) {
+		
+		errorLogDao.save(errorLog);
+	}
+
+	@Override
+	public ErrorLog getErrorLogById(long id) {
+		return errorLogDao.find(id);
+	}
+
+	@Override
+	public PageDataList<ErrorLogModel> list(ErrorLogModel model) {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<ErrorLog> list = errorLogDao.findPageList(param);
+		logger.info("错误异常日志记录param:"+param.toMap().toString()+",list size:"+list.getList().size());
+		List<ErrorLogModel> modelList = new ArrayList<ErrorLogModel>();
+		PageDataList<ErrorLogModel> pageDataList = new PageDataList<ErrorLogModel>();
+		pageDataList.setPage(list.getPage());
+		if (list.getList().size() > 0) {
+			for(int i=0; i< list.getList().size(); i++) {
+				ErrorLog errorLog = (ErrorLog)list.getList().get(i);
+				ErrorLogModel errorLogModel = ErrorLogModel.instance(errorLog);
+				User user = errorLog.getAddUser();
+				if (user != null) {
+					errorLogModel.setAddUserName(user.getUserName());
+				}
+				modelList.add(errorLogModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	
+	private QueryParam searchParam(QueryParam param, ErrorLogModel model) {
+		if(model != null){
+			if (StringUtil.isNotBlank(model.getName())) {
+				param.addParam("name",  Operators.LIKE, model.getName());
+			}
+			if (StringUtil.isNotBlank(model.getAddUserName())) {
+				User addUser = userDao.getUserByUserName(model.getAddUserName());
+				param.addParam("addUser.userId", addUser.getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getPlatform()) && !ErrorLog.SEARCH_ALL.equals(model.getPlatform())) {
+				param.addParam("platform", model.getPlatform());
+			}
+			if (StringUtil.isNotBlank(model.getLevel()) && !ErrorLog.SEARCH_ALL.equals(model.getLevel())) {
+				param.addParam("level", model.getLevel());
+			}
+			if (StringUtil.isNotBlank(model.getErrorModuleName())) {
+				param.addParam("errorModuleName", Operators.LIKE, model.getErrorModuleName());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+	
+}

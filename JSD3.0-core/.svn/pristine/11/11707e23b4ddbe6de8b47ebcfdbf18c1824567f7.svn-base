@@ -1,0 +1,63 @@
+package com.ddtkj.p2psys.core.cache;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.rule.DataShowRuleCheck;
+
+/**
+ * @描述:平台展示数据缓存工具类
+ * @作者:guojunhui@ddtkj.com
+ * @创建时间: 2014年1月7日
+ */
+public class ShowDataCache {
+
+	public static final String PLATFORM_DATA = "platform_data";
+	
+	/**
+	 * 初始化平台数据到缓存
+	 */
+	public static void initplatformDataMap(){
+		Map<String,Object> platformDataMap = new HashMap<String,Object>();
+		DataShowRuleCheck check = (DataShowRuleCheck) GlobalCache.getRuleCheck("dataShow");
+		if(check != null){
+			platformDataMap.put("showData", check);
+		}
+		if (!MemCachedUtil.memCachedClient.keyExists(PLATFORM_DATA)) {
+			MemCachedUtil.memCachedClient
+					.set(PLATFORM_DATA, platformDataMap);
+		}else{
+			MemCachedUtil.memCachedClient
+			.replace(PLATFORM_DATA, platformDataMap);
+		}
+	}
+	/**
+	 * 修改平台数据到缓存
+	 */
+	public static void modifyPlatformDataMap(Map<String,Object> platformDataMap){
+		
+		if (!MemCachedUtil.memCachedClient.keyExists(PLATFORM_DATA)) {
+			MemCachedUtil.memCachedClient
+			.set(PLATFORM_DATA, platformDataMap);
+		}else{
+			MemCachedUtil.memCachedClient
+			.replace(PLATFORM_DATA, platformDataMap);
+		}
+	}
+	/**
+	 * 获取平台数据
+	 * @return
+	 */
+	public static Map<String,Object> getplatformDataMap(){
+		@SuppressWarnings("unchecked")
+		Map<String, Object> platformDataMap = (Map<String, Object>) MemCachedUtil.memCachedClient
+				.get(PLATFORM_DATA);
+		if (platformDataMap == null) {
+			return null;
+		}
+
+		return platformDataMap;
+	}
+	
+}

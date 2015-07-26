@@ -1,0 +1,266 @@
+package com.rongdu.p2psys.core.dao.jdbc;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.dao.OperatorDao;
+import com.rongdu.p2psys.core.domain.Operator;
+
+@Repository("operatorDao")
+public class OperatorDaoImpl extends BaseDaoImpl<Operator> implements OperatorDao {
+
+	@SuppressWarnings("unchecked")
+	public List<Operator> userList() {
+		String jpql = "from Manager where isDelete = ?1";
+		Query query = em.createQuery(jpql);
+		query.setParameter(1, false);
+		List<Operator> list = query.getResultList();
+		return list;
+	}
+
+	public Operator userFind(long id) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("isDelete", false);
+		param.addParam("id", id);
+		List<Operator> list = super.findByCriteria(param);
+
+//		 String jpql = "from User where isDelete = ?1 and id=?2";
+//		 Query query = em.createQuery(jpql);
+//		 query.setParameter(1, 0);
+//		 query.setParameter(2, id);
+//		 List<Operator> list = query.getResultList();
+		if (list != null && list.size() > 0) {
+			return (Operator) list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	public Operator getManagerByUserName(String userName) {
+		String jpql = "from Operator where userName = ?1 and isDelete = false";
+		Query query = em.createQuery(jpql);
+		query.setParameter(1, userName);
+		List list = query.getResultList();
+		if (list != null && list.size() >= 1) {
+			return (Operator) list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<Operator> getOperatorByRole(List<Integer> pid) {
+		// TODO Auto-generated method stub
+		StringBuffer sql = new StringBuffer("SELECT p.* FROM s_operator_role pr LEFT JOIN s_role r ");
+		sql.append(" ON  pr.role_id=r.id LEFT JOIN s_operator p ON p.id=pr.operator_id ");
+		sql.append(" where r.is_delete = ?1 ");
+		if(null != pid && pid.size()!=0){
+			sql.append(" and r.pid in (?2)");
+		}
+		Query query = em.createNativeQuery(sql.toString(), Operator.class);
+		query.setParameter(1, false);
+		if(null != pid && pid.size()!=0){
+			query.setParameter(2, pid);
+		}
+		
+		
+		List<Operator> operatorList = query.getResultList();
+		if (operatorList != null && operatorList.size() > 0) {
+			return operatorList;
+		}
+		
+		
+		return null;
+	}
+
+	
+	@SuppressWarnings("unchecked")
+	public PageDataList<Operator> getOperatorListByRole(Map<String,Object> paramMap,
+			QueryParam param) {
+		
+		StringBuffer sql = new StringBuffer("SELECT p.* FROM s_operator_role pr LEFT JOIN s_role r ");
+		sql.append(" ON  pr.role_id=r.id LEFT JOIN s_operator p ON p.id=pr.operator_id ");
+		sql.append(" where r.is_delete = ?1 ");
+		
+		String isLocked = (String) paramMap.get("isLocked");
+		String isDelete = (String) paramMap.get("isDelete");
+		if( StringUtil.isNotBlank(isDelete) && !"99".equals(isDelete)){
+			if(isDelete.equals("Y")){
+				sql.append(" and p.is_delete = "+true+"");
+			}else{
+				sql.append(" and p.is_delete = "+false+"");
+			}
+		}else if(StringUtil.isBlank(isDelete)){
+			sql.append(" and p.is_delete = "+false+"");
+		}
+		
+		if(StringUtil.isNotBlank(isLocked) && !"99".equals(isLocked)){
+			sql.append(" and p.is_locked = '"+isLocked+"'");
+		}
+		
+		List<Integer> pid = (List<Integer>) paramMap.get("pidList");
+		if(null != pid && pid.size()!=0){
+//			sql.append(" and (r.pid in (?3) or r.id in (?4)) ");
+			sql.append(" and ( r.pid in (?3) ");
+			sql.append(" OR r.pid IN (SELECT id FROM s_role WHERE pid IN (?4) and is_delete=false ) ) ");
+		}
+		
+		String name = (String) paramMap.get("name");
+		String userName = (String) paramMap.get("userName");
+
+		// 角色名
+		String roleName = (String) paramMap.get("roleName");
+		String mobile = (String) paramMap.get("mobile");
+		
+		
+		
+		
+		if(StringUtil.isNotBlank(name)){
+
+			sql.append(" and p.name like '%"+name+"%'");
+		}
+
+		// 角色名
+		if(StringUtil.isNotBlank(roleName)){
+			sql.append(" and r.name like '%"+roleName+"%'");
+		}
+		// 操作员手机号
+		if(StringUtil.isNotBlank(mobile)){
+			sql.append(" and p.mobile like '%"+mobile+"%'");
+		}
+		if(StringUtil.isNotBlank(userName)){
+			sql.append(" and p.user_name like '%"+userName+"%'");
+		}
+		
+		
+		
+		sql.append(" ORDER BY add_time desc ");
+			
+		Query query = em.createNativeQuery(sql.toString(), Operator.class);
+		query.setParameter(1, false);
+		
+		if(null != pid && pid.size()!=0){
+			query.setParameter(3, pid);
+			query.setParameter(4, pid);
+		}
+	
+        Page page = new Page(query.getResultList().size(), param.getPage().getCurrentPage(), param.getPage().getPernum());
+        query.setFirstResult((param.getPage().getCurrentPage() - 1) * param.getPage().getPernum());
+        query.setMaxResults(param.getPage().getPernum());
+        
+        List<Operator> operatorList = query.getResultList();
+		PageDataList<Operator> operatorPageList = new PageDataList<Operator>();
+		operatorPageList.setList(operatorList);
+		operatorPageList.setPage(page);
+		
+		return operatorPageList;
+	}
+	@Override
+	public PageDataList<Operator> getAOperatorListByRole(Map<String,Object> paramMap,
+			QueryParam param) {
+				
+		StringBuffer sql = new StringBuffer("SELECT distinct p.* FROM s_operator_role pr LEFT JOIN s_role r ");
+		sql.append(" ON  pr.role_id=r.id LEFT JOIN s_operator p ON p.id=pr.operator_id ");
+		sql.append(" where r.is_delete = ?1 and p.is_delete = ?2 ");
+		
+		List<Integer> pid = (List<Integer>) paramMap.get("pidList");
+		if(null != pid && pid.size()!=0){
+			sql.append(" and (r.pid in (?3)) ");
+		}
+		
+		String name = (String) paramMap.get("name");
+		String userName = (String) paramMap.get("userName");
+		//JSDBET-812 gjh 2015-3-17 start
+		String roleName = (String) paramMap.get("roleName");
+		if(null != roleName){
+			sql.append(" and r.name like '%"+roleName+"%'");
+		}
+		//JSDBET-812 gjh 2015-3-17 end
+		if(null != name){
+			sql.append(" and p.name like '%"+name+"%'");
+		}
+		if(null != userName){
+			sql.append(" and p.user_name like '%"+userName+"%'");
+		}
+		sql.append(" ORDER BY RAND()  ");
+			
+		Query query = em.createNativeQuery(sql.toString(), Operator.class);
+		query.setParameter(1, false);
+		query.setParameter(2, false);
+		
+		if(null != pid && pid.size()!=0){
+			query.setParameter(3, pid);
+		}
+		List<Operator> operatorList = query.getResultList();
+		int count = operatorList.size();
+		if (param.getPage() != null) {
+			param.addPage(count, 1, Page.ROWS);
+		}
+		param.addPage(count, param.getPage().getCurrentPage(), param.getPage().getPernum());
+		
+		//query.setFirstResult(param.getPage().getCurrentPage()).setMaxResults(param.getPage().getPernum());
+		
+		return new PageDataList<Operator>(param.getPage(), operatorList);
+	}
+
+	@Override
+	public Operator findOpterById(long id, boolean isDel) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("isDelete", isDel);
+		param.addParam("id", id);
+		Operator operator = super.findByCriteriaForUnique(param);
+
+		if(null != operator){
+			return operator;
+		}
+		return null;
+	}
+
+	@Override
+	public PageDataList<Operator> getKefuByRoleId(Map<String, Object> paramMap,
+			QueryParam param) {
+		StringBuffer sql = new StringBuffer("SELECT distinct p.* FROM s_operator_role pr LEFT JOIN s_role r ");
+		sql.append(" ON  pr.role_id=r.id LEFT JOIN s_operator p ON p.id=pr.operator_id ");
+		sql.append(" where r.is_delete = false and p.is_delete = false ");
+		
+		List<Integer> pid = (List<Integer>) paramMap.get("pidList");
+		if(null != pid && pid.size()!=0){
+			sql.append(" and (r.id in (?1)) ");
+		}
+		
+		sql.append(" ORDER BY RAND()  ");
+		
+		Query query = em.createNativeQuery(sql.toString(), Operator.class);
+		if(null != pid && pid.size()!=0){
+			query.setParameter(1, pid);
+		}
+	
+		List<Operator> operatorList = query.getResultList();
+		int count = operatorList.size();
+		if (param.getPage() != null) {
+			param.addPage(count, 1, Page.ROWS);
+		}
+		param.addPage(count, param.getPage().getCurrentPage(), param.getPage().getPernum());
+		return new PageDataList<Operator>(param.getPage(), operatorList);
+	}
+	
+	//JSDP-BUG109 sxy
+	@Override
+	public Operator getOperatorByNo(String customerNo) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("no", customerNo);
+		param.addParam("isDelete", false);
+		Operator operator = findByCriteriaForUnique(param);
+		return operator;
+	}
+}

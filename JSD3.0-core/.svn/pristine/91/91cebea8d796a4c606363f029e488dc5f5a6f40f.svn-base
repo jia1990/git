@@ -1,0 +1,209 @@
+package com.rongdu.p2psys.borrow.executer;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.dao.AccountExtraDao;
+import com.ddtkj.p2psys.account.dao.AccountLogDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountExtra;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+
+/**
+ * 投标
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-22
+ */
+public class BorrowTenderExecuter extends BaseExecuter {
+
+	protected AccountLogDao accountLogDao;
+	protected AccountDao accountDao;
+	protected UserCacheDao userCacheDao;
+	protected AccountExtraDao  accountExtraDao;
+	private String accountLogType = Constant.TENDER;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void prepare() {
+		accountLogDao = (AccountLogDao) BeanUtil.getBean("accountLogDao");
+		accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		userCacheDao = (UserCacheDao) BeanUtil.getBean("userCacheDao");
+		accountExtraDao = (AccountExtraDao)BeanUtil.getBean("accountExtraDao");
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+	    //JSDP-228  fengguoqin 2015.07.25 start
+		AccountExtra accountExtra = accountExtraDao.getAccountExtraByUserId(user.getUserId());
+		 //JSDP-228  fengguoqin 2015.07.25 end
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		//操作金额
+		log.setRechargeMoney(rechargeMoney);
+		log.setAwardMoney(awardMoney);
+		log.setInterestMoney(interestMoney);
+		log.setReturnCapitalMoney(returnCapitalMoney);
+		log.setRpDynamicMoney(rpDynamicMoney);
+		//JSDP-228  fengguoqin  2015.07.23  start
+		log.setRpStaticMoney(rpStaticMoney);
+		//JSDP-228  fengguoqin  2015.07.23  end
+		
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		log.setRpDynamicUsable(account.getRpDynamicTotal());
+		//JSDP-228  fengguoqin  2015.07.23  start
+		log.setRpStaticUsable(accountExtra.getRpStaticTotal());
+		//JSDP-228  fengguoqin  2015.07.23  end
+		
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		log.setFreezeRpDynamic(account.getFreezeRpDynamic());
+		//JSDP-228  fengguoqin  2015.07.23  start
+		log.setFreezeRpStatic(accountExtra.getFreezeRpStatic());
+		//JSDP-228  fengguoqin  2015.07.23  end
+		
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)0);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		//accountDao.modify(0, -super.money, super.money, super.user.getUserId());
+		/*Account account = new Account(user);
+		//账户多种可用金额
+		account.setRechargeUsable(-rechargeMoney);
+		account.setAwardUsable(-awardMoney);
+		account.setInterestUsable(-interestMoney);
+		account.setReturnCapitalUsable(-returnCapitalMoney);
+		//账户多种冻结金额
+		account.setFreezeUseAward(awardMoney);
+		account.setFreezeUseInterest(interestMoney);
+		account.setFreezeUseRecharge(rechargeMoney);
+		account.setFreezeUseReturnCapital(returnCapitalMoney);
+		accountDao.modify(account);*/
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		AccountExtra accountExtra = accountExtraDao.getAccountExtraByUserId(user.getUserId());
+	   // 账户各类可用金额
+	   account.setRechargeUsable(BigDecimalUtil.add(account.getRechargeUsable(), -rechargeMoney));
+	   
+	   account.setAwardUsable(BigDecimalUtil.add(account.getAwardUsable(), -awardMoney));
+	  
+	   account.setInterestUsable(BigDecimalUtil.add(account.getInterestUsable(), -interestMoney));
+	   
+	   account.setReturnCapitalUsable(BigDecimalUtil.add(account.getReturnCapitalUsable(), -returnCapitalMoney));
+	   
+	   account.setRpDynamicTotal(BigDecimalUtil.add(account.getRpDynamicTotal(),-rpDynamicMoney));
+	   //JSDP-228  fengguoqin 2015.07.23   start
+	   accountExtra.setRpStaticTotal(BigDecimalUtil.add(accountExtra.getRpStaticTotal(),-rpStaticMoney));
+	   //JSDP-228  fengguoqin 2015.07.23   end
+	   // 账户各类冻结金额
+       account.setFreezeUseAward(BigDecimalUtil.add(account.getFreezeUseAward(), awardMoney));
+       
+       account.setFreezeUseReturnCapital(BigDecimalUtil.add(account.getFreezeUseReturnCapital(), returnCapitalMoney));
+       
+       account.setFreezeUseInterest(BigDecimalUtil.add(account.getFreezeUseInterest(), interestMoney));
+       
+       account.setFreezeUseRecharge(BigDecimalUtil.add(account.getFreezeUseRecharge(), rechargeMoney));
+       
+       account.setFreezeRpDynamic(BigDecimalUtil.add(account.getFreezeRpDynamic(),rpDynamicMoney));
+       //JSDP-228  fengguoqin 2015.07.23   start
+       accountExtra.setFreezeRpStatic(BigDecimalUtil.add(accountExtra.getFreezeRpStatic(),rpStaticMoney));
+       //JSDP-228  fengguoqin 2015.07.23   end
+	   if(account.getRechargeUsable() < 0){
+	       throw new AccountException("充值可用金额不足！", 1);
+	   }
+	   if(account.getInterestUsable() < 0){
+	       throw new AccountException("利息可用金额不足！", 1);
+	   }
+	   if(account.getAwardUsable() < 0){
+	       throw new AccountException("奖励可用金额不足！", 1);
+	   }
+	   if(account.getReturnCapitalUsable()< 0){
+	       throw new AccountException("回款可用金额不足！", 1);
+	   }
+	   if(account.getRpDynamicTotal()<0 && rpDynamicMoney > 0){
+		   throw new AccountException("钱袋子余额不足!",1);
+	   }
+	   accountDao.update(account);
+	   //JSDP-228  fengguoqin 2015.07.25 start
+	   accountExtraDao.update(accountExtra);
+	   //JSDP-228  fengguoqin 2015.07.25 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.TENDER_SUCC);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+	/*	if (BaseTPPWay.isOpenApi()) {
+			if(BaseTPPWay.apiCode().equals("1")){
+				YjfService apiService = new YjfServiceImpl();
+				Borrow borrow = (Borrow) Global.getTransfer().get("borrow");
+				List<Object> taskList = new ArrayList<Object>();
+				if (borrow.getType() == Borrow.TYPE_FLOW) {
+					// 流转标直接打款
+					apiService.flowBorrowLoan(money, super.user, borrow, super.toUser, taskList);
+				} else {
+					apiService.addTenderFreezeMoney(money,  super.user, borrow, super.toUser, taskList);
+				}
+				apiService.doApiTask(taskList);
+			}else if(BaseTPPWay.apiCode().equals("2")){
+				
+			}
+			
+		}*/
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+
+}

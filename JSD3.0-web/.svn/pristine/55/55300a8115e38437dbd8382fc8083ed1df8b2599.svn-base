@@ -1,0 +1,108 @@
+package com.rongdu.p2psys.web.borrow;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.p2psys.borrow.domain.BorrowAuto;
+import com.rongdu.p2psys.borrow.model.BorrowAutoModel;
+import com.rongdu.p2psys.borrow.service.BorrowAutoService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * 自动投标
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月14日
+ */
+public class BorrowAutoAction extends BaseAction implements ModelDriven<BorrowAutoModel> {
+
+	private BorrowAutoModel model = new BorrowAutoModel();
+
+	@Override
+	public BorrowAutoModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private BorrowAutoService borrowAutoService;
+
+	private User user;
+
+	/**
+	 * 我的自动投标设置
+	 * 
+	 * @return
+	 */
+	@Action("/member/auto/detail")
+	public String detail() throws Exception {
+		user = getSessionUser();
+		BorrowAuto auto = borrowAutoService.init(user);
+		request.setAttribute("auto", auto);
+		return "detail";
+	}
+
+	/**
+	 * 修改自动投标设置
+	 * 
+	 * @return
+	 */
+	@Action("/member/auto/modify")
+	public void modify() throws Exception {
+		int enable = paramInt("enable");
+		int aprEnable = paramInt("aprEnable");
+		int awardEnable = paramInt("awardEnable");
+		int timelimitMonthEnable = paramInt("timelimitMonthEnable");
+		int timelimitDayEnable = paramInt("timelimitDayEnable");
+		int styleEnable = paramInt("styleEnable");
+		BorrowAuto auto = model.prototype();
+		if(enable == 1){
+			auto.setEnable(true);
+		}else{
+			auto.setEnable(false);
+		}
+		if(aprEnable == 1){
+			auto.setAprEnable(true);
+		}else{
+			auto.setAprEnable(false);
+		}
+		if(awardEnable == 1){
+			auto.setAwardEnable(true);
+		}else{
+			auto.setAwardEnable(false);
+		}
+		if(timelimitMonthEnable == 1){
+			auto.setTimelimitMonthEnable(true);
+		}else{
+			auto.setTimelimitMonthEnable(false);
+		}
+		if(timelimitDayEnable == 1){
+			auto.setTimelimitDayEnable(true);
+		}else{
+			auto.setTimelimitDayEnable(false);
+		}
+		if(styleEnable == 1){
+			auto.setStyleEnable(true);
+		}else{
+			auto.setStyleEnable(false);
+		}
+		auto.setUser(getSessionUser());
+		borrowAutoService.update(auto);
+		redirect("/member/auto/detail.html");
+	}
+
+	/**
+	 * 修改自动投标状态
+	 * 
+	 * @return
+	 */
+	@Action("/member/auto/modifyStatus")
+	public void modifyStatus() throws Exception {
+		BorrowAuto auto = model.prototype();
+		borrowAutoService.modifyStatus(auto);
+	}
+
+}

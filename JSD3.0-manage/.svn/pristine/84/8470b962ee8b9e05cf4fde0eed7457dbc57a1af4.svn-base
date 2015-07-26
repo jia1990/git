@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canLock= true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  700; //弹出窗口宽度
+	var winHeight = 500; //弹出窗口高度
+	var addTitle = "添加用户"; //添加窗口标题
+	var addUrl =  "/modules/system/operator/operatorAddPage.html"; // 添加窗口链接地址
+	var editTitle = "编辑用户"; //编辑窗口标题
+	var resetMsg = "你确定要重置该用户密码吗？";
+	var editUrl =  "/modules/system/operator/operatorEditPage.html"; //编辑窗口链接地址
+	var deleteUrl = "/modules/system/operator/operatorDelete.html";	//删除记录接口地址
+	
+	var resetPwdUrl = "/modules/system/operator/operatorResetPwd.html";	//删除记录接口地址
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	var resetPwdWinParmeters = "'{0}','"+resetPwdUrl+"','"+resetMsg+"'";
+	
+	
+	var lockTitle = "锁定用户";
+	var lockUrl =  "/modules/system/operator/operatorLockPage.html";
+	var lockWinParmeters = "'{0}','"+lockTitle+"',500,300,'"+lockUrl+"','确定'";
+	
+	var openUrl = "/modules/system/operator/operatorUnDelete.html";	
+	var openWinParmeters = "'{0}','"+openUrl+"','是否启用此管理员？'";
+	
+	
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'operatorList.html',  //表格数据接口地址
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 50, checkbox : false}, 
+			//{ field: 'loginRole', title: '登录角色名', width: 100, sortable:false },
+			{ field: 'userName', title: '用户名', width: 100, sortable:false },
+			{ field: 'roleName', title: '角色', width: 100, sortable:false },
+			{ field: 'name', title: '用户姓名', width: 100,fixed: true, sortable:false },	
+			{ field: 'no', title: '工号', width: 80, fixed: true,sortable:false },
+			{ field: 'phone', title: '电话', width: 100, sortable:false },
+			{ field: 'mobile', title: '手机', width: 100, sortable:false },
+			{ field: 'email', title: '邮箱', width: 150, sortable:false },
+			{ field: 'isLocked', title: '状态', width: 150, sortable:false , formatter: function(value,row,index){
+					if (value == 'NN'){
+						return "未锁定";
+					} else if(value == 'AY'){
+						return "已锁定";
+					}else if(value == 'FF'){
+						return "已销户";
+					}
+					if(value == 'UY'){
+						return "挂起";
+					}
+           		}
+			
+			},
+			{ field: 'remark', title: '备注', width: 150, sortable:false }, 
+			  {	field : 'action',
+				title : '操作',
+				width :100,
+				fixed: true,
+				formatter : function(value, row, index) { //功能按钮添加
+					var str = '';
+					
+					if(row.delOpt=='Y'){
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+openWinParmeters+');" src="{1}" title="启用"/>', row.id, '${theme_dir}/css/images/extjs_icons/tick.png');
+					}else{
+						if ($.canAdd) {
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.addFun('+addWinParmeters+');" src="{1}" title="添加"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil_add.png');
+						}
+						str += '&nbsp;';
+						if ($.canEdit) {
+							str += "<@secAuthorizeUrl value='/operator/opteratorEditBtn.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+							str += "</@secAuthorizeUrl>";
+						}
+						str += '&nbsp;';
+						if ($.canDelete) {
+							if(row.userName != row.loginName){
+								str += "<@secAuthorizeUrl value='/operator/opteratorDelBtn.html'>";
+								if(row.roleId==14||row.roleId==2){
+									str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteOptorFun('+deleteWinParmeters+');" src="{1}" title="删除"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+								}else{
+									str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+								}
+								str += "</@secAuthorizeUrl>";
+							}
+						}
+						str += '&nbsp;';					
+						if ($.canDelete) {
+							if(row.userName != row.loginName){
+								str += "<@secAuthorizeUrl value='/operator/opteratorResetPwdBtn.html'>";
+								str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+resetPwdWinParmeters+');" src="{1}" title="重置用户密码"/>', row.id, '${theme_dir}/css/images/extjs_icons/tab_edit.png');
+								str += "</@secAuthorizeUrl>";
+							}
+						}
+						str += '&nbsp;';
+						if ($.canLock) {
+							if(row.userName != row.loginName){
+								str += "<@secAuthorizeUrl value='/operator/operatorLockedBtn.html' >";
+								str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+lockWinParmeters+');" src="{1}" title="锁定用户"/>', row.id, '${theme_dir}/css/images/extjs_icons/lock/lock.png');
+								str += "</@secAuthorizeUrl>";
+							}
+						}
+						str += '&nbsp;';
+					}
+					
+					
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onRowContextMenu : function(e, rowIndex, rowData) {
+				e.preventDefault();
+				$(this).datagrid('unselectAll').datagrid('uncheckAll');
+				$(this).datagrid('selectRow', rowIndex);
+				$('#menu').menu('show', {
+					left : e.pageX,
+					top : e.pageY
+				});
+			},
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip');
+			}
+		});
+	});		
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" autocomplete="off"/></li>
+            		<li>姓名：<input type="text" name="name" autocomplete="off"/></li>
+            		<li>角色：<input type="text" name="roleName" autocomplete="off"/></li>
+            		<li>手机号：<input type="text" name="mobile" autocomplete="off"/></li>
+            		<li>用户状态：<select name="isDelete" id="idDelete" class="type">
+	                  <option value="99" >全部</option>
+	                  <option value="Y">已删除</option>
+	                  <option value="N" selected="selected">未删除</option>
+	                </select></li>
+            		<li>锁定状态：<select name="isLocked" id="isLocked" class="type">
+	                  <option value="99" selected="selected">全部</option>
+	                  <option value="NN">未锁定</option>
+	                  <option value="AY">管理员锁定</option>
+	                  <option value="UY">用户登录锁定</option>
+	                </select></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>			
+		</div>		
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">		
+		<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>				
+	</div>
+	<div id="menu" class="easyui-menu" style="width: 120px; display: none;">
+		<div onclick="$.fn.dataGridOptions.editFun($(this).attr('node-id'),editTitle,winWidth,winHeight,editUrl);" data-options="iconCls:'pencil'">编辑</div>
+		<div onclick="$.fn.dataGridOptions.deleteFun($(this).attr('node-id'),deleteUrl);" data-options="iconCls:'pencil_delete'">删除</div>
+        <div onclick="$.fn.dataGridOptions.deleteFun($(this).attr('node-id'),resetPwdUrl,resetMsg);" data-options="iconCls:'tab_edit'">重置用户密码</div>		
+	</div>
+</body>
+</html>

@@ -1,0 +1,94 @@
+package com.rongdu.p2psys.core.model;
+
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+
+import com.rongdu.p2psys.core.domain.Role;
+
+public class RoleModel extends Role {
+
+	private static final long serialVersionUID = 1L;
+
+	/** 当前页数 **/
+	private int page;
+	/** 每页总数 **/
+	private int rows;
+	/**角色id**/
+	private List<Integer> idlist ;
+	private String rolePname;//所属角色的名称
+	private long rolePid;//所属角色的id
+	private String isDelete;//是否被删除
+	
+	/**
+	 * 当前登录的角色ID
+	 */
+	private String loginRoleId;
+
+	public String getLoginRoleId() {
+		return loginRoleId;
+	}
+
+	public void setLoginRoleId(String loginRoleId) {
+		this.loginRoleId = loginRoleId;
+	}
+
+	/**
+	 * 将实体转为model
+	 * @return
+	 */
+	public static RoleModel instance(Role r) {
+		RoleModel rModel = new RoleModel();
+		BeanUtils.copyProperties(r, rModel);
+		return rModel;
+	}
+	
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+	
+	public String getRolePname() {
+		return rolePname;
+	}
+
+	public void setRolePname(String rolePname) {
+		this.rolePname = rolePname;
+	}
+	
+	public long getRolePid() {
+		return rolePid;
+	}
+
+	public void setRolePid(long rolePid) {
+		this.rolePid = rolePid;
+	}
+
+	public List<Integer> getIdlist() {
+		return idlist;
+	}
+
+	public void setIdlist(List<Integer> idlist) {
+		this.idlist = idlist;
+	}
+
+	public String getIsDelete() {
+		return isDelete;
+	}
+
+	public void setIsDelete(String isDelete) {
+		this.isDelete = isDelete;
+	}
+	
+}

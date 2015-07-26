@@ -1,0 +1,87 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.web.score;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreType;
+import com.rongdu.p2psys.score.model.ScoreModel;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.score.service.ScoreTypeService;
+
+/**
+ * @描述：
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月6日 
+ */
+public class ScoreAction extends BaseAction implements ModelDriven<ScoreModel>{
+	
+		
+	private ScoreModel model = new ScoreModel();
+		
+	private User user;
+	private Map<String, Object> data;
+	
+	
+	@Resource
+	private ScoreService scoreService;
+	
+	@Resource
+	private ScoreTypeService scoreTypeService;
+	
+	@Resource
+	private ScoreRuleAwardService scoreRuleAwardService;
+	
+	@Resource
+	private UserScoreAwardService userScoreAwardService;
+	
+	/**
+	 *@author 李建云
+	 * 积分明细页面 
+	 * 
+	 * */
+	@Action("/member/score/score")
+	public String score(){
+		
+		user = this.getSessionUser();
+		Score score = scoreService.getScoreByUserId(user.getUserId());
+		List<ScoreType> scoreTypeList= scoreTypeService.getScoreListType();
+		
+		request.setAttribute("score", score);
+		request.setAttribute("scoreTypeList", scoreTypeList);
+		
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+		request.setAttribute("ruleAward", ruleAward);
+		if (ruleAward != null) {
+			Date startTime = ruleAward.getStartDate();
+			Date endTime = ruleAward.getEndDate();
+			double transMoney = userScoreAwardService.getCardTotalByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL, startTime, endTime, user);
+			request.setAttribute("transMoney", transMoney);
+		}
+		return "score";
+	}
+
+	public ScoreModel getModel() {
+		return model;
+	}
+
+	public void setModel(ScoreModel model) {
+		this.model = model;
+	}
+
+}

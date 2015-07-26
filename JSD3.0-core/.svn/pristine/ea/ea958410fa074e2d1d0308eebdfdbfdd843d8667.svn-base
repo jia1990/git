@@ -1,0 +1,22 @@
+package com.ddtkj.p2psys.webpetcard.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.webpetcard.dao.PetCardSumDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardSum;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+@Repository("petCardSumDao")
+public class PetCardSumDaoImpl extends BaseDaoImpl<PetCardSum>  implements PetCardSumDao {
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.webpetcard.dao.PetCardSumDao#getPetCardSumByUserId(long)
+	 */
+	@Override
+	public PetCardSum getPetCardSumByUserId(long userId) {
+		PetCardSum petCardSum = super.findObjByProperty("user.userId", userId);
+		return petCardSum;
+	}
+
+	
+}

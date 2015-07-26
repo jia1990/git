@@ -1,0 +1,101 @@
+package com.rongdu.p2psys.borrow.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.rongdu.p2psys.borrow.service.BorrowProtocolService;
+import com.rongdu.p2psys.core.constant.ProtocolConstant;
+import com.rongdu.p2psys.core.dao.ProtocolDao;
+import com.rongdu.p2psys.core.domain.Protocol;
+import com.rongdu.p2psys.core.protocol.AbstractProtocolBean;
+import com.rongdu.p2psys.core.protocol.ProtocolHelper;
+
+@Service("borrowProtocolService")
+public class BorrowProtocolServiceImpl implements BorrowProtocolService {
+
+	@Resource
+	private ProtocolDao protocolDao;
+	@Resource
+	private BorrowTenderDao borrowTenderDao;
+
+	/**
+	 * 借款人协议下载
+	 * 
+	 * @param borrowId
+	 * @param userId
+	 * @return
+	 */
+	@Override
+	public AbstractProtocolBean buildBorrowerProtocol(long borrowId, long userId) {
+		Protocol protocol = protocolDao.findByProperty("nid", ProtocolConstant.BASE_FOR_BORROWER).get(0);
+		AbstractProtocolBean protocolBean = ProtocolHelper.doProtocol(ProtocolConstant.BASE_FOR_BORROWER);
+		protocolBean.executer(borrowId, protocol, userId);
+		return protocolBean;
+	}
+	/**
+	 * 债权转出人协议下载
+	 * 
+	 * @param borrowId
+	 * @param userId
+	 * @return
+	 */
+	@Override
+	public AbstractProtocolBean buildCaProtocol(long caId, long userId) {
+		Protocol protocol = protocolDao.findByProperty("nid", ProtocolConstant.BASE_FOR_CA).get(0);
+		AbstractProtocolBean protocolBean = ProtocolHelper.doProtocol(ProtocolConstant.BASE_FOR_CA);
+		
+		protocolBean.executer(caId, protocol, userId);
+		return protocolBean;
+	}
+	/**
+	 * 债权受让人协议下载
+	 * 
+	 * @param caId
+	 * @param userId
+	 * @return
+	 */
+	@Override
+	public AbstractProtocolBean buildClProtocol(long caId,long clId, long userId) {
+		Protocol protocol = protocolDao.findByProperty("nid", ProtocolConstant.BASE_FOR_CL).get(0);
+		AbstractProtocolBean protocolBean = ProtocolHelper.doProtocol(ProtocolConstant.BASE_FOR_CL);
+		protocolBean.executer(caId,clId, protocol, userId);
+		return protocolBean;
+	}
+	/**
+	 * 投资人协议下载
+	 * 
+	 * @param borrowId
+	 * @param userId
+	 * @param tenderId
+	 * @return
+	 */
+	@Override
+	public AbstractProtocolBean buildTenderProtocol(long tenderId) {
+		BorrowTender tender = borrowTenderDao.find(tenderId);
+		Protocol protocol = protocolDao.findByProperty("nid", ProtocolConstant.BASE_FOR_TENDER).get(0);
+		AbstractProtocolBean protocolBean = ProtocolHelper.doProtocol(ProtocolConstant.BASE_FOR_TENDER);
+		protocolBean.executer(tender.getBorrow().getId(), tender.getId(), protocol, tender.getUser().getUserId());
+		return protocolBean;
+	}
+
+	/**
+	 * 平台协议下载
+	 * 
+	 * @param borrowId
+	 * @param userId
+	 * @param operatorId
+	 * @return
+	 */
+	@Override
+	public AbstractProtocolBean buildWebProtocol(long borrowId, long userId, long operatorId) {
+		Protocol protocol = protocolDao.findByProperty("nid", ProtocolConstant.BASE_FOR_WEB).get(0);
+		AbstractProtocolBean protocolBean = ProtocolHelper.doProtocol(ProtocolConstant.BASE_FOR_WEB);
+		protocolBean.executer(borrowId, protocol, operatorId);
+		return protocolBean;
+	}
+	
+	
+}

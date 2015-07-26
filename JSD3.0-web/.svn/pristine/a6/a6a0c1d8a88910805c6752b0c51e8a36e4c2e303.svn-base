@@ -1,0 +1,219 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.web.member;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.member.domain.MemberVipAward;
+import com.ddtkj.p2psys.member.model.MemberVipAwardModel;
+import com.ddtkj.p2psys.member.model.MemberVipAwardSubModel;
+import com.ddtkj.p2psys.member.service.MemberVipAwardService;
+import com.ddtkj.p2psys.member.service.MemberVipHistoryService;
+import com.ddtkj.p2psys.member.service.MemberVipService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserInvitedSummary;
+import com.ddtkj.p2psys.user.service.UserInvitedSummaryService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.VipRuleCheck;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.InviteVIP;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.InviteVIP.Invite_convert_vips;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：会员奖励
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月22日 
+ */
+public class MemberVipAwardAction extends BaseAction<MemberVipAwardSubModel> implements ModelDriven<MemberVipAwardSubModel>{
+	
+	private MemberVipAwardSubModel model = new MemberVipAwardSubModel();
+
+	public MemberVipAwardSubModel getModel() {
+		return model;
+	}
+	
+	public void setModel(MemberVipAwardSubModel model) {
+		this.model = model;
+	}
+
+	@Resource
+	private MemberVipAwardService memberVipAwardService;
+	
+	@Resource
+	private MemberVipService memberVipService;
+	
+	@Resource
+	private MemberVipHistoryService memberVipHistoryService;
+	
+	@Resource
+	private UserService userService;
+	
+	@Resource
+	private UserInvitedSummaryService userInvitedSummaryService;
+	
+	private VipRuleCheck vipRule= (VipRuleCheck) Global
+			.getRuleCheck("vip");
+	
+	private User user;
+	
+	private Map<String, Object> data;
+	
+	/**
+	 * @author 李建云
+	 * 邀请获得会员包记录页面表
+	 * */
+	@Action("/member/member/memberAwardLog")
+	public String memberAwardLog(){
+		
+		//并发随机标识
+		String resultFlag=System.currentTimeMillis()+""+Math.random()*10000;
+		request.setAttribute("resultFlag", resultFlag);
+		
+		return "memberAwardLog";
+	}
+	
+	/**
+	 * @author 李建云
+	 * 邀请获得会员包历史记录
+	 * @throws IOException 
+	 * */
+	@Action("/member/member/memberAwardLogList")
+	public void memberAwardLogList() throws Exception{
+		data = new HashMap<String, Object>();
+		user = userService.find(this.getSessionUser().getUserId());
+		model.setUser(user);
+		PageDataList<MemberVipAwardModel> pageDataList = memberVipAwardService.memberVipAwardPageList(model);
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * @author 李建云
+	 * vip包兑换VIP
+	 * */
+	@Action("/member/member/updateVipAward")
+	public void updateVipAward() throws Exception{
+		data = new HashMap<String, Object>();
+		user = userService.find(this.getSessionUserId());
+		int id = this.paramInt("id");
+		String resultFlag=paramString("resultFlag");
+		//查询当前邀请VIP奖励记录
+		MemberVipAward memberVipAward= memberVipAwardService.findMemberVipAward(id);
+		model.setUser(user);
+		model.setVipLevel(memberVipAward.getVipLevel());
+		model.setVipValidMonth(memberVipAward.getVipValidMonth());
+		model.setAwardResource(memberVipAward.getAwardResource());
+		
+		MemberVip memberVip= memberVipService.findMemberByUserId(user.getUserId());
+		//兑换VIP包等级
+		String vipAwardLevel = memberVipAward.getVipLevel();
+		
+		
+		if(memberVip != null && "Y".equals(memberVip.getUsable()) ){
+			//查询数据库中，当前的会员等级	
+			String  currentVipLevel  = memberVip.getVipLevel();
+					
+			if(!"".equals(currentVipLevel)&&currentVipLevel.length()>1&&vipAwardLevel.length()>1){
+				currentVipLevel = currentVipLevel.substring(1,2);
+				vipAwardLevel = vipAwardLevel.substring(1,2);
+			}
+			//进行等级比较
+			if(Integer.parseInt(vipAwardLevel)<Integer.parseInt(currentVipLevel)){
+				String vipLevelName = null;
+				if("V1".equals(memberVip.getVipLevel())){
+					vipLevelName ="铜牌会员";
+				}else if("V2".equals(memberVip.getVipLevel())){
+					vipLevelName ="银牌会员";
+				}else if("V3".equals(memberVip.getVipLevel())){
+					vipLevelName ="金牌会员";
+				}else if("V4".equals(memberVip.getVipLevel())){
+					vipLevelName ="砖石会员";
+				}
+				data.put("vipLevelName", vipLevelName);
+				data.put("result", false);
+			}else{
+				//更新 用户VIP记录表
+				// JSDP-161  wcw 20150525 start
+				//DisruptorUtils.convertVipForVipAward(model, resultFlag);
+				DisruptorUtils.convertVip(model, resultFlag);
+				// JSDP-161  wcw 20150525 end
+				data.put("result", true);
+			}
+		}else if(memberVip == null ||(memberVip != null && "N".equals(memberVip.getUsable()))){		
+			//更新 用户VIP记录表
+			// JSDP-161  wcw 20150525 start
+			//DisruptorUtils.convertVipForVipAward(model, resultFlag);
+			DisruptorUtils.convertVip(model, resultFlag);
+			// JSDP-161  wcw 20150525 end
+			data.put("result", true);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * @author 李建云
+	 * 邀请人数兑换VIP规则展示
+	 * 
+	 * */
+	@Action("/member/invite/vipConvertRule")
+	public void vipConvertRule() throws Exception {
+		data = new HashMap<String, Object>();
+		InviteVIP   inviteVip = vipRule.getInvite_vip();
+		List<Invite_convert_vips> inviteVipRuleList =null;
+		if(inviteVip != null && inviteVip.getStatus()==1){
+			inviteVipRuleList = Arrays.asList(inviteVip.getList());
+		}
+		UserInvitedSummary userInvitedSummary = userInvitedSummaryService
+				.findUserInvitedSummaryByUserId(this.getSessionUserId());
+		if(userInvitedSummary!=null){
+			data.put("userInvitedSummary", userInvitedSummary);
+			data.put("unUsedInviteTotal", BigDecimalUtil.sub(userInvitedSummary.getInviteTotal(), userInvitedSummary.getInviteUsedTotal()));
+		}
+		data.put("ruleList", inviteVipRuleList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * @author 李建云
+	 * 邀请人数兑换成VIP包
+	 * */
+	@Action("/member/invite/invitedUserConvertVip")
+	public void invitedUserConvertVip() throws Exception {
+		data = new HashMap<String, Object>();
+		
+		model.setUser(this.getSessionUser());
+		userInvitedSummaryService.modifyInviteUsedTotal(model);
+		
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+}

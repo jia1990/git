@@ -1,0 +1,151 @@
+package com.ddtkj.p2psys.tpp.ymd.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：用户开户记录实体
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月8日
+ */
+@Entity
+@Table(name = "t_jsd_account_open_history")
+public class AccountOpenHistory implements Serializable {
+
+	private static final long serialVersionUID = -8013189632534941880L;
+	
+	public static final String OPEN_ACCOUNT_SUCCESS="00";
+	public static final String OPEN_ACCOUNT_FAIL="99";
+	
+    @Id
+    @OneToOne(fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private User user; // 用户ID
+	private String userMode;// 开通第三方账户的平台用户类别： 个人：20  企业： 21
+	private String thirdPartyLoginName;// 借贷平台提供的：个人为手机号，企业为邮箱third_party_login_name
+	private String userRealName;// 平台注册用户真实姓名
+	private String cardNo;// 证件号码
+	private String userName;// 平台唯一用户名称（汇潮托管昵称）
+	private String userRemark;// 用户备注
+	private String returnMsg;// 按照JSON格式的保存托管方本次交易返回的信息
+	private String sendCleartextInfo;// JSON格式发送给托管平台的参数信息
+	
+	private String status;  //开户状态    00：开户成功   99：开户失败
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime;// 记录添加时间
+	private String addIp; // 记录添加IP
+	public AccountOpenHistory() {
+		super();
+	}
+
+	public String getUserMode() {
+		return userMode;
+	}
+
+	public void setUserMode(String userMode) {
+		this.userMode = userMode;
+	}
+
+	public String getThirdPartyLoginName() {
+		return thirdPartyLoginName;
+	}
+
+	public void setThirdPartyLoginName(String thirdPartyLoginName) {
+		this.thirdPartyLoginName = thirdPartyLoginName;
+	}
+	public String getCardNo() {
+		return cardNo;
+	}
+
+	public void setCardNo(String cardNo) {
+		this.cardNo = cardNo;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+
+	public String getReturnMsg() {
+		return returnMsg;
+	}
+
+	public void setReturnMsg(String returnMsg) {
+		this.returnMsg = returnMsg;
+	}
+
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getUserRealName() {
+		return userRealName;
+	}
+
+	public void setUserRealName(String userRealName) {
+		this.userRealName = userRealName;
+	}
+
+	public String getUserRemark() {
+		return userRemark;
+	}
+
+	public void setUserRemark(String userRemark) {
+		this.userRemark = userRemark;
+	}
+
+
+	public String getSendCleartextInfo() {
+		return sendCleartextInfo;
+	}
+
+	public void setSendCleartextInfo(String sendCleartextInfo) {
+		this.sendCleartextInfo = sendCleartextInfo;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	
+}

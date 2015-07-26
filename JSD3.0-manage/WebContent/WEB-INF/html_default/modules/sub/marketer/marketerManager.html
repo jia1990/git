@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>邀请管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  500;
+	var winHeight = 500;
+
+    var editTitle = "修改市场专员";
+    var editUrl =  "/modules/sub/marketer/marketerEditPage.html";
+    var editWinParmeters = "'{0}','"+editTitle+"',400,400,'"+editUrl+"'";
+    
+    var addTitle = "添加市场专员";
+	var addUrl = "/modules/sub/marketer/marketerAddPage.html";
+	
+	var deleteUrl = "/modules/sub/marketer/marketerDel.html";
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'marketerList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect : true,
+			showFooter : true,	//显示页脚
+			columns : [ [ 			
+			{ field: 'userId', title: '编号', width: 70},
+			{ field: 'userName', title: '用户名', width: 70},
+			{ field: 'mobilePhone', title: "手机号", width: 80},
+			{ field: 'branchName', title: "所属加盟商", width: 80},
+			{ field: 'inviteCount', title: "邀请人数", width: 100},
+			{ field: 'validCount', title: "有效邀请人数", width: 100},
+			
+			{ field: 'action',title : '操作',width :60,fixed:true, formatter:function(value, row, index){
+				var str = '';
+				str += "<@secAuthorizeUrl value='/marketer/marketerEditBtn.html'>"
+				str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑"/>', row.userId, '${theme_dir}/css/images/extjs_icons/pencil.png');
+				str += "</@secAuthorizeUrl>"
+				str += "&nbsp;";
+				str += "<@secAuthorizeUrl value='/marketer/marketerDelBtn.html'>"
+				str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除" ondragstart="return false"/>', row.userId, '${theme_dir}/css/images/extjs_icons/cancel.png');
+				str += "</@secAuthorizeUrl>"
+                return str;
+			}}
+			 ] ],
+	            toolbar : '#toolbar'
+		});
+		
+	});
+	function exportExcel(){
+		var url = "/modules/account/account/exportExcelAccount.html";
+		var userName = $("#username").val();
+		var realName = $("#realname").val();
+		var sou = "?userType=" + 13 + "&userName=" + userName + "&realName=" + realName;
+		window.location.href = url + sou;
+	}
+
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>手机号：<input type="text" name="mobilePhone" id="mobilePhone" autocomplete="off"/></li>
+            		<li>加盟商：<input type="text" name="branchName" id="branchName" autocomplete="off"/></li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	    
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/marketer/marketerAddBtn.html'>
+		<a onclick="$.fn.dataGridOptions.addFun(3,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>
+		</@secAuthorizeUrl>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

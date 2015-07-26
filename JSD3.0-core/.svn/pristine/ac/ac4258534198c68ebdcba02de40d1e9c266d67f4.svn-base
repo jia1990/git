@@ -1,0 +1,104 @@
+package com.ddtkj.p2psys.credit.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * 扣除待收利息（去掉重复的待收利息）
+JSDP-210
+ * 
+ * @author 王长伟
+ * @version 3.0
+ * @since 2015-7-4
+ */
+public class CreditDecuctWaitInterestExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.DECUCT_WAIT_INTEREST;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		//操作金额
+		log.setInterestMoney(interestMoney);
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)1);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		//账户待收总额
+		account.setCollectionTotal(BigDecimalUtil.sub(
+				account.getCollectionTotal(), interestMoney));
+		//账户总额
+		account.setAccountTotal(BigDecimalUtil.sub(
+				account.getAccountTotal(), interestMoney));
+		// 更新
+		accountDao.update(account);
+		
+		System.out.println("购买者扣除重复待收利息成功，金额："+interestMoney);
+		
+	}
+
+	@Override
+	public void handleAccountSum() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+}

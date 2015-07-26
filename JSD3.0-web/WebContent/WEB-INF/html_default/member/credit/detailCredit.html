@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<#include "../../include/resource1.html"> 
+<#include "../../include/resource_credit.html"> 
+<#assign nid="member"> 
+  <#include "../../include/headerMemberCenter.html">
+<style>
+select{display:none;}
+.select_showbox{border: 1px solid #ccc;width:195px;height: 36px;padding-left: 5px;background: url(${webroot}${theme_dir}/images/sel.png) no-repeat 160px 0;line-height: 36px;}
+.select_option{border: 1px solid #ccc;border-top: none;display: none;}
+.select_option li{padding-left: 5px;margin: 0;}
+.select_option li.hover{background: #0697DA; color: #fff;}
+.select_box ul{margin:0;position:absolute;top:38px;width:200px;background:#fff;z-index: 101;}
+.select_box ul li{clear:both;width:195px;}
+.select_box{position:relative;}
+
+.cliam_title dd{float:left;cursor:pointer;width:396px;text-align:center;line-height:36px;border-bottom:1px solid #ddd;}
+.cliam_list{display:none;}
+.may_swingout{padding:0 20px;}
+</style>
+<title>晋商贷-债权转让</title>
+</head>
+ <body>
+ <!-- 弹窗  start -->
+		<!-- 确认购买 -->
+	<div class="c_cofirm_buy" style="display:none;">
+	</div>
+	<!-- 购买成功 -->
+	<div class="c_buy_success" style="display:none;">
+		<div class="c_success_instruc" style="margin-bottom: 30px;">债权转出成功</div>
+		<div class="c_cliam_close1"></div>
+		<span class="c_cliamBT4">确认</span>
+	</div>
+	<!-- 是否撤销 -->
+	<div class="c_buy_revocationing" style="display:none;left: 277px;top: 103.5px">
+		<div class="c_success_instruc" style="margin-bottom: 30px;">确认撤销？</div>
+		<div class="c_cliam_close2"></div>
+		<span class="c_cliamBT1">确认</span><span class="c_cliamBT2">取消</span>
+	</div>
+	<!-- 是否撤销 (初审前)-->
+	<!--JSDP-35 gjh 2015-4-30 start-->
+	<div class="c_buy_revocationing1" style="display:none;left: 277px;top: 103.5px">
+		<div class="c_success_instruc" style="margin-bottom: 30px;">确认撤销？</div>
+		<div class="c_cliam_close21"></div>
+		<span class="c_cliamBT11">确认</span><span class="c_cliamBT2">取消</span>
+	</div>
+	<!--JSDP-35 gjh 2015-4-30 end-->
+	<!-- 撤销成功 -->
+	<div class="c_buy_revocation" style="display:none;">
+		<div class="c_success_instruc" style="margin-bottom: 30px;">撤销成功</div>
+		<div class="c_cliam_close3"></div>
+		<span class="c_cliamBT2">确认</span>
+	</div>
+	<div class="modal-backdrop c_buy_bj" style="display:none;"></div>
+ 	<!-- 弹窗  end -->
+
+	<div class="c_deal">
+		<div class="c_deal_content">
+			<!-- 左侧导航 -->
+			<#assign mid="c_creditor">
+			<#include "../../member/trade_menu.html">
+			<!-- 右侧 -->
+			<div class="c_deal_record c_member_content">
+				<ul class="c_deal_detal">
+					<li style="border-right:1px solid #e0e0e0;padding:0 20px 0 0;margin-right:56px;">
+						<div class="y_tooltips" style="display:none;top:auto;bottom:113px;">
+							债权转让盈亏=债权折溢价盈亏-债权交易费用
+							<i></i>
+						</div>
+						<span style="font-size:16px;">债权转让盈亏<em class="yhoverems"></em></span>
+						<i style="font-size:14px;color:#ff7800;">${creditBalance!}元</i>
+						<span>转出中的份额<em>${creditCopiesCount!}</em>份</span>
+						<span>转出中的数量<em>${creditCount!}</em>个</span>
+					</li>
+					<li>
+						<p class="detalpo1">
+							<span>成功转入金额</span>
+							<span>${buyCreditSum!}元</span>
+						</p>
+						<p>
+							<span>成功转出金额</span>
+							<span>${creditSum!}元</span>
+						</p>
+					</li>
+					<li>
+						<p class="detalpo1">
+							<span>债权转入盈亏</span>
+							<span>${buyCreditBalance!}元</span>
+						</p>
+						<p>
+							<span>债权转出盈亏</span>
+							<span>${creditOutBalance!}元</span>
+						</p>
+					</li>
+					<li>
+						<p class="detalpo1">
+							<span>已转入的债权数量</span>
+							<span>${buyCreditCount!}份</span>
+						</p>
+						<p>
+							<span>已转出的债权数量</span>
+							<span>${creditedCount!}份</span>
+						</p>
+					</li>
+				</ul>
+				<h2 class="YFAQsa"><a href="/common/faquestions.html">债权转让中常遇到的问题？</a></h2>
+			</div>
+		</div>
+		<div class="c_clear"></div>
+	</div>
+	<#include "../../include/footer.html">
+	 <script>
+		seajs.use("${webroot}${theme_dir}/media/js/member/credit_detail")
+	</script>
+ </body>
+</html>

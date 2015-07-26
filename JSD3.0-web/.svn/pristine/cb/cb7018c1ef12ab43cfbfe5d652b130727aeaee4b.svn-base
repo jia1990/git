@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html"> 
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" href="${webroot}${theme_dir}/media/css/activity.css"/>
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script>
+$(function(){
+	
+	 $(".activ01 .yq2").click(function(){
+		$(this).parent().parent().hide();
+		$(this).parent().parent().next().hide();
+		$(".activ03").show();
+	})
+	$(".activ03 .dq").click(function(){
+		$(this).parent().parent().hide();
+		$(this).parent().parent().prev().hide();
+		$(".activ01").show();
+	})
+})
+</script>
+<title>晋商贷-诚信、安全、方便、快捷、高效的投资理财平台！</title>
+</head>
+<body onselectstart ='return false'>
+ <#include "../include/header.html">
+	<div class="activ01" style="min-height: 500px">
+		<div class="actab">
+			<input type="hidden" value="${inviteId!}" id="inviteIdNo"/>
+			<#if session_user?exists >
+			<a class="dq" href="javascript:void(0);"></a>
+			<#else>
+			<a class="dq" href="javascript:void(0);"></a>
+			<a class="noyq" href="/user/login.html"></a>
+			
+			<#if inviteId?exists >
+			<a class="yq2" href="/user/register.html?id=${inviteId!}"></a>
+			<#else>
+			<a class="yq2" href="/user/register.html"></a>
+			</#if>	
+			
+			</#if>	
+		</div>
+		<div class="dbtop"></div>
+		<div class="dbmid">  
+			
+		</div>
+		<div id="kkpager" style='width:1000px;margin:80px auto 0;text-align:center;'></div>
+	    <div class="dbbom"></div>
+	</div>
+	
+</body>
+
+<script>
+	seajs.use("${webroot}${theme_dir}/media/js/activityList");
+</script>
+</html>
+	<#include  "../include/footer.html"> 
+
+
+

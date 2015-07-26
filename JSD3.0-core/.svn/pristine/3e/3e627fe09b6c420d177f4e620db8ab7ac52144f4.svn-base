@@ -1,0 +1,345 @@
+package com.ddtkj.p2psys.member.model;
+
+import java.text.ParseException;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoSetDao;
+import com.ddtkj.p2psys.member.dao.MemberVipAwardDao;
+import com.ddtkj.p2psys.member.dao.MemberVipDao;
+import com.ddtkj.p2psys.member.dao.MemberVipHistoryDao;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.member.domain.MemberVipAward;
+import com.ddtkj.p2psys.member.domain.MemberVipHistory;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.CalendarUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.VipRuleCheck;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.BuyVIP;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.BuyVIP.VipLevel;
+import com.rongdu.p2psys.core.rule.VipRuleCheck.BuyVIP.VipLevel.VipPrice;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * 
+ * @描述：vip奖励来源
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年1月4日
+ */
+public class MemberVipAwardModel  extends MemberVipAward{
+
+
+	private static final long serialVersionUID = 7408370353489550350L;
+	
+	/** 当前页码 */
+	private int page;
+	/** 每页总数 **/
+	private int rows = 10;
+	
+	protected MemberVipDao memberVipDao;
+	
+	protected MemberVipAwardDao memberVipAwardDao;
+	
+	private String userName;
+	
+	protected MemberVipHistoryDao memberVipHistoryDao;
+	
+	protected MemberVipHistory memberVipHistory;//会员历史记录
+	
+	protected UserDao userDao;
+	
+	protected BorrowAutoSetDao borrowAutoSetDao;
+	
+	private double usedVipFee;//已使用vip金额
+	
+	private double unUsedVipFee;//未使用vip金额
+	
+	private int usedMonth;//已使用月份
+	
+	private int unUsedMonth;//未使用月份
+	
+	//vip包折算后每月金额
+	private double vipAwardPerPrice;
+	
+	public MemberVipAwardModel(){
+		init();
+	}
+
+	public  void init() {
+		memberVipDao=(MemberVipDao) BeanUtil.getBean("memberVipDao");
+		memberVipHistoryDao=(MemberVipHistoryDao) BeanUtil.getBean("memberVipHistoryDao");
+		memberVipAwardDao=(MemberVipAwardDao) BeanUtil.getBean("memberVipAwardDao");
+		userDao=(UserDao) BeanUtil.getBean("userDao");
+		borrowAutoSetDao=(BorrowAutoSetDao) BeanUtil.getBean("borrowAutoSetDao");
+	}
+	
+	private VipRuleCheck vipRule= (VipRuleCheck) Global.getRuleCheck("vip");
+	
+	
+	
+	/**
+	 * 将model转为实体
+	 * @return
+	 */
+	public  MemberVipAward prototype() {
+		MemberVipAward m = new MemberVipAward();
+		BeanUtils.copyProperties(this, m);
+		return m;
+	}
+	/**
+	 * 将实体转化为Model
+	 * @param m
+	 * @return
+	 */
+	public static MemberVipAwardModel instance(MemberVipAward m) {
+		MemberVipAwardModel memberVipAwardModel = new MemberVipAwardModel();
+		BeanUtils.copyProperties(m, memberVipAwardModel);
+		return memberVipAwardModel;
+	}
+	
+	public double getVipAwardPerPrice() {
+			 
+		BuyVIP buyVipRule= vipRule.getBuy_vip();
+		List<VipPrice> vipPriceList = null;
+		//会员包折算每月价格
+		double perPrice = 0.0;
+		
+		if(buyVipRule != null &&buyVipRule.getStatus() ==1){
+			
+			if(vipLevel != null &&!"".equals(vipLevel)){
+				VipLevel  vipLevelRule = null;
+				if("V1".equals(vipLevel)){	
+					vipLevelRule = buyVipRule.getV1();
+				}else if("V2".equals(vipLevel)){
+					vipLevelRule = buyVipRule.getV2();
+				}else if("V3".equals(vipLevel)){
+					vipLevelRule = buyVipRule.getV3();
+				}else if("V4".equals(vipLevel)){
+					vipLevelRule = buyVipRule.getV4();
+				} 
+				if(vipLevelRule.getType() ==1){
+				//按固定金额计算 
+				vipPriceList = Arrays.asList(vipLevelRule.getList());
+				VipPrice  vipPrice= vipPriceList.get(0);
+					double price = vipPrice.getPrice();
+					int month = vipPrice.getMonth();
+					perPrice = BigDecimalUtil.div(price, month, 2);
+				}else if(vipLevelRule.getType() ==2){
+				//按费率计算
+				//每月价格	
+					perPrice = vipLevelRule.getVip_rate().getPrice();
+				}
+
+			}
+		}
+		return perPrice;
+	}
+	
+	public double getUsedVipFee() throws ParseException {
+		MemberVip member = memberVipDao.findMemberVip(this.getUser().getUserId());
+		//购买VIP历史记录表
+		MemberVipHistory vipHistoryOld = this.getMemberVipHistory();
+		//选中的会员等级
+		String vipLevel =getVipLevel();
+		if(!"".equals(vipLevel)&&vipLevel.length()>1){		
+			vipLevel = vipLevel.substring(1, 2);		
+		}
+
+		if(member != null && vipHistoryOld != null && "Y".equals(member.getUsable()) ){
+			//查询数据库中，当前的会员等级	
+			String  currentVipLevel  = member.getVipLevel();
+					
+			if(!"".equals(currentVipLevel)&&currentVipLevel.length()>1){
+				currentVipLevel = currentVipLevel.substring(1,2);
+			}
+			//如果是同级延期续费，如果是升级，扣除一个月
+			//进行等级比较
+			if(Integer.parseInt(vipLevel)==Integer.parseInt(currentVipLevel)){
+				//折算金额
+				double vipFeeHis = vipHistoryOld.getVipFee();		
+				//未使用VIP费用
+				usedVipFee =vipFeeHis-unUsedVipFee;
+			
+			}else if(Integer.parseInt(vipLevel)>Integer.parseInt(currentVipLevel)){
+				//折算金额
+				double vipFeeHis = vipHistoryOld.getVipFee();		
+				int spaceMonth = CalendarUtil.getMonthSpace(member.getStartTime(), member.getEndTime());	
+				//每月VIP费用
+				double perVipFee = BigDecimalUtil.div(vipFeeHis, spaceMonth, 2);
+				int month = CalendarUtil.getMonthSpace(member.getStartTime(), new Date());
+				//已使用月份
+				int usedMonth =month+1; 
+				//已使用 VIP费用
+				 usedVipFee = BigDecimalUtil.mul(perVipFee, usedMonth);		
+			}
+		}
+		return usedVipFee;
+	}
+	
+	public void setUsedVipFee(double usedVipFee) {
+		this.usedVipFee = usedVipFee;
+	}
+	
+	public double getUnUsedVipFee() throws ParseException {
+		
+		MemberVip member = memberVipDao.findMemberVip(this.getUser().getUserId());
+		//购买VIP历史记录表
+		MemberVipHistory vipHistoryOld = this.getMemberVipHistory();
+		//选中的会员等级
+		String vipLevel = 	this.getVipLevel();
+		if(!"".equals(vipLevel)&&vipLevel.length()>1){		
+			vipLevel = vipLevel.substring(1, 2);		
+		}
+		if(member != null &&vipHistoryOld !=null && "Y".equals(member.getUsable()) ){
+			String  currentVipLevel  = member.getVipLevel();
+			if(!"".equals(currentVipLevel)&&currentVipLevel.length()>1){
+				currentVipLevel = currentVipLevel.substring(1,2);
+			}
+			//如果是同级延期续费，如果是升级，扣除一个月
+			//进行等级比较
+			if(Integer.parseInt(vipLevel)==Integer.parseInt(currentVipLevel)){	
+				double vipFeeHis = vipHistoryOld.getVipFee();		
+				Date startTime=  member.getStartTime();
+				Date endTime = member.getEndTime();	
+				//未使用VIP费用
+				unUsedVipFee =BigDecimalUtil.round(vipFeeHis*(endTime.getTime()-new Date().getTime())/(endTime.getTime()-startTime.getTime()), 2);
+			}else if(Integer.parseInt(vipLevel)>Integer.parseInt(currentVipLevel)){
+				//查询数据库中，当前的会员等级				
+				//折算金额
+				double vipFeeHis = vipHistoryOld.getVipFee();		
+				int spaceMonth = CalendarUtil.getMonthSpace(member.getStartTime(), member.getEndTime());	
+				//每月VIP费用
+				double perVipFee = BigDecimalUtil.div(vipFeeHis, spaceMonth, 2);
+				int month = CalendarUtil.getMonthSpace(member.getStartTime(), new Date());
+				//已使用月份
+				int usedMonth =month+1; 
+				//已使用 VIP费用
+				double usedVipFee = BigDecimalUtil.mul(perVipFee, usedMonth);
+				//未使用VIP费用
+				unUsedVipFee =BigDecimalUtil.sub(vipFeeHis, usedVipFee);	
+				
+			}
+		}		
+		return unUsedVipFee;
+	}
+	
+	public int getUsedMonth() throws ParseException {
+		
+		MemberVip member = memberVipDao.findMemberVip(this.getUser().getUserId());
+		//购买VIP历史记录表
+		//选中的会员等级
+		String vipLevel =getVipLevel();
+		if(!"".equals(vipLevel)&&vipLevel.length()>1){		
+			vipLevel = vipLevel.substring(1, 2);		
+		}
+
+		if(member != null && "Y".equals(member.getUsable()) ){
+			//查询数据库中，当前的会员等级	
+			String  currentVipLevel  = member.getVipLevel();
+					
+			if(!"".equals(currentVipLevel)&&currentVipLevel.length()>1){
+				currentVipLevel = currentVipLevel.substring(1,2);
+			}
+			//如果是同级延期续费，如果是升级，扣除一个月
+			//进行等级比较
+			if(Integer.parseInt(vipLevel)==Integer.parseInt(currentVipLevel)){
+
+				//未使用VIP费用
+				usedMonth =new Long(DateUtil.getSubDay(new Date(),member.getStartTime())/30).intValue();
+			
+			}else if(Integer.parseInt(vipLevel)>Integer.parseInt(currentVipLevel)){
+				//查询数据库中，当前的会员等级	
+				int month = CalendarUtil.getMonthSpace(member.getStartTime(), new Date());
+				//已使用月份
+				usedMonth =month+1; 
+			}
+		}
+
+		return usedMonth;
+	}
+	
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+	public MemberVipHistory getMemberVipHistory() {
+		return memberVipHistory;
+	}
+	public void setMemberVipHistory(MemberVipHistory memberVipHistory) {
+		this.memberVipHistory = memberVipHistory;
+	}
+	public void setUnUsedVipFee(double unUsedVipFee) {
+		this.unUsedVipFee = unUsedVipFee;
+	}
+	public void setUsedMonth(int usedMonth) {
+		this.usedMonth = usedMonth;
+	}
+
+	public void setVipAwardPerPrice(double vipAwardPerPrice) {
+		this.vipAwardPerPrice = vipAwardPerPrice;
+	}
+	
+	public int getUnUsedMonth() throws ParseException {
+	
+		MemberVip member = memberVipDao.findMemberVip(this.getUser().getUserId());
+		//购买VIP历史记录表
+		//选中的会员等级
+		String vipLevel =getVipLevel();
+		if(!"".equals(vipLevel)&&vipLevel.length()>1){		
+			vipLevel = vipLevel.substring(1, 2);		
+		}
+
+		if(member != null && "Y".equals(member.getUsable()) ){
+			//查询数据库中，当前的会员等级	
+			String  currentVipLevel  = member.getVipLevel();
+					
+			if(!"".equals(currentVipLevel)&&currentVipLevel.length()>1){
+				currentVipLevel = currentVipLevel.substring(1,2);
+			}
+			//如果是同级延期续费，如果是升级，扣除一个月
+			//进行等级比较
+			if(Integer.parseInt(vipLevel)==Integer.parseInt(currentVipLevel)){
+
+				//未使用VIP费用
+				unUsedMonth =new Long(DateUtil.getSubDay(new Date(),member.getEndTime())/30).intValue();
+			
+			}else if(Integer.parseInt(vipLevel)>Integer.parseInt(currentVipLevel)){
+				//查询数据库中，当前的会员等级	
+				int month = CalendarUtil.getMonthSpace(member.getStartTime(), member.getEndTime());
+				//已使用月份
+				unUsedMonth =month-this.getUsedMonth(); 
+			}
+		}
+
+		return unUsedMonth;
+	}
+	
+	public void setUnUsedMonth(int unUsedMonth) {
+		this.unUsedMonth = unUsedMonth;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+}

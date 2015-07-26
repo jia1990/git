@@ -1,0 +1,218 @@
+package com.ddtkj.p2psys.subbranch.model;
+
+import java.math.BigInteger;
+import java.util.Date;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述：分店市场专员关系Model
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+public class BranchMarketerModel extends BranchMarketer{
+	
+	
+	
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	
+	private long userId;
+	private String userName;//用户名
+	private String mobilePhone;
+	private BigInteger inviteCount;//总共邀请人数
+	private BigInteger validCount;//有效邀请人数
+	private String branchName;//所属加盟商名称
+	private String marketerName;//市场专员用户名
+	private Date addTime;//添加时间
+	private String isValid;//是否有效 Y:有效 N：无效 T：投资
+	
+	
+	/**
+	 * 实体转化为model
+	 * @param branch
+	 * @return
+	 */
+	public static BranchMarketerModel instance(BranchMarketer branchMarketer) {
+		BranchMarketerModel branchMarketerModel = new BranchMarketerModel();
+		BeanUtils.copyProperties(branchMarketer, branchMarketerModel);
+		return branchMarketerModel;
+	}
+	
+	/**
+	 * model转化为实体
+	 * @return
+	 */
+	public BranchMarketer prototype() {
+		BranchMarketer branchMarketer = new BranchMarketer();
+		BeanUtils.copyProperties(this, branchMarketer);
+		return branchMarketer;
+	}
+	
+	
+
+	/**
+	 * @return the page
+	 */
+	public int getPage() {
+		return page;
+	}
+
+	/**
+	 * @param page the page to set
+	 */
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	/**
+	 * @return the size
+	 */
+	public int getSize() {
+		return size;
+	}
+
+	/**
+	 * @param size the size to set
+	 */
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	/**
+	 * @return the userId
+	 */
+	public long getUserId() {
+		return userId;
+	}
+
+	/**
+	 * @param userId the userId to set
+	 */
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+	/**
+	 * @return the userName
+	 */
+	public String getUserName() {
+		return userName;
+	}
+
+	/**
+	 * @param userName the userName to set
+	 */
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	/**
+	 * @return the mobilePhone
+	 */
+	public String getMobilePhone() {
+		return mobilePhone;
+	}
+
+	/**
+	 * @param mobilePhone the mobilePhone to set
+	 */
+	public void setMobilePhone(String mobilePhone) {
+		this.mobilePhone = mobilePhone;
+	}
+
+	/**
+	 * @return the inviteCount
+	 */
+	public BigInteger getInviteCount() {
+		return inviteCount;
+	}
+
+	/**
+	 * @param inviteCount the inviteCount to set
+	 */
+	public void setInviteCount(BigInteger inviteCount) {
+		this.inviteCount = inviteCount;
+	}
+
+	/**
+	 * @return the validCount
+	 */
+	public BigInteger getValidCount() {
+		return validCount;
+	}
+
+	/**
+	 * @param validCount the validCount to set
+	 */
+	public void setValidCount(BigInteger validCount) {
+		this.validCount = validCount;
+	}
+
+	/**
+	 * @return the branchName
+	 */
+	public String getBranchName() {
+		return branchName;
+	}
+
+	/**
+	 * @param branchName the branchName to set
+	 */
+	public void setBranchName(String branchName) {
+		this.branchName = branchName;
+	}
+
+	/**
+	 * @return 市场专员用户名
+	 */
+	public String getMarketerName() {
+		return marketerName;
+	}
+
+	/**
+	 * @param 市场专员用户名
+	 */
+	public void setMarketerName(String marketerName) {
+		this.marketerName = marketerName;
+	}
+
+	/**
+	 * @return 添加时间
+	 */
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	/**
+	 * @param 添加时间
+	 */
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	/**
+	 * @return 是否有效
+	 */
+	public String getIsValid() {
+		return isValid;
+	}
+
+	/**
+	 * @param 是否有效
+	 */
+	public void setIsValid(String isValid) {
+		this.isValid = isValid;
+	}
+
+	
+	
+	
+	
+}

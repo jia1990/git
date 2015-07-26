@@ -1,0 +1,469 @@
+package com.ddtkj.p2psys.user.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+
+/**
+ * @描述:用户附属信息实体类
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间:  2014年12月8日 
+ */
+
+@Entity
+@Table(name="t_jsd_user_cache")
+public class UserCache implements Serializable {
+
+	private static final long serialVersionUID = 8958665158706218519L;
+	@Id
+	private long userId;
+	/*
+	 * 用户附属实体一对一关联用户信息实体
+	 * */
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private User user;
+	private String sex; // 男:M、女:F、 保密:X
+	private String professional;// 从事职业
+	private String userType;//用户类型(投资人:10,借款人:11,担保公司:12,商户:13)
+	private String userNature;//用户性质(用户性质 20:自然人,21:公司法人(公司注册)',
+	private String cardPositive;//个人证件正面图片路径
+	private String cardOpposite;//个人证件反面图片路径
+	private String  headerPortraitWay;//个人头像设定方式,默认:30 自定义:31
+	private String province;//省
+	private String city;// 市
+	private String area;//区
+	private String address;//地址
+	private int customerUserId;// 客服ID,不做任何关联
+	private String customerUserName;//客服姓名
+    private int inviteUserId;//邀请人ID
+	private String companyName;//公司名称
+	private String companyType;//公司类型( 独资企业:70,合伙企业:71,公司企业:72,个体工商户:73)
+	private String companyRegNo;//公司注册号
+	private String companyTaxNo;//公司税务登记证号
+	private String companyDesc;//公司描述---同样也适用于个人描述
+	private String companyLawPerson;//公司法人代表姓名
+	private String companyLawPersonCardno;//公司法人代表证件号
+	private double companyRegCapital;// 公司注册资本
+	private String companyOrgCode;//公司组织机构代码
+	private String companyPhone;//公司电话
+	private String companyFax;//公司传真
+	private String companyEmail;//公司邮箱
+	private String jyzzPicPath;//经营执照图片路径
+	private String swdjPicPath;//税务登记证图片路径
+	private String zzjgPicPath;//组织机构证图片路径
+	private String khxkPicPath;//开户许可证图片路径
+	private String dkkPicPath;//贷款卡记录（企业）图片路径
+	private String grzxPicPath;//个人征信报告图片路径
+	private String addIp;//添加IP
+	private String riskSolutions;//风险方案
+	private String companyStatus;//经营状况
+	private String sourceRepay;//还款来源
+	
+	//wcw 2014-12-29 start
+	private String maritalStatus; //婚姻状况   0：保密  1：已婚  2：未婚
+	//第二联系人相关
+	private String secondContactRealname; //第二联系人真实姓名
+	private String secondContactPhone; //第二联系人联系电话
+	private String relationships;//与本人关系
+	//gjh 2015-1-23 start
+	private String studentCardPicPath;//学生证（适合分期宝用户）  					
+	private String liveImgPicPath;//宿舍或教室生活照（适合分期宝用户）	
+	private String college;//就读大学、   												
+	private String major;//专业、            									
+	private String studentId;//学号(适合分期宝用户)								
+	private String borrowType;//标的类型   
+	
+	private String hirerightPicPath;//学信网
+	private String position;//岗位职位
+	private String legalDraw="2";//法人提现  1:是    2：否，  默认2是企业开户
+	
+	
+	
+	public String getLegalDraw() {
+		return legalDraw;
+	}
+	public void setLegalDraw(String legalDraw) {
+		this.legalDraw = legalDraw;
+	}
+	public String getSecondContactRealname() {
+		return secondContactRealname;
+	}
+	public void setSecondContactRealname(String secondContactRealname) {
+		this.secondContactRealname = secondContactRealname;
+	}
+	
+	public String getSecondContactPhone() {
+		return secondContactPhone;
+	}
+	public void setSecondContactPhone(String secondContactPhone) {
+		this.secondContactPhone = secondContactPhone;
+	}
+	public String getRelationships() {
+		return relationships;
+	}
+	public void setRelationships(String relationships) {
+		this.relationships = relationships;
+	}
+	
+	public String getMaritalStatus() {
+		return maritalStatus;
+	}
+	public void setMaritalStatus(String maritalStatus) {
+		this.maritalStatus = maritalStatus;
+	}
+	//wcw 2014-12-29 end
+	public String getSourceRepay() {
+		return sourceRepay;
+	}
+	public void setSourceRepay(String sourceRepay) {
+		this.sourceRepay = sourceRepay;
+	}
+	public String getCompanyStatus() {
+		return companyStatus;
+	}
+	public void setCompanyStatus(String companyStatus) {
+		this.companyStatus = companyStatus;
+	}
+
+
+	public String getRiskSolutions() {
+		return riskSolutions;
+	}
+
+
+	public void setRiskSolutions(String riskSolutions) {
+		this.riskSolutions = riskSolutions;
+	}
+
+
+	public UserCache() {
+	}
+	
+	
+	public UserCache(User user, String addIp) {
+		this.addIp = addIp;
+		this.userId = user.getUserId() ;
+		this.user = user;
+	}
+	
+	//注销用户
+	public void userCacheOff(String sex, String professional, String userType,
+			String userNature, String cardPositive, String cardOpposite,
+			String headerPortraitWay, String province, String city,
+			String area, String address, int customerUserId,
+			String customerUserName, int inviteUserId, String companyName,
+			String companyType, String companyRegNo, String companyTaxNo,
+			String companyDesc, String companyLawPerson,
+			String companyLawPersonCardno, double companyRegCapital,
+			String companyOrgCode, String companyPhone, String companyFax,
+			String companyEmail, String jyzzPicPath, String swdjPicPath,
+			String zzjgPicPath, String khxkPicPath, String dkkPicPath,
+			String grzxPicPath) {
+		this.sex = sex;
+		this.professional = professional;
+		this.userType = userType;
+		this.userNature = userNature;
+		this.cardPositive = cardPositive;
+		this.cardOpposite = cardOpposite;
+		this.headerPortraitWay = headerPortraitWay;
+		this.province = province;
+		this.city = city;
+		this.area = area;
+		this.address = address;
+		this.customerUserId = customerUserId;
+		this.customerUserName = customerUserName;
+		this.inviteUserId = inviteUserId;
+		this.companyName = companyName;
+		this.companyType = companyType;
+		this.companyRegNo = companyRegNo;
+		this.companyTaxNo = companyTaxNo;
+		this.companyDesc = companyDesc;
+		this.companyLawPerson = companyLawPerson;
+		this.companyLawPersonCardno = companyLawPersonCardno;
+		this.companyRegCapital = companyRegCapital;
+		this.companyOrgCode = companyOrgCode;
+		this.companyPhone = companyPhone;
+		this.companyFax = companyFax;
+		this.companyEmail = companyEmail;
+		this.jyzzPicPath = jyzzPicPath;
+		this.swdjPicPath = swdjPicPath;
+		this.zzjgPicPath = zzjgPicPath;
+		this.khxkPicPath = khxkPicPath;
+		this.dkkPicPath = dkkPicPath;
+		this.grzxPicPath = grzxPicPath;
+	}
+
+
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		if(user!=null){
+			this.setUserId(user.getUserId());
+		}
+		this.user = user;
+	}
+	public String getSex() {
+		return sex;
+	}
+	public void setSex(String sex) {
+		this.sex = sex;
+	}
+	public String getProfessional() {
+		return professional;
+	}
+	public void setProfessional(String professional) {
+		this.professional = professional;
+	}
+	public String getUserType() {
+		return userType;
+	}
+	public void setUserType(String userType) {
+		this.userType = userType;
+	}
+	public String getUserNature() {
+		return userNature;
+	}
+	public void setUserNature(String userNature) {
+		this.userNature = userNature;
+	}
+	public String getCardPositive() {
+		return cardPositive;
+	}
+	public void setCardPositive(String cardPositive) {
+		this.cardPositive = cardPositive;
+	}
+	public String getCardOpposite() {
+		return cardOpposite;
+	}
+	public void setCardOpposite(String cardOpposite) {
+		this.cardOpposite = cardOpposite;
+	}
+	public String getHeaderPortraitWay() {
+		return headerPortraitWay;
+	}
+	public void setHeaderPortraitWay(String headerPortraitWay) {
+		this.headerPortraitWay = headerPortraitWay;
+	}
+	public String getProvince() {
+		return province;
+	}
+	public void setProvince(String province) {
+		this.province = province;
+	}
+	public String getCity() {
+		return city;
+	}
+	public void setCity(String city) {
+		this.city = city;
+	}
+	public String getArea() {
+		return area;
+	}
+	public void setArea(String area) {
+		this.area = area;
+	}
+	public String getAddress() {
+		return address;
+	}
+	public void setAddress(String address) {
+		this.address = address;
+	}
+	public int getCustomerUserId() {
+		return customerUserId;
+	}
+	public void setCustomerUserId(int customerUserId) {
+		this.customerUserId = customerUserId;
+	}
+	public String getCustomerUserName() {
+		return customerUserName;
+	}
+	public void setCustomerUserName(String customerUserName) {
+		this.customerUserName = customerUserName;
+	}
+	
+	public String getCompanyName() {
+		return companyName;
+	}
+	public void setCompanyName(String companyName) {
+		this.companyName = companyName;
+	}
+	public String getCompanyRegNo() {
+		return companyRegNo;
+	}
+	public void setCompanyRegNo(String companyRegNo) {
+		this.companyRegNo = companyRegNo;
+	}
+	public String getCompanyTaxNo() {
+		return companyTaxNo;
+	}
+	public void setCompanyTaxNo(String companyTaxNo) {
+		this.companyTaxNo = companyTaxNo;
+	}
+	public String getCompanyDesc() {
+		return companyDesc;
+	}
+	public void setCompanyDesc(String companyDesc) {
+		this.companyDesc = companyDesc;
+	}
+	public String getCompanyLawPerson() {
+		return companyLawPerson;
+	}
+	public void setCompanyLawPerson(String companyLawPerson) {
+		this.companyLawPerson = companyLawPerson;
+	}
+	public String getCompanyLawPersonCardno() {
+		return companyLawPersonCardno;
+	}
+	public void setCompanyLawPersonCardno(String companyLawPersonCardno) {
+		this.companyLawPersonCardno = companyLawPersonCardno;
+	}
+	public double getCompanyRegCapital() {
+		return companyRegCapital;
+	}
+	public void setCompanyRegCapital(double companyRegCapital) {
+		this.companyRegCapital = companyRegCapital;
+	}
+	public String getCompanyOrgCode() {
+		return companyOrgCode;
+	}
+	public void setCompanyOrgCode(String companyOrgCode) {
+		this.companyOrgCode = companyOrgCode;
+	}
+	public String getCompanyPhone() {
+		return companyPhone;
+	}
+	public void setCompanyPhone(String companyPhone) {
+		this.companyPhone = companyPhone;
+	}
+	public String getCompanyFax() {
+		return companyFax;
+	}
+	public void setCompanyFax(String companyFax) {
+		this.companyFax = companyFax;
+	}
+	public String getCompanyEmail() {
+		return companyEmail;
+	}
+	public void setCompanyEmail(String companyEmail) {
+		this.companyEmail = companyEmail;
+	}
+	public String getJyzzPicPath() {
+		return jyzzPicPath;
+	}
+	public void setJyzzPicPath(String jyzzPicPath) {
+		this.jyzzPicPath = jyzzPicPath;
+	}
+	public String getSwdjPicPath() {
+		return swdjPicPath;
+	}
+	public void setSwdjPicPath(String swdjPicPath) {
+		this.swdjPicPath = swdjPicPath;
+	}
+	public String getZzjgPicPath() {
+		return zzjgPicPath;
+	}
+	public void setZzjgPicPath(String zzjgPicPath) {
+		this.zzjgPicPath = zzjgPicPath;
+	}
+	public String getKhxkPicPath() {
+		return khxkPicPath;
+	}
+	public void setKhxkPicPath(String khxkPicPath) {
+		this.khxkPicPath = khxkPicPath;
+	}
+	public String getDkkPicPath() {
+		return dkkPicPath;
+	}
+	public void setDkkPicPath(String dkkPicPath) {
+		this.dkkPicPath = dkkPicPath;
+	}
+	public String getGrzxPicPath() {
+		return grzxPicPath;
+	}
+	public void setGrzxPicPath(String grzxPicPath) {
+		this.grzxPicPath = grzxPicPath;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public int getInviteUserId() {
+		return inviteUserId;
+	}
+	public void setInviteUserId(int inviteUserId) {
+		this.inviteUserId = inviteUserId;
+	}
+	public long getUserId() {
+		return userId;
+	}
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+	public String getCompanyType() {
+		return companyType;
+	}
+	public void setCompanyType(String companyType) {
+		this.companyType = companyType;
+	}
+	public String getStudentCardPicPath() {
+		return studentCardPicPath;
+	}
+	public void setStudentCardPicPath(String studentCardPicPath) {
+		this.studentCardPicPath = studentCardPicPath;
+	}
+	public String getLiveImgPicPath() {
+		return liveImgPicPath;
+	}
+	public void setLiveImgPicPath(String liveImgPicPath) {
+		this.liveImgPicPath = liveImgPicPath;
+	}
+	public String getCollege() {
+		return college;
+	}
+	public void setCollege(String college) {
+		this.college = college;
+	}
+	public String getMajor() {
+		return major;
+	}
+	public void setMajor(String major) {
+		this.major = major;
+	}
+	public String getStudentId() {
+		return studentId;
+	}
+	public void setStudentId(String studentId) {
+		this.studentId = studentId;
+	}
+	public String getBorrowType() {
+		return borrowType;
+	}
+	public void setBorrowType(String borrowType) {
+		this.borrowType = borrowType;
+	}
+	public String getHirerightPicPath() {
+		return hirerightPicPath;
+	}
+	public void setHirerightPicPath(String hirerightPicPath) {
+		this.hirerightPicPath = hirerightPicPath;
+	}
+	public String getPosition() {
+		return position;
+	}
+	public void setPosition(String position) {
+		this.position = position;
+	}
+	
+
+}

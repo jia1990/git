@@ -1,0 +1,497 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * 
+ * @描述：红包产生记录DAO实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月24日
+ */
+@Repository("rpProduceDao")
+public class RpProduceDaoImpl extends BaseDaoImpl<RpProduce> implements RpProduceDao {
+
+	@Override
+	public PageDataList<RpProduce> getAll(QueryParam param) {
+		return null;
+	}
+
+
+	@Override
+	public double sRedPackSumMoney(long userId) {
+		//String jpql = "SELECT   SUM(rp_static_money) FROM t_jsd_rp_produce  WHERE rp_type=1 AND user_id=:userId AND rp_static_status !=1 AND rp_static_status !=3";
+		String jpql = "SELECT   SUM(rp_static_money) FROM t_jsd_rp_produce  WHERE rp_type=1 AND user_id=:userId AND rp_static_status not in(1,3,5)";
+		Query query = em.createNativeQuery(jpql);
+		query.setParameter("userId", userId);
+		
+		Object sRedPackSumMoney = query.getSingleResult();
+		
+		if(sRedPackSumMoney!=null){
+		return Double.parseDouble(sRedPackSumMoney.toString());	
+		}
+		return 0.0;
+	}
+	
+	@Override
+	public double sRedPackUsedSumMoney(long userId) {
+		String jpql = "SELECT   SUM(rp_static_money) FROM t_jsd_rp_produce  WHERE rp_type=1 AND user_id=:userId ";
+		Query query = em.createNativeQuery(jpql);
+		query.setParameter("userId", userId);
+		
+		Object dRedPackSumMoney = query.getSingleResult();
+		
+		if(dRedPackSumMoney!=null){
+		return Double.parseDouble(dRedPackSumMoney.toString());	
+		}
+		return 0.0;
+	}
+
+
+	@Override
+	public double dRedPackGenerateSumMoney(long userId) {
+		String jpql = "SELECT   SUM(rp_dynamic_money) FROM t_jsd_rp_produce  WHERE rp_type=2 AND user_id=:userId ";
+		Query query = em.createNativeQuery(jpql);
+		query.setParameter("userId", userId);
+		
+		Object dRedPackSumMoney = query.getSingleResult();
+		
+		if(dRedPackSumMoney!=null){
+		return Double.parseDouble(dRedPackSumMoney.toString());	
+		}
+		return 0.0;
+	}
+	
+	@Override
+	public void updateStatus(long userId,long beforeStatus,long afterStatus,long id) {
+		String jpql = "update  t_jsd_rp_produce set rp_static_status=:afterStatus  WHERE rp_type=1 AND user_id=:userId and rp_static_status=:beforeStatus and id=:id";
+		Query query = em.createNativeQuery(jpql);
+		query.setParameter("afterStatus", afterStatus);
+		query.setParameter("userId", userId);
+		query.setParameter("beforeStatus", beforeStatus);
+		query.setParameter("id", id);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更改静态红包使用表状态失败！", 1);
+		}
+		refresh(super.find(id));
+	}
+
+
+	@Override
+	public PageDataList<RpProduceModel> getAwardedInvitePageDataList(
+			RpProduceModel rpProduceModel, long userId) {
+	
+		StringBuffer sbf = new StringBuffer();
+		// 20150706  JSDP-212  sxy  start
+		//sbf.append(" SELECT  r.* FROM  t_jsd_rp_produce r WHERE user_id=:userId AND r.rp_static_res='static_rp_invited_first_invest' AND r.rp_static_referrer_id > 0 ");
+		sbf.append(" SELECT  r.* FROM  t_jsd_rp_produce r WHERE user_id=:userId AND r.rp_static_res IN ('static_rp_invited_first_invest','static_rp_recommend') AND r.rp_static_referrer_id > 0 ORDER BY r.id DESC ");
+
+
+		EntityManager em = this.getEm();
+		
+		 Query query = em.createNativeQuery(sbf.toString(), RpProduce.class);
+		 if (userId > 0) {
+             query.setParameter("userId", userId);
+         }
+		 Page page = new Page(query.getResultList().size(), rpProduceModel.getPage(), rpProduceModel.getSize());
+         query.setFirstResult((rpProduceModel.getPage() - 1) * rpProduceModel.getSize());
+         query.setMaxResults(rpProduceModel.getSize());
+         
+		 List<RpProduceModel> list = query.getResultList();
+
+         PageDataList<RpProduceModel> pageDataList = new PageDataList<RpProduceModel>();
+         
+         pageDataList.setList(list);
+         pageDataList.setPage(page);
+      
+         return pageDataList;
+	}
+
+	@Override
+	public int getInviteAwardSum(RpProduceModel model, long userId) {
+		StringBuffer sbf = new StringBuffer();
+		// 20150706  JSDP-212  sxy  start
+		//sbf.append(" SELECT  r.* FROM  t_jsd_rp_produce r WHERE user_id=:userId AND r.rp_static_res='static_rp_invited_first_invest' AND r.rp_static_referrer_id > 0 ");
+		sbf.append(" SELECT  r.* FROM  t_jsd_rp_produce r WHERE user_id=:userId AND r.rp_static_res IN ('static_rp_invited_first_invest','static_rp_recommend') AND r.rp_static_referrer_id > 0 ");
+
+		EntityManager em = this.getEm();
+		
+		 Query query = em.createNativeQuery(sbf.toString(), RpProduce.class);
+		 if (userId > 0) {
+             query.setParameter("userId", userId);
+         }
+         
+		 List<RpProduceModel> list = query.getResultList();
+		 if(list != null ){
+			 return list.size();
+		 }
+		return 0;
+	}
+	
+	@Override
+	public double awardInvitedRPSum(long userId) {
+		
+		String jpql = "SELECT SUM(rp_static_money) FROM t_jsd_rp_produce  WHERE rp_type=1 AND rp_static_referrer_id >0 AND user_id=:userId ";
+		Query query = em.createNativeQuery(jpql);
+		query.setParameter("userId", userId);
+		
+		Object dRedPackSumMoney = query.getSingleResult();
+		
+		if(dRedPackSumMoney!=null){
+		return Double.parseDouble(dRedPackSumMoney.toString());	
+		}
+		return 0.0;
+	}
+	
+	public List<RpProduce> list(long userId,long rpStaticStatus,long rpType){
+		String jpql = "SELECT * FROM t_jsd_rp_produce  WHERE rp_type=:rpType AND rp_static_status =:rpStaticStatus AND user_id=:userId ";
+		Query query = em.createNativeQuery(jpql, RpProduce.class);
+		query.setParameter("userId", userId);
+		query.setParameter("rpStaticStatus", rpStaticStatus);
+		query.setParameter("rpType", rpType);
+		List<RpProduce> list = query.getResultList();
+		return list;	
+	}
+	@Override
+	public double sRedPackSumMoneyAll(String startDate,String endDate) {
+		StringBuffer jpql = new StringBuffer("SELECT  SUM(rp_static_money) FROM t_jsd_rp_produce  WHERE rp_type=1 AND rp_static_status not in(1,3,5)");
+		if(startDate != null){
+			jpql.append(" AND rp_create_time > '" + startDate + "'");
+		}
+		if(endDate != null){
+			jpql.append(" AND rp_create_time < '" + endDate + "'");
+		}
+		Query query = em.createNativeQuery(jpql.toString());
+		
+		Object sRedPackSumMoney = query.getSingleResult();
+		
+		if(sRedPackSumMoney!=null){
+		return Double.parseDouble(sRedPackSumMoney.toString());	
+		}
+		return 0.0;
+	}
+	@Override
+	public double dRedPackGenerateSumMoneyAll(String startDate,String endDate) {
+		StringBuffer jpql = new StringBuffer("SELECT  SUM(rp_dynamic_money) FROM t_jsd_rp_produce  WHERE rp_type=2");
+		if(startDate != null){
+			jpql.append(" AND rp_create_time > '" + startDate + "'");
+		}
+		if(endDate != null){
+			jpql.append(" AND rp_create_time < '" + endDate + "'");
+		}
+		Query query = em.createNativeQuery(jpql.toString());
+		
+		Object dRedPackSumMoney = query.getSingleResult();
+		
+		if(dRedPackSumMoney!=null){
+		return Double.parseDouble(dRedPackSumMoney.toString());	
+		}
+		return 0.0;
+	}
+
+	//JSDP-167 xingjia 2015-05-28 start
+	@Override
+	public List<RpProduceModel> rpSumMoney(RpProduceModel model) {
+		StringBuffer sql = new StringBuffer();
+		//JSDP-167 xingjia 20150603 start
+		sql.append("SELECT s2.dyMoneySum,s1.useLogSum,u.user_name,u.real_name,s2.rpType "
+				+"FROM (SELECT SUM(ul.account) useLogSum,ul.user_id useLogUser FROM t_jsd_rp_use_log ul,t_jsd_user u" 
+				+" WHERE ul.user_id=u.user_id ");
+		//JSDP-182 xingjia 20150615 start
+		if(StringUtil.isNotBlank(model.getType())){
+			sql.append(" and ul.rp_type = "+model.getType());
+		}
+		
+		sql.append("  GROUP BY ul.user_id) s1 RIGHT JOIN (");
+		//JSDP-182 xingjia 20150615 end
+		if(StringUtil.isBlank(model.getType())){
+			model.setType(RpProduce.RP_STATIC+"");
+		}
+		
+		if(StringUtil.isNotBlank(model.getType()) && (RpProduce.RP_STATIC+"").equals(model.getType())){
+			sql.append("SELECT SUM(rp.rp_static_money) dyMoneySum ");
+		}else if(StringUtil.isNotBlank(model.getType()) && (RpProduce.RP_DYNAMIC+"").equals(model.getType())){
+			sql.append("SELECT SUM(rp.rp_dynamic_money) dyMoneySum ");
+		}
+		
+		sql.append(" ,rp.user_id rpProduceUser ,rp.rp_type rpType FROM t_jsd_rp_produce rp,t_jsd_user u" 
+				+" WHERE rp.user_id=u.user_id AND rp.rp_type="+model.getType());
+		//JSDP-167 xingjia 20150603 start
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and u.user_name like '%"+model.getUserName()+"%'");
+		}
+		//JSDP-167 xingjia 20150603 end
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" and rp.rp_create_time >= '"+model.getStartTime()+"'");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" and rp.rp_create_time < '"+ model.getEndTime()+"'");
+		}
+		sql.append(" GROUP BY rp.user_id ) s2 ON s1.useLogUser = s2.rpProduceUser"
+				+" LEFT JOIN t_jsd_user u ON u.user_id=s2.rpProduceUser ");
+		//JSDP-167 xingjia 20150603 end
+
+		Query query = em.createNativeQuery(sql.toString());
+		//JSDP-167 xingjia 20150529 start
+		model.setPages(new Page(query.getResultList().size(), model.getPage(), model.getSize()));
+		//JSDP-167 xingjia 20150529 end
+		query.setFirstResult((model.getPage() - 1) * model.getSize());
+		query.setMaxResults(model.getSize());
+		List list = query.getResultList();
+		List<RpProduceModel> rpList = new ArrayList<RpProduceModel>();
+		
+		Object[] object = new Object[5];
+		for(int i =0;i<list.size();i++){
+			object = (Object[]) list.get(i);
+			RpProduceModel rp = new RpProduceModel();
+			rp.setUserName((String) object[2]);
+			rp.setRealName((String) object[3]);
+			if(StringUtil.isNotBlank(object[1]+"")){
+				rp.setRpUsedMoney(object[1]+"");
+			}else{
+				rp.setRpUsedMoney("0");
+			}
+			if(StringUtil.isNotBlank(object[0]+"")){
+				rp.setRpProMoney(object[0]+"");
+			}else{
+				rp.setRpProMoney("0");
+			}
+			rp.setStartTime(model.getStartTime());
+			rp.setEndTime(model.getEndTime());
+			rp.setType(object[4]+"");
+			rpList.add(rp);
+		}
+
+		return rpList;
+	}
+
+
+	@Override
+	public List getExcelList(RpProduceModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT SUM(rp.rp_static_money),SUM(ul.account),u.user_name,u.real_name, "
+					 +" CASE rpp.rp_type "
+					 +" WHEN 1 THEN '静态红包'"
+					 +" WHEN 2 THEN '动态红包'"
+					 +" ELSE '无'"
+					 +" END rpType"
+					 +" FROM t_jsd_rp_produce rp "
+					 +" LEFT JOIN t_jsd_rp_use_log ul"
+					 +" ON ul.user_id = rp.user_id"
+					 +" LEFT JOIN t_jsd_user u"
+					 +" ON u.user_id=rp.user_id"
+					 +" LEFT JOIN t_jsd_rp_produce rpp"
+					 +" ON rpp.user_id=rp.user_id"
+					 +" WHERE 1=1 ");
+		
+		if(StringUtil.isNotBlank(model.getType()) && !"99".equals(model.getType())){
+			sql.append(" and rpp.rp_type= "+ model.getType());
+			
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" and rp.rp_create_time >= '"+model.getStartTime()+"'");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" and rp.rp_create_time < '"+ model.getEndTime()+"'");
+		}
+		sql.append(" GROUP BY rp.user_id");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		List list = query.getResultList();
+		return list;
+	}
+
+
+	@Override
+	public List getDetailExcelList(RpProduceModel model) {
+		StringBuffer sql = new StringBuffer();
+		if(StringUtil.isNotBlank(model.getTypeConsume())){
+			sql.append("SELECT u.user_name,u.real_name,CASE ul.rp_type WHEN 1 THEN '静态红包' "
+					+" WHEN 2 THEN '动态红包' ELSE '无' END rpType,ul.account,ul.remark"
+					+" FROM t_jsd_rp_use_log ul LEFT JOIN t_jsd_user u ON u.user_id= ul.user_id WHERE 1=1 ");
+			if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+				sql.append(" and ul.add_time >='"+model.getStartTime()+"'");
+			}
+			if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+				sql.append(" and ul.add_time <'"+model.getEndTime()+"'");
+			}
+		}else{
+			sql.append(" SELECT u.user_name,u.real_name,ul.rp_static_money,CASE ul.rp_static_status"
+					+" WHEN 1 THEN '已使用'"
+					+" WHEN 2 THEN '未使用'"
+					+" WHEN 3 THEN '已过期'"
+					+" WHEN 4 THEN '未过期'"
+					+" WHEN 5 THEN '冻结'"
+					+" ELSE '无' END staticStatus ,"
+					+" ul.rp_static_valid_time,CASE ul.rp_static_res"
+					+" WHEN 'static_rp_identify then' THEN '认证'"
+					+" WHEN 'static_rp_recommend then'  THEN '推荐好友'"
+					+" WHEN 'static_rp_invited_first_invest' THEN '好友首次投资'"
+					+" ELSE '无' END staticRes,"
+					+" CASE ul.rp_type WHEN 1 THEN '静态红包' "
+					+" WHEN 2 THEN '动态红包' ELSE '无' END rpType,ul.rp_create_time,"
+					+" ul.rp_dynamic_money,CASE ul.rp_dynamic_res "
+					+" WHEN 'dynamic_rp_invest' THEN '投资' "
+					+" WHEN 'dynamic_rp_score_award' THEN '积分抽奖'"
+					+" ELSE '无' END dynamicRes FROM t_jsd_rp_produce ul "
+					+" LEFT JOIN t_jsd_user u ON ul.user_id=u.user_id where 1=1 ");
+			if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+				sql.append(" and ul.rp_create_time >='"+model.getStartTime()+"'");
+			}
+			if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+				sql.append(" and ul.rp_create_time <'"+model.getEndTime()+"'");
+			}
+		}
+		
+		if(StringUtil.isNotBlank(model.getType())  && !"99".equals(model.getType())){
+			sql.append(" AND ul.rp_type="+model.getType());
+		}
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and u.user_name LIKE '%"+model.getUserName()+"%'");
+		}
+		Query query = em.createNativeQuery(sql.toString());
+		List list = query.getResultList();
+		return list;
+	}
+	//JSDP-167 xingjia 2015-05-28 end
+	//JSDP-181 wcw 20150615 start
+	public List<RpProduce> list(long userId,RpProduceModel rpm){
+		StringBuffer jpql = new StringBuffer("SELECT * FROM t_jsd_rp_produce where 1=1 " );
+		if(userId!=0){
+			jpql.append(" and user_id=:userId ");
+		}
+		if(rpm.getRpStaticStatus()!=0){
+			jpql.append(" and rp_static_status =:rpStaticStatus ");
+		}
+		if(rpm.getRpType()!=0){
+			jpql.append(" and rp_type=:rpType ");
+		}
+		if(StringUtil.isNotBlank(rpm.getRpStaticRes())){
+			jpql.append(" and rp_static_res=:rpStaticRes ");
+		}
+		if(StringUtil.isNotBlank(rpm.getStartTime())){
+			jpql.append(" and rp_create_time>=:startTime ");
+		}
+		if(StringUtil.isNotBlank(rpm.getEndTime())){
+			jpql.append(" and rp_create_time<:endTime ");
+		}
+		Query query = em.createNativeQuery(jpql.toString(), RpProduce.class);
+		if(userId!=0){
+		    query.setParameter("userId", userId);
+		}
+		if(rpm.getRpStaticStatus()!=0){
+			query.setParameter("rpStaticStatus", rpm.getRpStaticStatus());
+		}
+		if(rpm.getRpType()!=0){
+			query.setParameter("rpType", rpm.getRpType());
+		}
+		if(StringUtil.isNotBlank(rpm.getRpStaticRes())){
+			query.setParameter("rpStaticRes", rpm.getRpStaticRes());
+		}
+		if(StringUtil.isNotBlank(rpm.getStartTime())){
+			query.setParameter("startTime", rpm.getStartTime());
+		}
+		if(StringUtil.isNotBlank(rpm.getEndTime())){
+			query.setParameter("endTime", rpm.getEndTime());
+		}
+		List<RpProduce> list = query.getResultList();
+		return list;	
+	}
+	
+	public void update(RpProduce rp,double beforeRpStaticMoney,double afteRpStaticMoney){
+		StringBuffer jpql = new StringBuffer("update  t_jsd_rp_produce set rp_static_money=:afteRpStaticMoney  WHERE 1=1 ");
+		if(beforeRpStaticMoney!=0){
+			jpql.append(" and rp_static_money=:beforeRpStaticMoney ");
+		}
+		if(rp.getId()!=0){
+			jpql.append(" and id=:id ");
+		}
+		Query query = em.createNativeQuery(jpql.toString());
+		if(beforeRpStaticMoney!=0){
+			 query.setParameter("beforeRpStaticMoney", beforeRpStaticMoney);
+		}
+		if(afteRpStaticMoney!=0){
+			 query.setParameter("afteRpStaticMoney", afteRpStaticMoney);
+		}
+		if(rp.getId()!=0){
+			query.setParameter("id", rp.getId());
+		}
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更改静态红包使用表状态失败！", 1);
+		}
+	}
+	//JSDP-181 wcw 20150615 end
+
+	//JSDP-195 xingjia 20150625 start
+	@Override
+	public List recommendFriendExcel(RpProduceModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT u.user_name,u.real_name,CASE rp.rp_type WHEN 1 THEN '静态红包' "
+					+" WHEN 2 THEN '动态红包' ELSE '无' END rpType ,case rp.rp_static_status when 1 then '红包已使用' "
+					+" when 2 then '红包未使用' when 3 then '红包已过期' when 4 then '红包未过期' when 5 then '红包冻结' else '无' end rpStatus,"
+					+" case rp_static_res when 'static_rp_recommend' then '邀请好友' else '无' end rpStaticRes,"
+					+" rp_static_money,rp.rp_static_referrer_name,rp.rp_create_time"
+					+" FROM t_jsd_rp_produce rp,t_jsd_user u  WHERE u.user_id=rp.user_id AND "
+					+" rp_static_res='static_rp_recommend' ");
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" AND u.user_name =:userName");
+		}
+		
+		if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+			sql.append(" AND rp.rp_create_time >=:startTime");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+			sql.append(" AND rp.rp_create_time <=:endTime ");
+		}
+		
+		if(StringUtil.isNotBlank(model.getRpStaticReferrerName())){
+			sql.append(" AND rp.rp_static_referrer_name LIKE '%"+model.getRpStaticReferrerName()+"%'");
+		}
+		if(StringUtil.isNotBlank(model.getRpStatus()) && !"99".equals(model.getRpStatus())){
+			sql.append(" AND rp.rp_static_status=:rpStatus");
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			query.setParameter("userName", model.getUserName());
+		}
+		
+		if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		
+		if(StringUtil.isNotBlank(model.getRpStatus()) && !"99".equals(model.getRpStatus())){
+			query.setParameter("rpStatus", model.getRpStatus());
+		}
+		
+		List list = query.getResultList();
+		return list;
+	}
+	//JSDP-195 xingjia 20150625 end
+}

@@ -1,0 +1,94 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.core.quartz.recharge;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.core.quartz.openAccount.OpenAccountTask;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @描述：充值调度
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年5月25日 
+ */
+public class RechargeTask extends AbstractLoanTask{
+	private Logger logger = Logger.getLogger(OpenAccountTask.class);
+
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	
+	
+	public AccountRechargeService getAccountRechargeService() {
+		return accountRechargeService;
+	}
+
+	public void setAccountRechargeService(
+			AccountRechargeService accountRechargeService) {
+		this.accountRechargeService = accountRechargeService;
+	}
+
+	public Logger getLogger() {
+		return logger;
+	}
+
+	public void setLogger(Logger logger) {
+		this.logger = logger;
+	}
+
+	public RechargeTask(AccountRechargeService accountRechargeService) {
+		super();
+		task.setName("recharge.Task");
+		this.accountRechargeService = accountRechargeService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (RechargeJobQueue.RECHARGE!=null && RechargeJobQueue.RECHARGE.size() > 0) {
+			RechargeBean rb = RechargeJobQueue.RECHARGE.peek();
+			if (rb != null) {
+				String result = "success";
+				try {
+					accountRechargeService.doRechargeTask(rb.getRechargeModel());
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					RechargeJobQueue.RECHARGE.remove(rb);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				    if(rb.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(rb.getResultFlag(), result);
+			            }
+			        }
+				}
+			}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return RechargeTask.RECHARGE_STATUS;
+	}
+
+}

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>积分抽奖规则奖品设置</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var winWidth = 880;
+	var winHeight = 600;
+	var addTitle="添加奖品规则";
+	var addUrl="/modules/user/score/awardObjectAddPage.html?ruleId=${ruleId}";
+	
+	var editAwardObjectTitle = "编辑奖品规则";
+	var editAwardObjectUrl= "/modules/user/score/showAwardObjectPage.html?ruleId=${ruleId}";
+	var editAwardObjectParmeters = "'{0}','"+ editAwardObjectTitle+"',"+ winWidth+","+ winHeight+",'"+ editAwardObjectUrl+"'";
+
+	var delAwardObjectTitle = "删除奖品规则";
+	var delAwardObjectUrl= "/modules/user/score/delAwardObject.html?ruleId=${ruleId}";
+	var delAwardObjectParmeters = "'{0}','"+ delAwardObjectTitle+"',"+ winWidth+","+ winHeight+",'"+ delAwardObjectUrl+"'";
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'allAwardObjectList.html?ruleId=${ruleId}',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'rate',
+            sortOrder : 'ASC',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 60,fixed:true, sortable:false },
+              { field: 'name', title: '奖品名', width: 180,fixed:true, sortable:false }, 
+              { field: 'level', title: '奖品级别', width: 80, fixed:true, sortable:false },
+              { field: 'rate', title: '奖品中奖率', width: 100,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  return getScoreAwardRate(row.rate,100000000);
+              }},
+              { field: 'total', title: '奖品总量', width: 140, fixed:true,sortable:false ,formatter: function(value,row,index){
+					if(row.awardLimit == 0){
+						return "无限制"
+					}else{
+						return "有限制，数量："+row.total;
+					}
+              }},     
+        	  { field: 'bestow', title: '奖品领用数量', width: 100,fixed:true, sortable:false },
+              { field: 'type', title: '奖品类型', width: 150,fixed:true, sortable:false, formatter: function(value,row,index){
+            	  return getScoreAwardType(row.type,row.vipLevel,row.vipValidMonth);  
+              }},
+             
+              { field: 'description', title: '奖品描述', width: 150,fixed:true, sortable:false },
+              { field: 'awardValue', title: '奖品属性值', width: 100,fixed:true, sortable:false },
+             /*  { field: 'awardValue', title: '奖品属性值', width: 180,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  return getScoreAwardValue(row.type, row.awardValue);	
+              }}, */
+              { field: 'ratio', title: '奖品倍率', width: 100,fixed:true, sortable:false },
+              { field: 'status', title: '是否启用', width: 80,fixed:true, sortable:false, formatter: function(value,row,index){
+            	 	if (value=="11") {
+            	 		return "启用";	
+            	 	}else if(value=="22"){
+            	 		return "未启用";	
+            	 	}else{
+            	 		return "未指定的状态";	
+            	 	}
+              }},
+              { field: 'addTime', title: '奖品添加时间', width: 160,fixed:true, sortable:false, formatter: function(value,row,index){
+            	  return getLocalTime(value,4);  
+              }}, 
+              { field: 'addIp', title: '奖品添加IP', width: 150,fixed:true, sortable:false },
+              { field : 'action',
+                  title : '操作',
+                  width :90,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                      var str = '';
+                      str += "<@secAuthorizeUrl value='/editAwardObject.html'>";
+                      str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editAwardObjectParmeters+');" src="{1}" title="编辑奖品规则"/>', row.id, '${theme_dir}/css/images/extjs_icons/plugin.png');                
+                      str += "</@secAuthorizeUrl>";
+                      str += '&nbsp;';
+                        
+                      return str;
+                  }
+              }
+             ]],
+             toolbar : '#toolbar'
+        }); 
+    });
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+     <div id="toolbar" style="display: none;">		
+    	<@secAuthorizeUrl value='/AwardAddRule.html'>
+		<a id="a" onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">新增奖品规则</a>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;规则名称：${ruleAward.name!}
+		</@secAuthorizeUrl>
+	</div>
+<input type="hidden" name="ruleId" id="ruleId" value="${ruleId}">	
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

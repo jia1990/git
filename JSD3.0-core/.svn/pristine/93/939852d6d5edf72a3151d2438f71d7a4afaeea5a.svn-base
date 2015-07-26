@@ -1,0 +1,69 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.borrow.executor;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * @描述：扣除借款人担保手续费
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月30日 
+ */
+public class DeductGuaranteeFeeExecuter extends BaseExecuter {
+	private String accountLogType = Constant.DEDUCT_GUARANTEE_FEE;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		
+		//借款人借款入账
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		log.setBorrowerEnterMoney(money);
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		log.setRepaymentTotal(account.getRepaymentTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)1);
+		log.setTradeNo(tradeNo);
+		log.setOutTradeNo(outTradeNo);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		// accountDao.modify(money, money, 0, 0, super.user.getUserId());
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		// 总金额
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),
+				-money));
+		// 可用金额
+		account.setBorrowerEnterUsable((BigDecimalUtil.add(
+				account.getBorrowerEnterUsable(), -money)));
+		if (account.getBorrowerUsableTotal() < 0) {
+			throw new AccountException("可用金额不足！", 1);
+		}
+		if(account.getAccountTotal()<0){
+			throw new AccountException("账户总额不足！", 1);
+		}
+		// 更新
+		//JSDP-164 wcw 20150527 start
+		accountDao.modifyBorrowerAccount(account, user.getUserId());
+		//accountDao.update(account);
+		//JSDP-164 wcw 20150527 end
+	}
+}

@@ -1,0 +1,478 @@
+package com.rongdu.p2psys.core.disruptor;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.member.model.MemberVipAwardSubModel;
+import com.ddtkj.p2psys.member.model.MemberVipSubModel;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.user.domain.User;
+import com.lmax.disruptor.BatchEventProcessor;
+import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.SequenceBarrier;
+import com.lmax.disruptor.SingleThreadedClaimStrategy;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.tpp.ips.model.IpsRegister;
+
+/**
+ * 
+ * TODO 类说明</p>
+ *  
+ * @author：xx 
+ * @version 1.0
+ * @since 2014年6月13日
+ */
+public class DisruptorUtils {
+
+	private static DisruptorUtils dis = null;
+	private static final int BUFFER_SIZE = Integer.parseInt(Global.getValue("disruptor_ringbuffer_size"));
+
+	private final RingBuffer<ValueEvent> ringBuffer = new RingBuffer<ValueEvent>(ValueEvent.EVENT_FACTORY,
+			new SingleThreadedClaimStrategy(BUFFER_SIZE), new BlockingWaitStrategy());
+
+	private final SequenceBarrier sequenceBarrier = ringBuffer.newBarrier();
+	private final CEventHandler handler = new CEventHandler();
+
+	private final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+
+	private final BatchEventProcessor<ValueEvent> batchEventProcessor = new BatchEventProcessor<ValueEvent>(ringBuffer,
+			sequenceBarrier, handler);
+
+	public DisruptorUtils() {
+		ringBuffer.setGatingSequences(batchEventProcessor.getSequence());
+	}
+
+	public void consume() {
+		EXECUTOR.submit(batchEventProcessor);
+	}
+
+	public void produce(ValueEvent event) {
+		new Thread(new Producer(event, ringBuffer)).start();
+	}
+
+	static {
+		dis = new DisruptorUtils();
+	}
+
+	/**
+	 * 自动投标
+	 * @param model
+	 * @throws Exception
+	 */
+	public static void autoTender(BorrowModel model) throws Exception {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("borrowAutoTender");
+		event.setBorrowModel(model);
+		dis.produce(event);
+		dis.consume();
+	}
+
+	/**
+	 * 满标复审
+	 * @param model
+	 * @throws Exception
+	 */
+	public static void autoVerifyFull(BorrowModel model) throws Exception {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("autoVerifyFull");
+		event.setBorrowModel(model);
+		event.setResultFlag(model.getResultFlag());
+		dis.produce(event);
+		dis.consume();
+	}
+	
+    /**
+     * 复审通过
+     * @param model
+     * @throws Exception
+     */
+    public static void autoVerifyFullSuccess(BorrowModel model) throws Exception {
+        ValueEvent event = new ValueEvent();
+        event.setOperate("autoVerifyFullSuccess");
+        event.setBorrowModel(model);
+        event.setResultFlag(model.getResultFlag());
+        dis.produce(event);
+        dis.consume();
+    }	
+
+    /**
+     * 即投即生息
+     * @param model
+     * @throws Exception
+     */
+    public static void autoInstantLive(BorrowModel model,BorrowTender tender,String resultFlag) throws Exception {
+        ValueEvent event = new ValueEvent();
+        event.setOperate("autoInstantLive");
+        event.setBorrowModel(model);
+        event.setTender(tender);
+        event.setResultFlag(resultFlag);
+        dis.produce(event);
+        dis.consume();
+    }	
+
+	/**
+	 * 复审不通过
+	 * @param model
+	 * @throws Exception
+	 */
+	public static void autoVerifyFullFail(BorrowModel model) throws Exception {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("autoVerifyFullFail");
+		event.setBorrowModel(model);
+		dis.produce(event);
+		dis.consume();
+	}
+
+	/**
+	 * 还款
+	 * @param borrowRepayment
+	 */
+	public static void repay(BorrowRepayment borrowRepayment,String resultFlag) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("repay");
+		event.setBorrowRepayment(borrowRepayment);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+	
+	/**
+	 * 还款
+	 * @param borrowRepayment
+	 */
+	public static void repaySuccess(BorrowRepayment borrowRepayment,String resultFlag) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("repaySuccess");
+		event.setBorrowRepayment(borrowRepayment);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+	/**
+	 * 撤标
+	 * @param model
+	 */
+	public static void autoCancel(Borrow borrow) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("autoCancel");
+		event.setBorrow(borrow);
+		dis.produce(event);
+		dis.consume();
+	}
+	
+	/**
+	 * 提现
+	 * @param cashModel 提现的参数封装
+	 * @throws Exception 异常
+	 */
+	public static void doVerifyCashBackTask(YmdCash ymdCash,String resultFlag) throws Exception {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("verifyDrawBack");
+		event.setYmdCash(ymdCash);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+	/**
+	 * 提现银行转账失败回调业务处理
+	 * @param cashModel 提现的参数封装
+	 * @throws Exception 异常
+	 *//*
+	public static void doCashBankFailBackTask(AccountDrawModel drawModel,String resultFlag) throws Exception {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("drawBankFailBack");
+		event.setDrawModel(drawModel);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}*/
+	/**
+	 * 提现银行转账失败回调业务处理
+	 * @param cashModel 提现的参数封装
+	 * @throws Exception 异常
+	 */
+	public static void doCashBankFailBackTask(YmdCash ymdCash,String resultFlag) throws Exception {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("drawBankFailBack");
+		event.setYmdCash(ymdCash);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+	/**
+	 * 充值
+	 * @param reModel 充值的参数封装
+	 * @param log 充值日志的参数封装
+	 */
+	public static void doRechargeBackTask(RechargeModel reModel,String resultFlag) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("verifyRecharge");
+		event.setRechargeModel(reModel);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+	
+	
+	
+	/**
+	 * 提前还款
+	 * @param borrowRepayment
+	 */
+	public static void doPriorRepay(BorrowRepayment borrowRepayment) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("doPriorRepay");
+		event.setBorrowRepayment(borrowRepayment);
+		dis.produce(event);
+		dis.consume();
+	}
+	/**
+	 * 后台逾期垫付
+	 * @param borrowRepayment
+	 */
+	public static void overdue(BorrowRepayment borrowRepayment) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("overdue");
+		event.setBorrowRepayment(borrowRepayment);
+		dis.produce(event);
+		dis.consume();
+	}
+	/**
+	 * 前台逾期垫付
+	 * @param borrowRepayment
+	 */
+	public static void overduePayment(BorrowRepayment borrowRepayment) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("overduePayment");
+		event.setBorrowRepayment(borrowRepayment);
+		dis.produce(event);
+		dis.consume();
+	}
+	
+   
+    
+    /**
+     * 汇潮开户
+     * @param user
+     * @param ips
+     */
+    public static void ymdRegister(User user , YmdRegister ymd, String resultFlag){
+    	ValueEvent event = new ValueEvent();
+    	event.setOperate("ymdRegister");
+    	event.setUser(user);
+    	event.setYmdRegister(ymd);
+    	event.setResultFlag(resultFlag);
+    	dis.produce(event);
+    	dis.consume();
+    	
+    }
+    
+    
+    /**
+     * 发标回调
+     * @param user
+     * @param ips
+     */
+    public static void doAddBorrow(BorrowModel bm){
+    	ValueEvent event = new ValueEvent();
+    	event.setOperate("doAddBorrow");
+    	event.setBorrowModel(bm);
+    	dis.produce(event);
+    	dis.consume();
+    	
+    }
+    /**
+     * 登记担保方
+     * @param bm
+     */
+    public static void doIpsRegisterGuarantor(BorrowModel bm, String resultFlag){
+        ValueEvent event = new ValueEvent();
+        event.setOperate("doIpsRegisterGuarantor");
+        event.setBorrowModel(bm);
+        event.setResultFlag(resultFlag);
+        dis.produce(event);
+        dis.consume();
+        
+    }
+    
+    /**
+     * 投标回调
+     * @param bm
+     */
+    public static void doAddTender(User user,BorrowModel bm,Borrow borrow,BorrowTender tender,String resultFlag){
+    	ValueEvent event = new ValueEvent();
+    	event.setOperate("doAddTender");
+    	event.setBorrowModel(bm);
+    	event.setBorrow(borrow);
+    	event.setTender(tender);
+    	event.setUser(user);
+    	event.setResultFlag(resultFlag);
+    	dis.produce(event);
+    	dis.consume();
+    	
+    }
+    
+    /**
+     * 代偿回调
+     * @param borrowRepayment
+     */
+    public static void doCompensate(BorrowRepayment borrowRepayment,String resultFlag) {
+        ValueEvent event = new ValueEvent();
+        event.setOperate("doCompensate");
+        event.setBorrowRepayment(borrowRepayment);
+        event.setResultFlag(resultFlag);
+        dis.produce(event);
+        dis.consume();
+    }
+    /**
+     * 代偿回调
+     * @param borrowRepayment
+     */
+    public static void doCompensateSuccess(BorrowRepayment borrowRepayment,String resultFlag) {
+        ValueEvent event = new ValueEvent();
+        event.setOperate("doCompensateSuccess");
+        event.setBorrowRepayment(borrowRepayment);
+        event.setResultFlag(resultFlag);
+        dis.produce(event);
+        dis.consume();
+    }
+    /**
+     * 自动还款回调
+     * @param borrowRepayment
+     */
+    public static void doInstantLiveBorrowRepay(BorrowCollection c,String resultFlag) {
+        ValueEvent event = new ValueEvent();
+        event.setOperate("doInstantLiveBorrowRepay");
+        event.setBorrowCollection(c);
+        event.setResultFlag(resultFlag);
+        dis.produce(event);
+        dis.consume();
+    }
+    /**
+     * 债权转让复审
+     * @param ca
+     * @param resultFlag
+     */
+	public static void creditVerifyFullSuccess(CreditAssignment ca,String resultFlag) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("creditVerifyFullSuccess");
+		event.setCreditAssignment(ca);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+
+	/**
+     * 债权转让复审不通过
+     * @param ca
+     * @param resultFlag
+     */
+	public static void creditVerifyFullFail(CreditAssignment ca, String resultFlag) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("creditVerifyFullFail");
+		event.setCreditAssignment(ca);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+	//JSDP-35 gjh 2015-4-30 start
+	/**
+	 * 债权转让复审前撤销
+	 * @param ca
+	 * @param resultFlag
+	 */
+	public static void creditReCall(CreditAssignment ca, String resultFlag) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("creditReCall");
+		event.setCreditAssignment(ca);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+	//JSDP-35 gjh 2015-4-30 end
+	
+	 /**
+	 * 债权转让购买
+	 * @param borrowRepayment
+	 */
+	public static void creditBuySuccess(CreditAssignment ca,User u,CreditLog cl,String resultFlag) {
+		ValueEvent event = new ValueEvent();
+		event.setOperate("creditBuySuccess");
+		event.setCreditAssignment(ca);
+		event.setCl(cl);
+		event.setUser(u);
+		event.setResultFlag(resultFlag);
+		dis.produce(event);
+		dis.consume();
+	}
+    /**
+     *@author 李建云
+     *购买vip转账 
+     * */
+    public static void buyVipTransfer(MemberVipSubModel memberVipSubModel,String resultFlag) {
+        ValueEvent event = new ValueEvent();
+        event.setOperate("buyVipTransfer");
+        event.setMemberVipSubModel(memberVipSubModel);
+        event.setResultFlag(resultFlag);
+        dis.produce(event);
+        dis.consume();
+    }
+    
+    /**
+     *@author 李建云
+     *VIP包兑换vip 
+     * */
+    public static void convertVipForVipAward(MemberVipAwardSubModel memberVipAwardSubModel,String resultFlag) {
+        ValueEvent event = new ValueEvent();
+        event.setOperate("convertVipForVipAward");
+        event.setMemberVipAwardSubModel(memberVipAwardSubModel);
+        event.setResultFlag(resultFlag);
+        dis.produce(event);
+        dis.consume();
+    }
+    
+    /**
+   	 * 分期宝直接购买
+   	 * @param borrowRepayment
+   	 */
+   	public static void goodsBuySuccess(GoodsOrder go,User u,String resultFlag) {
+   		ValueEvent event = new ValueEvent();
+   		event.setOperate("goodsBuySuccess");
+   		//JSDBET-884 gjh 2015-3-30 start
+   		event.setResultFlag(resultFlag);
+   		//JSDBET-884 gjh 2015-3-30 end
+   		event.setGoodsOrder(go);
+   		event.setUser(u);
+   		dis.produce(event);
+   		dis.consume();
+   	}
+    /**
+   	 * 分期宝分期购买
+   	 * @param borrowRepayment
+   	 */
+   	public static void addOneSuccess(GoodsOrder go,User u,GoodsModel gm,Borrow b,String resultFlag) {
+   		ValueEvent event = new ValueEvent();
+   		event.setOperate("goodsBuyOneSuccess");
+   		event.setGoodsOrder(go);
+   		//JSDBET-884 gjh 2015-3-30 start
+   		event.setResultFlag(resultFlag);
+   		//JSDBET-884 gjh 2015-3-30 end
+   		event.setUser(u);
+   		event.setGm(gm);
+   		event.setBorrow(b);
+   		dis.produce(event);
+   		dis.consume();
+   	}
+}

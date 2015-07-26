@@ -1,0 +1,178 @@
+package com.rongdu.manage.action.score;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.score.domain.ScoreType;
+import com.rongdu.p2psys.score.model.ScoreLogModel;
+import com.rongdu.p2psys.score.service.ScoreLogService;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.score.service.ScoreTypeService;
+
+public class ManageScoreLogAction extends BaseAction implements ModelDriven<ScoreLogModel> {
+
+	private ScoreLogModel model = new ScoreLogModel();
+	
+	private Map<String, Object> data;
+	
+	@Override
+	public ScoreLogModel getModel() {
+		
+		return model;
+	}
+	
+	@Resource
+	private ScoreLogService scoreLogService;
+	@Resource
+	private ScoreTypeService scoreTypeService;
+	@Resource
+	private ScoreService scoreService;
+	
+	/**
+	 * 根据用户名查询用户的积分的页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/user/score/scoreDetailManager")
+	public String scoreDetailManager() throws Exception{
+		
+		List<ScoreType> list = scoreTypeService.getScoreListType();
+		
+		request.setAttribute("list", list);
+		
+		return "scoreDetailManager";
+	}
+	
+	/**
+	 * 根据用户名查询用户的积分详细列表
+	 * @throws Exception
+	 */
+	@Action("/modules/user/score/scoreDetailList")
+	public void scoreDetailList() throws Exception{
+		
+		//PageDataList<ScoreLogModel> scoreLogPageList = scoreLogService.getScoreLogPage(model);
+		//PageDataList<ScoreLogModel> scoreLogPageList = scoreLogService.getUserScoreLogPage(pageNumber,pageSize,model);
+		String userName = paramString("userName");
+		PageDataList<ScoreLogModel> scoreLogPageList = new PageDataList<ScoreLogModel>();
+		if(StringUtil.isNotBlank(model.getUserName()) || StringUtil.isNotBlank(model.getScoreTypeName())
+				|| StringUtil.isNotBlank(model.getStartTime()) ||StringUtil.isNotBlank(model.getEndTime())){
+			scoreLogPageList = scoreLogService.getScoreLogPage(model);
+		}
+		
+		
+		data = new HashMap<String, Object>();
+		if(scoreLogPageList.getPage() == null){
+			data.put("total", 0); // 总行数
+		}else {
+			data.put("total", scoreLogPageList.getPage().getTotal()); // 总行数
+		}
+		data.put("rows", scoreLogPageList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	
+	
+	/**
+	 * 重复积分查询页面
+	 * @return
+	 */
+	@Action("/modules/user/score/repeatScoreManage")
+	public String repeatScoreManage(){
+		
+		return "repeatScoreManage";
+	}
+	/**
+	 * 重复积分查询方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/user/score/repeatScoreList")
+	public void repeatScoreList() throws IOException{
+		
+		PageDataList<ScoreLogModel> scorePageList = scoreLogService.findRepeatScorePage(model);
+		data = new HashMap<String, Object>();
+		if(scorePageList.getPage() == null){
+			data.put("total", 0); // 总行数
+		}else {
+			data.put("total", scorePageList.getPage().getTotal()); // 总行数
+		}
+		data.put("rows", scorePageList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 删除多余的积分
+	 * @throws IOException
+	 */
+	@Action("/modules/user/score/delRepeatScore")
+	public void delRepeatScore() throws IOException{
+		data = new HashMap<String, Object>();
+		
+		long id = paramLong("id");
+		ScoreLog scoreLog = scoreLogService.findScoreLogById(id);
+		
+		List<ScoreLog> sl = scoreLogService.getScoreList(scoreLog.getUser().getUserId(),scoreLog.getScoreTypeNid());
+		//总共的积分记录
+		List<ScoreLog> scoreLogList = scoreLogService.getScoreList(scoreLog.getUser().getUserId(),null);
+		
+		Collection<ScoreLog> collecScoreLog = new ArrayList<ScoreLog>();
+		Collection<ScoreLog> collecUScoreLog = new ArrayList<ScoreLog>();
+		
+		for(int i =0;i<sl.size()-1;i++){
+			ScoreLog scoreLogs = sl.get(i);
+			scoreLogs.setScoreTypeNid("repeat-"+scoreLogs.getScoreTypeNid());
+			collecUScoreLog.add(scoreLogs);
+		}
+		
+		int repeatScore = 0;
+		if(sl.size()>=2){
+			for(int i=0;i<sl.size()-1;i++){
+				//每次新建时查询最大的积分
+				ScoreLog scoreLogMax = scoreLogList.get(scoreLogList.size()-1);
+				
+				repeatScore += sl.get(i).getScore();
+				ScoreLog slog = new ScoreLog();
+				slog.setScore(-scoreLog.getScore());
+				slog.setValidScore(scoreLogMax.getValidScore()-repeatScore);
+				slog.setAddTime(new Date());
+				slog.setFreezeScore(0);
+				slog.setRemark(this.getOperatorUserName()+"删除重复产生记录,删除"+scoreLog.getScore()+"个积分");
+				slog.setScoreTypeName(scoreLog.getScoreTypeName());
+				slog.setScoreTypeNid(scoreLog.getScoreTypeNid());
+				slog.setType(scoreLog.getType());
+				slog.setUser(scoreLog.getUser());
+				collecScoreLog.add(slog);
+			}
+		}
+		if(null != scoreLog){
+			Score score = scoreService.getScoreByUserId(scoreLog.getUser().getUserId());
+			score.setTotalScore(score.getTotalScore()-repeatScore);
+			score.setValidScore(score.getValidScore()-repeatScore);
+			ScoreLog log = scoreLogService.updateScoreLog(collecUScoreLog,score, collecScoreLog);
+			if(null != log){
+				data.put("result", true);
+				data.put("msg", "删除成功！");
+			}else{
+				data.put("result", true);
+				data.put("msg", "删除失败！");
+			}
+		}
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+
+}

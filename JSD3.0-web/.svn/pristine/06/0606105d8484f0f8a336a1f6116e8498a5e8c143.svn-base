@@ -1,0 +1,72 @@
+package com.rongdu.p2psys.web.redpacket;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * 活动红包的产生查询 JSDP-215
+ * @author xingjia
+ *
+ */
+public class RpActivityAction extends BaseAction implements ModelDriven<RpActivityProduceModel> {
+	private RpActivityProduceModel model = new RpActivityProduceModel();
+	
+	@Resource
+	private RpActivityProduceService rpActivityProduceService;
+	private Map<String, Object> data;
+	
+	public RpActivityProduceModel getModel() {
+		return model;
+	}
+	public void setModel(RpActivityProduceModel model) {
+		this.model = model;
+	}
+	//fengguoqin JSDP-215 20150709  start
+	/**
+	 * 活动红包的产生
+	 */
+	@Action("/rpActivity/rpActivityProduceList")
+	public void rpActivityProduceList()throws Exception{
+		User user = this.getSessionUser();
+		data = new HashMap<String, Object>();
+		if(user==null){
+			this.redirect("/user/login.html");
+		}else{
+			model.setUserId(user.getUserId());
+			PageDataList<RpActivityProduceModel> rpActivityProduceDataList = rpActivityProduceService.getPageList(model);
+			data.put("data", rpActivityProduceDataList);
+			printJson(getStringOfJpaObj(data));
+			data=null;
+		}
+		//fengguoqin JSDP-215 20150709  end
+	}
+	//JSDP-203 20150720 xingjia start
+	@Action("/rpActivity/rpActivityUnvalidList")
+	public void rpActivityUnvalid() throws Exception{
+		User user = this.getSessionUser();
+		data = new HashMap<String, Object>();
+		if(user==null){
+			this.redirect("/user/login.html");
+		}else{
+			model.setUserId(user.getUserId());
+			model.setActivityType(RpActivity.ACTIVITY_INDIANA_JONES);
+			PageDataList<RpActivityProduce> rpActivityProduceUnvalid = rpActivityProduceService.rpActivityProduceUnvalid(model);
+			data.put("data", rpActivityProduceUnvalid);
+			printJson(getStringOfJpaObj(data));
+			data=null;
+		}
+	}
+	//JSDP-203 20150720 xingjia end
+}

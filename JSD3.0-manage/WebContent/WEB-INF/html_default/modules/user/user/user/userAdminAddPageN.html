@@ -1,0 +1,250 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/user/user/userAdminAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址	
+</script>
+<style>
+ #professional,#sourceRepay{width:200px;}
+</style>
+<form id="form"  method="post" enctype="multipart/form-data">
+<div class="adminUserForm">
+	<ul>
+		<li><span>公司名称：</span><input type="text" name="companyName" maxlength="30" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'maxLength[30]'"/><i>*</i></li>
+		<li><span>公司类型：</span>
+		<@linkage name="companyType" id="style" type="value" nid="company_type" />
+		<!-- <select name="companyType" id="style"><option value="1">个人独资企业</option><option value="2">合伙企业</option><option value="3">公司企业</option></select> -->
+		</li>
+		<!-- <li><span>公司标志：</span><input type="file" name="files" class="adminUserTxt" /></li> -->
+		<li><span>公司注册号：</span><input type="text" name="companyRegNo" autocomplete="off"  maxlength="15" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'numeric'" onkeyup="this.value=this.value.replace(/\D/g,'')"/><i>*</i></li>
+		<li><span>税务登记证号：</span><input type="text" autocomplete="off" name="companyTaxNo"  maxlength="20" class="easyui-validatebox adminUserTxt" onkeyup="this.value=this.value.replace(/\D/g,'')"/></li>
+		<li><span>所属行业：</span><@linkage name="professional" id="professional" type="value" nid="professional"/></li>
+	</ul>
+	<div class="adminUserMuti">
+		<span style="line-height:40px;">公司地区：</span>
+		
+		
+		<!-- <select class="prov" name="province"><option value="浙江">浙江</option></select>  
+	    <select class="city" name="city" disabled="disabled"><option value="杭州">杭州</option></select> 
+	    <select class="dist" name="area" disabled="disabled"><option value="西湖区">西湖区</option></select> 
+	     -->
+	    <select name="province" id="province" class="prov">
+			<option value="">请选择</option>
+		</select> 
+		<select name="city" id="city" class="city">
+			<option value="">请选择</option>
+		</select> 
+		<select id="county" name="area" class="dist">
+			<option value="">请选择</option>
+		</select> 
+	    
+	    
+	    
+	</div>
+	<div class="adminUserMuti"><span>还款来源：</span>
+		<@linkage name="sourceRepay" id="sourceRepay" type="value" nid="repayment_source"/>
+	</div>
+	<div class="adminUserMuti"><span>公司地址：</span><textarea name="address" maxlength="50" autocomplete="off" class="easyui-validatebox adminUserTextarea" data-options="required: true,validType:'maxLength[50]'"></textarea><i>*</i></div>
+	<div class="adminUserMuti"><span>公司描述：</span><textarea name="companyDesc" maxlength="100" autocomplete="off" class="easyui-validatebox adminUserTextarea" data-options="required: true,validType:'maxLength[100]'"></textarea><i>*</i></div>
+	<div class="adminUserMuti"><span>经营状况：</span><textarea name="companyStatus" maxlength="100" autocomplete="off" class="easyui-validatebox adminUserTextarea" data-options="required: true,validType:'maxLength[100]'"></textarea><i>*</i></div>
+</div>
+<div class="adminUserForm">
+	<ul>
+		<li><span>法人姓名：</span><input type="text" maxlength="20" name="companyLawPerson" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true" onkeyup="this.value=this.value.replace(/[^\u4E00-\u9FA5]/g,'')"/><i>*</i></li>
+		<li><span>法人身份证：</span><input type="text"  maxlength="20" name="companyLawPersonCardno" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'idCard'" onkeyup="this.value=this.value.replace(/[^\w\.\/]/ig,'')"/><i>*</i></li>
+		<li class="regCapital"><span>注册资本：</span><input type="text" maxlength="11" name="companyRegCapital" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'maxNum[0,99999999999]'"/><i>*</i></li>
+		<li><span>组织机构代码号：</span><input type="text" maxlength="25" name="companyOrgCode" autocomplete="off" class="easyui-validatebox adminUserTxt" onkeyup="this.value=this.value.replace(/[^\w\.\/]/ig,'')"/></li>
+	</ul>
+</div>
+<div class="adminUserForm">
+	<ul>
+		<li><span>借款人：</span><input type="text" maxlength="20" name="user.realName" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'chinese'" onkeyup="this.value=this.value.replace(/[^\u4E00-\u9FA5]/g,'')"/><i>*</i></li>
+		<li><span>借款人身份证：</span><input type="text" maxlength="20" name="user.cardNO" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'idCard'" onkeyup="this.value=this.value.replace(/[^\w\.\/]/ig,'')"/><i>*</i></li>
+		<li><span>借款人手机：</span><input type="text" maxlength="15" name="user.mobilePhone" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'mobile'" onkeyup="value=value.replace(/[^1234567890-]+/g,'')"/><i>*</i></li>
+		<li><span>借款人邮箱：</span><input type="text" maxlength="30"name="user.email" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'email'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/><i>*</i></li>
+		<li><span>岗位职位：</span><input type="text" maxlength="30"name="position" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'notNull'"/><i>*</i></li>
+		<li><span>婚姻状况：</span>
+		<input type="radio" name="maritalStatus" class="easyui-validatebox" value="1"  checked="checked"/>已婚
+		<input type="radio" name="maritalStatus" class="easyui-validatebox" value="2" />未婚
+		</li>
+		<li><span>法人账户提现：</span>
+			<input type="radio" name="legalDraw" class="easyui-validatebox" value="1" checked="checked"/>是
+			<input type="radio" name="legalDraw" class="easyui-validatebox" value="2"/>否
+		</li>
+	</ul>
+</div>
+<div class="adminUserForm">
+	<ul>
+		<li><span>公司电话：</span><input type="text" maxlength="15" name="companyPhone" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'tel'" onkeyup="value=value.replace(/[^1234567890-]+/g,'')"/><i>*</i></li>
+		<li><span>公司传真：</span><input type="text" maxlength="15" name="companyFax" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="validType:'fax'" onkeyup="value=value.replace(/[^1234567890-]+/g,'')"/></li>
+		<li><span>公司邮箱：</span><input type="text" maxlength="30"name="companyEmail" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="validType:'email'" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/></li>
+	</ul>
+</div>
+<div class="adminUserForm">
+	<ul>
+		<li><span>经营执照：</span><input type="file"  accept="image/*" name="files" class="easyui-validatebox adminUserTxt" /></li>
+		<li class="taxRegNo"><span>税务登记证：</span><input type="file" name="files" accept="image/*" class="easyui-validatebox adminUserTxt" /></li>
+		<li class="zzjgCode"><span>组织机构证：</span><input type="file" name="files" accept="image/*" class="easyui-validatebox adminUserTxt" /></li>
+		<li><span>开户许可证：</span><input type="file" name="files" accept="image/*" class="adminUserTxt adminUserTxt"/></li>
+		<li><span>贷款卡记录：</span><input type="file" name="files" accept="image/*" class="adminUserTxt adminUserTxt"/></li>
+		<li><span>个人征信报告：</span><input type="file" name="files"  accept="image/*" class="easyui-validatebox adminUserTxt"/></li>
+	</ul>
+</div>
+<input type="hidden" name="userType" value="11">
+<input type="hidden" name="userNature" value="21">  
+<input type="hidden" name="fileIndex" id="fileIndex" />
+<input type="hidden" name="fileSize" id="fileSize" />
+<input type="hidden" name="borrowType" value="N"/>
+
+<div class="borrowForm" style="border-bottom:0;">
+	<h2 class="borrowFormTitle">公司照</h2>
+	<div class="guarantee_type">
+		<span>公司照：</span>
+	        <div id="uploadGuaranteeBox" data-arr="uploadFile" style="height: auto;">
+	            <ul id="uploadPiclist3" class="photoUpload" style="list-style: none; padding: 0; margin: 0;">
+	                <li class="add_btn" style="float: left;">
+	                  <i class="a"></i> <i class="b"></i>
+	                  <input type="file" name="file" id="uploadFile4" accept="image/*" onchange="return ajaxFileUpload1('uploadFile4','/imageUp.jsp','picPath');" title="点击上传图片" />
+	                </li>
+	            </ul>
+	       </div>
+	</div>	
+</div>
+<input type="hidden" value="${userAdminAddToken!}" name="userAdminAddToken">
+</form>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<script>
+	$(function(){
+		$("#form").submit(function(){
+			var files = $("input[name='files']");
+			var fileIndex = "";
+			for(var i = 0; i < files.length; i++){
+				if(files[i].value != ""){
+					fileIndex = fileIndex+i+",";
+				}
+			}
+			$("#fileIndex").val(fileIndex.substring(0,fileIndex.length-1));
+			$("#fileSize").val(files.length);
+		});
+	});
+
+	
+	
+	
+	
+	
+	
+	
+	$("#style").change(function(){
+		var selectVal= $("#style").val();
+		if(selectVal==4){
+			$(".taxRegNo").html('<span>税务登记证：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" accept="image/*"/>');
+			$(".regCapital").html('<span>注册资本：</span><input type="text" name="regCapital" autocomplete="off" class="easyui-validatebox adminUserTxt"/><i>*</i>');
+			$(".zzjgCode").html('<span>组织机构证：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" accept="image/*"/>');
+		}else{
+			$(".taxRegNo").html('<span>税务登记证：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" accept="image/*"/>');
+			$(".regCapital").html('<span>注册资本：</span><input type="text" name="regCapital" autocomplete="off"  class="easyui-validatebox adminUserTxt" id="regCapital" data-options="required: true"/><i>*</i>');
+			$(".zzjgCode").html('<span>组织机构证：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" accept="image/*"/>');
+		}
+	});
+	
+	$("#regCapital").live("keyup",function(){
+		var regCapitalVal=$("#regCapital").val();
+		if(parseInt(regCapitalVal) != regCapitalVal){
+			$("#regCapital").val("");
+		}
+	})
+	
+	
+	
+	
+	/*
+	 *初始化省份选择框
+	 * */
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",
+        success:function(json){
+        	
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		 
+        		  var province=json[i];
+        		 $("#province").append("<option  value="+province.id+">"+province.name+"</option>");
+        	 }
+        }
+    });
+	
+	//给省份下拉选择框注册change事件 
+	 $("#province").change(function(){
+		 $("#city").empty();
+		 $("#city").append("<option value=''>请选择</option>");
+		 var id = $(this).val();
+		 if($(this).val() != ''){
+		 	getCity(id);
+		 }else{
+		 	 $("#county").empty();
+			 $("#county").append("<option value=''>请选择</option>");
+		 }
+	 });
+	
+	
+	/*省份发生变化
+	 *AJAX一步后台获取与此省份关联的城市
+	 * 
+	 * */
+	function  getCity(id){
+		//ajax逻辑
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var city=json[i];
+	        		 $("#city").append("<option value="+city.id+">"+city.name+"</option>");
+	        	 }
+	        }
+	    });
+		
+	}
+	
+	/*给城市选择框注册change事件*/
+	$("#city").change(function(){
+		 $("#county").empty();
+		 $("#county").append("<option value=''>请选择</option>");
+		var id = $(this).val();
+		if($(this).val() != ''){
+			getCounty(id);
+		}
+	});
+
+	/*城市发生变化
+	 *AJAX一步后台获取与此市关联的县（区）
+	 * 
+	 * */
+	function getCounty(id){
+		//ajax逻辑
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var county=json[i];
+	        		 $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+	        	 }
+	        }
+	    });
+		
+	}
+	
+	
+	
+	
+	
+	
+</script>

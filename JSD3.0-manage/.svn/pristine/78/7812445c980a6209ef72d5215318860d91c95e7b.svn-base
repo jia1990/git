@@ -1,0 +1,107 @@
+package com.ddtkj.manage.action.redPackage;
+
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.manage.quartz.timer.QuartzJob;
+import com.ddtkj.p2psys.redpacket.model.RpActivityConsumeModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityConsumeService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * JSDP-184 
+ */
+public class ManageRpActivityConsumeAction extends BaseAction implements ModelDriven<RpActivityConsumeModel>{
+	private static Logger logger = Logger.getLogger(ManageRpActivityConsumeAction.class);
+	private RpActivityConsumeModel model = new RpActivityConsumeModel();
+	@Resource
+	private RpActivityConsumeService rpActivityConsumeService;
+	@Resource
+	private DictService dictService;
+	
+	private Map<String, Object> data;
+	
+	/**
+	 * 活动红包产生记录展示的页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/rpActivityConsumePage")
+	public String rpActivityConsumePage(){
+		
+		List list = dictService.list("rp_type");
+		request.setAttribute("dictList", list);
+		return "rpActivityConsumePage";
+	}
+	/**
+	 * 活动红包消费的查询方法
+	 * @throws IOException
+	 */
+	@Action("/modules/redPackage/rpActivityConsumeList")
+	public void rpActivityConsumeList() throws IOException{
+		data = new HashMap<String, Object>();
+		logger.info("---------------");
+		PageDataList<RpActivityConsumeModel> rpModelList = rpActivityConsumeService.getPageList(model);
+		List<RpActivityConsumeModel> rpActivityConsumeList = rpActivityConsumeService.getSumListRpConsume(model);
+		//获取汇总数据
+		List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+		DecimalFormat df =new DecimalFormat("#0.00");
+		if(null != rpActivityConsumeList && rpActivityConsumeList.size()!=0){
+    		Map<String,String> footerMap = new HashMap<String,String>();
+    		for(int i=0;i<rpActivityConsumeList.size();i++){
+    			footerMap.put("userName", "消费成功金额："+df.format(rpActivityConsumeList.get(i).getConsumeSucMoney()));
+    			footerMap.put("realName", "消费失败金额："+df.format(rpActivityConsumeList.get(i).getConsumeFailMoney()));
+    		}
+    		
+    		footerList.add(footerMap);
+		}
+		
+		data.put("footer", footerList);
+		data.put("total", rpModelList.getPage().getTotal()); // 总行数
+		data.put("rows", rpModelList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+	
+	/**
+	 * 活动红包的消费导出excel
+	 * @throws Exception 
+	 */
+	@Action("/modules/redPackage/excelRpActivityConsume")
+	public void excelRpActivityConsume() throws Exception{
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		String title = "活动红包产生Excel表";
+
+		String[] hearders = new String[] { "编号","用户名", "真实姓名", "活动类型", "产生金额", "产生时间", "备注"};// 表头数组
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]"};// 对象属性数组
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+		List newList = rpActivityConsumeService.excelListRpConsume(model);
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+	}
+	
+	public RpActivityConsumeModel getModel() {
+		return model;
+	}
+	public void setModel(RpActivityConsumeModel model) {
+		this.model = model;
+	}
+
+}

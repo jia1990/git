@@ -1,0 +1,208 @@
+
+package com.ddtkj.p2psys.score.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.score.dao.ScoreRuleAwardDao;
+import com.ddtkj.p2psys.score.dao.UserScoreAwardDao;
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.model.UserScoreAwardModel;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+@Service("userScoreAwardService")
+public class UserScoreAwardServiceImpl implements UserScoreAwardService {
+
+	private static Logger logger = Logger.getLogger(UserScoreAwardServiceImpl.class);
+	
+	@Resource
+	private UserScoreAwardDao userScoreAwardDao;
+	@Resource
+	private ScoreRuleAwardDao scoreRuleAwardDao;
+	
+
+	@Override
+	public List<UserScoreAward> getMyAwardList(long ruleId, long userId) {
+		return userScoreAwardDao.getMyAwardList(ruleId, userId);
+	}
+	
+	@Override
+	public PageDataList<UserScoreAward> getUserScoreAwardList(UserScoreAward userScoreAward, int pageNum, int pageSize) {
+		return userScoreAwardDao.getUserScoreAwardList(userScoreAward, pageNum, pageSize);
+	}
+	
+	@Override
+	public List<UserScoreAward> getScoreAwardedList(long ruleId, int num, boolean isOrderByLevel) {
+		return userScoreAwardDao.getScoreAwardedList(ruleId, num, isOrderByLevel);
+	}
+
+	@Override
+	public PageDataList<UserScoreAwardModel> getUserScoreAwardList(
+			UserScoreAwardModel model) {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<UserScoreAward> list = userScoreAwardDao.findPageList(param);
+		logger.info("积分抽奖记录param:"+param.toMap().toString()+",list size:"+list.getList().size());
+		List<UserScoreAwardModel> modelList = new ArrayList<UserScoreAwardModel>();
+		PageDataList<UserScoreAwardModel> pageDataList = new PageDataList<UserScoreAwardModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				UserScoreAward userScoreAward = (UserScoreAward)list.getList().get(i);
+				UserScoreAwardModel userSocreAwardModel = UserScoreAwardModel.instance(userScoreAward);
+				ScoreRuleAward ruleAward = userScoreAward.getRule();
+				User user = userScoreAward.getUser();
+				ScoreAward scoreAward = userScoreAward.getAward();
+				userSocreAwardModel.setRuleName(ruleAward.getName());
+				userSocreAwardModel.setRealName(user.getRealName());
+				userSocreAwardModel.setAwardTypeStr(scoreAward.getType()+"");
+				userSocreAwardModel.setVipLevel(scoreAward.getVipLevel());
+				userSocreAwardModel.setVipValidMonth(scoreAward.getVipValidMonth());
+				userSocreAwardModel.setAwardValue(scoreAward.getAwardValue());
+				modelList.add(userSocreAwardModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+
+	@Override
+	public List<UserScoreAward> getScoreLuxuryAwardList(long ruleId, int num,
+			boolean isOrderByLevel, int luxuryAward) {
+		return userScoreAwardDao.getScoreLuxuryAwardList(ruleId, num, isOrderByLevel, luxuryAward);
+	}
+	
+	private QueryParam searchParam(QueryParam param, UserScoreAwardModel model) {
+		if(model != null){
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				param.addParam("user.userId", model.getUser().getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getUserName())){
+				param.addParam("userName",  Operators.LIKE, model.getUserName());
+			}
+			if (StringUtil.isNotBlank(model.getRealName())){
+				param.addParam("user.realName",  Operators.EQ, model.getRealName());
+			}
+			if(StringUtil.isNotBlank(model.getStatus()) && !UserScoreAward.SCORE_AWARD_STATUS_ALL.equals(model.getStatus())){
+				param.addParam("status", model.getStatus());
+			}
+			if(StringUtil.isNotBlank(model.getAwardTypeStr()) && !UserScoreAward.SCORE_AWARD_OBJECTTYPE_ALL.equals(model.getAwardTypeStr())){
+				param.addParam("award.type", model.getAwardTypeStr());
+			}
+			if(model.getAwardType() > 0 && model.getAwardType() != 99){
+				param.addParam("awardType", model.getAwardType());
+			}
+			if(StringUtil.isNotBlank(model.getReceiveStatus()) && !UserScoreAward.SCORE_AWARD_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())){
+				param.addParam("receiveStatus", model.getReceiveStatus());
+			}
+			if(StringUtil.isNotBlank(model.getTransNo())){
+				param.addParam("transNo", model.getTransNo());
+			}
+			if(StringUtil.isNotBlank(model.getCardNo())){
+				param.addParam("cardNo", model.getCardNo());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+
+	@Override
+	public double getUserScoreAwardSum(UserScoreAwardModel model, String awardType) {
+		return 	userScoreAwardDao.getUserScoreAwardSum(model, awardType );
+	}
+
+	@Override
+	public String userScoreAwardTotal(UserScoreAwardModel model,
+			String awardType) {
+		return userScoreAwardDao.userScoreAwardTotal(model, awardType);
+	}
+
+	@Override
+	public void updateReceiveStaus(List<UserScoreAward> list) {
+		userScoreAwardDao.update(list);
+	}
+
+	@Override
+	public double getCardTotalByStatusAndUser(String status, Date startTime,
+			Date endTime, User user) {
+		return userScoreAwardDao.getCardTotalByStatusAndUser(status, startTime, endTime, user);
+	}
+
+	@Override
+	public List<UserScoreAward> getScoreAwardListByStatusAndTransNo(String status,
+			Date startTime, Date endTime, String transNo) {
+		return userScoreAwardDao.getScoreAwardListByStatusAndTransNo(status, startTime, endTime, transNo);
+	}
+
+	@Override
+	public PageDataList<UserScoreAwardModel> getScoreAwardListByType(
+			UserScoreAwardModel model, int awardType) {
+		return null;
+	}
+
+	@Override
+	public void updateScoreAwardTransNo(List<UserScoreAward> list) {
+		userScoreAwardDao.update(list);
+	}
+
+	@Override
+	public String scoreAwardTotal(UserScoreAwardModel model) {
+		return userScoreAwardDao.scoreAwardTotal(model);
+	}
+
+	@Override
+	public List<UserScoreAward> getScoreAwardListByStatusAndUser(String status,
+			Date startTime, Date endTime, User user) {
+		return userScoreAwardDao.getScoreAwardListByStatusAndUser(status, startTime, endTime, user);
+	}
+
+	@Override
+	public double getCardTotalByStatusAndTransNo(String status, Date startTime,
+			Date endTime, User user, String transNo) {
+		return userScoreAwardDao.getCardTotalByStatusAndTransNo(status, startTime, endTime, user, transNo);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<UserScoreAwardModel> excelListOrder(UserScoreAwardModel model) {
+		return userScoreAwardDao.excelListOrder(model);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+	
+}

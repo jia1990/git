@@ -1,0 +1,56 @@
+package com.ddtkj.p2psys.goods.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsOrderModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+public interface GoodsOrderDao extends BaseDao<GoodsOrder>{
+	/**
+	 * 根据borrowId获取订单号
+	 * @param id
+	 * @return
+	 * @throws Exception
+	 */
+	GoodsOrder findOrderByBorrowId(long id) throws Exception;
+	
+	/**
+	 * 分页 查询用户订单信息
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	public PageDataList<GoodsOrder> getList(GoodsOrderModel model);
+	
+	/**
+	 * 分页 查询商户订单信息
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	public PageDataList<GoodsOrder> getStoreOrderList(GoodsOrderModel model);
+	
+	/**
+	 * 查询用户订单完成数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int orderCountByUser(int userId);
+	
+	/**
+	 * 查询用户订单完成金额
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int orderMoneyCountByUser(int userId);
+	//JSDP-116 fengguoqin 2015-05-16 start
+	/**
+	 * excel导出订单信息
+	 * @return
+	 * @author 冯国琴
+	 */
+	public List<GoodsOrderModel> excelListOrder(GoodsOrderModel model);
+	//JSDP-116 fengguoqin 2015-05-16 end
+}

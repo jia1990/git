@@ -1,0 +1,387 @@
+
+package com.rongdu.p2psys.web.score;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.common.util.security.SignUtils;
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.authorize.service.ClientUserService;
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.ddtkj.p2psys.cardaward.service.CardAwardTransferService;
+import com.ddtkj.p2psys.cardaward.service.MemberCardAwardService;
+import com.ddtkj.p2psys.score.constant.ScoreAwardConstant;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.model.UserScoreAwardModel;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.service.PetCardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述: 购物卡转账到云购
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+public class CardAwardTransferAction extends BaseAction implements ModelDriven<CardAwardTransferModel> {
+	
+	private static Logger logger = Logger.getLogger(CardAwardTransferAction.class);
+
+	@Resource
+	private UserService userService;
+	@Resource
+	private MemberCardAwardService memberCardAwardService;
+	@Resource
+	private ClientUserService clientUserService;
+	@Resource
+	private CardAwardTransferService cardAwardTransferService;
+	@Resource
+	private ScoreRuleAwardService scoreRuleAwardService;
+	@Resource
+	private ScoreService scoreService;
+	@Resource
+	private UserScoreAwardService userScoreAwardService;
+	@Resource
+	private PetCardService petCardService;
+	
+	CardAwardTransferModel model = new CardAwardTransferModel();
+	Map<String, Object> data = new HashMap<String, Object>();
+	Map<String, Object> paramMap = new HashMap<String, Object>();
+	
+	public CardAwardTransferModel getModel() {
+		return model;
+	}
+	
+	private User user;
+
+	
+	/**
+	 * 购物卡转账到云购
+	 * @throws Exception   
+	 */ 
+	@Action("/member/score/cardAwardTransfer")
+	public void cardAwardTransfer() throws Exception {
+		String reqUrl = "";
+		String clientId = "";
+		double transMoney = 0;
+		user = getSessionUser();
+		if(EnableCardTransfer() != null){
+			reqUrl = EnableCardTransfer().getCardTransfer().getReqUrl();
+			clientId = EnableCardTransfer().getCardTransfer().getClientId();
+		}
+		if (user == null){
+			data.put("msg", "你还未登录，请登录");
+		}
+		checkToken("cardTransferToken");
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+		if (ruleAward != null) {
+			Date startTime = ruleAward.getStartDate();
+			Date endTime = ruleAward.getEndDate();
+			transMoney = userScoreAwardService.getCardTotalByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL, startTime, endTime, user);
+		}
+		if (transMoney > 0) {
+			// 查询应用信息
+			Client currentClient = new Client();
+			currentClient.setClientId(clientId);
+			user = userService.find(user.getUserId());
+			ClientUserModel userInfo = clientUserService.updateOauthUserInfo(user, currentClient);
+			CardAwardTransfer cardTransfer = fillCardAwardTransfer();
+			cardTransfer.setTransType(CardAwardTransfer.TRANS_TYPE_CARDAWARD);
+			cardTransfer.setTransMoney(transMoney);
+			boolean isSuccess = cardAwardTransferService.handelCardAwardTransfer(cardTransfer, userInfo, reqUrl);
+			if(isSuccess){
+				data.put("msg", "你的云购卡兑换成功！");
+			}else{
+				data.put("msg", "你的云购卡兑换失败，请联系管理员！");
+				data.put("code", "01");
+			}
+		}else{
+			data.put("msg", "你的云购卡面值为"+transMoney+"无法进行兑换操作");
+			data.put("code", "02");
+		}
+		printJson(getStringOfJpaObj(data));	
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 回调方法处理
+	 * @throws Exception   
+	 */ 
+	@Action("/credit/callBackConvert")
+	public String callBackTransfer() throws Exception {
+		String callUrl = "";
+		if(EnableCardTransfer() != null){
+			callUrl = EnableCardTransfer().getCardTransfer().getCallUrl();
+		}
+		String backValue = paramString("status");		//云购全球传参：Y表示订单处理成功
+		String tradeNo = paramString("trans_no");		//云购全球传参：订单流水号
+		if(null != backValue && ("Y").equals(backValue)){
+			cardAwardTransferService.callBackTransfer(tradeNo);
+			response.sendRedirect(callUrl);
+		}
+		return null;
+	}
+	
+	private CardAwardTransfer fillCardAwardTransfer() {
+		CardAwardTransfer cardTransfer = new CardAwardTransfer();
+		cardTransfer.setUser(user);
+		cardTransfer.setAddIp(Global.getIP());
+		cardTransfer.setStatus(CardAwardTransfer.TRANS_STATUS_FAIL);
+		cardTransfer.setReceiveStatus(CardAwardTransfer.TRANS_RECEIVESTATUS_FAIL);
+		cardTransfer.setAddTime(new Date());
+		return cardTransfer;
+	}
+	
+	private YunGouTransferRuleCheck EnableCardTransfer(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(check != null && check.getCardTransfer() != null && YunGouTransferRuleCheck.TRANSFER_STATUS_ENABLE.equals(check.getCardTransfer().getStatus())) {
+			return check;
+		}
+		return null;
+	}
+	
+	/**
+	 * 云购卡转账记录页面
+	 * @throws Exception   
+	 */ 
+	@Action("/member/score/transferDetail")
+	public String cardTransferDetail() throws Exception {
+		double transMoney = 0;
+		Score score = scoreService.getScoreByUserId(getSessionUserId());
+		request.setAttribute("score", score);
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+		request.setAttribute("ruleAward", ruleAward);
+		if (ruleAward != null) {
+			Date startTime = ruleAward.getStartDate();
+			Date endTime = ruleAward.getEndDate();
+			transMoney = userScoreAwardService.getCardTotalByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL, startTime, endTime, getSessionUser());
+		}
+		request.setAttribute("transMoney", transMoney);
+		logger.info("cardTransfer transMoney:"+transMoney);
+		return "transferDetail";
+	}
+	
+	/**
+	 * 用户云购卡转账记录
+	 * @throws Exception   
+	 */ 
+	@Action("/member/score/getTransferLogList")
+	public void getMyTransferLogList() throws Exception {
+		user = getSessionUser();
+		model.setUser(user);
+		PageDataList<CardAwardTransferModel> pageDateList = cardAwardTransferService.getCardTransferList(model);
+		data.put("data", pageDateList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 云购卡转账页面初始化
+	 * @throws Exception 异常
+	 */
+	@Action("/scoreAward/cardTransferIndex")
+	public String index() throws Exception {
+		saveToken("cardTransferToken");
+		double transMoney = 0;
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+		request.setAttribute("ruleAward", ruleAward);
+		if (ruleAward != null) {
+			Date startTime = ruleAward.getStartDate();
+			Date endTime = ruleAward.getEndDate();
+			transMoney = userScoreAwardService.getCardTotalByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL, startTime, endTime, getSessionUser());
+		}
+		request.setAttribute("transMoney", transMoney);
+		return "yunGouCardT";
+	}
+	
+	/**
+	 * 云购卡活动页面记录列表
+	 * @throws Exception   
+	 */ 
+	@Action("/scoreAward/cardTransferList")
+	public void scoreAwardList() throws Exception {
+		UserScoreAwardModel scoreAwardModel = new UserScoreAwardModel();
+		scoreAwardModel.setSize(100);
+		scoreAwardModel.setAwardType(ScoreAwardConstant.AWARD_OBJECTTYPE_CARD);
+		PageDataList<UserScoreAwardModel> pageList = userScoreAwardService.getUserScoreAwardList(scoreAwardModel);
+		int totalPage = pageList.getPage().getTotal();
+		data.put("rows", pageList.getList());
+		data.put("total", totalPage);
+		data.put("data", pageList);
+		printJson(getStringOfJpaObj(data));		
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 购物卡转账到云购新站
+	 * @throws Exception   
+	 */ 
+	@Action("/member/score/cardAwardTransferYg")
+	public void cardAwardTransferYg() throws Exception {
+		String reqUrl = null;
+		String memberQueryUrl = null;
+		String ygSign = null;
+		String callBackUrl = null;
+		double transMoney = 0;
+		user = getSessionUser();
+		if(EnableCardTransfer() != null){
+			reqUrl = EnableCardTransferYg().getCardTransferYg().getReqUrl();
+			memberQueryUrl = EnableCardTransferYg().getCardTransferYg().getMemberQueryUrl();
+			ygSign = EnableCardTransferYg().getCardTransferYg().getSign();
+			callBackUrl = EnableCardTransferYg().getCardTransferYg().getSupplyReqUrl();
+		}
+		if (user == null){
+			data.put("msg", "你还未登录，请登录");
+		}
+		checkToken("cardTransferToken");
+		//账户中心接口查询是否登录
+		user = userService.find(user.getUserId());
+		if(cardAwardTransferService.hasSignInAccountCenter(user, memberQueryUrl)) {
+			ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatus(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE);
+			if (ruleAward != null) {
+				Date startTime = ruleAward.getStartDate();
+				Date endTime = ruleAward.getEndDate();
+				transMoney = userScoreAwardService.getCardTotalByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL, startTime, endTime, user);
+			}
+			if (transMoney > 0) {
+				CardAwardTransfer cardTransfer = fillCardAwardTransfer();
+				cardTransfer.setTransType(CardAwardTransfer.TRANS_TYPE_CARDAWARD_TOJYG);
+				cardTransfer.setTransMoney(transMoney);
+				boolean isSuccess = cardAwardTransferService.handelCardAwardTransferYg(cardTransfer, user, reqUrl, ygSign);
+				if(isSuccess){
+					response.sendRedirect(callBackUrl);
+					data.put("msg", "你的云购卡兑换成功！");
+				}else{
+					data.put("msg", "你的云购卡兑换失败，请联系管理员！");
+					data.put("code", "01");
+				}
+			}else{
+				data.put("msg", "你的云购卡面值为"+transMoney+"无法进行兑换操作");
+				data.put("code", "02");
+			}
+		}else{
+			data.put("msg", "你还没有登录过账户中心，请先登录");
+			data.put("code", "03");
+		}
+		printJson(getStringOfJpaObj(data));	
+		data = null;
+	}
+	
+	private YunGouTransferRuleCheck EnableCardTransferYg(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(check != null && check.getCardTransferYg() != null && YunGouTransferRuleCheck.TRANSFER_STATUS_ENABLE.equals(check.getCardTransferYg().getStatus())) {
+			return check;
+		}
+		return null;
+	}
+	
+	private YunGouTransferRuleCheck EnableYungouCardTransfer(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(check != null && check.getYungouCardTransfer() != null && YunGouTransferRuleCheck.YUNGOUCARD_STATUS_ENABLE.equals(check.getYungouCardTransfer().getStatus())) {
+			return check;
+		}
+		return null;
+	}
+	
+	/**
+	 * 云购体验卡激活回调方法
+	 * @throws Exception   
+	 */ 
+	@Action("/scoreAward/YgCardCallBack")
+	public String YgCardCallBack() throws Exception {
+		boolean result = false;
+		String signKey = null;
+		if(EnableYungouCardTransfer() != null) {
+			signKey = EnableYungouCardTransfer().getYungouCardTransfer().getSignKey();
+		}
+		Map<String, Object> backMap = new HashMap<String, Object>();
+		String cardNo = paramString("cardNo");
+		String activateTime = paramString("activateTime");
+		String sign = paramString("sign");
+		paramMap.put("cardNo", cardNo);
+		paramMap.put("activateTime", activateTime);
+		paramMap.put("sign", sign);
+		//验签校验，通过就处理
+		Map<String, Object> map = SignUtils.checkMap(paramMap, signKey);
+		logger.info("YgCardCallBack:"+map.get("cardNo")+map.get("activateTime")+map.get("sign"));
+		if (map != null) {
+			PetCard petCard = petCardService.getPetCardByCardNo(cardNo);
+			if (petCard != null) {
+				petCard.setActivateTime(DateUtil.getDate(activateTime));
+				user = userService.getUserByUserName(petCard.getUserName());
+				result = cardAwardTransferService.handelYgCardCallBack(user, petCard);
+				backMap.put("cardStatus", petCard.getStatus());
+			}
+		}		
+		if (result) {
+			backMap.put("status", "true");
+		} else {
+			backMap.put("status", "false");
+		}
+		printJson(JSON.toJSONString(backMap));
+		backMap = null;
+		return null;
+	}
+	
+
+	/**
+	 * 云购体验卡激活回调查询方法,如果状态为已激活返回true
+	 * @throws Exception   
+	 */ 
+	@Action("/scoreAward/YgCardCallBack")
+	public String YgCardQueryCallBack() throws Exception {
+		String signKey = null;
+		if(EnableYungouCardTransfer() != null) {
+			signKey = EnableYungouCardTransfer().getYungouCardTransfer().getSignKey();
+		}
+		Map<String, Object> backMap = new HashMap<String, Object>();
+		String cardNo = paramString("cardNo");
+		String activateTime = paramString("activateTime");
+		String sign = paramString("sign");
+		paramMap.put("cardNo", cardNo);
+		paramMap.put("activateTime", activateTime);
+		paramMap.put("sign", sign);
+		//验签校验，通过就处理
+		Map<String, Object> map = SignUtils.checkMap(paramMap, signKey);
+		if (map != null) {
+			PetCard petCard = petCardService.getPetCardByCardNo(cardNo);
+			if (petCard != null) {
+				if (PetCard.TYPE_PET_CARD_YG.equals(petCard.getType()) && PetCard.ED_CARD_STATUS.equals(petCard.getStatus())) {
+					backMap.put("status", "true");
+				} else {
+					backMap.put("status", "false");
+				}
+			}
+		}		
+		printJson(JSON.toJSONString(backMap));
+		backMap = null;
+		return null;
+	}
+	
+}

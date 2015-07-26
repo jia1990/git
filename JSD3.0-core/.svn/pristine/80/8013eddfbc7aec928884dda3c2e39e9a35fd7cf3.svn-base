@@ -1,0 +1,226 @@
+package com.rongdu.p2psys.borrow.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.BorrowRepaymentModel;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月20日
+ */
+public interface BorrowRepaymentService {
+	
+	 /**
+     * 获取当前担保公司催收项目个数
+     */
+    int getCollectionCount(long userId);
+    
+    /**
+     * 获取当前担保公司逾期项目个数
+     */
+    int getOverdueCount(long userId);
+    
+	/**
+	 * 还款明细
+	 * 
+	 * @param model
+	 * @return List<BorrowRepaymentModel>
+	 */
+	PageDataList<BorrowRepaymentModel> list(BorrowRepaymentModel model);
+	/**
+	 * 还款明细
+	 * 
+	 * @param model
+	 * @return List<BorrowRepaymentModel>
+	 */
+	PageDataList<BorrowRepayment> listByBorrow(long borrowid, int page,int size);
+	
+	/**
+     * 前台还款明细
+     * 
+     * @param model
+     * @return List<BorrowRepaymentModel>
+     */
+    PageDataList<BorrowRepaymentModel> getList(BorrowRepaymentModel model);
+
+	/**
+	 * 获取BorrowRepayment实体
+	 * 
+	 * @param repay_id
+	 * @return BorrowRepayment
+	 */
+	BorrowRepayment findById(long repay_id);
+	/**
+	 * 根据用户ID获取还款总额
+	 * @param userId 用户ID
+	 * @return 待还款总额
+	 */
+	double getUserBorrowRepayTotal(long userId);
+    
+	/**
+	 * 逾期垫付
+	 * @param borrowRepayment
+	 */
+	public void overdue(BorrowRepayment borrowRepayment, Operator operator);
+	
+	/**
+	 * 还款统计
+	 * @param userId 用户ID
+	 * @return 还款统计
+	 */
+	BorrowRepaymentModel getReapyStatistics(long userId);
+	
+	/**
+     * 计算剩余待还本金
+     * @param borrowId
+     * @return
+     */
+    public double getRemainderCapital(long borrowId);
+    
+    /**
+     * 原始待还利息总额
+     * @param id
+     * @return
+     */
+    public double getRemainderInterest(long borrowId);
+
+    /**
+     * 逾期中的借款
+     * @param user
+     * @return 逾期标集合
+     */
+    List<BorrowRepayment> fingOverDueBorrowRepayment(User user);
+    
+    /**
+     * 根据标ID查询还款计划
+     * @param borrowId
+     * @return
+     */
+    List<BorrowRepayment> getRepaymentByBorrowId(long borrowId);
+    /**
+     * 根据标ID查询还款计划
+     * @param borrowId
+     * @return
+     */
+    PageDataList<BorrowRepayment> getRepaymentByBId(long borrowId,int page,int size);
+    /**
+     * 统计今日待还个数
+     * @return
+     */
+    int count();
+    
+    /**
+     * 获得当前标需要还的还款期数
+     * @param period
+     * @return
+     */
+    public int getCurrPeriod(long borrowId);
+    
+    /**
+     * 还款提醒
+     */
+    void doRepaymentNotice();
+
+    /**
+     * 获取当前担保公司催收项目个数
+     */
+    int getUrgeCount(long userId);
+
+    /**
+     * 催收项目列表
+     * @param model
+     * @return
+     */
+    PageDataList<BorrowRepaymentModel> getCollectionList(BorrowModel model);
+    /**
+     * 催收项目个数
+     * @param model
+     * @return
+     */
+    PageDataList<BorrowRepaymentModel> getCollectionListCount(BorrowModel model);
+    //JSDP-85 gjh 2015-5-4 start
+    /**
+     * 第三方对比
+     * @param list
+     * @return
+     */
+    PageDataList<BorrowRepaymentModel> contrast(PageDataList<BorrowRepaymentModel> list) throws Exception;
+    //JSDP-85 gjh 2015-5-4 end
+    /**
+     * 即投即生息 查询待还列表
+     * @param status
+     * @return
+     */
+    public List<BorrowRepayment> getRepayListByStatus(int status);
+    /**
+     * 获取已偿还利息总额
+     * @return
+     */
+    double getCompensatedInterestSum(String startDate,String endDate);
+    /**
+     * 获取已偿还本金总额
+     * @return
+     */
+    double getCompensatedCapitalSum(String startDate,String endDate);
+    /**
+     * 逾期待还列表处理
+     * @param status
+     * @param repayType  1正常还款  2代偿还款
+     * @return
+     */
+    List<BorrowRepayment> getRepayListByStatus(int status,int repayType);
+    /**
+     * 逾期业务逻辑处理
+     * @param r
+     */
+    public void doOverdue(BorrowRepayment r);
+    /**
+     * 查询此用户的待还记录
+     * @param userId
+     * @param status
+     * @return
+     */
+    List<BorrowRepayment> repaymentListByUserIdAndStatus(long userId,List<Integer> statusList,int repayType);
+    /**
+     * 根据标的id，还款状态查询还款记录
+     * @param borrowId
+     * @param status
+     * @return
+     */
+    List<BorrowRepayment> unRepaymentList(List<Long> borrowId,int status);
+    /**
+     * 借款人还款金额汇总
+     * @param model
+     * @return
+     */
+    public String repaymentAccountTotal(BorrowRepaymentModel model);
+    
+    /**
+	 * 借款人待还导出excel使用sql
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 sxy 2015-05-15 start
+	List<BorrowRepayment> excelBorrowRepayList(BorrowRepaymentModel model);
+	//JSDP-116 sxy 2015-05-15 start
+	/**
+	 * 借款逾期导出excel使用sql
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 sxy 2015-05-15 start
+	List<BorrowRepayment> excelBorrowOverdueList(BorrowRepaymentModel model);
+	//JSDP-116 sxy 2015-05-15 start
+
+	//JSDP-221 wcw 2015-07-17 start
+	void update(BorrowRepayment br);
+	//JSDP-221 wcw 2015-07-17 end
+}

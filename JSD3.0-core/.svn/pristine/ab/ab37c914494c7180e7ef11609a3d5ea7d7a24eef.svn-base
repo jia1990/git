@@ -1,0 +1,129 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+
+
+/**
+ * @描述：1.0资金账户转账到3.0 业务逻辑层
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月26日 
+ */
+public interface AccountTransferService {
+    /**
+     * 检查用户第三方是否开户成功
+     * @param userName
+     * @param cardNo
+     * @return
+     */
+	Map<String, Object>  checkIsOpenAccount(String userName,String cardNo);
+	/**
+	 * 1.0账户资金转账给3.0转账交易
+	 * @param oldUser
+	 * @param accountTransfer
+	 * @return
+	 * @throws Exception
+	 */
+	Map<String, Object> accountTransfer(User oldUser,AccountTransfer accountTransfer)throws Exception;
+	
+	PageDataList<AccountTransfer> getTransferList(AccountTransferModel at,String startTime,String endTime);
+	
+	/**
+	 * 获取转账分页信息
+	 * @param model
+	 * @return
+	 */
+	PageDataList<AccountTransferModel> getPageDataList(AccountTransferModel model);
+
+    //JSDBET-943 wcw 2015-04-14 start
+	/**
+	 * 转账
+	 * @param user
+	 * @param model
+	 * @return
+	 */
+	Map<String, Object> transfer(User user,AccountTransferModel model);
+	//JSDBET-943 wcw 2015-04-14 end
+	
+	//JSDP-55 gjh 2015-04-22 start
+	/**
+	 * 转账
+	 * @param user
+	 * @param model
+	 * @return
+	 */
+	Map<String, Object> transfer(AccountTransferModel atm,AccountTransfer at);
+	//JSDP-55 gjh 2015-04-22 end
+	
+	//JSDP-55 gjh 2015-04-22 start
+	/**
+	 * 保存
+	 */
+	AccountTransfer save(AccountTransfer at);
+	/**
+	 * 更改
+	 */
+	AccountTransfer update(AccountTransfer at);
+	/**
+	 * 根据某一属性查询转账记录
+	 */
+	AccountTransfer findObjByProperty(String property, Object value);
+	//JSDP-55 gjh 2015-04-22 end
+	/**
+	 * 
+	 * fengguoqin@ddtkj.com   JSDP-7  
+	 *
+	 * 前台获取用户转账分页信息
+	 * @param model
+	 * @return
+	 */
+	PageDataList<AccountTransferModel> getForePageDataList(AccountTransferModel model);
+	//JSDP-116 xingjia 2015-05-16 start
+	 /**
+	  * 使用sql导出excel（转账查询）
+	  * @param model
+	  * @return
+	  */
+	 List excelListTransfer(AccountTransferModel model);
+	 //JSDP-116 xingjia 2015-05-16 start
+	//JSDP-156 xingjia 2015-05-22 start
+	 /**
+	  * 转账云购
+	  * @param accountTransfer
+	  */
+	 //JSDP-159 xingjia 2015-05-23 start
+	 void accountTyunGou(AccountTransfer accountTransfer,ClientUserModel userInfo,String reqUrlStr);
+	 //JSDP-159 xingjia 2015-05-23 end
+	 /**
+	  * 转账云购(处理本地)
+	  * @param accountTransfer
+	  * @return
+	  */
+	 AccountTransfer verifyAccountTransfer(AccountTransferModel atm,AccountTransfer accountTransfer,String transferMoney);
+	 /**
+	  * 处理云购补单
+	  * @param accountTransfer
+	  * @param userInfo
+	  * @return
+	  */
+	 //JSDP-159 xingjia 2015-05-23 start
+	 String handleAccountTransferYungou(AccountTransfer accountTransfer,ClientUserModel userInfo,String supplyOrderUrl);
+	 //JSDP-159 xingjia 2015-05-23 end
+	 /**
+	  * 转账云购记录查询分页
+	  * @param model
+	  * @return
+	  */
+	 PageDataList<AccountTransfer> accountTransferYunGou(AccountTransferModel model);
+	//JSDP-156 xingjia 2015-05-22 start
+}

@@ -1,0 +1,343 @@
+package com.ddtkj.p2psys.account.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.persistence.Version;
+
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+
+
+/**
+ * @描述：用户账户实体
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Entity
+@Table(name = "t_jsd_account")
+public class Account implements Serializable{
+	private static final long serialVersionUID = 3738147829994275471L;
+	
+	public static final String COMPARE_OK="ok";
+	public static final String COMPARE_ERROR="error";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+    private User user; //用户ID
+	private double accountTotal;  //账户总额
+	
+	//投资人
+	private double interestUsable;  //利息可用总额
+	private double awardUsable;    //奖励可用总额
+	private double rechargeUsable;  //充值可用总额
+	private double returnCapitalUsable;  //回款本金可用总额
+	private double freezeUseInterest;  //冻结使用利息金额
+	private double freezeUseRecharge;  //冻结使用充值金额
+	private double freezeUseReturnCapital;  //冻结使用回款本金金额
+	private double freezeUseAward;   //冻结使用奖励金额
+	private double collectionTotal;  //待收总额
+	private double rpDynamicTotal ;// 钱袋子总额
+	private double freezeRpDynamic ; //冻结钱袋子金额
+	
+	//借款人
+	private double repaymentTotal;   //还款总额
+	private double borrowerRechargeUsable;  //借款人充值可用金额
+	private double borrowerEnterUsable;  //借款人借款入账可用金额
+	private double borrowerFreezeUseRecharge; //借款人冻结充值可用金额
+	private double borrowerFreezeUseEnter; //借款人冻结借款入账可用金额
+	
+    private String compareResult;//第三方与本地余额对账结果  ok 正常  error 异常
+    @Version
+	private int version;//行锁
+	/**
+	 * 获取投资人可用金额
+	 * @return
+	 */
+	public double getUsableAccount(){
+		return BigDecimalUtil.add(interestUsable,awardUsable,rechargeUsable,returnCapitalUsable) ;
+	}
+	/**
+	 * 获取借款人可用总额
+	 * @return
+	 */
+	public double getBorrowerUsableTotal(){
+		return BigDecimalUtil.add(borrowerEnterUsable,borrowerRechargeUsable) ;
+	}
+	
+	/**
+	 * 获取投资人冻结总额
+	 * @return
+	 */
+	public double getFreezeAccount(){
+		return BigDecimalUtil.add(freezeUseAward,freezeUseInterest,freezeUseRecharge,freezeUseReturnCapital) ;
+	}
+	/**
+	 * 获取借款人冻结总额
+	 * @return
+	 */
+	public double getBorrowerFreezeTotal(){
+		return BigDecimalUtil.add(borrowerFreezeUseRecharge,borrowerFreezeUseEnter) ;
+	}
+	
+	public Account(double accountTotal, double interestUsable,
+			double awardUsable, double rechargeUsable,
+			double returnCapitalUsable, double freezeUseInterest,
+			double freezeUseRecharge, double freezeUseReturnCapital,
+			double freezeUseAward, double collectionTotal) {
+		super();
+		this.accountTotal = accountTotal;
+		this.interestUsable = interestUsable;
+		this.awardUsable = awardUsable;
+		this.rechargeUsable = rechargeUsable;
+		this.returnCapitalUsable = returnCapitalUsable;
+		this.freezeUseInterest = freezeUseInterest;
+		this.freezeUseRecharge = freezeUseRecharge;
+		this.freezeUseReturnCapital = freezeUseReturnCapital;
+		this.freezeUseAward = freezeUseAward;
+		this.collectionTotal = collectionTotal;
+	}
+	
+	
+
+
+
+	public Account(User user, double accountTotal,
+			double borrowerRechargeUsable, double borrowerEnterUsable,
+			double borrowerFreezeUseRecharge, double borrowerFreezeUseEnter) {
+		super();
+		this.user = user;
+		this.accountTotal = accountTotal;
+		this.borrowerRechargeUsable = borrowerRechargeUsable;
+		this.borrowerEnterUsable = borrowerEnterUsable;
+		this.borrowerFreezeUseRecharge = borrowerFreezeUseRecharge;
+		this.borrowerFreezeUseEnter = borrowerFreezeUseEnter;
+	}
+	/**
+	 * 可用资金的分配
+	 * @param account 账户的金额
+	 * @param userType 用户类型
+	 * @param usedAmount 要操作的金额
+	 * @return
+	 */
+	public static String accountDivider(Account account ,String userType,double usedAmount){
+		if(null != userType && userType.equals(UserConstant.USER_SORT_INVESTOR)){
+			double currRecharge = 0.0;
+			double currAward = 0.0;
+			double currInterest = 0.0;
+			double currReturnCapital = 0.0;
+			//充值可用
+			double rechargeUsable=account.getRechargeUsable();
+			//奖励可用
+			double awardUsable=account.getAwardUsable();
+			//回款本金可用
+			double returnCapitalUsable=account.getReturnCapitalUsable();
+			
+			//计算转账使用金额（使用充值、使用奖励、使用利息、使用回款）
+			if(rechargeUsable>=usedAmount){
+				currRecharge=usedAmount;
+			}else{
+				if((rechargeUsable+awardUsable)>=usedAmount){
+					currRecharge=rechargeUsable;
+					currAward=BigDecimalUtil.sub(usedAmount,rechargeUsable);
+				}else{
+					double currMoney=BigDecimalUtil.add(rechargeUsable,awardUsable,returnCapitalUsable);
+					if(currMoney>=usedAmount){
+						currRecharge=rechargeUsable;
+						currAward=awardUsable;
+						currReturnCapital=BigDecimalUtil.add(usedAmount,-rechargeUsable,-awardUsable);
+					}else{
+						currRecharge=rechargeUsable;
+						currAward=awardUsable;
+						currReturnCapital=returnCapitalUsable;
+						currInterest=BigDecimalUtil.sub(usedAmount, currMoney);
+					}
+				}
+			}
+			 return (currRecharge+","+currAward+","+currInterest+","+currReturnCapital);
+		}else{
+			
+			double currBorrowRecharge = 0.0;
+			double currBorrowEnterAccount = 0.0;
+			double borrowUseableRecharge = account.getBorrowerRechargeUsable();
+			if(borrowUseableRecharge>=usedAmount){
+				currBorrowRecharge = usedAmount;
+			}else{
+				currBorrowRecharge = borrowUseableRecharge;
+				currBorrowEnterAccount = BigDecimalUtil.sub(usedAmount,borrowUseableRecharge);
+			}
+			return (currBorrowRecharge+","+currBorrowEnterAccount);
+		}
+		
+	}
+	
+	
+
+	public Account() {
+		super();
+	}
+	public Account(User user) {
+		super();
+		this.user = user;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public double getAccountTotal() {
+		return accountTotal;
+	}
+	public void setAccountTotal(double accountTotal) {
+		this.accountTotal = accountTotal;
+	}
+	public double getInterestUsable() {
+		return interestUsable;
+	}
+	public void setInterestUsable(double interestUsable) {
+		this.interestUsable = interestUsable;
+	}
+	public double getAwardUsable() {
+		return awardUsable;
+	}
+	public void setAwardUsable(double awardUsable) {
+		this.awardUsable = awardUsable;
+	}
+	public double getRechargeUsable() {
+		return rechargeUsable;
+	}
+	public void setRechargeUsable(double rechargeUsable) {
+		this.rechargeUsable = rechargeUsable;
+	}
+	public double getFreezeUseInterest() {
+		return freezeUseInterest;
+	}
+	public void setFreezeUseInterest(double freezeUseInterest) {
+		this.freezeUseInterest = freezeUseInterest;
+	}
+	public double getFreezeUseRecharge() {
+		return freezeUseRecharge;
+	}
+	public void setFreezeUseRecharge(double freezeUseRecharge) {
+		this.freezeUseRecharge = freezeUseRecharge;
+	}
+	
+	public double getFreezeUseReturnCapital() {
+		return freezeUseReturnCapital;
+	}
+	public void setFreezeUseReturnCapital(double freezeUseReturnCapital) {
+		this.freezeUseReturnCapital = freezeUseReturnCapital;
+	}
+	public double getFreezeUseAward() {
+		return freezeUseAward;
+	}
+	public void setFreezeUseAward(double freezeUseAward) {
+		this.freezeUseAward = freezeUseAward;
+	}
+	public double getCollectionTotal() {
+		return collectionTotal;
+	}
+	public void setCollectionTotal(double collectionTotal) {
+		this.collectionTotal = collectionTotal;
+	}
+	public double getRepaymentTotal() {
+		return repaymentTotal;
+	}
+	public void setRepaymentTotal(double repaymentTotal) {
+		this.repaymentTotal = repaymentTotal;
+	}
+	public double getReturnCapitalUsable() {
+		return returnCapitalUsable;
+	}
+	public void setReturnCapitalUsable(double returnCapitalUsable) {
+		this.returnCapitalUsable = returnCapitalUsable;
+	}
+
+
+	public double getBorrowerRechargeUsable() {
+		return borrowerRechargeUsable;
+	}
+
+
+	public void setBorrowerRechargeUsable(double borrowerRechargeUsable) {
+		this.borrowerRechargeUsable = borrowerRechargeUsable;
+	}
+
+
+	public double getBorrowerEnterUsable() {
+		return borrowerEnterUsable;
+	}
+
+
+	public void setBorrowerEnterUsable(double borrowerEnterUsable) {
+		this.borrowerEnterUsable = borrowerEnterUsable;
+	}
+
+
+	public double getBorrowerFreezeUseRecharge() {
+		return borrowerFreezeUseRecharge;
+	}
+
+
+	public void setBorrowerFreezeUseRecharge(double borrowerFreezeUseRecharge) {
+		this.borrowerFreezeUseRecharge = borrowerFreezeUseRecharge;
+	}
+
+
+	public double getBorrowerFreezeUseEnter() {
+		return borrowerFreezeUseEnter;
+	}
+
+
+	public void setBorrowerFreezeUseEnter(double borrowerFreezeUseEnter) {
+		this.borrowerFreezeUseEnter = borrowerFreezeUseEnter;
+	}
+
+	public double getRpDynamicTotal() {
+		return rpDynamicTotal;
+	}
+
+	public void setRpDynamicTotal(double rpDynamicTotal) {
+		this.rpDynamicTotal = rpDynamicTotal;
+	}
+
+	public double getFreezeRpDynamic() {
+		return freezeRpDynamic;
+	}
+
+	public void setFreezeRpDynamic(double freezeRpDynamic) {
+		this.freezeRpDynamic = freezeRpDynamic;
+	}
+	public String getCompareResult() {
+		return compareResult;
+	}
+	public void setCompareResult(String compareResult) {
+		this.compareResult = compareResult;
+	}
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public int getVersion(){
+		return version;
+	}
+	public void setVersion(int version) {
+		this.version = version;
+	}
+	
+}

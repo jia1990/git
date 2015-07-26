@@ -1,0 +1,360 @@
+package com.ddtkj.mobile.action;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.mobile.Constants;
+import com.ddtkj.mobile.MobileBaseAction;
+import com.ddtkj.mobile.common.MD5;
+import com.ddtkj.mobile.common.id5.ZCXY_ID5;
+import com.ddtkj.p2psys.phone.model.PhoneActivityModel;
+import com.ddtkj.p2psys.phone.service.PhoneActivityService;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.model.ArticleModel;
+import com.rongdu.p2psys.core.service.ArticleService;
+import com.rongdu.p2psys.core.service.SiteService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class MorePageAction extends MobileBaseAction {
+	@Resource
+	private SiteService siteService;
+	@Resource
+	private ArticleService articleService;
+	@Resource
+	private PhoneActivityService PhoneActivityService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserCacheService userCacheService;
+	private Map<String, Object> data;
+
+	// 更多 - 消息公告
+	@Action("/jsdmobile/more_notice")
+	public String more_notice() throws Exception {
+		try{
+			int page = this.paramInt("page");
+			ArticleModel model = (ArticleModel) paramModel(ArticleModel.class);
+			model.setNid("notice");
+			model.setPage(page);
+			model.setSize(10);
+			data = new HashMap<String, Object>();
+			PageDataList<ArticleModel> pageDataList = articleService.list(model);
+			List<Map<String, Object>> articleArray = new ArrayList<Map<String, Object>>();
+			if (pageDataList != null && pageDataList.getList().size() > 0) {
+				for (int i = 0; i < pageDataList.getList().size(); i++) {
+					ArticleModel am = pageDataList.getList().get(i);
+					Map<String, Object> map = new HashMap<String, Object>();
+					String addDate = DateUtil.dateStr4(am.getAddTime());
+					map.put("addTime", (Object) addDate);
+					map.put("author", (Object) "晋商贷");
+					map.put("id", (Object) am.getId());
+					map.put("title", (Object) am.getTitle());
+					map.put("content", (Object)am.getContent());
+					articleArray.add(map);
+				}				
+	
+			}
+			data.put("notice_array", articleArray);
+			data.put("page", page);
+			data.put("res_code", 1);
+			data.put("res_msg", "读取消息公告成功");
+			printMap(data);
+		}catch(Exception e){
+			this.printResult("获取消息公告失败 "+e.getMessage(), "0");
+		}
+
+		return null;
+	}
+	
+	// 更多 - 活动专区
+	@Action("/jsdmobile/more_activity")
+	public String more_activity() throws Exception {
+		try{
+			int page = this.paramInt("page");
+			PhoneActivityModel model = (PhoneActivityModel) paramModel(PhoneActivityModel.class);
+			model.setPage(page);
+			model.setSize(6);
+			model.setActivityStatus("1"); //进行中
+			model.setStatus((byte)1); //可显示
+			data = new HashMap<String, Object>();
+			PageDataList<PhoneActivityModel> pageDataList = PhoneActivityService.phoneActivityList(model, page, 6);
+			List<Map<String, Object>> activityArray = new ArrayList<Map<String, Object>>();
+			if (pageDataList != null && pageDataList.getList().size() > 0) {
+				for (int i = 0; i < pageDataList.getList().size(); i++) {
+					PhoneActivityModel am = pageDataList.getList().get(i);
+					Map<String, Object> map = new HashMap<String, Object>();
+					
+					map.put("id", am.getId());
+					map.put("title", am.getTitle());
+					map.put("desc", am.getSubhead());
+					map.put("time", DateUtil.dateStr4(am.getOnlineTime())+" - "+DateUtil.dateStr4(am.getNolineTime()));
+					map.put("url", am.getPicPath());
+					map.put("detailUrl", am.getContent());
+					
+					activityArray.add(map);
+				}	
+			} 
+			data.put("activity_array", activityArray);
+			data.put("page", page);
+			data.put("res_code", 1);
+			data.put("res_msg", "读取活动信息成功");
+			printMap(data);
+		}catch(Exception e){
+			this.printResult("获取活动信息失败 "+e.getMessage(), "0");
+		}
+		return null;
+	}
+
+	// 更多 - 实名认证
+	@Action("/jsdmobile/more_realcheck")
+	public String more_realcheck() throws Exception {
+		
+		try{
+			Map<String, Object> map = new HashMap<String, Object>();
+
+			String mode = this.paramString("mode"); // 请求类型
+			String account_name = this.paramString("account_name"); // 账户名(个人为手机号,
+																	// 企业为邮箱)
+			String real_name = this.paramString("real_name"); // 真实姓名
+			String card_no = this.paramString("card_no"); // 身份证号
+			String nick_name = this.paramString("nick_name"); // 用户昵称
+			String remark = this.paramString("remark"); // 备注
+
+			//从数据库获取数据
+			User user=userService.find(paramLong("uid"));
+			
+			//若用户实名认证次数超过两次,则必须从网页版人工操作
+			if(user.getThirdPartyOpenCount()>2){
+				this.printResult("您实名认证已超过两次,请转网页版手工提交认证信息!", "0");
+				return null;
+			}	
+			
+			/*ZCXY_ID5 id5_validator = new ZCXY_ID5();
+			if(!id5_validator.validRealInfo(real_name, card_no)){
+				this.printResult("实名认证失败,请输入正确的姓名与身份证号!", "0");
+				return null;
+			}*/
+			
+			UserModel model=new UserModel();
+			model.setCardNO(card_no);
+			model.setRealName(real_name);
+			YmdRegister obj = (YmdRegister)userCacheService.doRealname(user, model);
+			
+			String call_back_url = getWebsiteUrl()+"/jsdmobile/yemadai_register_return.html";;
+			String return_url = call_back_url;
+			String number_id = obj.getNumberId(); // 商户数字账号
+			String advice_url = call_back_url;
+			String merchantKey = obj.getMerchantKey();		
+			
+			String urlPara = "number_id=" + number_id + "&" + "mode=" + mode + "&" + "account_name=" + account_name + "&" + "real_name=" + real_name + "&" + "card_no=" + card_no + "&" + "nick_name=" + nick_name + "&" + "advice_url=" + advice_url + "&" + "return_url=" + return_url + "&" + "remark=" + remark + "&" + "merchantKey=" + merchantKey;
+			System.out.println(urlPara);
+			String sign_info = MD5.crypt(urlPara).toLowerCase();
+			System.out.println(sign_info);
+
+			map.put("number_id", number_id);
+			map.put("advice_url", advice_url); // 服务器通知地址
+			map.put("return_url", return_url);
+			map.put("sign_info", sign_info); // 签名
+			map.put("res_code", "1");
+			map.put("res_msg", "");
+			printMap(map);
+		}catch(Throwable t){
+			t.printStackTrace();
+			this.printResult("实名认证失败 "+t.getMessage(), "0");
+		}		
+		return null;
+	}
+	
+	//我的账号 - 汇潮服务器回调URL, 接收用户注册信息与充值信息,返回操作状态HTML页面
+	@Action(value = "/jsdmobile/yemadai_register_return", results = { 
+			@Result(name = "yemadai_result", type="ftl", location = "phone/pages/yemadai_result.html") })
+	public String yemadai_register_return() throws Exception{
+		
+		System.out.println("/jsdmobile/yemadai_register_return  接收到汇潮一麻袋注册回调信息........");
+		request.setAttribute("result", "操作成功!");
+		try {
+			//处理汇潮操作参数
+			YmdModel ymd=new YmdModel();
+			String pMerCode = paramString("number_id");  //获取处理状态
+			String pErrCode = paramString("status");  //获取处理状态
+			String pNickName = paramString("nick_name");  //平台用户唯一昵称
+			String pmode = paramString("mode");  //类型
+			String pSign = paramString("sign_info");//加密签名
+			ymd.setNumberId(pMerCode);
+			ymd.setErrCode(pErrCode);
+			ymd.setErrMsg(ymd.getErrMsg(pErrCode, "开户失败，请检查输入是否符合要求"));
+			ymd.setNickName(pNickName);
+			ymd.setMode(pmode);
+			ymd.setSignInfo(pSign);
+			User user = userService.getUserByUserName(ymd.getNickName());
+		    //开户
+			if (!"00".equals(ymd.getErrCode())) {
+				if("11".equals(user.getUserCache().getUserType())){
+					throw new BussinessException(ymd.getErrMsg(ymd.getErrCode(), "开户失败，请检查输入是否符合要求"), "/member_borrow/security/realNameIdentify.html");
+				}else{
+					throw new BussinessException(ymd.getErrMsg(ymd.getErrCode(), "开户失败，请检查输入是否符合要求"), "/member/security/realNameIdentify.html");
+				}
+			}
+			YmdRegister ymdRegister=new YmdRegister();
+			BeanUtils.copyProperties(ymd, ymdRegister);
+			ymdRegister.checkSign(); //验签
+			//处理回调
+			if(user!=null){		
+				userCacheService.ymdRegisterCall(user, ymdRegister);			
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			request.setAttribute("result", e.getMessage());
+		}
+		//返回静态页面
+		return "yemadai_result";
+	}
+
+	// 更多 - 紧急联系人、绑定手机、绑定邮箱、修改密码
+	//紧急联系人       http://localhost:8080/jsdmobile/more_other.html?uid=168&type=contact&contact_name=李四&contact_mobile=12334567890&contact_relation=兄弟
+	//绑定手机      http://localhost:8080/jsdmobile/more_other.html?uid=168&type=mobile&mobile=18234040103
+	//绑定邮箱      http://localhost:8080/jsdmobile/more_other.html?uid=168&type=email&email_=553909925@qq.com
+	//修改密码      http://localhost:8080/jsdmobile/more_other.html?uid=168&type=password&password_=fgq123456
+	@Action("/jsdmobile/more_other")
+	public String more_other() throws Exception {
+		long uid = paramLong("uid");
+		User user = userService.find(uid);
+		UserCache uc = userCacheService.findByUserId(uid);
+		data = new HashMap<String, Object>();
+		UserCacheModel ucm = UserCacheModel.instance(uc);
+		String type = paramString("type");
+		if (type.equals("contact")) {
+			try {
+			String secondContactRealname = paramString("contact_name");
+			String secondContactPhone = paramString("contact_mobile");
+			String relationships = paramString("contact_relation");
+			if(!(secondContactRealname.equals("") || secondContactPhone.equals("")||relationships.equals(""))&&secondContactRealname!=null && secondContactPhone!=null&&relationships!=null){
+				
+				ucm.setSecondContactRealname(secondContactRealname);
+				ucm.setSecondContactPhone(secondContactPhone);
+				ucm.setRelationships(relationships);
+					userCacheService.modifyPersonalData(ucm);
+					data.put("res_code", 1);
+					data.put("res_msg", "保存成功！");
+				
+			}else{
+				data.put("res_code", 0);
+				data.put("res_msg", "紧急联系人信息不能为空");
+			}
+			} catch (Exception e) {
+				data.put("res_code", 0);
+				data.put("res_msg", "保存失败 "+e.getMessage());
+			}
+
+		} else if (type.equals("mobile")) {
+			try {
+				String mobilePhone = paramString("mobile");
+				if(!mobilePhone.equals("")&&mobilePhone!=null){
+					userService.modifyPhone(uid, mobilePhone);
+					data.put("res_code", 1);
+					data.put("res_msg", "绑定手机成功！");
+				}else{
+					data.put("res_code", 0);
+					data.put("res_msg", "手机号码不允许为空，请输入！");
+				}
+				
+			} catch (Exception e) {
+				data.put("res_code", 0);
+				data.put("res_msg", "绑定手机失败 "+e.getMessage());
+			}
+		} else if (type.equals("email")) {
+			try {
+				String email = paramString("email");
+				if(!email.equals("")&&email!=null){
+					if(!"81".equals(user.getUserIdentify().getEmailStatus())){
+						userService.activateEmailByCode(user.getUserName(), email);
+					}else{
+					    userService.modifyEmail(uid, email);
+					}
+					data.put("res_code", 1);
+					data.put("res_msg", "绑定邮箱成功！");
+				}else{
+					data.put("res_code", 0);
+					data.put("res_msg", "邮箱不允许为空，请输入！");
+				}
+				
+			} catch (Exception e) {
+				data.put("res_code", 0);
+				data.put("res_msg", "绑定邮箱失败，请重试！"+e.getMessage());
+			}
+		} else if (type.equals("password")) {
+			try {
+				String password = paramString("password");
+				String oldpassword = paramString("oldpassword");
+				
+				UserModel model=new UserModel();
+				model.setUserName(user.getUserName());
+				model.setPassword(oldpassword);
+				User temp_user = userService.doLogin(model.prototype(),paramInt("encrypt"));
+				if(null == temp_user){
+					data.put("res_code", 0);
+					data.put("res_msg", "修改密码失败，原密码不正确！");
+				}else{
+					if(!password.equals("")&&password!=null){
+						user.setPassword(password);
+						userService.modifyPwd(user);
+						data.put("res_code", 1);
+						data.put("res_msg", "修改密码成功！");
+					}else{
+						data.put("res_code", 0);
+						data.put("res_msg", "新密码不允许为空，请输入！");
+					}
+				}
+				
+			} catch (Exception e) {
+				data.put("res_code", 0);
+				data.put("res_msg", "修改密码失败，请重试！"+e.getMessage());
+			}
+		} else if (type.equals("pay_password")){
+			try {
+				String paypassword = paramString("paypassword");
+
+				UserModel model = new UserModel();
+				model.setUserName(user.getUserName());
+
+				model.setNewPayPwd(paypassword);
+				model.setConfirmNewPayPwd(paypassword);
+
+				user.setPaypwd(model.getNewPayPwd());
+				if (user != null) {
+					session.remove(Constant.SESSION_USER);
+					session.put(Constant.SESSION_USER, userService.modifyPaypwd(user));
+				}
+				data.put("res_code", 1);
+				data.put("res_msg", "修改支付密码成功！");
+
+			} catch (Exception e) {
+				data.put("res_code", 0);
+				data.put("res_msg", "修改支付密码失败! " + e.getMessage());
+			}
+		}else{
+			data.put("res_code", 0);
+			data.put("res_msg", "操作类型错误,服务器不支持此操作!");
+		}
+		printMap(data);
+		return null;
+	}
+}

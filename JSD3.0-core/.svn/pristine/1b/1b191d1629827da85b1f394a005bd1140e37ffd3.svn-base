@@ -1,0 +1,82 @@
+package com.ddtkj.p2psys.phone.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.phone.domain.PhoneActivity;
+import com.rongdu.common.util.Page;
+
+/**
+ * 活动Model
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 3.0
+ * @since 2015年1月10日
+ */
+public class PhoneActivityModel extends PhoneActivity {
+
+	private static final long serialVersionUID = -3427914494350214145L;
+	/** 当前页码 */
+	private int page;
+	/** 上一篇ID */
+	private long prevId;
+	/** 下一篇ID*/
+	private long nextId;
+	
+	/** 每页数据条数 */
+    private int size = Page.ROWS;
+    
+	/** 活动状态	0：未开始 1：进行中 2：已结束 */
+	private String activityStatus;
+
+	public String getActivityStatus() {
+		return activityStatus;
+	}
+
+	public void setActivityStatus(String activityStatus) {
+		this.activityStatus = activityStatus;
+	}
+
+	public static PhoneActivityModel instance(PhoneActivity activity) {
+		PhoneActivityModel activityModel = new PhoneActivityModel();
+		BeanUtils.copyProperties(activity, activityModel);
+		return activityModel;
+	}
+
+	public PhoneActivity prototype() {
+		PhoneActivity activity = new PhoneActivity();
+		BeanUtils.copyProperties(this, activity);
+		return activity;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public long getPrevId() {
+        return prevId;
+    }
+
+    public void setPrevId(long prevId) {
+        this.prevId = prevId;
+    }
+
+    public long getNextId() {
+        return nextId;
+    }
+
+    public void setNextId(long nextId) {
+        this.nextId = nextId;
+    }
+}

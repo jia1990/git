@@ -1,0 +1,167 @@
+
+package com.ddtkj.p2psys.cardaward.dao.impl;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.cardaward.dao.CardAwardTransferDao;
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.exception.CardAwardTransferException;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-31   
+ */
+@Repository("cardAwardTransferDao")
+public class CardAwardTransferDaoImpl extends BaseDaoImpl<CardAwardTransfer> implements CardAwardTransferDao {
+
+	@Override
+	public void updateCardTransferReceiveStatus(CardAwardTransfer cardTransfer) {
+		String sql = "UPDATE t_jsd_card_award_transfer SET receive_status = :receiveStatus WHERE trans_no = :transNo AND receive_status = :preStatus ";
+		String[] names = {"receiveStatus", "transNo", "preStatus"};
+		Object[] values = {CardAwardTransfer.TRANS_RECEIVESTATUS_SUCC, cardTransfer.getTransNo(), CardAwardTransfer.TRANS_RECEIVESTATUS_FAIL};
+		int count = updateBySql(sql, names, values);
+		if(count < 1){
+			throw new CardAwardTransferException("购物卡转账表转账状态更新失败");
+		}
+	}
+	
+	@Override
+	public void updateCardTransferStatus(CardAwardTransfer cardTransfer) {
+		String sql = "UPDATE t_jsd_card_award_transfer SET status = :status WHERE trans_no = :transNo AND status = :preStatus ";
+		String[] names = {"status", "transNo", "preStatus"};
+		Object[] values = {cardTransfer.getStatus(), cardTransfer.getTransNo(), CardAwardTransfer.TRANS_STATUS_FAIL};
+		int count = updateBySql(sql, names, values);
+		if(count < 1){
+			throw new CardAwardTransferException("购物卡转账表请求状态更新失败");
+		}
+	}
+	
+	@Override
+	public String transferTotal(CardAwardTransferModel model) {
+		StringBuffer sql = new StringBuffer("SELECT SUM(t.trans_money) FROM t_jsd_card_award_transfer t LEFT JOIN t_jsd_user u "
+				+ " ON t.user_id = u.user_id LEFT JOIN s_operator op ON t.operator_id = op.id WHERE 1=1 ");
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and u.user_name like '%"+model.getUserName()+"%' ");
+		}
+		if(StringUtil.isNotBlank(model.getRealName())){
+			sql.append(" and u.real_name = :realName ");
+		}
+		if(StringUtil.isNotBlank(model.getStatus()) && !CardAwardTransfer.TRANS_STATUS_ALL.equals(model.getStatus())){
+			sql.append(" and t.status = :status ");
+		}
+		if(StringUtil.isNotBlank(model.getReceiveStatus()) && !CardAwardTransfer.TRANS_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())){
+			sql.append(" and t.receive_status = :receiveStatus ");
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" and t.add_time >= :startTime ");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" and t.add_time <= :endTime ");
+		}
+		if(StringUtil.isNotBlank(model.getTransNo())){
+			sql.append(" and t.trans_no = :transNo ");
+		}
+		if(StringUtil.isNotBlank(model.getOperatorUserName())){
+			sql.append(" and op.user_name = :opUserName ");
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		if(StringUtil.isNotBlank(model.getRealName())){
+			query.setParameter("realName", model.getRealName());
+		}
+		if(StringUtil.isNotBlank(model.getStatus()) && !CardAwardTransfer.TRANS_STATUS_ALL.equals(model.getStatus())){
+			query.setParameter("status", model.getStatus());
+		}
+		if(StringUtil.isNotBlank(model.getReceiveStatus()) && !CardAwardTransfer.TRANS_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())){
+			query.setParameter("receiveStatus", model.getReceiveStatus());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		if(StringUtil.isNotBlank(model.getTransNo())){
+			query.setParameter("transNo", model.getTransNo());
+		}
+		if(StringUtil.isNotBlank(model.getOperatorUserName())){
+			query.setParameter("opUserName", model.getOperatorUserName());
+		}
+		Object obj = query.getSingleResult();
+		if(null != obj){
+			return obj.toString();
+		}
+		return null;
+	}
+ 
+	@Override
+	public CardAwardTransfer getCardTransferByTransNo(String transNo) {
+		return findObjByProperty("transNo", transNo);
+	}
+
+	@Override
+	public void updateCardTransferByTransNo(CardAwardTransfer cardTransfer) {
+		String sql = "UPDATE t_jsd_card_award_transfer t SET remark = :remark, verify_time = :verify_time, operator_id = :operator_id WHERE trans_no = :transNo ";
+		String[] names = {"remark", "verify_time" , "operator_id", "transNo"};
+		Object[] values = {cardTransfer.getRemark(), cardTransfer.getVerifyTime(), cardTransfer.getVerifyUser().getId(), cardTransfer.getTransNo()};
+		int count = updateBySql(sql, names, values);
+		if(count < 1){
+			throw new CardAwardTransferException("购物卡转账表审核记录更新失败");
+		}
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List excelTransferList(CardAwardTransferModel model) {
+		StringBuffer  sql = new StringBuffer("");
+		sql.append("  SELECT  transfer.id transferId,u.`user_name` userName,u.`real_name` realName, transfer.`trans_no` transNo,transfer.`trans_money` transMoney,");
+		sql.append("  CASE transfer.`trans_type`  WHEN  3 THEN '云购卡转账' WHEN  4 THEN '现金转账'  ELSE '未指定的转账类型' END AS transType,");
+		sql.append("  CASE transfer.`status`  WHEN  11 THEN '已兑换' WHEN  22 THEN '未兑换' ELSE '未指定的兑换状态' END AS transferStatus,");
+		sql.append("  CASE transfer.`receive_status`  WHEN  11 THEN '转账成功' WHEN  22 THEN '转账失败' ELSE '未指定的转账状态' END AS  receiveStatus,");
+		sql.append("  DATE_FORMAT(transfer.`verify_time` ,'%Y-%m-%d %T') verifyTime,transfer.`remark`,");
+		sql.append("  DATE_FORMAT(transfer.`add_time` ,'%Y-%m-%d %T') ,transfer.`add_ip` addIp ");
+		sql.append("  FROM t_jsd_user u,t_jsd_card_award_transfer transfer LEFT JOIN `s_operator` operat ON  transfer.operator_id = operat.id ");
+		sql.append( "  WHERE transfer.`user_id` = u.`user_id`  ");
+		if(!StringUtil.isBlank(model.getUserName())){
+			sql.append("  AND u.user_name ='"+model.getUserName()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getRealName())){
+			sql.append("  AND u.real_name ='"+model.getRealName()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getTransNo())){
+			sql.append("  AND transfer.trans_no ='"+model.getTransNo()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getOperatorUserName())){
+			sql.append("  AND operat.user_name ='"+model.getOperatorUserName()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getStatus()) && !"99".equals(model.getStatus())){
+			sql.append("  AND transfer.`status` ="+model.getStatus()+"  ");
+		}
+		if(!StringUtil.isBlank(model.getReceiveStatus())&& !"99".equals(model.getReceiveStatus())){
+			sql.append("  AND transfer.`receive_status` ="+model.getReceiveStatus()+"  ");
+		}
+		if(!StringUtil.isBlank(model.getStartTime())){
+			sql.append("  AND transfer.`add_time` >= '"+model.getStartTime()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getEndTime())){
+			sql.append("  AND transfer.`add_time` <'"+model.getEndTime()+"'  ");
+		}
+		
+		sql.append("  ORDER BY transfer.`add_time` DESC");
+		
+      Query query = em.createNativeQuery(sql.toString());
+     
+		List orderList = query.getResultList();
+		//JSDP-116 fengguoqin 2015-05-15 start
+		return orderList;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+	
+}

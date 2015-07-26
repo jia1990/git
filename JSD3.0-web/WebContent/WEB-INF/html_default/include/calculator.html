@@ -1,0 +1,134 @@
+<style>
+select{display:none;}
+.select_showbox{color:#777;margin-bottom:10px;float:left;border: 1px solid #d9d9d9;width:180px;height: 36px;padding-left: 5px;background: url(${webroot}${theme_dir}/images/sel.png) no-repeat 145px 0;line-height: 36px;}
+.select_option{border: 1px solid #ccc;border-top: none;display: none;}
+.select_option li{padding-left: 5px;margin: 0;}
+.select_option li.hover,#flagstatusnew li:hover{background: #0697DA; color: #fff;}
+.select_box ul{margin:0;position:absolute;top:38px;left:70px;width:185px;background:#fff;z-index: 101;}
+.select_box ul li{clear:both;width:180px;color:#777;line-height:30px;}
+.select_box{position:relative;}
+</style>
+<script src="${webroot}${theme_dir}/media/js/jquery-1.8.2.min.js"></script>
+<div class="calculatorCpmBox">
+	<h1>收益计算器<img src="${webroot}${theme_dir}/images/bid/cpm.png"></h1>
+	<form class="calculatorCpmLeft">
+		<a href=""><img src="${webroot}${theme_dir}/images/header_footer/logo.png" style="display:block;margin-bottom:15px;margin-left:51px;height:40px;"></a>
+		<!-- JSDP-19  gjh 2015-4-13 start -->
+		<div style="position:relative;height:30px;"><label style="display:inline-block;margin-top:10px;">投资金额</label><input type="text" id="account" class="nullinput" placeholder="意向投资金额" maxlength="7" style="position:absolute;top:0;left:70px;"/><span style="position:absolute;left:230px;top:10px;">元</span></div><br/>
+		<!-- JSDP-19  gjh 2015-4-13 end -->
+		<div>
+		<label style="float:left;margin-right:14px;display:block;line-height:40px;">投资类型</label>
+		<select id="typestatus" style="margin-top:3px;width:188px;">
+			<option value="1">月标</option>
+			<option value="2">天标</option>
+		</select>
+		<div style="clear:both;"></div>
+		</div>
+		<!-- JSDP-19  gjh 2015-4-13 start -->
+		<div style="position:relative;height:30px;margin-top:3px;"><label style="display:inline-block;margin-top:10px;">投资期限</label><input type="text" id="periods" class="nullinput" placeholder="期望时间长度" maxlength="2" style="position:absolute;top:0;left:70px;"/><span class="tyepname" style="position:absolute;left:230px;top:10px;">月</span></div><br/>
+		<div style="position:relative;height:30px;"><label style="display:inline-block;margin-top:10px;">年化利率</label><input type="text" id="apr" class="nullinput" placeholder="期望年化利率" maxlength="2" style="position:absolute;top:0;left:70px;"/><span style="position:absolute;left:230px;top:10px;">%</span></div><br/>
+		<!-- JSDP-19  gjh 2015-4-13 end -->
+		<div>
+		<label style="float:left;margin-right:14px;display:block;line-height:40px;">还款方式</label>
+		<select id="flagstatus" style="margin-top:3px;width:188px;">
+			<option value="2">一次性还</option>
+			<option value="3">每月付息</option>
+			<option value="4">等额本息</option>
+		</select>
+		<div style="clear:both;"></div>
+		</div>
+		<br/>
+		<input type="button" class="y_cpmbuttons" value="计算收益"/>
+		<input type="reset" class="y_cpmresets" value="重新计算"/>
+		<div style="text-align:center;margin-right:10px;color:#FF7800;display:none;margin-top:-15px;" id="calculErr" ></div>
+	</form>
+	<div class="calculatorCpmRight">
+		<ul class="cpmscroll">
+			<li>
+				<dl class="dd_titlecpm">
+					<dd>收款日期</dd>
+					<dd>收款金额</dd>
+					<dd>收回本金</dd>
+					<dd>收回利息</dd>
+					<dd class="cpmlastdd">剩余本金</dd>
+				</dl>
+			</li>
+			<li>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+				<dl>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd style="border-top:1px solid #dadada;"> </dd>
+					<dd class="cpmlastdd" style="border-top:1px solid #dadada;"></dd>
+				</dl>
+			</li>
+		</ul>
+		<ul class="ul_bottomcpm c_bottomcpm">
+			<li>
+				<dl>
+					<dd>总结</dd>
+					<dd>0.00</dd>
+					<dd>0.00</dd> 
+					<dd>0.00</dd>
+					<dd class="cpmlastdd"></dd>
+				</dl>
+			
+			</li>
+			<li class="libottomcpm">实际总收益：<span>￥0元</span></li>
+		</ul>
+	</div>
+</div>
+<div class="calculatorCpmBottom"></div>
+<script>
+	seajs.use("${webroot}${theme_dir}/media/js/jquery.selectnormal");
+	seajs.use("${webroot}${theme_dir}/media/js/invest/calculator");
+</script>

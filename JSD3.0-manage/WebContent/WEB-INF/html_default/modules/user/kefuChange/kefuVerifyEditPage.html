@@ -1,0 +1,50 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/kefuChange/kefuVerifyEdit.html');	
+</script>
+<style>
+#touxiang{
+	border-top-left-radius:5px;
+	border-top-right-radius:5px;
+	border-bottom-right-radius:5px;
+	border-bottom-left-radius:5px;
+	height:150px;
+	width:150px;
+	border:1px #DFDFDF solid;
+}
+
+
+</style>
+<form id="form"  method="post">
+<div class="popForm sForm">
+		<div class="formitm">
+			 <label class="lab">审核状态： </label>
+			 <div class="ipt">
+			 	<input type="radio" name="verifyResult" value="1" checked="checked"/>&nbsp;&nbsp;审核通过  
+			 	<input type="radio" name="verifyResult" value="2"/>&nbsp;&nbsp;审核不通过
+			 </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">投诉理由：</label>
+		     <div class="ipt">
+		    	 <textarea name="eventReason" class="w300 easyui-validatebox" readonly="readonly">${kefuRecord.eventReason!}</textarea>	
+		    	 <div style="float:right;">
+		    	 	<img src="${path!}" id="touxiang" title="${userName!}" ondragstart="return false"/>
+		    	    <div style="text-align:center;">${userName!}</div>
+		    	 </div>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">备注：</label>
+		     <div class="ipt">
+		     	<textarea name="remark" class="w300 easyui-validatebox" maxlength="200"></textarea>	
+		     </div>
+		</div>
+		
+		
+		<input name="id" value="${kefuRecord.id!}" type="hidden">
+		
+		<input name="kefuVerifyEditToken" value="${kefuVerifyEditToken!}" type="hidden">
+		
+</div>
+</form>

@@ -1,0 +1,1191 @@
+package com.ddtkj.p2psys.borrow.service.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowHelper;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityConsumeDao;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.dao.RpUseLogDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpUseLog;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardDao;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardLogDao;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.interest.InterestCalculator;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.dao.OperatorDao;
+import com.rongdu.p2psys.core.dao.VerifyLogDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.model.RankModel;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Service("borrowTenderService")
+public class BorrowTenderServiceImpl implements BorrowTenderService{
+	@Resource
+	private BorrowTenderDao tenderDao;
+	@Resource
+	private BorrowDao borrowDao;
+	@Resource
+	private BorrowCollectionDao borrowCollectionDao;
+	@Resource
+    private AccountDao accountDao;
+	@Resource
+	private RpUseLogDao rpUseLogDao ;
+	@Resource
+	private OperatorDao operatorDao ;
+	@Resource
+	private PetCardDao petCardDao;
+	@Resource
+	private PetCardLogDao petCardLogDao;
+	@Resource
+	private RpActivityProduceDao rpActivityProduceDao; 
+	@Resource
+	private RpActivityConsumeDao rpActivityConsumeDao;
+	
+	
+	@Override
+	public PageDataList<BorrowTenderModel> list(BorrowTenderModel model) {
+		
+		QueryParam param = QueryParam.getInstance();
+		if (model != null) {
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				param.addParam("user.userId", model.getUser().getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getUserName())) {
+				param.addParam("user.userName", Operators.LIKE, model.getUserName());
+			}
+			if (StringUtil.isNotBlank(model.getBorrowName())&& model.getBorrowName().length() > 0&& !"undefined".equals(model.getBorrowName())) {
+                param.addParam("borrow.name", Operators.LIKE, model.getBorrowName());
+            }
+			if(StringUtil.isNotBlank(model.getType())){
+				param.addParam("borrow.type", model.getType());
+            } 
+			if(99 != model.getStatus()){
+				param.addParam("status", model.getStatus());
+			} 
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			//0未还 1 已还
+			/*if (model.getStatus() > -1) {
+				param.addParam("status", model.getStatus());
+			}*/
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		param.addOrder(OrderType.DESC, "id");
+
+		PageDataList<BorrowTender> pageDataList = tenderDao.findPageList(param);
+		PageDataList<BorrowTenderModel> pageDateList = new PageDataList<BorrowTenderModel>();
+		List<BorrowTenderModel> list = new ArrayList<BorrowTenderModel>();
+		pageDateList.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				BorrowTender t = (BorrowTender) pageDataList.getList().get(i);
+				BorrowTenderModel tm = BorrowTenderModel.instance(t);
+				Borrow borrow = t.getBorrow();
+				tm.setBorrowName(borrow.getName());
+				tm.setAccountYes(borrow.getAccountYes());
+				tm.setUserName(t.getUser().getUserName());
+				tm.setBorrowUserName(borrow.getUser().getUserName());
+				tm.setScales(borrow.getScales());
+				tm.setBorrowId(borrow.getId());
+				tm.setUser(null);
+				tm.setType(String.valueOf(borrow.getType()));
+				tm.setBorrowStatus(String.valueOf(borrow.getStatus()));
+				tm.setBorrow(borrow);
+				list.add(tm);
+			}
+		}
+		pageDateList.setList(list);
+		return pageDateList;
+	}
+	// JSDP-BUG106 20150504 sxy start
+	// JSDPBUG-99 20150505  sxy
+	/**
+	 * 
+	 * 投资列表
+	 * 
+	 * @author 孙晓勇 2015年4月15日 15:24:43
+	 */
+	@Override
+	public PageDataList<BorrowTenderModel> tenderlist(BorrowTenderModel model) {
+		
+		int size = model.getSize();
+		int page = model.getPage();
+		
+		QueryParam param = QueryParam.getInstance();
+		
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		
+		if (size != 0) {
+	        param.addPage(page, size);
+		} else {
+		    param.addPage(page);
+		}
+		
+		// 投标方式
+		if(StringUtil.isNotBlank(model.getTenderTypeStr()) || null != model.getTenderTypeStr()){
+			param.addParam("tenderType", model.getTenderTypeStr());
+		}
+		
+
+		// 时间类型
+		if(null != model.getTimeType() || "".equals(model.getTimeType())){
+			
+			// 昨日
+			if(StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, -1))).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.LT, end);
+				
+				/*param.addParam("addTime", Operators.GTE, DateUtil.rollDay(nowdate, -1));
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.LT, start);*/
+			}
+			// 今日
+			if(StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())){
+				// 本月月份
+				//String thisMonth = DateUtil.dateStr11(new Date());
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, +1))).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, end);
+				/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, nowdate);*/
+				//param.addParam("addTime", Operators.EQ, nowdate);
+			}
+			// 一周
+			if(StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, -7)).substring(0, 10) + " 00:00:00")));
+				param.addParam("addTime", Operators.LT, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, 1)).substring(0, 10) + " 00:00:00")));
+				/*param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("addTime", Operators.LTE, nowdate);*/
+			}
+			// 本月
+			if(StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())){
+				// 本月月份
+				//String thisMonth = DateUtil.dateStr11(new Date());
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollMon(start, +1))).substring(0, 7) + "-01 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, end);
+				/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, nowdate);*/
+			}
+			// 时间段
+			if(StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())){
+				if(null != model.getStartTime() && null != model.getEndTime()){
+					Date start = DateUtil.valueOf(model.getStartTime());
+					Date end = DateUtil.valueOf(model.getEndTime());
+					param.addParam("addTime", Operators.GTE, start );
+					param.addParam("addTime", Operators.LTE, end );
+				}
+			}
+			
+		} else {
+			
+			// 投标时间
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				// Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				Date start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				// Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			
+		}
+		
+		
+		// 投资人用户名
+		if (StringUtil.isNotBlank(model.getUserName())) {
+            param.addParam("user.userName", Operators.LIKE, model.getUserName());
+        }
+		
+		// 借款人用户名
+		if (StringUtil.isNotBlank(model.getBorrowUserName())) {
+			param.addParam("borrowUserName", Operators.LIKE, model.getBorrowUserName());
+		}
+		
+		// 标类型
+		if(StringUtil.isNotBlank(model.getType())){
+			param.addParam("borrow.type", model.getType());
+		}
+		// JSDP-185 sxy 20150623
+		// 投标状态
+		if(0 < model.getStatus()){
+			if(model.getStatus()==100){
+				param.addParam("status", 0);
+			}else if(model.getStatus()==200){
+				param.addParam("status", 1);
+			}else if(model.getStatus()==300){
+				param.addParam("status", 2);
+			}
+			//param.addParam("status", model.getStatus());
+		}
+		// 标ID
+		if(model.getId()!=0){
+			param.addParam("borrow.id", Operators.EQ, model.getBorrowId());
+		}
+		// 对账类型
+		if(StringUtil.isNotBlank(model.getCompareResult())){
+			/*if("null".equals(model.getCompareResult())){
+				param.addParam("compareResult", Operators.EQ, "");
+			}else{*/
+				param.addParam("compareResult", Operators.EQ, model.getCompareResult());
+			/*}*/
+		}
+		// JSDP-BUG109 sxy start
+		// 客服ID
+		if (StringUtil.isNotBlank(model.getCustomerUserId())) {
+			Operator opt = operatorDao.getOperatorByNo(model.getCustomerUserId());
+			if(null != opt){
+				param.addParam("user.userCache.customerUserId", Operators.EQ, opt.getId());
+			}else{
+				param.addParam("user.userCache.customerUserId", Operators.EQ, 0);
+			}
+		}
+		// JSDP-BUG109 sxy end
+		// 投标类型
+		if(0 != model.getTenderType()){
+			
+			if(10 == model.getTenderType()){
+				param.addParam("tenderType", 0);
+			}else if(11 == model.getTenderType()){
+				param.addParam("tenderType", 1);
+			}else if(12 == model.getTenderType()){
+				param.addParam("tenderType", 2);
+			}
+			
+			//param.addParam("tenderType", model.getTenderType());
+		}
+		
+		
+		// 投标时间倒序
+		param.addOrder(OrderType.DESC, "addTime");
+		
+		PageDataList<BorrowTender> pageDataList = tenderDao.findPageList(param);
+		PageDataList<BorrowTenderModel> pageDataList_ = new PageDataList<BorrowTenderModel>();
+		List<BorrowTenderModel> list = new ArrayList<BorrowTenderModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		
+		Account account = new Account();
+		
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				BorrowTender tender = (BorrowTender) pageDataList.getList().get(i);
+				BorrowTenderModel model2 = BorrowTenderModel.instance(tender);
+				String username = tender.getUser().getUserName();
+				String realName = tender.getUser().getRealName();
+				String borrowUserName = tender.getBorrow().getUser().getUserName();
+				
+				// 标类型
+				String borrowType = String.valueOf(tender.getBorrow().getType());
+				// 借款标类型
+				int borrowTimeType = tender.getBorrow().getBorrowTimeType();
+				// 借款期限
+				int timeLimit = tender.getBorrow().getTimeLimit();
+				// 利率
+				double borrowApr = tender.getBorrow().getApr();
+				
+				
+				// 投资人专属客服
+				int operatorId = tender.getUser().getUserCache().getCustomerUserId();
+				Operator opt = operatorDao.userFind(operatorId);
+				
+				
+				// 投资人账户总额
+				account = accountDao.getAccountByUserId(tender.getUser().getUserId());
+				DecimalFormat df = new DecimalFormat("#0.00");
+				model2.setTenderUserAccountStr(df.format(account.getAccountTotal()));
+				model2.setBorrowId(tender.getBorrow().getId());
+				// 利率
+				model2.setBorrowApr(borrowApr);
+				
+				model2.setType(borrowType);
+				
+				model2.setUser(null);
+				model2.setBorrow(null);
+				model2.setUserName(username);
+				model2.setRealName(realName);
+				// 注册时间
+				model2.setRegisterTime(tender.getUser().getAddTime());
+				/*SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");//小写的mm表示的是分钟  
+				try {
+					model2.setRegisterTime(sdf.parse(DateUtil.dateStr4(tender.getUser().getAddTime())));
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}*/
+				
+				
+				if(null != opt){
+					
+					if(null != opt.getNo() || StringUtil.isNotBlank(opt.getNo())){
+						model2.setCustomerUserId(opt.getNo());
+					}else{
+						model2.setCustomerUserId("");
+					}
+					
+				}else{
+					model2.setCustomerUserId("");
+				}
+				
+				model2.setBorrowUserName(borrowUserName);
+				model2.setBorrowTimeType(borrowTimeType);
+				model2.setTimeLimit(timeLimit);
+				model2.setLineId(i+1);
+				list.add(model2);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+	// JSDP-BUG106 20150504 sxy end
+	
+	@Override
+	public PageDataList<BorrowTender> tenderMoneyStatisticsListForSQL(
+			BorrowTenderModel model, int page, int size) {
+
+		return tenderDao.tenderMoneyStatisticsListForSQL(model,page,size);
+	}
+	
+	
+	
+	// JSDPBUG-99 20150505  sxy end
+	@Override
+	public double hasTenderTotalPerBorrowByUserid(long borrowId, long userId) {
+		return tenderDao.hasTenderTotalPerBorrowByUserid(borrowId, userId);
+	}
+
+	@Override
+	public PageDataList<BorrowTenderModel> list(long borrowId, int page, int size) {
+		return tenderDao.list(borrowId, page, size);
+	}
+
+	/*@Override
+	public BorrowTender addTender(User user, Borrow borrow, double money, int flowCount,String addIp) {
+		borrow.setScales(-1); //用于标记是投标的情况
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		com.ddtkj.p2psys.borrow.model.BorrowModel model = com.ddtkj.p2psys.borrow.model.BorrowModel.instance(worker.prototype());
+		
+		// 投标校验
+		//model = worker.checkTenderBefore(model, money, user, flowCount);
+		com.ddtkj.p2psys.account.domain.Account act = accountDao.findObjByProperty("user.userId", user.getUserId());
+        if (money > act.getUseMoney()) {
+            model.setMoney(act.getUseMoney());
+        } else {
+            model.setMoney(money);
+        }
+		// 填充投标
+		BorrowTender tender = fillBorrowTender(model, user, flowCount);
+		tender.setAddIp(addIp);
+		BorrowTender validTender = getValidTender(tender, borrow);
+		double validAccount = validTender.getAccount();
+		InterestCalculator ic = worker.interestCalculator(validAccount);
+		List<BorrowCollection> collectList = worker.createCollectionList(validTender, ic);
+		borrowCollectionDao.save(collectList);
+		validTender = worker.tenderSuccess(validTender, ic);
+		// 冻结投资人本金
+		Global.setTransfer("borrow", borrow);
+		Global.setTransfer("money", validAccount);
+		Global.setTransfer("tender", tender);
+		Global.setTransfer("user", tender.getUser());
+		AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("borrowTenderExcuter");
+		borrowTenderExecuter.execute(validAccount, user, borrow.getUser());
+		
+		worker.immediateInterestAfterTender(validTender);
+		worker.immediateRepayAfterTender();
+		return tender;
+	}*/
+	@Override
+	public BorrowTender addTender(User user, Borrow borrow, double money,String addIp)throws Exception  {
+		//return addTender(user, borrow, money, addIp,0.00);
+		return new BorrowTender();
+	}
+	
+	//JSDP-53  wcw 2015-4-20 start
+	public BorrowTender validTender(User user, Borrow borrow, BorrowTender tender,BorrowModel bmodel){
+		double money=bmodel.getMoney(); //投标金额
+		double mdAccount=bmodel.getMdAccount(); //使用动态红包金额
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		BorrowModel model = BorrowModel.instance(worker.prototype());
+		// 投标校验
+		model = worker.checkTenderBefore(model, money, user, borrow.getFlowCount());
+		model.setMdAccount(mdAccount);
+	    // 填充投标
+		BorrowTenderModel btm=new BorrowTenderModel();
+		 //JSDBET-944 投标优化    wcw 2015-04-15 start
+        tender = btm.fillBorrowTender(tender,model, user);
+        //JSDBET-944 投标优化    wcw 2015-04-15 end
+		//tender.setAddIp(addIp);
+		//计算真实可投金额
+		BorrowTender validTender = btm.getValidTender(tender, borrow,model);
+		return validTender;
+	}
+	
+	@Override
+	//public BorrowTender addTender(User user, Borrow borrow, double money,String addIp,double mdAccount)throws Exception {
+	public BorrowTender oldAddTender(User user, Borrow borrow, BorrowTender tender,BorrowModel bmodel)throws Exception {
+		double money=bmodel.getMoney(); //投标金额
+		double mdAccount=bmodel.getMdAccount(); //使用动态红包金额
+		
+		//borrow.setScales(-1); //用于标记是投标的情况
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		BorrowModel model = BorrowModel.instance(worker.prototype());
+		try {
+			// 投标校验
+			model = worker.checkTenderBefore(model, money, user, borrow.getFlowCount());
+			model.setMdAccount(mdAccount);
+		    // 填充投标
+			BorrowTenderModel btm=new BorrowTenderModel();
+			 //JSDBET-944 投标优化    wcw 2015-04-15 start
+	        tender = btm.fillBorrowTender(tender,model, user);
+	        //JSDBET-944 投标优化    wcw 2015-04-15 end
+			//tender.setAddIp(addIp);
+			//计算真实可投金额
+			BorrowTender validTender = btm.getValidTender(tender, borrow,model);
+			double validAccount = validTender.getAccount();
+			InterestCalculator ic = worker.interestCalculator(validAccount);
+			//生成待收记录
+			List<BorrowCollection> collectList = worker.createCollectionList(validTender, ic);
+			borrowCollectionDao.save(collectList);
+			validTender = worker.tenderSuccess(validTender, ic);
+			// 冻结投资人本金
+			Global.setTransfer("borrow", borrow);
+			Global.setTransfer("money", validAccount);
+			Global.setTransfer("tender", tender);
+			Global.setTransfer("user", tender.getUser());
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("rechargeMoney", tender.getUseRecharge());
+			map.put("awardMoney", tender.getUseAward());
+			map.put("interestMoney", tender.getUseInterest());
+			map.put("returnCapitalMoney", tender.getUseReturnedMoney());
+			map.put("rpDynamicMoney", tender.getUseRpDynamic());
+			AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("borrowTenderExecuter");
+			borrowTenderExecuter.execute(map, user, borrow.getUser());
+			
+			worker.immediateInterestAfterTender(validTender);
+			worker.immediateRepayAfterTender();
+		} catch (Exception e) {
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("投标异常，异常信息："+e.getMessage()+e.getCause(), "投标异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_TENDER, ErrorLogConstant.CODE_TENDER_FAIL_SYS, tender.getUser(), ErrorLogConstant.MODULE_BORROW_TENDER, tender.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+		return tender;
+	}
+	
+	@Override
+	//public BorrowTender addTender(User user, Borrow borrow, double money,String addIp,double mdAccount)throws Exception {
+	public BorrowTender addTender(User user, Borrow borrow, BorrowTender tender,BorrowModel bmodel)throws Exception {
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		// JSDP-174 wcw 2015-06-09 start
+		tender.setAccount(BigDecimalUtil.add(tender.getUseAward(),tender.getUseInterest(),tender.getUseRecharge(),tender.getUseReturnedMoney(),tender.getUseRpDynamic()));
+		// JSDP-174 wcw 2015-06-09 end
+		Account account = accountDao.findObjByProperty("user.userId", tender.getUser().getUserId());
+		double validAccount = tender.getAccount();
+		int tenderType=tender.getTenderType();
+		//活动时产生红包的消费，体验卡的消费
+		try {
+			worker.activityRpConsumeTender(tender,account);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			//本地账户与第三方比对  wcw  2015-05-30 start
+			if(tender.getTenderType()!=3){
+				long userId=user.getUserId();
+				AccountModel am=new AccountModel();
+				am.accountCompare(userId);
+			}
+			//本地账户与第三方比对  wcw  2015-05-30 end
+			
+			//--------ymd---------------处理 钱袋子使用 -------------------------------------------------
+			if(bmodel.getMdAccount()>0){
+				Account act = accountDao.findObjByProperty("user.userId", tender.getUser().getUserId());
+				//红包使用金额存于投标记录中
+				tender.setUseRpDynamic(bmodel.getMdAccount());
+				RpUseLog rpUseLog = new RpUseLog(tender.getUser(), borrow,RpProduce.RP_DYNAMIC,bmodel.getMdAccount(),act.getRpDynamicTotal(), act.getRpDynamicTotal()-bmodel.getMdAccount(),new Date(),bmodel.getAddIp(), "用户"+tender.getUser().getUserName()+"投【"+borrow.getName()+"】标使用钱袋子金额为："+tender.getUseRpDynamic()+"元") ;
+				rpUseLogDao.save(rpUseLog) ;
+			}
+			//-----------end-------------
+			double scales = BigDecimalUtil.decimal(BigDecimalUtil.div(BigDecimalUtil.add(borrow.getAccountYes(), tender.getAccount()),
+					borrow.getAccount()) * 100, 2);
+			borrowDao.update(tender.getAccount(), scales, borrow.getStatus(), borrow.getId());
+			
+			InterestCalculator ic = worker.interestCalculator(validAccount);
+			//生成待收记录
+			List<BorrowCollection> collectList = worker.createCollectionList(tender, ic);
+			borrowCollectionDao.save(collectList);
+			tender = worker.tenderSuccess(tender, ic);
+			// 冻结投资人本金
+			Global.setTransfer("borrow", borrow);
+			Global.setTransfer("money", validAccount);
+			Global.setTransfer("tender", tender);
+			Global.setTransfer("user", tender.getUser());
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("rechargeMoney", tender.getUseRecharge());
+			map.put("awardMoney", tender.getUseAward());
+			map.put("interestMoney", tender.getUseInterest());
+			map.put("returnCapitalMoney", tender.getUseReturnedMoney());
+			map.put("rpDynamicMoney", tender.getUseRpDynamic());
+			AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("borrowTenderExecuter");
+			borrowTenderExecuter.execute(map, user, borrow.getUser());
+			tender.setTenderType((byte)tenderType);
+			worker.immediateInterestAfterTender(tender);
+			try {
+				worker.activityRpAfterTender(tender);//投标产生奖励
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			worker.immediateRepayAfterTender();
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new HandleException("投标请求超时,请联系客服", "投标异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_TENDER, ErrorLogConstant.CODE_TENDER_FAIL_SYS, tender.getUser(), ErrorLogConstant.MODULE_BORROW_TENDER, tender.getId(), 1);
+		}
+		return tender;
+	}
+	//JSDP-53  wcw 2015-4-20 end
+	/*private BorrowTender fillBorrowTender(BorrowModel model, User user, int flowCount) {
+		BorrowTender tender = new BorrowTender();
+		tender.setBorrow(model.prototype());
+		if (model.getType() == Borrow.TYPE_FLOW) {
+			tender.setMoney(flowCount * model.getFlowMoney());
+			//tender.setStatus(1); //暂不确定为什么设置为1先换成0
+		} else {
+			tender.setMoney(model.getMoney());
+			//tender.setStatus(0);
+		}
+		tender.setStatus(0);
+		tender.setAddTime(new Date());
+		tender.setAddIp(Global.getIP());
+		tender.setUser(user);
+		//tender.setAutoRepurchase(auto_repurchase);
+		return tender;
+	}*/
+	
+	
+
+	/** 最新借款 **/
+	public List<BorrowTender> getNewTenderList() {
+		return tenderDao.getNewTenderList();
+	}
+
+	/** 首页投资排行榜 **/
+	public List<RankModel> getRankList() {
+		return tenderDao.getRankList();
+	}
+
+	public PageDataList<BorrowTenderModel> getTenderList(long borrowId, int page) {
+		int pageNum = Global.getInt("con_borrow_ajaxTenderListPagenum");
+		return tenderDao.getTenderListByBorrowid(borrowId, page, pageNum);
+	}
+
+	public double getUserTenderNum(long userid, Date beginDate, Date endDate) {
+		return tenderDao.getUserTenderNum(userid, beginDate, endDate);
+	}
+
+	/*private BorrowTender getValidTender(BorrowTender tender, Borrow borrow) {
+		// 获取最新的数据库的记录
+		Borrow data = borrowDao.find(tender.getBorrow().getId());
+		BorrowWorker worker = BorrowHelper.getWorker(data);
+		double validAccount = worker.validAccount(tender);
+		tender.setAccount(validAccount);
+		//worker.checkTender(tender);
+		double scales = BigDecimalUtil.round(BigDecimalUtil.div(BigDecimalUtil.add(data.getAccountYes(), validAccount),
+				data.getAccount()) * 100);
+		borrowDao.update(validAccount, scales, data.getStatus(), data.getId());
+		tender.setTenderBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_INVEST));
+		tender = tenderDao.save(tender);
+		return tender;
+	}*/
+
+	
+	
+	
+	
+	@Override
+	public List<BorrowTenderModel> getTenderList(long borrowId) {
+	    List<BorrowTender> itemList = tenderDao.findByProperty("borrow.id", borrowId);
+	    List<BorrowTenderModel> modelList = new ArrayList<BorrowTenderModel>();
+	    for(BorrowTender item : itemList){
+	        BorrowTenderModel model =  BorrowTenderModel.instance(item);
+	        model.setUserName(item.getUser().getUserName());
+	        model.setUserId(item.getUser().getUserId());
+	        modelList.add(model);
+	    }
+		return modelList;
+	}
+
+	/**
+	 * 根据borrowId查询tenderList
+	 * 
+	 * @param borrowId
+	 * @return List<BorrowTender>
+	 */
+	@Override
+	public List<BorrowTender> getTenderListByBorrowId(long borrowId) {
+		return tenderDao.findByProperty("borrow.id", borrowId);
+	}
+
+	/**
+	 * 根据id查询
+	 * 
+	 * @param tenderId
+	 * @return
+	 */
+	@Override
+	public BorrowTender getTenderById(long tenderId) {
+		return tenderDao.find(tenderId);
+	}
+
+    @Override
+    public PageDataList<BorrowModel> getBorrowlist(BorrowTenderModel model) {
+        PageDataList<Borrow> pageDataList = tenderDao.getBorrowlist(model);
+        PageDataList<BorrowModel> pageDataList_ = new PageDataList<BorrowModel>();
+        List<BorrowModel> list = new ArrayList<BorrowModel>();
+        pageDataList_.setPage(pageDataList.getPage());
+        VerifyLogDao verifyLogDao = (VerifyLogDao) BeanUtil.getBean("verifyLogDao");
+        if (pageDataList.getList().size() > 0) {
+            for (int i = 0; i < pageDataList.getList().size(); i++) {
+                Borrow borrow = (Borrow) pageDataList.getList().get(i);
+                BorrowModel bm = BorrowModel.instance(borrow);
+                try {
+                    bm.setUserName(borrow.getUser().getUserName());
+                    bm.setUserId(borrow.getUser().getUserId());
+                } catch (Exception e) {
+                    bm.setUserName("<font color='red'>该用户被删除</font>");
+                    bm.setUserId(0);
+                }
+
+                VerifyLog log = verifyLogDao.findByType(borrow.getId(), "borrow", 1);
+                if (log != null) {
+                    Date d = log.getTime(); //初审时间
+                    Calendar c = Calendar.getInstance();
+                    c.setTime(d);
+                    c.add(Calendar.DATE, borrow.getValidTime());
+                    Calendar now = Calendar.getInstance();
+                    now.setTime(new Date());
+                    bm.setIsFlow(c.before(now));
+                    bm.setStartTime(DateUtil.dateStr2(log.getTime()));
+                }
+                bm.setUser(null);
+                list.add(bm);
+            }
+        }
+        pageDataList_.setList(list);
+        return pageDataList_;
+    }
+
+    @Override
+    public int getInvestCountByDate(String date) {
+        return tenderDao.getInvestCountByDate(date);
+    }
+
+    @Override
+    public List<Integer> getInvestCount() {
+        List<Integer> counts = new ArrayList<Integer>();
+        for (int i = 0; i< 7; i++){
+            int count = tenderDao.getInvestCountByDate(i);
+            counts.add(count);
+        }
+        return counts;
+    }
+
+    @Override
+    public double tenderAccount() {
+        return tenderDao.tenderAccount();
+    }
+    
+    @Override
+    public double ultimoTenderAccount() {
+    	return tenderDao.ultimoTenderAccount();
+    }
+    
+    @Override
+    public int getInvestUserCount() {
+        return tenderDao.getInvestUserCount();
+    }
+    
+    @Override
+    public double tenderAllInterest() {
+        return tenderDao.tenderAllInterest();
+    }
+
+
+	@Override
+	public double sumTenderAccount(long userId) {
+
+		return tenderDao.sumTenderAccount(userId);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.borrow.service.BorrowTenderService#tenderTodayAccount()
+	 */
+	@Override
+	public double tenderTodayAccount() {
+		 return tenderDao.tenderTodayAccount();
+	}
+
+	/**
+	 * 成功投资一次以上的用户数——投资人
+	 * @author 孙晓勇
+	 */
+	@Override
+	public int getTenderInvestUserCount() {
+		
+		return tenderDao.getTenderInvestUserCount();
+	}
+
+	/**
+     * 成功投资一次以上的用户数——投资人
+     * @author 孙晓勇
+     */
+	@Override
+	public double tenderInvestAccount() {
+		
+		return tenderDao.tenderInvestAccount();
+	}
+	@Override
+	public List<Object[]> investTop10In() {
+		
+		return tenderDao.investTop10In();
+	}
+	@Override
+	public double investAccountMax() {
+		
+		return tenderDao.investAccountMax();
+	}
+	@Override
+	public int investNumberMax() {
+		
+		return tenderDao.investNumberMax();
+	}
+	@Override
+	public int investNumberSum() {
+		
+		return tenderDao.investNumberSum();
+	}
+
+
+	@Override
+	public double tenderedAccountsByDate(String dates) {
+		return tenderDao.tenderedAccountsByDate(dates);
+	}
+
+	@Override
+	public int ultimoTenderSum() {
+		return tenderDao.ultimoTenderSum();
+	}
+
+	@Override
+	public PageDataList<BorrowTender> getSwingOutTender(User user,int page,int size) {
+		return tenderDao.getSwingOutTender(user,page,size);
+	}
+
+	@Override
+	public double getInvesterTenderAccount(long userId, Date startTime,
+			Date endTime) {
+		return tenderDao.getInvesterTenderAccount(userId, startTime, endTime);
+	}
+	
+	@Override
+	public double getInvesterTenderAccount(long userId, Date endTime) {
+		return tenderDao.getInvesterTenderAccount(userId, endTime);
+	}
+	
+	@Override
+	public int getInvesterTenderSum(long userId, Date startTime,
+			Date endTime) {
+	   return tenderDao.getInvesterTenderSum(userId, startTime, endTime);
+	}
+
+	@Override
+	public double getUserReturnedMoneySum(long userId, Date startTime, Date endTime) {
+		return tenderDao.getUserReturnedMoneySum(userId,startTime,endTime);
+	}
+	//JSDP-158  wcw 2015-05-23 start
+	@Override
+	public double getInvesterTenderAccountByUserAndBorrowType(long userId,
+			int type,int status) {
+		return tenderDao.getInvesterTenderAccountByUserAndBorrowType(userId,type,status);
+	}
+	//JSDP-158  wcw 2015-05-23 end
+	@Override
+	public List<BorrowTender> getUserOngoingBorrow(User user) {
+		return tenderDao.getUserOngoingBorrow(user);
+	}
+
+	@Override
+	public BorrowTender update(BorrowTender t) {
+		return tenderDao.update(t);
+	}
+	//JSDP-53 wcw 2015-4-20 start
+	@Override
+	public void compaireBorrowTenderList(int borrow_id)throws Exception{
+		List<BorrowTender> tenderList = tenderDao.findByProperty("borrow.id", borrow_id);
+		if(tenderList.size()<=0){
+			throw new BussinessException("投资列表为空", 1);
+		}
+		for(BorrowTender bt:tenderList){
+			try {
+				double tender_account=bt.getAccount();
+				String tenderBilNo=bt.getTenderBilNo();
+				if(StringUtil.isNotBlank(tenderBilNo)&&!"undefined".equals(tenderBilNo)){
+					//第三方数据
+					YmdQuery ymdQuery=new YmdQuery();
+					ymdQuery.setOutTradeNo(tenderBilNo);
+					ymdQuery.setMode("trade");
+					YmdQueryReturn ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+					List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+					YmdQueryReturnDetails yrd=new YmdQueryReturnDetails();
+					if(bt.getStatus()==0){
+						bt.setCompareResult(Account.COMPARE_ERROR);
+						tenderDao.update(bt);
+					}else{
+						if(list.size()>0){
+							yrd=list.get(0);
+							if(yrd!=null){
+								double ymdAmount=NumberUtil.getDouble(yrd.getAmount());
+								double balance=BigDecimalUtil.sub(tender_account, ymdAmount);
+								//一麻袋交易日志
+								if("00".equals(ymdQueryReturn.getResultCode())&&(balance>0.1||balance<0)){
+									bt.setCompareResult(Account.COMPARE_ERROR);
+									tenderDao.update(bt);
+								}else{
+									bt.setCompareResult(Account.COMPARE_OK);
+									tenderDao.update(bt);
+								}
+							}
+						}
+					}
+				}
+			} catch (Exception e) {
+				continue;
+			}
+		}
+	}
+	//JSDP-53 wcw 2015-4-20 end
+	//JSDP-219 gjh 2015-7-10 start
+	public void compaireBorrowTenderList(BorrowTenderModel model) throws Exception {
+		QueryParam param = QueryParam.getInstance();
+		
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		
+		// 投标方式
+		if(StringUtil.isNotBlank(model.getTenderTypeStr()) || null != model.getTenderTypeStr()){
+			param.addParam("tenderType", model.getTenderTypeStr());
+		}
+		
+
+		// 时间类型
+		if(null != model.getTimeType() || "".equals(model.getTimeType())){
+			
+			// 昨日
+			if(StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, -1))).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.LT, end);
+				
+				/*param.addParam("addTime", Operators.GTE, DateUtil.rollDay(nowdate, -1));
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.LT, start);*/
+			}
+			// 今日
+			if(StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())){
+				// 本月月份
+				//String thisMonth = DateUtil.dateStr11(new Date());
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(nowdate, +1))).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, end);
+				/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, nowdate);*/
+				//param.addParam("addTime", Operators.EQ, nowdate);
+			}
+			// 一周
+			if(StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, -7)).substring(0, 10) + " 00:00:00")));
+				param.addParam("addTime", Operators.LT, DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollDay(start, 1)).substring(0, 10) + " 00:00:00")));
+				/*param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("addTime", Operators.LTE, nowdate);*/
+			}
+			// 本月
+			if(StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())){
+				// 本月月份
+				//String thisMonth = DateUtil.dateStr11(new Date());
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+				Date end = DateUtil.valueOf((DateUtil.dateStr4(DateUtil.rollMon(start, +1))).substring(0, 7) + "-01 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, end);
+				/*Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, nowdate);*/
+			}
+			// 时间段
+			if(StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())){
+				if(null != model.getStartTime() && null != model.getEndTime()){
+					Date start = DateUtil.valueOf(model.getStartTime());
+					Date end = DateUtil.valueOf(model.getEndTime());
+					param.addParam("addTime", Operators.GTE, start );
+					param.addParam("addTime", Operators.LTE, end );
+				}
+			}
+			
+		} else {
+			
+			// 投标时间
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				// Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				Date start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				// Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			
+		}
+		
+		
+		// 投资人用户名
+		if (StringUtil.isNotBlank(model.getUserName())) {
+            param.addParam("user.userName", Operators.LIKE, model.getUserName());
+        }
+		
+		// 借款人用户名
+		if (StringUtil.isNotBlank(model.getBorrowUserName())) {
+			param.addParam("borrowUserName", Operators.LIKE, model.getBorrowUserName());
+		}
+		
+		// 标类型
+		if(StringUtil.isNotBlank(model.getType())){
+			param.addParam("borrow.type", model.getType());
+		}
+		// JSDP-185 sxy 20150623
+		// 投标状态
+		if(0 < model.getStatus()){
+			if(model.getStatus()==100){
+				param.addParam("status", 0);
+			}else if(model.getStatus()==200){
+				param.addParam("status", 1);
+			}else if(model.getStatus()==300){
+				param.addParam("status", 2);
+			}
+			//param.addParam("status", model.getStatus());
+		}
+		// 标ID
+		if(model.getId()!=0){
+			param.addParam("borrow.id", Operators.EQ, model.getBorrowId());
+		}
+		// 对账类型
+		if(StringUtil.isNotBlank(model.getCompareResult())){
+			/*if("null".equals(model.getCompareResult())){
+				param.addParam("compareResult", Operators.EQ, "");
+			}else{*/
+				param.addParam("compareResult", Operators.EQ, model.getCompareResult());
+			/*}*/
+		}
+		// JSDP-BUG109 sxy start
+		// 客服ID
+		if (StringUtil.isNotBlank(model.getCustomerUserId())) {
+			Operator opt = operatorDao.getOperatorByNo(model.getCustomerUserId());
+			if(null != opt){
+				param.addParam("user.userCache.customerUserId", Operators.EQ, opt.getId());
+			}else{
+				param.addParam("user.userCache.customerUserId", Operators.EQ, 0);
+			}
+		}
+		// JSDP-BUG109 sxy end
+		// 投标类型
+		if(0 != model.getTenderType()){
+			
+			if(10 == model.getTenderType()){
+				param.addParam("tenderType", 0);
+			}else if(11 == model.getTenderType()){
+				param.addParam("tenderType", 1);
+			}else if(12 == model.getTenderType()){
+				param.addParam("tenderType", 2);
+			}
+			
+			//param.addParam("tenderType", model.getTenderType());
+		}
+		
+		
+		// 投标时间倒序
+		param.addOrder(OrderType.DESC, "addTime");
+		List<BorrowTender> tenderList = tenderDao.findByCriteria(param);
+		if(tenderList.size()<=0){
+			throw new BussinessException("投资列表为空", 1);
+		}
+		for(BorrowTender bt:tenderList){
+			try {
+				double tender_account=bt.getAccount();
+				String tenderBilNo=bt.getTenderBilNo();
+				if(StringUtil.isNotBlank(tenderBilNo)&&!"undefined".equals(tenderBilNo)){
+					//第三方数据
+					YmdQuery ymdQuery=new YmdQuery();
+					ymdQuery.setOutTradeNo(tenderBilNo);
+					ymdQuery.setMode("trade");
+					YmdQueryReturn ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+					List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+					YmdQueryReturnDetails yrd=new YmdQueryReturnDetails();
+					if(bt.getStatus()==0){
+						bt.setCompareResult(Account.COMPARE_ERROR);
+						tenderDao.update(bt);
+					}else{
+						if(list.size()>0){
+							yrd=list.get(0);
+							if(yrd!=null){
+								double ymdAmount=NumberUtil.getDouble(yrd.getAmount());
+								double balance=BigDecimalUtil.sub(tender_account, ymdAmount);
+								//一麻袋交易日志
+								if("00".equals(ymdQueryReturn.getResultCode())&&(balance>0.1||balance<0)){
+									bt.setCompareResult(Account.COMPARE_ERROR);
+									tenderDao.update(bt);
+								}else{
+									bt.setCompareResult(Account.COMPARE_OK);
+									tenderDao.update(bt);
+								}
+							}
+						}
+					}
+				}
+			} catch (Exception e) {
+				continue;
+			}
+		}
+	};
+	//JSDP-219 gjh 2015-7-10 end
+	
+	@Override
+	public Map<String, Double> getTenderMoneySum() {
+		
+		return tenderDao.getTenderMoneySum();
+	}
+	//JSDP-116 sxy 2015-05-18 start
+	@Override
+	public List<BorrowTender> excelTenderDatalist(
+			BorrowTenderModel borrowTenderModel) {
+		return tenderDao.excelTenderDatalist(borrowTenderModel);
+	}
+	//JSDP-116 sxy 2015-05-18 start
+	
+	// 2015年5月29日 sxy
+	@Override
+	public List<BorrowTenderModel> tenderMoneyDataTotal(BorrowTenderModel model) {
+			return tenderDao.tenderMoneyDataTotal(model);
+	}
+	// JSDP-180 SXY 20150611
+	@Override
+	public double tenderMoneyDataTotalOfStatus(BorrowTenderModel model) {
+		return tenderDao.tenderMoneyDataTotalOfStatus(model);
+	}
+	
+	//JSDP-184 xingjia 20160618 start
+	@Override
+	public BorrowTenderModel findFirstTender(long borrowId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", "1");
+		param.addParam("borrow.id", borrowId);
+		param.addOrder(OrderType.DESC, "addTime");
+		List<BorrowTender> tenderList = tenderDao.findByCriteria(param);
+		BorrowTenderModel btm = null;
+		if(tenderList.size()!= 0){
+			btm = BorrowTenderModel.instance(tenderList.get(0));
+			
+		}
+		return btm;
+	}
+	//JSDP-184 xingjia 20160618 end
+	@Override
+	public List borrowTenderRpActivity(Date startTime,
+			Date endTime, int borrowType, int validTime) {
+		return tenderDao.borrowTenderRpActivity(startTime, endTime, borrowType, validTime);
+	}
+	//JSDP-203 xingjia 20150702 start
+	@Override
+	public List<BorrowTender> getTenderByBorrowIdAndAddTime(long id,
+			Date startTime, Date endTime) {
+		return tenderDao.getTenderByBorrowIdAndAddTime(id, startTime, endTime);
+	}
+	@Override
+	public Map<String, Object> findMostMoneyByBorrowId(long borrowId,
+			Date startTime, Date endTime) {
+		return tenderDao.findMostMoneyByBorrowId(borrowId,startTime,endTime);
+	}
+	//JSDP-203 xingjia 20150702 end
+	
+}

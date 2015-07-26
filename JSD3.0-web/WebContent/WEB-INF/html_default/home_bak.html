@@ -1,0 +1,187 @@
+﻿<!DOCTYPE HTML>
+<html>
+<#assign nid="index" >
+<#include "include/resource1.html"> 
+<#include "include/header.html">
+<div id="banner_wrap"> 
+  <!--S-banner 图 --> 
+  <div class="banner">
+    <div class="flexslider sss">
+		<ul class="banner_con slides">
+		</ul>
+	</div>
+  </div>
+  <script>
+  	var webroot="${webroot}"; 
+  </script>
+  <!--E-banner图-->  
+  
+  <!--S-登录框--> 
+  <#if session_user??>
+	  <script>
+	  	var session_status = true
+		var fm_login_name = "${session_user.userName!}";
+		var fm_login_img = "${webroot}/avatar/${session_user.userId}.jpg"
+	  </script>
+  <#else>
+  	<script>var session_status = false</script>
+	</#if>
+	<div class="login_box logined" style="display:none;">
+		<div class="login_bg"></div>
+		<dl class="login_after">
+			<dt>欢迎来到本站投资理财！</dt>
+			<dd class="clearfix">
+				<a href="${webroot}/member/main.html" class="lognedUserPic"><#if session_user??><img src="${webroot}/avatar/${session_user.userId}.jpg" alt="" class="userImg" /> <#else><img src="" alt="" class="userImg" /></#if></a>
+				<div class="loginedInfo">
+					<span class="logined_name" <#if session_user??>title="${session_user.userName}"</#if>><#if session_user??>${session_user.userName}</#if></span>
+					<span><a href="${webroot}/user/logout.html" title="安全退出">[安全退出]</a></span>
+				</div>
+			</dd>
+			<dd>
+				<a href="${webroot}/member/main.html" class="a_loginbtn">进入我的账户</a>
+			</dd>
+			<dd>
+				<ul>
+					<li class="login_after_b1"><i class="iconfont">&#xe602;</i><a href="${webroot}/member/recharge/newRecharge.html" title="账户充值">账户充值</a></li>
+					<li class="login_after_b2"><i class="iconfont">&#xe601;</i><a href="${webroot}/member/cash/newCash.html" title="账户提现">账户提现</a></li>
+					<li class="login_after_b3"><i class="iconfont">&#xe609;</i><a href="${webroot}/member/account/log.html" title="资金记录">资金记录</a></li>
+					<li class="login_after_b4"><i class="iconfont">&#xe60d;</i><a href="${webroot}/member/message/detail.html" title="我的消息">我的消息</a></li>
+				</ul>
+			</dd>
+		</dl>
+	</div>
+  <div class="login_box login_before" style="display:none;">
+  <form action="${webroot}/user/doLogin.html" autocomplete = "off" method="post" name="login" id="loginForm" >
+  	<div class="login_bg"></div>
+    <dl>
+      <dt class="clearfix"><font>第一次使用?<a href="${webroot}/user/register.html">免费注册</a></font><span>登录</span></dt>
+      <dd>
+        <input type="text" id="username" autocomplete="off" name="userName" class="username" placeholder="用户名/邮箱/手机号码" /><span class="formicon"></span>
+      </dd>
+      <dd>
+		<input type="password" name="pwd" autocomplete="off" id="password" class="password" placeholder="密码" ><span class="formicon"></span>
+      </dd>
+      <dd class="showForgetBox"><label>&nbsp;</label> <a class="forget" href="${webroot}/user/getpwd.html?showType=1" title="忘记密码">忘记密码？</a></dd>
+      <dd class="showErrorTips" style="height:40px;"><div style="display:none"><span class="errorTips"><em><i class="iconfont">&#xe62a;</i><b>请输入用户名和密码</b></em></span></div></dd>
+      <dd>       	
+      	<input type="hidden" name="source" value="index" />
+        <input type="hidden" name="actionType"  value="login" />
+        <input type="submit" value="立即登录" class="login_btn">
+      </dd>
+    </dl>
+    <input type="hidden" name="count" value="${count!}" id="count" />
+    </form>
+    <input type="hidden" name="email" id="email" /> 
+                <input type="hidden" name="userid" id="userid" />
+  </div>
+  <!--E-登录框结束-->
+  </div>
+  
+  <!-- E 首页介绍 -->
+<!-- S 首页内容 -->
+<div class="index_container clearfix">
+	<dl class="float_left index_news_box">
+		<dt><a href="${webroot}/article/detail.html?nid=notice" class="float_right">更多&gt;&gt;</a><span>网站公告</span>第一时间了解站点信息</dt>
+		<dd style="overflow: hidden;">
+			<ul class="index_notice_list" id="index_notice_list">
+			</ul>
+		</dd>
+	</dl>
+	<dl class="float_right index_news_box">
+		<dt><a href="${webroot}/article/detail.html?nid=news" class="float_right">更多&gt;&gt;</a><span>行业资讯</span>第一时间了解网贷行业动态</dt>
+		<dd style="overflow: hidden;">
+			<ul class="index_notice_list" id="index_news_list">
+			</ul>
+		</dd>
+	</dl>
+</div> 
+<!-- E 首页内容  -->
+
+
+<!-- S 首页招标列表 -->
+<div id="index_invest_wrap">
+	<div class="index_invest_wrap_bg"></div>
+	<div class="index_invest_box">
+		<div class="index_invest_tab"><a href="${webroot}/invest/index.html" class="active" id="BorrowListBtn">投资列表</a></div>
+		<div class="countDown" style="display:none;">
+			<ul class="index_invest_list" id="index_invest_list"></ul>
+			<p class="moreList">更多优质投资理财项目在等着你，<a href="${webroot}/invest/index.html">投资列表</a></p>
+		</div>
+	</div>
+</div>
+<!-- E 首页招标列表 -->
+<!-- S 首页介绍 -->
+<div id="index_intro_wrap" class="clearfix">
+	<div class="index_intro_box">
+		<ul class="slides">
+			<li><img src="/themes/theme_default/images/banner1.png" /></li>
+			<li><img src="/themes/theme_default/images/banner2.png" /></li>
+			<li><img src="/themes/theme_default/images/banner3.png" /></li>
+			<li><img src="/themes/theme_default/images/banner4.png" /></li>
+		</ul>
+	</div>
+</div>
+
+
+<!-- S 特色介绍开始 -->
+<div id="guide_wrap">
+	<div class="guide_box">
+		<a href="/safe.html#safeStep1" target="_blank">
+			<dl>
+				<dt class="guide1"></dt>
+				<dd class="g_tit">资金托管</dd>
+				<dd>第三方资金托管</dd>
+				<dd>投资理财更有保障</dd>
+			</dl>
+		</a>
+		<a href="/safe.html#safeStep2" target="_blank">
+			<dl>
+				<dt class="guide2"></dt>
+				<dd class="g_tit">准入审核</dd>
+				<dd>严格的借款人准入审核</dd>
+				<dd>为您精选更优质的项目</dd>
+			</dl>
+		</a>
+		<a href="/safe.html#safeStep3" target="_blank">
+			<dl>
+				<dt class="guide3"></dt>
+				<dd class="g_tit">动态监管</dd>
+				<dd>抵押资产动态监管</dd>
+				<dd>做到最实时信息的更迭</dd>
+			</dl>
+		</a>
+		<a href="/safe.html#safeStep4" target="_blank">
+			<dl style="margin-right:0;">
+				<dt class="guide4"></dt>
+				<dd class="g_tit">逾期追偿</dd>
+				<dd>有效的逾期追偿制度</dd>
+				<dd>最高保障投资者权益</dd>
+			</dl>
+		</a>
+	</div>
+</div>
+<!-- E 特色介绍结束 -->
+
+
+<!--S-合作伙伴-->
+<div id="partnerwrap">
+	<dl class="partnerbd">
+		<dt>合作伙伴</dt>
+		<dd id="partnerList">
+		</dd>		
+	</dl>
+</div>
+<!--E-合作伙伴-->
+<ul class="onlineService">
+	<li class="backTop"><em id="backTop" class="iconfont">&#xe631;</em></li>
+	<li class="qqLink"><em class="iconfont ">&#xe610;</em><a href="tencent://message/?Menu=yes&amp;amp;uin=938048736&amp;amp;Service=58&amp;amp;SigT=A7F6FEA02730C98849F501C1D9B04A6E38E0F4C44D161498214A8A34171D54D14A65B300EE5B3BECB2EECB613C0564385242CC7345D5DC75B2CBE334F0C58F8BE2439EDBAB3885346E47EDB62F21736A0FA83D173335D2E4C4F3D9AF57852366B8021778E95A7B23586FD1D9FA9DA2E02F8F2A69E6C8F11B&amp;amp;SigU=30E5D5233A443AB2C4F538B07D2AC36E7DEB7FA01EC12EF216B493B89FE8EBB651244E8B7EBE53CCBA71301F264C692CDD270CD0AF8B8FB1C7DE08CAE890AB8C73AB7342724C1026" id="BizQQWPA1" class="qq">客服<br />交流</a></li>
+	<li class="wxLink"><em class="iconfont">&#xe632;</em><a href="javascript:;"><i></i><img src="${webroot}${theme_dir}/images/wx.jpg" alt=""><br />纵通理财</a></li>
+</ul>
+<!-- JS加载文章数据 -->
+<script>
+	seajs.use("${webroot}${theme_dir}/media/js/home");
+	seajs.use("footer");
+</script>
+<#include "include/footer.html">
+</body>
+</html>

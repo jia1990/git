@@ -1,0 +1,89 @@
+package com.ddtkj.p2psys.core.quartz.verifyFullBorrow;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+/**
+ * 满标复审业务处理类
+ * @author wcw
+ *
+ */
+public class VerifyFullBorrowTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(VerifyFullBorrowTask.class);
+
+	@Resource
+	private AutoBorrowService autoBorrowService;
+	
+	public AutoBorrowService getAutoBorrowService() {
+		return autoBorrowService;
+	}
+
+	public void setAutoBorrowService(AutoBorrowService autoBorrowService) {
+		this.autoBorrowService = autoBorrowService;
+	}
+
+	public Logger getLogger() {
+		return logger;
+	}
+
+	public void setLogger(Logger logger) {
+		this.logger = logger;
+	}
+
+	public VerifyFullBorrowTask(AutoBorrowService autoBorrowService) {
+		super();
+		this.autoBorrowService = autoBorrowService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (VerifyFullBorrowJobQueue.VERIFY_FULL_BORROW!=null && VerifyFullBorrowJobQueue.VERIFY_FULL_BORROW.size() > 0) {
+			VerifyFullBorrowBean vfb = VerifyFullBorrowJobQueue.VERIFY_FULL_BORROW.peek();
+			if (vfb != null) {
+				String result = "success";
+				try {
+					if("fullSuccess".equals(vfb.getType())){
+						autoBorrowService.autoVerifyFullSuccess(vfb.getBorrowModel());//满标复审，通过
+						result="满标审核通过成功";
+					}else if ("failBorrow".equals(vfb.getType())){
+						autoBorrowService.autoVerifyFullFail(vfb.getBorrowModel());//满标复审，不通过
+						result="满标审核不通过成功";
+					}
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+				} finally {
+					VerifyFullBorrowJobQueue.VERIFY_FULL_BORROW.remove(vfb);
+			        Global.removeTransfer();
+				    if(vfb.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(vfb.getResultFlag(), result);
+			            }
+			        }
+				}
+			}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return VerifyFullBorrowTask.VERIFY_BORROW_STATUS;
+	}
+
+}

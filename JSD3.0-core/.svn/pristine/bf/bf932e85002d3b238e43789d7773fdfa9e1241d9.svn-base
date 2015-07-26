@@ -1,0 +1,44 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.service;
+
+import com.ddtkj.p2psys.user.domain.UserRealnameApplication;
+import com.ddtkj.p2psys.user.model.UserRealnameApplicationModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：用户实名认证申请
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月29日 
+ */
+public interface UserRealnameApplicationService {
+
+	/**
+	 *@author 李建云
+	 * 保存开户资料
+	 * */
+	public void uploadUserRealNameApplication(UserRealnameApplicationModel model) throws Exception;
+	
+	/**
+	 *@author 李建云
+	 *查询用户上传图片 
+	 * */
+	public UserRealnameApplication findUserRealnameApplication(long userId)throws Exception;
+	
+	
+	/**
+	 *@author 李建云 
+	 * 后台查询用户审核资料
+	 * */
+	
+	public PageDataList<UserRealnameApplicationModel> list(UserRealnameApplicationModel borrowBespeak, int page, int size);
+	
+	
+	/**
+	 *@author 李建云
+	 *审核通过 
+	 * */
+	public void modifyUserRealnameApplicationStatus(UserRealnameApplicationModel model)throws Exception;
+	
+}

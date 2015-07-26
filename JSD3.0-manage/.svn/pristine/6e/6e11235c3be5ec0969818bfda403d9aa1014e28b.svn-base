@@ -1,0 +1,205 @@
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/user/user/userPersonAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址	
+</script>
+<style>
+ #professional,#sourceRepay{width:200px;}
+</style>
+<form id="form"  method="post" enctype="multipart/form-data">
+<div class="adminUserForm">
+	<ul>
+		<li><span>借款人：</span><input type="text" maxlength="20" name="user.realName" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'chinese'" maxlength="30"  onkeyup="this.value=this.value.replace(/[^\u4E00-\u9FA5]/g,'')"/><i>*</i></li>
+		<li><span>借款人手机：</span><input type="text" maxlength="15" name="user.mobilePhone" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'mobile'" maxlength="20" onkeyup="value=value.replace(/[^1234567890-]+/g,'')"/><i>*</i></li>
+		<li><span>借款人邮箱：</span><input type="text" maxlength="30" name="user.email" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'email'" maxlength="30" onkeyup="this.value=this.value.replace(/^ +| +$/g,'')"/><i>*</i></li>
+		<li><span>借款人身份证：</span><input type="text" maxlength="20" name="user.cardNO" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'idCard'" maxlength="20" onkeyup="this.value=this.value.replace(/[^\w\.\/]/ig,'')"/><i>*</i></li>
+		<li><span>所属行业：</span><@linkage name="professional" id="professional" type="value" nid="professional"/></li>
+		<li><span>岗位职位：</span><input type="text" maxlength="30"name="position" autocomplete="off" class="easyui-validatebox adminUserTxt" data-options="required: true,validType:'notNull'"/><i>*</i></li>
+		<li><span>婚姻状况：</span>
+		<input type="radio" name="maritalStatus" class="easyui-validatebox" value="1"  checked="checked"/>已婚
+		<input type="radio" name="maritalStatus" class="easyui-validatebox" value="2" />未婚
+		</li>
+	</ul>
+</div>
+<div class="adminUserForm">
+	<div class="adminUserMuti">
+		<span style="line-height:40px;">居住地区：</span>
+	    <select name="province" id="province">
+			<option value="">请选择</option>
+		</select> 
+		<select name="city" id="city">
+			<option value="">请选择</option>
+		</select> 
+		<select id="county" name="area" >
+			<option value="">请选择</option>
+		</select>  
+	</div>
+	<div class="adminUserMuti"><span>还款来源：</span>
+		<@linkage name="sourceRepay" id="sourceRepay" type="value" nid="repayment_source"/>
+	</div>
+	<div class="adminUserMuti"><span>个人描述：</span><textarea name="companyDesc" class="easyui-validatebox adminUserTextarea" data-options="required: true" maxlength="100"></textarea><i>*</i></div>
+</div>
+<div class="adminUserForm">
+	适用于分期宝
+	<ul>
+	<li><span>就读大学：</span><input type="text" name="college" data-options="required: true,validType:'chinese'" class="easyui-validatebox adminUserTxt"/><i>*</i></li>
+	<li><span>专业：</span><input type="text" name="major" data-options="required: true,validType:'chinese'" class="easyui-validatebox adminUserTxt"/><i>*</i></li>
+	<li><span>学号：</span><input type="text" name="studentId" data-options="required: true" onkeyup="this.value=this.value.replace(/\D/g,'')"  maxlength="12" class="easyui-validatebox adminUserTxt" /><i>*</i></li>
+	<li><span>学生证：</span><input type="file" name="files"  class="easyui-validatebox adminUserTxt" accept="image/*"/></li>
+	<li><span>学信网：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" accept="image/*"/></li>
+	<li><span style="width: 130px;">宿舍或教室生活照：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" accept="image/*"/></li>
+	</ul>
+</div>
+<div class="adminUserForm">
+	适用于车贷宝
+	<ul>
+		<!--
+		<li class="MortgageInfo"><span>抵押资料：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" data-options="required: true" accept="image/*"/><i>*</i></li>
+		<li class="WarrantyInfo"><span>担保资料：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" data-options="required: true" accept="image/*"/><i>*</i></li>
+		-->
+		<li class="bankCardNo"><span>银行卡流水：</span><input type="file" name="files" class="easyui-validatebox adminUserTxt" accept="image/*"/></li>
+		<li><span>信用报告：</span><input type="file" name="files" class="adminUserTxt adminUserTxt" accept="image/*"/></li>
+	</ul>
+</div>
+<input type="hidden" name="userType" value="11">
+<input type="hidden" name="userNature" value="20">  
+<input type="hidden" name="fileIndex" id="fileIndex" />
+<input type="hidden" name="fileSize" id="fileSize" />
+<input type="hidden" name="borrowType" id="borrowType" value="F"/>
+<div class="borrowForm" style="border-bottom:0;">
+	<h2 class="borrowFormTitle">借款人身份证(正面和反面)</h2>
+	<div class="guarantee_type">
+	        <div id="uploadGuaranteeBox" data-arr="uploadFile" style="height: auto;">
+	            <ul id="uploadPiclist4" class="photoUpload" style="list-style: none; padding: 0; margin: 0;">
+	                <li class="add_btn" style="float: left;">
+	                  <i class="a"></i> <i class="b"></i>
+	                  <input type="file" name="file" id="uploadFile4" onchange="return ajaxFileUpload1('uploadFile4','/imageUp.jsp','picPath','1');" title="点击上传图片" accept="image/*"/>
+	                </li>
+	            </ul>
+	       </div>
+	</div>	
+</div>
+<input type="hidden" value="${userAdminAddToken!}" name="userAdminAddToken">
+</form>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<script>
+	$(function(){
+		$("#form").submit(function(){
+			var files = $("input[name='files']");
+			var fileIndex = "";
+			for(var i = 0; i < files.length; i++){
+				if(files[i].value != ""){
+					fileIndex = fileIndex+i+",";
+				}
+			}
+			$("#fileIndex").val(fileIndex.substring(0,fileIndex.length-1));
+			$("#fileSize").val(files.length);
+		});
+	});
+	/* $("#city").citySelect({
+		url:"${theme_dir}/js/jquery-citySelect/city.json",
+		prov:"浙江", //省份 
+	    city:"杭州", //城市 
+	    dist:"西湖区", //区县 
+	    required:true,
+	    nodata:"none" //当子集无数据时，隐藏select 
+	});  */
+	
+	$("#style").change(function(){
+		var selectVal= $("#style").val();
+		if(selectVal==4){
+			$(".MortgageInfo").html('<span>抵押资料：</span><input type="file" accept="image/*" name="files" class="easyui-validatebox adminUserTxt" />');
+			$(".WarrantyInfo").html('<span>担保资料：</span><input type="file" accept="image/*" name="files" class="easyui-validatebox adminUserTxt" />');
+			$(".bankCardNo").html('<span>银行卡流水：</span><input type="file" accept="image/*" name="files" class="easyui-validatebox adminUserTxt" />');
+		}else{
+			$(".MortgageInfo").html('<span>抵押资料：</span><input type="file" accept="image/*" name="files" class="easyui-validatebox adminUserTxt" data-options="required: true"/><i>*</i>');
+			$(".WarrantyInfo").html('<span>担保资料：</span><input type="file" accept="image/*" name="files" class="easyui-validatebox adminUserTxt" data-options="required: true"/><i>*</i>');
+			$(".bankCardNo").html('<span>银行卡流水：</span><input type="file" accept="image/*" name="files" class="easyui-validatebox adminUserTxt" data-options="required: true"/><i>*</i>');
+		}
+	});
+	/*
+	 *初始化省份选择框
+	 * */
+	$.ajax({
+        type:"get",
+        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+        dataType:"json",
+        success:function(json){
+        	
+        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+        		 
+        		  var province=json[i];
+        		 $("#province").append("<option  value="+province.id+">"+province.name+"</option>");
+        	 }
+        }
+    });
+	
+	//给省份下拉选择框注册change事件 
+	 $("#province").change(function(){
+		 $("#city").empty();
+		 $("#city").append("<option value=''>请选择</option>");
+		 var id = $(this).val();
+		 if($(this).val() != ''){
+		 	getCity(id);
+		 }else{
+		 	 $("#county").empty();
+			 $("#county").append("<option value=''>请选择</option>");
+		 }
+	 });
+	
+	
+	/*省份发生变化
+	 *AJAX一步后台获取与此省份关联的城市
+	 * 
+	 * */
+	function  getCity(id){
+		//ajax逻辑
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var city=json[i];
+	        		 $("#city").append("<option value="+city.id+">"+city.name+"</option>");
+	        	 }
+	        }
+	    });
+		
+	}
+	
+	/*给城市选择框注册change事件*/
+	$("#city").change(function(){
+		 $("#county").empty();
+		 $("#county").append("<option value=''>请选择</option>");
+		var id = $(this).val();
+		if(id!=''){
+			getCounty(id);
+		}
+	});
+
+	/*城市发生变化
+	 *AJAX一步后台获取与此市关联的县（区）
+	 * 
+	 * */
+	function getCounty(id){
+		//ajax逻辑
+		$.ajax({
+	        type:"get",
+	        url:"/modules/user/user/user/regionList.html?id="+Math.random(),
+	        dataType:"json",	        
+	        data:{
+	        	pId:id
+	        },
+	        success:function(json){
+	        	 for(i=0;i<json.length;i++) {                                                                                                                                                                                        
+	        		  var county=json[i];
+	        		 $("#county").append("<option value="+county.id+">"+county.name+"</option>");
+	        	 }
+	        }
+	    });
+		
+	}
+	
+</script>

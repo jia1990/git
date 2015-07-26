@@ -1,0 +1,210 @@
+package com.ddtkj.manage.action.user.receipt;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+import com.rongdu.p2psys.user.model.KefuModel;
+import com.rongdu.p2psys.user.model.UserFreezeModel;
+import com.rongdu.p2psys.user.model.UserLogisticsAddressModel;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserCertificationService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserLogisticsAddressService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 后台用户收货地址查询的Action类
+ * @author xingjia
+ * @date 20141210
+ *
+ */
+public class AddressManageAction extends BaseAction<UserLogisticsAddressModel> implements ModelDriven<UserLogisticsAddressModel> {
+
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserCertificationService attestationService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private VerifyLogService verifyLogService;
+	
+	@Resource
+	private UserLogisticsAddressService userLogisticsAddressService;
+
+	private Map<String, Object> data;
+	private Map<String, Object> map = new HashMap<String, Object>();
+
+	/**
+	 * 获得用户清单页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/receipt/addressManager")
+	public String addressManager() throws Exception {
+		return "addressManager";
+	}
+
+	/**
+	 * 获得用户清单列表
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/receipt/addressList")
+	public void userList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		//收货地址可以有3个，单pageNumber的值为7时，说明查询的是非默认地址
+		if(pageSize == 0){
+			map.put("otherAddress", "adr");
+		}
+		
+		String userType = paramString("userType");
+		
+		map.put("userType", userType);
+		
+		map.put("model", model);
+		PageDataList<UserLogisticsAddress> pageDataList = userLogisticsAddressService.addressPageDataList(map, pageNumber, pageSize);
+		List<UserLogisticsAddressModel> addModelList = new ArrayList<UserLogisticsAddressModel>();
+		PageDataList<UserLogisticsAddressModel> pageDataModelList = new PageDataList<UserLogisticsAddressModel>();
+		List<UserLogisticsAddress> addressList = pageDataList.getList();
+		for(int i=0;i<addressList.size();i++){
+			UserLogisticsAddress addressE = addressList.get(i);
+			UserLogisticsAddressModel addrModel = UserLogisticsAddressModel.instance(addressE);
+			User addressUser = addressE.getUser();
+			
+			addrModel.setUserName(addressUser.getUserName());
+			addrModel.setProvinceName(addressE.getRegionProvince().getName());
+			addrModel.setCityName(addressE.getRegionCity().getName());
+			addModelList.add(addrModel);
+		}
+		pageDataModelList.setList(addModelList);
+		pageDataModelList.setPage(pageDataList.getPage());
+		int totalPage = pageDataModelList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pageDataModelList.getList());
+//		printJson(JSON.toJSON(data));
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 收货地址查询管理导出
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/user/receipt/addressExcel")
+	public void freezeExcel() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		int pageNumber = 1;// 当前页数
+		int pageSize = 99999999;// 每页总数
+		map.put("otherAddress", "all");
+		map.put("model", model);
+		
+		String userType = paramString("userType");
+		
+		map.put("userType", userType);
+		
+		PageDataList<UserLogisticsAddress> pageDataList = userLogisticsAddressService.addressPageDataList(map, pageNumber, pageSize);
+		List<UserLogisticsAddress> list = pageDataList.getList();
+		List<UserLogisticsAddressModel> newList = new ArrayList<UserLogisticsAddressModel>();		
+		for(int i=0;i<list.size();i++){
+			UserLogisticsAddressModel addrModel = UserLogisticsAddressModel.instance(list.get(i));
+			User addressUser = addrModel.getUser();
+			addrModel.setUserName(addressUser.getUserName());
+			addrModel.setProvinceName(addrModel.getRegionProvince().getName());
+			addrModel.setCityName(addrModel.getRegionCity().getName());
+			newList.add(addrModel);
+		}
+		String title = "收货地址查询管理Excel表";
+		
+		String[] hearders = new String[] {"编号","会员名","收货人姓名","省","市","详细地址","电话","邮编"};// 表头数组
+		String[] fields = new String[] { "id","userName","name","provinceName","cityName","detailAddress","phone","zipCode"};// 对象属性数组
+		int sheetRows = 50000;
+		int sheetPage = newList.size() / sheetRows;
+		if (newList.size() % sheetRows > 0) {
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<UserLogisticsAddress> tdList = new ArrayList<UserLogisticsAddress>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				UserLogisticsAddress sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+	}
+	
+	/**
+	 * 用户其他地址的页面
+	 * @return
+	 * @throws Exception
+	 * @author sunxiaoyong@ddtkj.com
+	 */
+	@Action(value = "/modules/user/receipt/otherAddressManage")
+	public String otherAddressManage() throws Exception{
+		int userId = paramInt("id");
+		request.setAttribute("userId", userId);
+		return "otherAddressManage";
+	}
+	/**
+	 * 用户其他地址的页面
+	 * 
+	 * @author sunxiaoyong@ddtkj.com
+	 */
+	@Action("/modules/user/receipt/otherAddressManageList")
+	public void otherAddressManageList() throws Exception {
+		int userId = paramInt("userId");
+		data = new HashMap<String, Object>();
+
+		map.put("model", model);
+		map.put("userId", userId);
+		PageDataList<UserLogisticsAddress> pageDataList = userLogisticsAddressService.otherAddressList(userId);
+		
+		PageDataList<UserLogisticsAddressModel> pageDataModelList = new PageDataList<UserLogisticsAddressModel>();
+		List<UserLogisticsAddress> addressList = pageDataList.getList();
+		List<UserLogisticsAddressModel> otherAddrList = new ArrayList<UserLogisticsAddressModel>();
+		
+		for(int i=0;i<addressList.size();i++){
+			UserLogisticsAddress addressE = addressList.get(i);
+			UserLogisticsAddressModel addrModel = UserLogisticsAddressModel.instance(addressE);
+			User addressUser = addressE.getUser();
+			addrModel.setUserName(addressUser.getUserName());
+			addrModel.setProvinceName(addressE.getRegionProvince().getName());
+			addrModel.setCityName(addressE.getRegionCity().getName());
+			otherAddrList.add(addrModel);
+		}
+		pageDataModelList.setList(otherAddrList);
+		pageDataModelList.setPage(pageDataList.getPage());
+		data.put("rows", pageDataModelList.getList());
+		printJson(getStringOfJpaObj(data));
+		
+	}
+}

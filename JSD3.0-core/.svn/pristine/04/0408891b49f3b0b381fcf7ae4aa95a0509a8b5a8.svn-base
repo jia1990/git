@@ -1,0 +1,373 @@
+
+package com.ddtkj.p2psys.score.dao.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.score.constant.ScoreAwardConstant;
+import com.ddtkj.p2psys.score.dao.UserScoreAwardDao;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.model.UserScoreAwardModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+@Repository("userScoreAwardDao")
+public class UserScoreAwardDaoImpl extends BaseDaoImpl<UserScoreAward> implements UserScoreAwardDao {
+	
+	private static Logger logger = Logger.getLogger(UserScoreAwardDaoImpl.class);
+
+	@Override
+	public List<UserScoreAward> getScoreAwardedList(long ruleId, int num, boolean isOrderByLevel) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rule.id", ruleId);
+		param.addParam("status", ScoreAwardConstant.AWARD_STATUS_YES);
+		if(isOrderByLevel){
+			param.addOrder(OrderType.ASC, "awardLevel");
+		}
+		param.addOrder(OrderType.DESC, "addTime");
+		return findByCriteria(param, 0, num);
+	}
+
+	@Override
+	public int getUserScoreAwardDayCnt(long ruleId, long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rule.id", ruleId);
+		param.addParam("user.userId", userId);
+		param.addParam("addTime", Operators.GTE, DateUtil.getIntegralTime());
+		param.addParam("addTime", Operators.LTE, DateUtil.getLastIntegralTime());
+		return countByCriteria(param);
+	}
+
+	@Override
+	public int getUserScoreAwardTotalCnt(long ruleId, long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rule.id", ruleId);
+		param.addParam("user.userId", userId);
+		return countByCriteria(param);
+	}
+
+	@Override
+	public double getUserScoreAwardSum(UserScoreAwardModel model, String awardType) {
+		StringBuffer jpql = new StringBuffer("SELECT SUM(object.award_value) FROM t_jsd_user_score_award award LEFT JOIN ");
+        jpql.append("t_jsd_score_award object ON award.award_id = object.id LEFT JOIN t_jsd_user user ON award.user_id = user.user_id " +
+        		"WHERE object.type = :awardType AND user.user_name = :userName AND user.real_name = :realName " +
+        		"AND award.status = :status AND award.receiveStatus = :receiveStatus AND award.add_time BETWEEN :startTime AND :endTime ");
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("startTime", model.getStartTime());
+        query.setParameter("endTime", model.getEndTime());
+        query.setParameter("status", model.getStatus());
+        query.setParameter("receiveStatus", model.getReceiveStatus());
+        query.setParameter("userName", model.getUserName());
+        query.setParameter("realName", model.getRealName());
+        query.setParameter("awardType", awardType);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public List<UserScoreAward> getMyAwardList(long ruleId, long userId) {	
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rule.id", ruleId);
+		param.addParam("user.userId", userId);
+		param.addParam("status", ScoreAwardConstant.AWARD_STATUS_YES);
+		param.addOrder(OrderType.DESC, "addTime");
+		return findByCriteria(param);
+	}
+
+	@Override
+	public int getUserScoreAwardTotalCnt(long ruleId, long userId, long status) {
+		QueryParam query = QueryParam.getInstance();
+		query.addParam("rule.id", ruleId);
+		query.addParam("user.userId", userId);
+		query.addParam("status", status);			
+		return countByCriteria(query);					
+	}
+
+	@Override
+	public PageDataList<UserScoreAward> getUserScoreAwardList(
+			UserScoreAward userScoreAward, int PageNum, int pageSize) {
+		
+		QueryParam param = QueryParam.getInstance().addPage(PageNum, pageSize);
+		if (StringUtil.isNotBlank(userScoreAward.getUserName())) {
+			param.addParam("userName", Operators.LIKE, userScoreAward.getUserName());
+		}
+		if (StringUtil.isNotBlank(userScoreAward.getStatus()) && !"99".equals(userScoreAward.getStatus())) {
+			param.addParam("status", userScoreAward.getStatus());
+		} 
+		param.addOrder(OrderType.ASC, "addTime");
+		return super.findPageList(param);
+	}
+	
+	@Override
+	public List<UserScoreAward> getScoreLuxuryAwardList(long ruleId, int num, boolean isOrderByLevel, int luxuryAward) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rule.id", ruleId);
+		param.addParam("status", ScoreAwardConstant.AWARD_STATUS_YES);
+		param.addParam("award.awardValue", Operators.GTE, luxuryAward);
+		if(isOrderByLevel){
+			param.addOrder(OrderType.ASC, "awardLevel");
+		}
+		param.addOrder(OrderType.DESC, "addTime");
+		return findByCriteria(param, 0, num);						
+	}
+
+	@Override
+	public String userScoreAwardTotal(UserScoreAwardModel model,
+			String awardType) {
+		StringBuffer sql = new StringBuffer("SELECT SUM(award.award_value) FROM t_jsd_user_score_award useraward LEFT JOIN t_jsd_score_award award " +
+				" ON useraward.award_id = award.id LEFT JOIN t_jsd_user user ON useraward.user_id = user.user_id WHERE 1=1 ");
+		if (StringUtil.isNotBlank(model.getUserName())) {
+			sql.append(" and useraward.user_name like '%" + model.getUserName() + "%' ");
+		}
+		if (StringUtil.isNotBlank(model.getRealName())) {
+			sql.append(" and user.real_name = :realName ");
+		}
+		if (StringUtil.isNotBlank(model.getStatus()) && !UserScoreAward.SCORE_AWARD_STATUS_ALL.equals(model.getStatus())) {
+			sql.append(" and useraward.status = :userAwardStatus ");
+		}
+		if (StringUtil.isNotBlank(model.getReceiveStatus()) && !UserScoreAward.SCORE_AWARD_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())) {
+			sql.append(" and useraward.receive_status = :receiveStatus ");
+		}
+		if (StringUtil.isNotBlank(model.getAwardTypeStr()) && !UserScoreAward.SCORE_AWARD_OBJECTTYPE_ALL.equals(model.getAwardType())) {
+			sql.append(" and award.type = :awardType");
+		}
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" and useraward.add_time >= :addTime");
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" and useraward.add_time <= :addTime");
+		}
+		Query query = em.createNativeQuery(sql.toString());
+		if (StringUtil.isNotBlank(model.getRealName())) {
+			query.setParameter("realName", model.getRealName());
+		}
+		if (StringUtil.isNotBlank(model.getStatus()) && !UserScoreAward.SCORE_AWARD_STATUS_ALL.equals(model.getStatus())) {
+			query.setParameter("userAwardStatus", model.getStatus());
+		}
+		if (StringUtil.isNotBlank(model.getReceiveStatus()) && !UserScoreAward.SCORE_AWARD_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())) {
+			query.setParameter("receiveStatus", model.getReceiveStatus());
+		}
+		if (StringUtil.isNotBlank(model.getAwardTypeStr()) && !UserScoreAward.SCORE_AWARD_OBJECTTYPE_ALL.equals(model.getAwardType())) {
+			query.setParameter("awardType", model.getAwardType());
+		}
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			query.setParameter("addTime", model.getStartTime());
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			query.setParameter("addTime", model.getEndTime());
+		}
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return obj.toString();
+		}
+		return null;
+	}
+
+	@Override
+	public void updateUserScoreAwardList(List<UserScoreAwardModel> list) {
+		
+	}
+
+	@Override
+	public double getCardTotalByStatusAndUser(String status, Date startTime,
+			Date endTime, User user) {
+		StringBuffer jpql = new StringBuffer("SELECT SUM(award.award_value) FROM t_jsd_user_score_award award ");
+        jpql.append("WHERE award.award_type = 6 AND award.receive_status = :receiveStatus AND award.add_time >= :startTime AND award.add_time <= :endTime AND user_id = :userId AND trans_no IS NULL ");
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("receiveStatus", status);
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public List<UserScoreAward> getScoreAwardListByStatusAndTransNo(String status,
+			Date startTime, Date endTime, String transNo) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("receiveStatus", status);
+		param.addParam("awardType", ScoreAwardConstant.AWARD_OBJECTTYPE_CARD);
+		param.addParam("addTime", Operators.GTE, startTime);
+		param.addParam("addTime", Operators.LTE, endTime);
+		param.addParam("transNo", transNo);
+		return findByCriteria(param);
+	}
+
+	@Override
+	public String scoreAwardTotal(UserScoreAwardModel model) {
+		StringBuffer sql = new StringBuffer("SELECT SUM(award.award_value) FROM t_jsd_user_score_award award LEFT JOIN t_jsd_user u "
+				+ " ON award.user_id = u.user_id LEFT JOIN t_jsd_score_award a ON award.award_id = a.id WHERE 1=1 ");
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and u.user_name like '%"+model.getUserName()+"%' ");
+		}
+		if(StringUtil.isNotBlank(model.getRealName())){
+			sql.append(" and u.real_name = :realName ");
+		}
+		if(StringUtil.isNotBlank(model.getStatus()) && !UserScoreAward.SCORE_AWARD_STATUS_ALL.equals(model.getStatus())){
+			sql.append(" and award.status = :status ");
+		}
+		if(StringUtil.isNotBlank(model.getReceiveStatus()) && !UserScoreAward.SCORE_AWARD_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())){
+			sql.append(" and award.receive_status = :receiveStatus ");
+		}
+		if(model.getAwardType() > 0 && model.getAwardType() != 99){
+			sql.append(" and award.award_type = :awardType ");
+		}
+		if(StringUtil.isNotBlank(model.getAwardTypeStr()) && !UserScoreAward.SCORE_AWARD_OBJECTTYPE_ALL.equals(model.getAwardTypeStr())){
+			sql.append(" and a.type = :type ");
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" and award.add_time >= :startTime ");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" and award.add_time <= :endTime ");
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		if(StringUtil.isNotBlank(model.getRealName())){
+			query.setParameter("realName", model.getRealName());
+		}
+		if(StringUtil.isNotBlank(model.getStatus()) && !CardAwardTransfer.TRANS_STATUS_ALL.equals(model.getStatus())){
+			query.setParameter("status", model.getStatus());
+		}
+		if(StringUtil.isNotBlank(model.getReceiveStatus()) && !CardAwardTransfer.TRANS_RECEIVESTATUS_ALL.equals(model.getReceiveStatus())){
+			query.setParameter("receiveStatus", model.getReceiveStatus());
+		}
+		if(model.getAwardType() > 0 && model.getAwardType() != 99){
+			query.setParameter("awardType", model.getAwardType());
+		}
+		if(StringUtil.isNotBlank(model.getAwardTypeStr()) && !UserScoreAward.SCORE_AWARD_OBJECTTYPE_ALL.equals(model.getAwardTypeStr())){
+			query.setParameter("type", model.getAwardTypeStr());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		Object obj = query.getSingleResult();
+		if(null != obj){
+			return obj.toString();
+		}
+		return null;
+	}
+
+	@Override
+	public List<UserScoreAward> getScoreAwardListByStatusAndUser(String status,
+			Date startTime, Date endTime, User user) {
+		String sql = "SELECT a.* FROM t_jsd_user_score_award a WHERE a.receive_status = :receiveStatus AND award_type = :awardType AND add_time >= :startTime AND add_time <= :endTime AND "+
+					 " user_id = :userId AND trans_no is null ";
+		Query query = em.createNativeQuery(sql, UserScoreAward.class);
+		query.setParameter("receiveStatus", status);
+		query.setParameter("awardType", ScoreAwardConstant.AWARD_OBJECTTYPE_CARD);
+		query.setParameter("startTime", startTime);
+		query.setParameter("endTime", endTime);
+		query.setParameter("userId", user.getUserId());
+		List<UserScoreAward> list = (List<UserScoreAward>) query.getResultList();
+		return list;
+	}
+
+	@Override
+	public double getCardTotalByStatusAndTransNo(String status, Date startTime,
+			Date endTime, User user, String transNo) {
+		StringBuffer jpql = new StringBuffer("SELECT SUM(award.award_value) FROM t_jsd_user_score_award award ");
+        jpql.append("WHERE award.award_type = 6 AND award.receive_status = :receiveStatus AND award.add_time >= :startTime AND award.add_time <= :endTime AND user_id = :userId AND trans_no = :transNo ");
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("receiveStatus", status);
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
+        query.setParameter("transNo", transNo);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<UserScoreAwardModel> excelListOrder(UserScoreAwardModel model) {
+		
+		StringBuffer  sql = new StringBuffer("");
+		sql.append("  SELECT  userScoreAward.`id` userScoreAwardId, u.`user_name`UserName,u.`real_name`realName,ruleAward.`name`ruleAwardName,CONCAT(scoreAward.`level`,'等奖')scoreAwardLevel,");
+		sql.append("  CASE scoreAward.`type` WHEN  1 THEN '现金' WHEN  2 THEN '积分' WHEN  3 THEN 'VIP奖励' WHEN  4 THEN '实物奖励' WHEN  5 THEN '红包奖励' WHEN 6 THEN '云购卡奖励' ELSE '未指定的奖品类型' END AS awardType,");
+		sql.append("  scoreAward.`name`scoreAwardName,scoreAward.award_value awardValue,userScoreAward.trans_no transNo,");
+		sql.append("  CASE userScoreAward.`status` WHEN 11 THEN '中奖' WHEN 22 THEN '中奖' WHEN 99 THEN '中奖' ELSE '未指定的抽奖状态' END AS  userScoreAwardStatus,");
+		sql.append("  CASE userScoreAward.`receive_status`WHEN 11 THEN '已发放' WHEN 22 THEN '未发放' WHEN 99 THEN '全部' ELSE '未指定的奖励发放状态' END AS  scoreAwardStatus, ");
+		sql.append("  DATE_FORMAT(userScoreAward.`add_time` ,'%Y-%m-%d %T') userScoreAwardAddTime,userScoreAward.`add_ip` userScoreAwardAddIp");
+		sql.append("  FROM  `t_jsd_user_score_award` userScoreAward,`t_jsd_user` u,`t_jsd_score_rule_award` ruleAward,t_jsd_score_award scoreAward ");
+		sql.append("  WHERE userScoreAward.`user_id` = u.`user_id` AND userScoreAward.award_id = scoreAward.`id`  AND userScoreAward.`rule_id` = ruleAward.`id` ");
+		if(!StringUtil.isBlank(model.getUserName())){
+			sql.append("  AND u.user_name like '%"+model.getUserName()+"%'  ");
+		}
+		if(!StringUtil.isBlank(model.getRealName())){
+			sql.append("  AND u.real_name ='"+model.getRealName()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getStatus()) && !"99".equals(model.getStatus())){
+			sql.append("  AND userScoreAward.status ="+model.getStatus()+"  ");
+		}
+		if(!StringUtil.isBlank(model.getAwardType())&& 99!=model.getAwardType()){
+			sql.append("  AND scoreAward.`type` ="+model.getAwardType()+"  ");
+		}
+		if(!StringUtil.isBlank(model.getTransNo())){
+			sql.append("  AND userScoreAward.trans_no = '"+model.getTransNo()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getReceiveStatus()) && !"99".equals(model.getReceiveStatus())){
+			sql.append("  AND userScoreAward.`receive_status` ="+model.getReceiveStatus()+"  ");
+		}
+		if(!StringUtil.isBlank(model.getStartTime())){
+			sql.append("  AND userScoreAward.add_time >= '"+model.getStartTime()+"'  ");
+		}
+		if(!StringUtil.isBlank(model.getEndTime())){
+			sql.append("  AND userScoreAward.add_time <'"+model.getEndTime()+"'  ");
+		}
+		
+		sql.append("  ORDER BY userScoreAward.add_time DESC");
+		
+      Query query = em.createNativeQuery(sql.toString());
+     
+		List orderList = query.getResultList();
+		return orderList;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+
+	@Override
+	public UserScoreAward getUserScoreAwardByStatusAndCardNo(String status,
+			Date startTime, Date endTime, User user, String cardNo) {
+		String sql = "SELECT a.* FROM t_jsd_user_score_award a WHERE receive_status = :status AND add_time >= :startTime AND add_time <= :endTime " +
+				" AND card_no = :cardNo AND user_id = :userId AND award_type = 6 ";
+		Query query = em.createNativeQuery(sql, UserScoreAward.class);
+		query.setParameter("status", status);
+		query.setParameter("startTime", startTime);
+		query.setParameter("endTime", endTime);
+		query.setParameter("cardNo", cardNo);
+		query.setParameter("userId", user.getUserId());
+		List<UserScoreAward> list = (List<UserScoreAward>) query.getResultList();
+		if (list != null && list.size() > 0) {
+			return list.get(0);
+		}
+		return null;
+	}
+	
+}

@@ -1,0 +1,239 @@
+package com.ddtkj.p2psys.user.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.user.domain.UserCache;
+
+
+/**
+ * 个人资料-基本信息
+ * 
+ * @author sj
+ * @version 2.0
+ * @since 2014年2月18日15:14:10
+ */
+public class UserCacheModel extends UserCache {
+
+	
+	private static final long serialVersionUID = 4954352904520068477L;
+
+	private String contactsCardId;
+	
+	private String contactsRealName;
+	
+	private String contactsPhone;
+	
+	private long userId;
+	private String isLockedNew;//用户锁定(用于excel)
+	
+	/**
+	 * 于俊斐新加  为方便显示
+	 */
+	private String provinceName ;
+	private String cityName ;
+	private String areaName ;
+
+	//
+	private String realName;	//借款人
+	private String mobilephone;	//手机号
+	private String email;		//邮箱
+	
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	public String getMobilephone() {
+		return mobilephone;
+	}
+
+	public void setMobilephone(String mobilephone) {
+		this.mobilephone = mobilephone;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	
+	
+	
+	public String getIsLockedNew() {
+		return isLockedNew;
+	}
+
+	public void setIsLockedNew(String isLockedNew) {
+		this.isLockedNew = isLockedNew;
+	}
+	
+	public long getUserId() {
+		return userId;
+	}
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+	/**
+	 * 是否已激活邮箱并初始化密码
+	 */
+	private boolean emailStatus;
+	
+
+	public String getContactsCardId() {
+        return contactsCardId;
+    }
+
+    public void setContactsCardId(String contactsCardId) {
+        this.contactsCardId = contactsCardId;
+    }
+
+    public String getContactsRealName() {
+		return contactsRealName;
+	}
+
+	public void setContactsRealName(String contactsRealName) {
+		this.contactsRealName = contactsRealName;
+	}
+
+	public String getContactsPhone() {
+		return contactsPhone;
+	}
+
+	public void setContactsPhone(String contactsPhone) {
+		this.contactsPhone = contactsPhone;
+	}
+
+	public boolean isEmailStatus() {
+        return emailStatus;
+    }
+
+    public void setEmailStatus(boolean emailStatus) {
+        this.emailStatus = emailStatus;
+    }
+
+    // 裁剪后的图像大小
+	private double cropX;
+	private double cropY;
+	private double cropW;
+	private double cropH;
+	private String uploadFileName;
+
+	public static UserCacheModel instance(UserCache userCache) {
+		UserCacheModel userCacheModel = new UserCacheModel();
+		BeanUtils.copyProperties(userCache, userCacheModel);
+		return userCacheModel;
+	}
+
+	public UserCache prototype() {
+		UserCache userCache = new UserCache();
+		BeanUtils.copyProperties(this, userCache);
+		return userCache;
+	}
+
+
+	public double getCropX() {
+		return cropX;
+	}
+
+	public void setCropX(double cropX) {
+		this.cropX = cropX;
+	}
+
+	public double getCropY() {
+		return cropY;
+	}
+
+	public void setCropY(double cropY) {
+		this.cropY = cropY;
+	}
+
+	public double getCropW() {
+		return cropW;
+	}
+
+	public void setCropW(double cropW) {
+		this.cropW = cropW;
+	}
+
+	public double getCropH() {
+		return cropH;
+	}
+
+	public void setCropH(double cropH) {
+		this.cropH = cropH;
+	}
+
+	public String getUploadFileName() {
+		return uploadFileName;
+	}
+
+	public void setUploadFileName(String uploadFileName) {
+		this.uploadFileName = uploadFileName;
+	}
+
+	public String getProvinceName() {
+		return provinceName;
+	}
+
+	public void setProvinceName(String provinceName) {
+		this.provinceName = provinceName;
+	}
+
+	public String getCityName() {
+		return cityName;
+	}
+
+	public void setCityName(String cityName) {
+		this.cityName = cityName;
+	}
+
+	public String getAreaName() {
+		return areaName;
+	}
+
+	public void setAreaName(String areaName) {
+		this.areaName = areaName;
+	}
+	
+	public String convertIsLock(String isLockedNew){
+		if(null !=isLockedNew){
+			
+			if(isLockedNew.equals("NN")){
+				isLockedNew = "未锁定";
+			}else if(isLockedNew.equals("AY")){
+				isLockedNew = "已锁定";
+			}else if(isLockedNew.equals("UY")){
+				isLockedNew = "挂起";
+			}else if(isLockedNew.equals("FF")){
+				isLockedNew = "销户";
+			}else{
+				isLockedNew = "不确定";
+			}
+		}
+		return isLockedNew;
+	}
+	
+	public void userPerson(Object b,int sheetRows, int sheetPage){
+    	
+    }
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}

@@ -1,0 +1,137 @@
+package com.ddtkj.mobile;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.poi.ss.formula.functions.T;
+import org.apache.struts2.ServletActionContext;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.mobile.cn.jpush.newapi.JPushClient;
+import com.ddtkj.mobile.cn.jpush.newapi.PushResult;
+import com.ddtkj.mobile.cn.jpush.newapi.RequestWarper;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+//移动端Action父类
+@SuppressWarnings("hiding")
+public class MobileBaseAction<T> extends BaseAction<T> {
+
+	public Map<String, Object> data;
+	
+	public MobileBaseAction(){
+	}
+
+	// 取得当前域名
+	protected String getWebsiteUrl() {		
+		String path = Global.getValue("weburl");
+		return path;
+	}
+	
+	//判断字符串是否为空
+	protected boolean isEmptyOr1(String str) {
+		if (str == null || str == "") {
+			return true;
+		}
+		return false;
+	}
+	
+	//辅助方法,读取json文件内容到字符串
+	protected String readJsonToString(String jsonFileName) throws IOException {
+		File file = new File(jsonFileName);
+		InputStreamReader isr = new InputStreamReader(new FileInputStream(file), "utf-8"); 
+		BufferedReader bf = new BufferedReader(isr);
+		String content = "";
+		StringBuilder sb = new StringBuilder();
+		while (content != null) {
+			content = bf.readLine();
+			if (content == null) {
+				break;
+			}
+			sb.append(content.trim());
+		}
+		bf.close();
+		return sb.toString();
+	}
+	
+	//发送推送消息
+	protected String pushMessageToall(RequestWarper param){
+		String msg = "";
+		
+		try{
+			JPushClient androidClient = new JPushClient(Constants.JPUSH_MASTER_SECRET_ANDROID, Constants.JPUSH_APPKEY_ANDROID, 3);
+			PushResult androidResult = new PushResult();
+			androidResult = androidClient.sendPush(param);
+			msg = msg+androidResult.getMsg_id();
+		}catch(MobileException e){
+			msg = msg+e.getLocalizedMessage();
+		}
+		
+		try{
+			JPushClient iosClient = new JPushClient(Constants.JPUSH_MASTER_SECRET_IOS, Constants.JPUSH_APPKEY_IOS, 3);
+			PushResult iosResult = new PushResult();
+			iosResult = iosClient.sendPush(param);
+			msg = msg+iosResult.getMsg_id();
+		}catch(MobileException e){
+			msg = msg+e.getLocalizedMessage();
+		}
+				
+		return msg;
+	}
+	
+	// 输入map到响应消息
+	protected void printMap(Map<String, Object> map) throws IOException {
+		printJson(JSON.toJSONString(map));
+	}
+
+	// 输出json到响应消息
+	protected void printJson(String str) {
+		HttpServletResponse response = ServletActionContext.getResponse();
+		response.setContentType("text/json;charset=utf-8");
+		response.setCharacterEncoding("UTF-8");
+		response.setHeader("Cache-Control", "no-cache");
+		
+		PrintWriter write = null;
+		try {
+			String json = "";
+			write = response.getWriter();
+			if (!this.isEmptyOr1(request.getParameter("appkey"))) {
+				json = str;
+			} else {
+				json = "{\"res_code\":\"0\",\"res_msg\":\"invalid terminator access ! appkey is invalid !\"}";
+			}
+			write.print(json);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (write != null) {
+				write.close();
+			}
+		}
+	}
+
+	// 输出执行结果到json
+	protected void printResult(String res_msg, String res_code) throws IOException {
+		Map<String, Object> resMap = new HashMap<String, Object>();
+		resMap.put("res_code", res_code);
+		resMap.put("res_msg", res_msg);
+		printJson(JSON.toJSONString(resMap));
+	}
+
+	public Map<String, Object> getData() {
+		return data;
+	}
+
+	public void setData(Map<String, Object> data) {
+		this.data = data;
+	}
+	
+}

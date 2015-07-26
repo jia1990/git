@@ -1,0 +1,54 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/market/schoolRecruit/schoolRecruitEdit.html');
+	});
+</script>
+<div class="popForm">
+	<div class="formitm">
+		<label class="lab">学校名称：</label>
+		<div class="ipt">${schoolName!}&nbsp;</div>
+	</div>
+	
+	<div class="formitm">
+		<label class="lab">用户姓名：</label>
+		<div class="ipt">${schoolRecruit.realName!}&nbsp;</div>
+	</div>
+	
+	<div class="formitm">
+		<label class="lab">手机号码：</label>
+		<div class="ipt">${schoolRecruit.phoneNo!}&nbsp;</div>
+	</div>
+	
+	<div class="formitm">
+		<label class="lab">所在省份：</label>
+		<div class="ipt">${regionProv!}&nbsp;</div>
+	</div>
+	
+	<div class="formitm">
+		<label class="lab">所在城市：</label>
+		<div class="ipt">${regionCity!}&nbsp;</div>
+	</div>
+	
+	<form id="form"  method="post">
+		<div class="formitm">
+			<label class="lab">备注信息：</label>
+			<div class="ipt"><textarea rows="10" name="remark" cols="30" maxlength="500"></textarea></div>
+		</div>
+		<div class="formitm">
+			<label class="lab">回访状态：</label>
+			<div class="ipt">
+				<select name="status">
+					<option value="1">已回访</option>
+					<option value="2">不回访</option>
+				</select>
+			</div>
+		</div>
+		<input type="hidden" name="id" value="${schoolRecruit.id!}"/>
+		<input type="hidden" name="addIp" value="${schoolRecruit.addIp!}"/>
+		<input type="hidden" name="addTime" value="${schoolRecruit.addTime?string('yyyy-MM-dd HH:mm:ss')}"/>
+		
+		
+		<input type="hidden" value="${schoolRecruitEditToken!}" name="schoolRecruitEditToken">
+	</form>
+</div>
+

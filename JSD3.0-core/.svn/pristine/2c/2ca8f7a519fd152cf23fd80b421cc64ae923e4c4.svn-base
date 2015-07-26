@@ -1,0 +1,89 @@
+package com.ddtkj.p2psys.core.quartz.tender;
+
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.quartz.AbstractLoanTask;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+/**
+ * 投标业务处理
+ * @author wcw
+ */
+public class TenderTask extends AbstractLoanTask {
+	private Logger logger = Logger.getLogger(TenderTask.class);
+
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	
+	
+	public BorrowTenderService getBorrowTenderService() {
+		return borrowTenderService;
+	}
+
+	public void setBorrowTenderService(BorrowTenderService borrowTenderService) {
+		this.borrowTenderService = borrowTenderService;
+	}
+
+	public TenderTask(BorrowTenderService borrowTenderService) {
+		super();
+		task.setName("Tender.Task");
+		this.borrowTenderService = borrowTenderService;
+	}
+
+	@Override
+	public void doLoan() {
+		while (TenderJobQueue.TENDER!=null && TenderJobQueue.TENDER.size() > 0) {
+			TenderBean tb = TenderJobQueue.TENDER.peek();
+			if (tb != null) {
+				String result="success";
+				try {
+					borrowTenderService.addTender(tb.getUser(), tb.getBorrow(), tb.getBorrowTender(),tb.getBorrowModel());
+				    result="投标成功";
+				    Map<String, Object> bfm= Global.getTransfer();
+				    String bf = (String) bfm.get("inadianaJonesBox");
+				    if(StringUtil.isNotBlank(bf)){
+				    	Global.setTransfer("inadianaJonesBox", "");
+				    	result = result + ",获得开启"+bf+"号宝箱的条件！";
+				    }
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+					logger.error(e);
+					//JSDBET-812 gjh 2015-3-17 start
+					if(e instanceof HandleException){
+		                result = e.getMessage();
+		            	((HandleException)e).saveExceptionLog((HandleException)e);
+		            //JSDBET-812 gjh 2015-3-17 end
+		            }else if(e instanceof com.rongdu.common.exception.BussinessException){
+		                result = e.getMessage();
+		            }else{
+		            	result = "系统异常，操作失败！！！";
+		            }
+					//投标抛异常，一些第三方接口需要将投资金额做解冻等处理
+				}finally {
+					TenderJobQueue.TENDER.remove(tb);
+					 //Global bug wcw  2015-3-26 start
+			        Global.removeTransfer();
+			      //Global bug wcw 2015-3-26 end
+				    if(tb.getResultFlag()!=null){//在需要保存系统处理信息的地方直接保存进来
+				    	if(StringUtil.isNotBlank(result)){
+			                Global.RESULT_MAP.put(tb.getResultFlag(), result);
+			            }
+			        }
+				}
+		}
+		}
+	}
+
+	@Override
+	public Object getLock() {
+		return TenderTask.TENDER_STATUS;
+	}
+
+}

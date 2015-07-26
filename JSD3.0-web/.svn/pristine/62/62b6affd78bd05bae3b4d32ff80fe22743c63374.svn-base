@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<#assign web_title='【贷款】抵押贷款_商业贷款_个人贷款 - ${webname!}'>
+<#assign web_description='${webname!}p2p网络贷款平台，为有资金需求的企业或个人提供提供安全便捷的网络借贷服务，如短期小额贷款、个人信用贷款、抵押贷款或无抵押贷款等，帮助企业实现资金周转。'>
+<#assign meta_keywords="贷款,抵押贷款,商业贷款,个人贷款">
+<#include "../include/resource.html">
+<body>
+<#assign nid="borrow" >
+<#include "../include/header.html">
+<#assign webroot=request.getContextPath()> 
+<script type="text/javascript">
+$(function(){
+	$(".borrow_tab_content_list").hide();
+	$("#div_fast").show();
+	$(".borrow_tab_content ul li").mouseover(function(){
+		$(".borrow_tab_content ul li").removeClass("active");
+		$(this).addClass("active");
+		$(".borrow_tab_content_list").hide();
+		$("#div_"+$(this).attr("id")).show();
+	});	
+})
+
+</script>
+<!--S-我要借款-->
+<div id="container">
+	<div id="content">
+	    <div class="currentPath">当前位置：<a href="#">我要借款</a> &gt; <a href="#">标种介绍</a></div>
+	    <div class="borrow_main" id="borrow_main">
+	    	<div class="borrow_title">标种介绍</div>
+	    	<!--S-borrow_tab-->
+	        <div class="borrow_tab_content">
+	          <h2>理财操作更轻松，收益处理更灵活！</h2>
+	         <ul class="borrow_tab clearfix">
+	            <li id="fast" class="active"><span class="borrow_tablist borrow_tablist_2">抵押标</span>
+	            <li id="offvouch"><span class="borrow_tablist borrow_tablist_1" >担保标</span>
+	            <li id="flow"><span class="borrow_tablist borrow_tablist_3" >流转标</span>
+	          	<!-- <li><span class="borrow_tablist borrow_tablist_4">净值标</span> -->
+	            <li id="month"><span class="borrow_tablist borrow_tablist_5" >信用标</span>
+	            <li id="miaobiao"><span class="borrow_tablist borrow_tablist_6" >秒还标</span>
+	          </ul>
+	          <div class="clearfix"></div>
+	          <#if borrowConfigList??>
+	          <#list borrowConfigList as item>
+	          <div id="div_${item.cname}" class="borrow_tab_content_list borrow_item_list">
+	            <p>${item.remark!} </p>
+	            <div class="p_title">收支说明</div>
+	            <p>投资人收益：</p>
+	            <p>收入：借款人支付的质押标利息</p>
+	            <p>支出：利息收入20%的投资管理费</p>
+	            <p></p>
+	            <p>借款人收益：</p>
+	            <p>支出：① 质押标利息</p>
+	            <p style="text-indent:5em;">② 每月收取借款金额0.5%的借款管理费（在借款入账时一次性收取)</p>
+	            <div class="p_title">还款及逾期</div>
+	            <p>　借款人到期还款出现困难，借款到期24小时内由惠卡创业贷网站100%垫付本金及利息，同时淘贷宝网站对借款人的抵押资产进行处置，用于还款。质押标逾期后，每天按8‰收取罚息，本金利息及罚息全部为惠卡创业贷网站收取。</p>
+	            <div class="borrow_btn"><a href="${webroot}/borrow/loan.html?type=${item.cname}">${item.name}</a></div>
+	          </div>
+	          </#list>
+	          </#if>
+	        </div>
+	        <!--E-borrow-->
+	    </div>
+	  <div class="borrow_process"></div>
+  </div>
+</div>
+
+<!--E-我要借款--> 
+<!--贷款帮助 结束--> 
+<#include "../include/footer.html">
+</body>
+</html>

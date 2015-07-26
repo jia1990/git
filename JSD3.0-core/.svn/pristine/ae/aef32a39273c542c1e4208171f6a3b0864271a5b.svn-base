@@ -1,0 +1,167 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Map;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的产生(端午节)
+ * @作者：wangchangwei@ddtkj.com  JSDP-203
+ * @创建时间：2015年4月14日 
+ */
+public class RpActivityRpMoneyDragonProduceWorker extends RpActivityBaseWorker{
+	
+	
+	public RpActivityRpMoneyDragonProduceWorker(RpActivity rpActivity,BorrowTender tender){
+		super(rpActivity,tender);
+	}
+
+	@Override
+	public void autoHandld() {
+		RpActivityProduceDao rpActivityProduceDao = (RpActivityProduceDao) BeanUtil.getBean("rpActivityProduceDao");
+		
+		//计算红包的奖励金额
+		RedPacketProduceRuleCheck redPacketRule = (RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+		Map<String,Object> activityRp = activityRp = redPacketRule.dragonRp();
+		
+		if(!activityRp.isEmpty()){
+			
+			String awardFormula = (String) activityRp.get("activityRp_award_formula");
+			Date startTime =  (Date) activityRp.get("activityRp_start_time");
+			Date endTime =  (Date) activityRp.get("activityRp_end_time");
+			String borrowFormula = (String) activityRp.get("activityRp_borrow");
+			//根据规则所得的奖励
+			double awardAmountD = 0;
+			try {
+				awardAmountD = rpActivityCalculate(awardFormula,startTime,endTime,borrowFormula,rpActivity.getActivityType());
+				awardAmountD = 3;
+			} catch (ScriptException e) {
+				e.printStackTrace();
+			}
+			if(awardAmountD > 0){
+				String batchNo = TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP);
+				String tradeNo = TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER);
+				//生成红包产生记录
+				RpActivityProduce rpActivityPro = new RpActivityProduce();
+				rpActivityPro.setActivityType(rpActivity.getActivityType());
+				rpActivityPro.setActivityAward(awardAmountD);
+				rpActivityPro.setAddTime(Calendar.getInstance().getTime());
+				rpActivityPro.setAwardType(RpActivityProduce.RP_AWARD_FIRST_TENDER);
+				rpActivityPro.setAwardUser(tender.getUser());
+				rpActivityPro.setBorrowId(tender.getBorrow().getId());
+				rpActivityPro.setTenderMoney(tender.getAccount());
+				rpActivityPro.setRemark(RpActivityProduce.RP_RPODUCE_DRAGON+":"+tender.getUser().getUserId()+"金额"+awardAmountD);
+				rpActivityPro.setIsEnable(1);//可用
+				rpActivityPro.setTradeNo(tradeNo);
+				rpActivityProduceDao.save(rpActivityPro);
+				
+				
+				Global.setTransfer("user", tender.getUser());
+				Global.setTransfer("rpMoney", awardAmountD);
+				
+				//修改账户金额，放入冻结金额中
+				map.put("outTradeNo", tradeNo);//流水号
+				map.put("tradeNo", batchNo);//批次号
+				map.put("logType", rpActivity.getActivityType());
+				map.put("rechargeMoney", awardAmountD);
+				AbstractExecuter executer = ExecuterHelper.doExecuter("rpActivityProduceInvesterExecuter");
+				executer.execute(map, tender.getUser());
+				
+				
+				String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+				String transferNo= batchNo;
+				String oriMerBillNo=rpActivityPro.getTradeNo();//流水号
+				String trdAmt= rpActivityPro.getActivityAward()+"";
+				String fromApiId=Global.getValue("ymd_merchant_id");
+				String toApiId=rpActivityPro.getAwardUser().getUserName();
+				if(StringUtil.isNotBlank(rpActivityPro.getAwardUser().getUserName())){
+					YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+					if("0000".equals(ymdTransfer.getErrCode())){
+						
+					}else{
+						throw new BussinessException("本地账户信息和一麻袋不符",1);
+					}
+				}
+			}
+			
+		}
+		
+
+		
+	
+	}
+	/**
+	 * 根据规则计算所得的奖励
+	 * @throws ScriptException 
+	 */
+	private double rpActivityCalculate(String awardFormula,Date startTime,Date endTime,String borrowFormula,String activityType) throws ScriptException{
+		
+		BorrowTenderDao tenderDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		double awardAmountD = 0;
+		
+		if("dragon".equals(activityType)){
+			//判断此标是否符合条件
+			String[] bf = borrowFormula.split(",");
+			
+			Borrow borrow = tender.getBorrow();
+			if(bf.length==3){
+				if(borrow.getType() == Integer.parseInt(bf[0]) && borrow.getBorrowTimeType() == 0){
+					if(bf[1].equals("GTE") && borrow.getTimeLimit()>=Integer.parseInt(bf[2])){
+						long tenderTime = tender.getAddTime().getTime();
+						if(tenderTime >= startTime.getTime() && tenderTime <= endTime.getTime()){
+							//端午节活动 wcw 2015-6-19 start
+							int count = tenderDao.getTenderByBorrowIdAndAddTimeCount(tender.getBorrow().getId(),startTime,endTime);
+							if(count==1){//带头大哥
+								//端午节活动 wcw 2015-6-19 end
+								ScriptEngine se = new ScriptEngineManager().getEngineByName("JavaScript");
+								String[] af = awardFormula.split(",");
+								String str = tender.getAccount()+ af[0].trim();
+								double awardAmountI = Math.floor((Double) se.eval(str));
+								if(awardAmountI >=1){
+									String str2 = awardAmountI + af[1].trim();
+									awardAmountD = (Double) se.eval(str2);
+								}
+							}
+						}
+					}else if(bf[1].equals("LTE") && borrow.getTimeLimit()<=Integer.parseInt(bf[2])){
+						
+					}
+				}
+			}
+		}
+		
+		if(awardAmountD>0){
+			return awardAmountD;
+		}else{
+			return 0;
+		}
+	}
+	
+
+}

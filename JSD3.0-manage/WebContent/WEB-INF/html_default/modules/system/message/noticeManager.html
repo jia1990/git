@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>信息管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.userLock = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  820;
+	var winHeight = 600;
+	var editTitle = "查看信息内容";
+	var editUrl =  "/modules/system/message/contentPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"','确定'";
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'noticeList.html',
+			fit : true,
+            fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 50, checkbox : false},
+			{ field: 'sentName', title: '发送者用户名', width: 100, sortable : false},
+			{ field: 'receiveName', title: '接收者用户名', width: 100, sortable : false},
+			{ field: 'receiveAddr', title: '接收地址', width: 100, fixed:true,sortable : false},
+			{ field: 'title', title: '标题', width: 150, sortable : false},
+			{ field: 'content', title: '内容', width: 700, fixed:true,sortable : false},
+			{ field: 'type', title: '类型', width: 60, sortable:false,
+				formatter:function(value, row, index){
+					if(value=="1"){
+						return "短信";
+					}else if(value=="2"){
+						return "邮件";
+					}else if(value=="3"){
+						return "站内信";
+					}else{
+						return "";
+					}
+				}
+			},
+			
+			{ field: 'status', title: '发送状态', width: 100, sortable:false,
+				formatter:function(value, row, index){
+					if(value=="1"){
+						return "发送成功";
+					}else if(value=="2"){
+						return "发送失败";
+					}else{
+						return "";
+					}
+				}
+			},
+			{ field: 'addTime', title: '添加时间', width: 150,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			} ,
+			{	field : 'action',
+				title : '操作',
+				width :100,
+				formatter : function(value, row, index) {
+					var str = '';
+					if ($.userLock) {
+						str += "<@secAuthorizeUrl value='/system/noticeViewBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.viewFun('+editWinParmeters+');" src="{1}" title="查看信息内容"/>', row.id, '${theme_dir}/css/images/extjs_icons/book_open.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					str += '&nbsp;';
+					
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip',['content']);
+			}
+		});
+	});
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>标题：<input type="text" name="title" autocomplete="off"/></li>
+            		<li>类型：
+						<select name="type" class="type">
+							<option value="" selected="selected">全部</option>
+							<option value="1">短信</option>
+							<option value="2">邮件</option>
+							<option value="3">站内信</option>
+						</select>
+					</li>
+					<li>手机号：
+						<input name="mobilePhone" id="mobilePhone" type="text" autocomplete="off"/>
+					</li>
+            		<li>用户名：
+						<input name="userName" id="userName" type="text" autocomplete="off"/>
+					</li>
+					<li>发送状态：
+						<select name="status" class="type">
+							<option value="0" selected="selected">全部</option>
+							<option value="1">发送成功</option>
+							<option value="2">发送失败</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	
+</body>
+</html>

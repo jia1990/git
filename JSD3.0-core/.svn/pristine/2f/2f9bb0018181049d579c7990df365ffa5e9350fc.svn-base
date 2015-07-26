@@ -1,0 +1,550 @@
+package com.ddtkj.p2psys.borrow.model.worker;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.interest.InterestCalculator;
+
+/**
+ * 封装Borrow业务处理接口
+ * 
+ * @author Administrator
+ */
+public interface BorrowWorker {
+
+	/**
+	 * @return
+	 */
+	Borrow prototype();
+
+	/**
+	 * @return
+	 */
+	BorrowConfig getBorrowConfig();
+
+	/**
+	 * @param user
+	 */
+	void setBorrowField(User user);
+
+	/**
+	 * 是否跳过初审
+	 * 
+	 * @param borrow
+	 */
+	void skipTrial(Borrow borrow);
+
+	/**
+	 * 
+	 */
+	void trial();
+
+	/**
+	 * 初审
+	 */
+	void verify();
+
+	/**
+	 * 撤回
+	 */
+	void revokeBorrow();
+	
+	/**
+	 * 秒标初审不通过解冻资金
+	 */
+	void secondUnVerifyFreeze();
+
+	/**
+	 * 截标
+	 */
+	void stopBorrow();
+
+	/**
+	 * 是否跳过满表复审
+	 */
+	void skipReview();
+
+	/**
+	 * 计算借款标的利息
+	 * 
+	 * @return
+	 */
+	double calculateInterest();
+
+	/**
+	 * 计算借款标的利息
+	 * 
+	 * @return
+	 */
+	double calculateInterest(double validAccount);
+
+	/**
+	 * @return
+	 */
+	InterestCalculator interestCalculator();
+
+	/**
+	 * @param validAccount
+	 * @return
+	 */
+	InterestCalculator interestCalculator(double validAccount);
+
+	/**
+	 * 计算借款标的手续费
+	 * 
+	 * @return
+	 */
+	double calculateBorrowFee();
+
+	/**
+	 * @return
+	 */
+	double calculateBorrowAward();
+
+	/**
+	 * @return
+	 */
+	BorrowRepayment[] getRepayment();
+	/**
+	 * 即时即生息生成还款计划
+	 * @param list
+	 * @return
+	 */
+	List<BorrowRepayment> getRepayment(List<BorrowCollection> list);
+
+	/**
+	 * @param period
+	 * @return
+	 */
+	Date getRepayTime(int period);
+	/**
+	 * 即投即生息计算还款时间
+	 * @param period
+	 * @param tenderTime
+	 * @return
+	 */
+	Date getRepayTime(int period,Date tenderTime);
+
+	/**
+	 * @param period
+	 * @return
+	 */
+	Date getFlowRepayTime(int period);
+
+	/**
+	 * @return
+	 */
+	boolean isNeedRealName();
+
+	/**
+	 * @return
+	 */
+	boolean isNeedVIP();
+
+	/**
+	 * @return
+	 */
+	boolean isNeedEmail();
+
+	/**
+	 * @return
+	 */
+	boolean isNeedPhone();
+
+	/**
+	 * @return
+	 */
+	boolean isNeedVideo();
+
+	/**
+	 * @return
+	 */
+	boolean isNeedScene();
+
+	/**
+	 * @param u
+	 * @return
+	 */
+	boolean checkIdentify(User u);
+
+	/**
+	 * @return
+	 */
+	boolean checkModelData();
+
+	/**
+	 * 是否最后一期
+	 * 
+	 * @param period 期数
+	 * @return
+	 */
+	boolean isLastPeriod(int period);
+
+	/**
+	 * @return
+	 */
+	double getTransactionFee();
+
+	/**
+	 * @param tender
+	 * @param ic
+	 * @return
+	 */
+	List<BorrowCollection> createCollectionList(BorrowTender tender, InterestCalculator ic);
+
+	/**
+	 * @param tender
+	 * @param period
+	 * @return
+	 */
+	String calCollectionRepayTime(BorrowTender tender, int period);
+
+	/**
+	 * @param clist
+	 * @return
+	 */
+	List<BorrowRepayment> createFlowRepaymentList(List<BorrowCollection> clist);
+
+	/**
+	 * 计算奖励情况
+	 * 
+	 * @return
+	 */
+	double calculateAward();
+
+	/**
+	 * @param account
+	 * @return
+	 */
+	double calculateAward(double account);
+
+	/**
+	 * @return
+	 */
+	boolean allowFullSuccess();
+
+	/**
+	 * @param tender
+	 */
+	void prepareTender(BorrowTender tender);
+
+	/**
+	 * @param tender
+	 * @return
+	 */
+	double validAccount(BorrowTender tender);
+
+	/**
+	 * @param user
+	 * @return
+	 */
+	boolean allowPublish(User user);
+
+	/**
+	 * 发标前处理
+	 * 
+	 * @param borrow
+	 * @param partAccount
+	 * @return
+	 */
+	Borrow handleBorrowBeforePublish(Borrow borrow);
+
+	/**
+	 * 发标后处理
+	 * 
+	 * @param borrow
+	 * @return
+	 */
+	Borrow handleBorrowAfterPublish(Borrow borrow);
+
+	/**
+	 * 投标前校验
+	 * 
+	 * @param model
+	 * @param tenderNum
+	 * @param user
+	 * @param flow_count
+	 * @return
+	 */
+	BorrowModel checkTenderBefore(BorrowModel model, double tenderNum, User user, int flow_count);
+
+	/**
+	 * 投标校验
+	 * 
+	 * @param tender
+	 */
+	void checkTender(BorrowTender tender);
+	
+	/**
+	 * 环迅投标校验
+	 * @param model
+	 * @param tenderNum
+	 * @param user
+	 */
+	void checkTender(BorrowModel model, double tenderNum, User user,String pwd);
+
+
+	/**
+	 * @param tender
+	 * @param ic
+	 * @return
+	 */
+	BorrowTender tenderSuccess(BorrowTender tender, InterestCalculator ic);
+
+	/**
+	 * 满标复审处理第三方接口
+	 */
+	void handleVerifyFull();
+	
+	//JSDP-53 wcw 2015-04-22 start 
+	/**
+	 * 满标复审掉单后补单
+	 */
+	YmdTransfer handleVerifyFullRepire();
+	//JSDP-53 wcw 2015-04-22 end
+	
+    /**
+     * 满标复审通过后，处理tender、collection
+     */
+    void handleTenderAfterFullSuccess();	
+
+	/**
+	 * 满标复审通过后，处理borrow、repayment
+	 */
+	void handleBorrowAfterFullSuccess();
+	/**
+	 * 满标复审通过后，处理活动红包的产生
+	 */
+	void handleActivityRpAfterFullSuccess();
+	//JSDP-171 xingjia 20150714 start
+	/**
+	 * 满标复审通过后，处理体验卡的消费
+	 */
+	void handlePetCardConsumeFullSuccess();
+	/**
+	 * 满标复审通过后，处理活动红包的消费
+	 */
+	void handleActivityRpConsumeFullSuccess();
+	/**
+	 * 满标复审不通过，解冻体验卡金额
+	 */
+	void handlePetCardConsumeFullFail();
+	/**
+	 * 满标复审不通过，解冻活动红包金额
+	 */
+	void handleActivityRpConsumeFullFail();
+	//JSDP-171 xingjia 20150714 end
+	/**
+	 * 满标复审未通过后，处理tender
+	 */
+	void handleTenderAfterFullFail();
+	//JSDBET-827 wcw 2015-3-17 start
+	/**
+	 * 满标复审未通过后，处理借款人
+	 */
+	void handleBorrowAfterFullFail()throws Exception ;
+	//JSDBET-827 wcw 2015-3-17 end
+	/**
+	 * 投标后立即生息
+	 * 
+	 * @param tender
+	 */
+	void immediateInterestAfterTender(BorrowTender tender)throws Exception ;
+
+	/**
+	 * 投完标后立即还款，秒标、提前还息的几个
+	 */
+	void immediateRepayAfterTender();
+
+	/**
+	 * 
+	 */
+	void immediateInviteAwardAfterTender();
+
+	/**
+	 * 计算借款手续费
+	 * 
+	 * @return 借款手续费
+	 */
+	double getManageFee();
+	/**
+	 * 即时生息计算借款手续费
+	 * @param t
+	 * @return
+	 */
+	double getManageFee(BorrowTender t);
+
+	/**
+	 * 计算展期利息
+	 * 
+	 * @param borrowRepayment
+	 * @return
+	 */
+	double calExtensionInterest(BorrowRepayment borrowRepayment);
+
+	/**
+	 * 还款前校验
+	 * 
+	 * @param borrowRepayment
+	 * @param account
+	 */
+	void validBeforeRepayment(BorrowRepayment borrowRepayment, Account account);
+	/**
+	 * 一麻袋处理还款(需要满标复审的标)
+	 * @param borrowRepayment
+	 */
+    void borrowRepayYmdHandle(BorrowRepayment borrowRepayment);
+    /**
+     * 一麻袋处理还款（即投即生息标）
+     * @param borrowCollection
+     */
+    void borrowRepayYmdHandle(BorrowCollection borrowCollection);
+    /**
+     * 一麻袋处理还款（借款人还款给担保公司）
+     * @param borrowRepayment
+     */
+    void borrowRepayCompensateYmdHandle(BorrowRepayment borrowRepayment);
+    
+    
+    /**
+     * 一麻袋处理还款（担保公司还款给投资人）
+     * @param borrowRepayment
+     */
+    void compensateRepayInvesterYmdHandle(BorrowRepayment borrowRepayment);
+
+    /**
+	 * 还款 处理借款人资金
+	 * 
+	 * @param repay
+	 */
+	void borrowRepayHandleBorrow(BorrowRepayment repay);
+	/**
+	 * 借款人还款给投资人和担保公司
+	 * @param repay
+	 */
+	void borrowRepayHandleTenderAndCompensatory(BorrowRepayment repay);
+    /**
+     * 即投即生息借款人资金
+     * @param c
+     */
+	public void borrowRepayHandleBorrow(BorrowCollection c);
+	/**
+	 * 还款 处理投资人资金
+	 * 
+	 * @param repay
+	 * @param vouchFirmUser
+	 */
+	void borrowRepayHandleTender(BorrowRepayment repay);
+	/**
+	 * 担保公司代偿还款给投资人
+	 * @param repay
+	 * @param vouchFirmUser
+	 */
+	void compensatoryRepayHandleTender(BorrowRepayment repay,User vouchFirmUser);
+	/**
+	 * 还款 处理投资人资金【即投即生息】
+	 * @param c
+	 */
+	public void borrowRepayHandleTender(BorrowCollection c);
+	
+	/**
+	 * 还款 处理借款人资金(提前还款)
+	 * @param repay
+	 */
+	public void borrowPriorRepayHandleBorrow(BorrowRepayment repay);
+	
+	/**
+	 * 还款 处理投资人资金(提前还款)
+	 * @param repay
+	 */
+	public void borrowPriorRepayHandleTender(BorrowRepayment repay);
+	
+    /**
+     * 代偿前校验
+     * 
+     * @param borrowRepayment
+     * @param account
+     */
+    void validBeforeCompensate(BorrowRepayment borrowRepayment);
+    
+    /**
+     * 借款人给担保公司还款
+     * @param borrowRepayment
+     */
+    void borrowRepaySecurityCompany(BorrowRepayment borrowRepayment);
+    
+    /**
+     * 即投即生息一麻袋转账处理
+     */
+    void handleYmdInstantLive(BorrowTender tender)throws Exception;
+    
+    /**
+     * 即投即生息投资人本地业务处理
+     */
+    void handleInvesterInstantLive(BorrowTender tender)throws Exception;
+    /**
+     * 即投即生息借款人本地业务处理
+     */
+    void handleBorrowerInstantLive(BorrowTender tender)throws Exception;
+  //JSDP-184 xingjia 20150618 start
+    /**
+     * 投标成功后立即给活动红包
+     * @param tender
+     * @throws Exception
+     */
+    void activityRpAfterTender(BorrowTender tender)throws Exception ;
+    //JSDP-171 xingjia 20150714 start
+    /**
+     * 投标时体验卡的消费
+     * @param tender
+     * @throws Exception
+     */
+    void petCardConsumeTender(BorrowTender tender) throws Exception;
+    //JSDP-171 xingjia 20150714 end
+    /**
+     * 投标时活动红包的消费
+     * @param tender
+     * @throws Exception
+     */
+    //JSDP-203 xingjia 20150702 start
+    void activityRpConsumeTender(BorrowTender tender) throws Exception;
+    //JSDP-203 xingjia 20150702 end
+    
+    void activityRpTranfer(RpActivityProduce rp)throws Exception;
+  //JSDP-184 xingjia 20150618 end
+    //JSDP-203 xingjia 20150714 start
+    /**
+     * 投标时冻结活动红包
+     * @param tender
+     * @param bmodel
+     * @throws Exception
+     */
+    void rpActivityFreeze(BorrowTender tender,BorrowModel bmodel) throws Exception;
+    //JSDP-203 xingjia 20150714 end
+    //JSDP-171 xingjia 20150714 start
+    /**
+     * 投标时冻结体验卡
+     * @param tender
+     * @throws Exception
+     */
+    void petCardFreeze(BorrowTender tender,BorrowModel bmodel) throws Exception;
+    /**
+     * 计算实际要使用的体验卡金额
+     * @param tender
+     * @param bmodel
+     * @throws Exception
+     */
+    double validPetCardMoney(BorrowTender tender,BorrowModel bmodel) throws Exception;
+    //JSDP-171 xingjia 20150714 start
+
+}

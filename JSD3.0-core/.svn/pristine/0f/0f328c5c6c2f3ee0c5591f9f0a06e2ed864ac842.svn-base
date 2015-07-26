@@ -1,0 +1,239 @@
+package com.ddtkj.p2psys.award.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+/**
+ * 活动奖励实体类
+ * @author xingjia
+ * @date 20141211
+ */
+@Entity
+@Table(name = "t_jsd_activity_award")
+public class ActivityAward implements Serializable{
+
+	private static final long serialVersionUID = 131954082937946233L;
+	@Id
+	private int actId;//活动id(主键、外键)
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "actId")
+	private ActivityConfig act ;
+	private String goodsType;//实物奖励是否有（实物可能奖励多个，多个实物名称按照 如下格式保存：iphone6-ipad如此类推）
+	private String goodsQuantity;//多个实物数量，按如下格式输入 1台-1台如此类推
+	private long goodsPrice;//多个实物价格，按如下格式输入5000.8-3780如此类推
+	private String scoreType;//是否有积分奖励(Y,N)
+	private int scoreQuantity;//积分数量
+	private String vipType;//是否有vip奖励
+	private int vipLevel;//vip等级
+	private int vipLimitTime;//vip拥有年限
+	private String cashType;//是否有现金奖励
+	private long cashMoney;//奖励现金金额
+	private String rpType;//是否有红包奖励
+	private String rpName;//红包名称
+	private int rpValidTime;//红包有效天数
+	private long rpMoney;//红包金额
+	
+	
+	
+	
+	/**
+	 * 类的空构造方法
+	 */
+	public ActivityAward() {
+		super();
+	}
+	
+	/**
+	 * @return the actId 主键
+	 */
+	public int getActId() {
+		return actId;
+	}
+
+	/**
+	 * @param actId 主键
+	 */
+	public void setActId(int actId) {
+		this.actId = actId;
+	}
+
+	/**
+	 * @return goodsType 是否有实物奖励
+	 */
+	public String getGoodsType() {
+		return goodsType;
+	}
+	/**
+	 * @param goodsType 是否有实物奖励
+	 */
+	public void setGoodsType(String goodsType) {
+		this.goodsType = goodsType;
+	}
+	/**
+	 * @return goodsQuantity 实物数量
+	 */
+	public String getGoodsQuantity() {
+		return goodsQuantity;
+	}
+	/**
+	 * @param goodsQuantity 实物数量
+	 */
+	public void setGoodsQuantity(String goodsQuantity) {
+		this.goodsQuantity = goodsQuantity;
+	}
+	/**
+	 * @return goodsPrice 实物价格
+	 */
+	public long getGoodsPrice() {
+		return goodsPrice;
+	}
+	/**
+	 * @param goodsPrice 实物价格
+	 */
+	public void setGoodsPrice(long goodsPrice) {
+		this.goodsPrice = goodsPrice;
+	}
+	/**
+	 * @return scoreType 是否有积分奖励
+	 */
+	public String getScoreType() {
+		return scoreType;
+	}
+	/**
+	 * @param scoreType 是否有积分奖励
+	 */
+	public void setScoreType(String scoreType) {
+		this.scoreType = scoreType;
+	}
+	/**
+	 * @return scoreQuantity 积分数量
+	 */
+	public int getScoreQuantity() {
+		return scoreQuantity;
+	}
+	/**
+	 * @param scoreQuantity 积分数量
+	 */
+	public void setScoreQuantity(int scoreQuantity) {
+		this.scoreQuantity = scoreQuantity;
+	}
+	/**
+	 * @return vipType 是否有vip奖励
+	 */
+	public String getVipType() {
+		return vipType;
+	}
+	/**
+	 * @param vipType 是否有vip奖励
+	 */
+	public void setVipType(String vipType) {
+		this.vipType = vipType;
+	}
+	/**
+	 * @return vipLevel vip等级
+	 */
+	public int getVipLevel() {
+		return vipLevel;
+	}
+	/**
+	 * @param vipLevel vip等级
+	 */
+	public void setVipLevel(int vipLevel) {
+		this.vipLevel = vipLevel;
+	}
+	/**
+	 * @return vipLimitTime vip拥有年限
+	 */
+	public int getVipLimitTime() {
+		return vipLimitTime;
+	}
+	/**
+	 * @param vipLimitTime vip拥有年限
+	 */
+	public void setVipLimitTime(int vipLimitTime) {
+		this.vipLimitTime = vipLimitTime;
+	}
+	/**
+	 * @return cashType 是否有现金奖励
+	 */
+	public String getCashType() {
+		return cashType;
+	}
+	/**
+	 * @param cashType 是否有现金奖励
+	 */
+	public void setCashType(String cashType) {
+		this.cashType = cashType;
+	}
+	/**
+	 * @return cashMoney 现金金额
+	 */
+	public long getCashMoney() {
+		return cashMoney;
+	}
+	/**
+	 * @param cashMoney 现金金额
+	 */
+	public void setCashMoney(long cashMoney) {
+		this.cashMoney = cashMoney;
+	}
+	/**
+	 * @return rpType 是否有红包奖励
+	 */
+	public String getRpType() {
+		return rpType;
+	}
+	/**
+	 * @param rpType 是否有红包奖励
+	 */
+	public void setRpType(String rpType) {
+		this.rpType = rpType;
+	}
+	/**
+	 * @return rpName 红包名称
+	 */
+	public String getRpName() {
+		return rpName;
+	}
+	/**
+	 * @param rpName 红包名称
+	 */
+	public void setRpName(String rpName) {
+		this.rpName = rpName;
+	}
+	/**
+	 * @return rpValidTime 红包有效期
+	 */
+	public int getRpValidTime() {
+		return rpValidTime;
+	}
+	/**
+	 * @param rpValidTime 红包有效期
+	 */
+	public void setRpValidTime(int rpValidTime) {
+		this.rpValidTime = rpValidTime;
+	}
+	/**
+	 * @return rpMoney 红包金额
+	 */
+	public long getRpMoney() {
+		return rpMoney;
+	}
+	/**
+	 * @param rpMoney 红包金额
+	 */
+	public void setRpMoney(long rpMoney) {
+		this.rpMoney = rpMoney;
+	}
+	
+	
+	
+}

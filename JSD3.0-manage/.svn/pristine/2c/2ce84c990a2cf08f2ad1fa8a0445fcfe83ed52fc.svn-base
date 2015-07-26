@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>发标待审标信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canRead = true;
+</script>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+    var winWidth =  480;
+    var winHeight = 300;
+    var verifyTitle = "vip审核";
+    var verifyUrl =  "/modules/user/identification/vipVerifyAddPage.html";
+    var verifyWinParmeters = "'{0}','"+verifyTitle+"',530,450,'"+verifyUrl+"'";
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'vipApplyList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50, fixed: true,sortable:false },              
+              { field: 'userName', title: '用户名', width: 100, sortable:false },
+              { field: 'realName', title: '真实姓名', width: 150, sortable:false },
+              { field: 'remark', title: '申请备注', width: 180, sortable:false },
+              { field: 'addTime', title: '申请时间', width: 150,fixed: true, sortable:false, 
+            	  	formatter: function(value,row,index){
+	  					if (row.addTime){
+	  						return getLocalTime(value,4);
+	  					} else {
+	  						return value;
+	  					}
+  				  	}  
+              }, 
+              { field: 'status', title: '状态', width: 80, fixed: true,sortable:false , 
+					formatter: function(value,row,index){
+						return verifyStatus(value);
+  					}  
+              },
+              { field : 'action',
+                title : '操作',
+                width :75,
+                fixed: true,
+                formatter : function(value, row, index) {
+                    var str = '';
+                    if(row.status == 0){
+	                    str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+verifyWinParmeters+');" src="{1}" title="vip审核"/>', row.id, '${theme_dir}/css/images/rd/edit.png');
+	                    str += '&nbsp;';                  
+                    }
+                    return str;
+                }
+            } ] ],
+            onRowContextMenu : function(e, rowIndex, rowData) {
+                e.preventDefault();
+                $(this).datagrid('unselectAll').datagrid('uncheckAll');
+                $(this).datagrid('selectRow', rowIndex);
+                $('#menu').menu('show', {
+                    left : e.pageX,
+                    top : e.pageY
+                });
+            },
+            loadFilter: function(data){
+				console.log(data);
+				$.each(data.rows,function(index,row){
+					if(row.user){
+						row.userName=row.user.userName;
+						row.realName=row.user.realName;
+					}else{
+						row.userName="<span style='color: red'>该用户不存在</span>";
+					}
+				}); 
+				return data;
+			}
+        });
+    });
+</script>
+</head>
+<body>
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',title:'查询条件',border:false,collapsible:false" style="height: 90px; overflow: hidden;">
+            <form id="searchForm">
+            	<div class="search_box">
+                    状态：
+                    <select name="status" class="status">
+                        <option value="3">全部</option>
+                        <option value="0" selected="selected">待审核</option>
+                        <option value="1">审核通过</option>
+                        <option value="2">审核未通过</option>
+                    </select>
+                </div>
+                <div class="search_box">用户名：<input type="text" name="userName"/></div>
+                <div class="search_box">开始时间：<input type="text" name="startTime" onClick="WdatePicker({dateFmt:'yyyy-MM-dd'})"/></div>
+                <div class="search_box">结束时间：<input type="text" name="endTime" onClick="WdatePicker({dateFmt:'yyyy-MM-dd'})"/></div>
+                <div class="search_box">
+                    <a href="javascript:void(0);" class="easyui-linkbutton" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a>
+                    <a href="javascript:void(0);" class="easyui-linkbutton" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a>
+                </div>
+            </form>
+        </div>
+        <div data-options="region:'center',border:false">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+    <div id="menu" class="easyui-menu" style="width: 120px; display: none;">        
+        <div onclick="$.fn.dataGridOptions.editFun($(this).attr('node-id'),editTitle,winWidth,winHeight,editUrl);" data-options="iconCls:'pencil'">编辑</div>        
+    </div>
+</body>
+</html>

@@ -1,0 +1,187 @@
+package com.rongdu.p2psys.core.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+/**
+ * 审核记录表 TODO 类说明
+ * 
+ * @version 1.0
+ * @since 2014-4-14
+ */
+@Entity
+@Table(name = "t_jsd_verify_supply_log")
+public class VerifySupplyLog implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	
+	public static final String RECHARGE_TRANSFER = "rechargeTransfer";//充值转账
+
+	/**
+	 * 主键
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+
+	/**
+	 * 审核人
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "add_user")
+	private Operator addUser;
+
+	/**
+	 * 对金额的操作补单、审核recharge_supply,cash_supply,transferVerify
+	 */
+	private String optType;
+
+	/**
+	 * 数据ID
+	 */
+	private String dataId;
+
+	/**
+	 * 审核类型，1：初审，2：复审
+	 */
+	private int verifyType;
+
+	/**
+	 * 结果
+	 */
+	private boolean result;
+
+	/**
+	 * 备注
+	 */
+	private String remark;
+
+	/**
+	 * 时间
+	 */
+	private Date addTime;
+	/**
+	 * ip
+	 */
+	private String ip;
+
+	public VerifySupplyLog() {
+		super();
+	}
+	
+	
+	
+	
+	/**
+	 * @param addUser
+	 * @param optType
+	 * @param dataId
+	 * @param verifyType
+	 * @param result
+	 * @param remark
+	 * @param addTime
+	 * @param ip
+	 */
+	public VerifySupplyLog(Operator addUser, String optType, String dataId,
+			int verifyType, boolean result, String remark, Date addTime,
+			String ip) {
+		super();
+		this.addUser = addUser;
+		this.optType = optType;
+		this.dataId = dataId;
+		this.verifyType = verifyType;
+		this.result = result;
+		this.remark = remark;
+		this.addTime = addTime;
+		this.ip = ip;
+	}
+
+
+
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	
+
+	public Operator getAddUser() {
+		return addUser;
+	}
+
+	public void setAddUser(Operator addUser) {
+		this.addUser = addUser;
+	}
+
+	public String getOptType() {
+		return optType;
+	}
+
+	public void setOptType(String optType) {
+		this.optType = optType;
+	}
+
+	public String getDataId() {
+		return dataId;
+	}
+
+	public void setDataId(String dataId) {
+		this.dataId = dataId;
+	}
+
+	public int getVerifyType() {
+		return verifyType;
+	}
+
+	public void setVerifyType(int verifyType) {
+		this.verifyType = verifyType;
+	}
+
+	public boolean getResult() {
+		return result;
+	}
+
+	public void setResult(boolean result) {
+		this.result = result;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getIp() {
+		return ip;
+	}
+
+	public void setIp(String ip) {
+		this.ip = ip;
+	}
+
+	
+
+}

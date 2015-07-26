@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../include/resource1.html"> 
+<#include "../include/header.html">
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<title>晋商贷-云购卡转账</title>
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/yunGouCardT.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script src="${webroot}${theme_dir}/media/js/alerts.js"></script>
+<script type="text/javascript">
+	$(function() {
+		$(window).resize(function(){
+			$(".outbj").css({width:"100%",height:$("body").height()+"px"});
+			$(".ad").css({top:($(window).height()-403)/2+"px",left:($(window).width()-434)/2+"px"});
+		})
+		$(window).resize();
+		$(".login_after .login_text").click(function(){
+			var transMoney=$("#transMoney").val();
+			if(transMoney == 0){
+				alerts("提示","您的云购全球购物卡面值为<em>0</em>元，请先投资！<span>确认</span>",360,240);
+				$(".y_alertsBoxCon span").click(function(){k
+				$(".alertsBox").hide();
+				$(".alertsbg").hide();
+				})
+				return false;
+			}
+			$(".outbj").show();
+			$(".ad").show();
+		})
+		$(".undo").click(function(){
+			$(".outbj").hide();
+			$(".ad").hide();
+		})
+		
+		
+	});
+</script>
+<style>
+.y_alertsBoxCon{position:relative;text-align:center;margin-top:10px;font-size:14px;color:#333;}
+.y_alertsBoxCon em{font-style:normal;color:#06b5ff;padding:0 3px;}
+.y_alertsBoxCon span{display:block;margin:40px auto 0;width: 120px;height: 36px;background: #06b5ff;border-radius: 3px;color: #fff;cursor: pointer;font-size: 16px;text-align:center;line-height:36px;}
+</style>
+</head>
+<body>
+	<div class="cloud_content">
+		<div class="text_content">
+			<div class="notice">
+				<p>尊敬的晋商贷会员：</p>
+				<p style="text-indent:2em;">应广大晋商贷用户的强烈要求，晋商贷投资云购活动第二duang“先生财后夺宝”活动再次火爆袭来！新一轮的</br>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;嗨购即将开始！亲们，准备好你们的子弹了吗？</p>
+				<p>活动时间：<#if ruleAward??&&ruleAward.startDate??&&ruleAward.endDate??>${(ruleAward.startDate)?string("yyyy年MM月dd日")!}-${(ruleAward.endDate)?string("yyyy年MM月dd日")!}</#if></p>
+				<p>活动对象：晋商贷所有投资人</p>
+			</div>
+		
+			<!-- 登录后 start -->
+			<#if session_user?exists>
+				<div class="login_after">
+					<div class="after_logo"></div>
+					<div class="all_text" style="width:636px;margin-left: 383px;">
+						<div class="all_buy" style="float:left;">
+							<p>尊敬的${session_user.userName!}用户：<b style="font-weight:600;"><a href="${webroot}/user/logout.html">[退出]</a></b></p>
+							<p style="width: 900px;">您在活动期内获得的<b style="font-weight:600;color:#000">云购全球购物卡</b>面值为： <b><i>${Request.transMoney!}</i>元</b></p>
+						</div>
+						<div class="login_text" style="margin-top:0;cursor:pointer;position:relative;top:-55px;margin-left: 36px;"></div>
+					<input type="hidden" id="transMoney" value="${Request.transMoney!}" readonly="readonly"/>	
+					</div>
+				</div>
+			<#else>
+				<!-- 登录前 start -->
+				<div class="login_before">
+					<div class="before_logo"></div>
+					<div class="all_text">
+						<div class="all_buy"></div>
+						<div class="login_text"><span style="font-size:18px;">登录</span>后即可查看您在活动期间内所获得的云购全球购物卡面值</div>
+					</div>
+					<a href="${webroot}/user/login.html" class="login_btns">登录</a>
+				</div>
+				<!-- 登录前 end -->
+			</#if>
+			<!-- 登录后 end -->
+			<div class="active_rule">
+				
+				<h2 style="font-size:20px;font-weight:600;">活动规则：</h2><br/>
+				<p>1、 在活动期间所产生的积分参加抽奖活动（<#if ruleAward??&&ruleAward.startDate??&&ruleAward.endDate??>${(ruleAward.startDate)?string("yyyy年MM月dd日")!}-${(ruleAward.endDate)?string("yyyy年MM月dd日")!}内投资产生的积分</#if>），奖品为云购全球云购卡的，可进行云购卡转账；其它阶段的积分不能参加兑换购物卡活动 。</p>
+				<p>2、积分产生公式：投标金额×投标期限（月）=积分
+					或   投标金额×投标期限（天/30）=积分 。 </p> 
+				<p>3、购物卡面值即为转账金额 。 </p> 
+				<p>4、活动期间抽奖获得的购物卡不可折现，只能在云购全球电商平台上进行购物使用 。</p>
+				<p>5、兑换购物卡后活动期间所产生的购物卡面值系统会自动抵消 。</p>
+				
+			</div>
+		</div>
+			<div style="width:1002px;margin:0 auto;position:relative;">
+				<a href="https://www.jinshangdai.com/invest/index.html" class="invest_btn"></a>
+			</div>
+	</div>
+	
+	<!-- 弹窗 -->
+	<#if session_user?exists>
+		<div class="outbj"></div>
+		<div class="ad">
+			<div class="honorific">
+				<div class="alert_title"></div>
+				<div class="alert_content">
+					<form action="${webroot}/member/score/cardAwardTransfer.html" name="form" method="post">
+						<p>尊敬的<span>${session_user.userName!}</span>用户，您好</p>
+						<p style="text-indent:2em;">您在活动期间抽奖产生 ${transMoney!} &nbsp;元的云购全球卡，确认兑换后活动期间所产生的云购卡面值会自动抵消。</p>
+						<p>（提交兑换后请联系您的专属客服进行信息核对）</p>
+						<div class="cloud_btn">
+							<a onclick="form.submit()" class="confirm"></a>
+							<a href="javascrpt:void(0);" class="undo"></a>
+						</div>
+						<input type="hidden" name="cardTransferToken" value="${cardTransferToken!}"/>	
+					</form>
+				</div>
+			</div>
+		</div>
+	</#if>
+	
+<#include "../include/footer.html">	
+<script src="${webroot}${theme_dir}/media/js/alerts.js"></script>
+<script>
+	
+</script>
+</body>
+</html>

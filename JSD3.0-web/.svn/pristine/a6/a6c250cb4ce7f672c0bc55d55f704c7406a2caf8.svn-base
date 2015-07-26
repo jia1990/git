@@ -1,0 +1,90 @@
+
+package com.rongdu.p2psys.web.score;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.model.UserScoreAwardModel;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.service.ScoreService;
+
+/**
+ * @描述: 抽奖记录action
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-8   
+ */
+public class UserScoreAwardAction extends BaseAction implements ModelDriven<UserScoreAwardModel>{
+
+	@Resource
+	private ScoreRuleAwardService scoreRuleAwardService;
+	@Resource
+	private UserScoreAwardService userScoreAwardService;
+	@Resource
+	private ScoreService scoreService;
+	
+	
+	private UserScoreAwardModel model = new UserScoreAwardModel();
+	Map<String, Object> data = new HashMap<String, Object>();
+	private User user;
+	
+	public UserScoreAwardModel getModel() {
+		return model;
+	}
+	
+	
+	/**
+	 * 我的中奖记录页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/member/score/awardDetail")
+	public String awardDetail() throws Exception {
+		double transMoney = 0;
+		Score score = scoreService.getScoreByUserId(getSessionUserId());
+		request.setAttribute("score", score);
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatusAndActiType(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE, ScoreRuleAward.ACTIVITY_TYPE_SCOREAWARD);
+		request.setAttribute("ruleAward", ruleAward);
+		if (ruleAward != null) {
+			Date startTime = ruleAward.getStartDate();
+			Date endTime = ruleAward.getEndDate();
+			transMoney = userScoreAwardService.getCardTotalByStatusAndUser(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL, startTime, endTime, getSessionUser());
+		}
+		request.setAttribute("transMoney", transMoney);
+		return "awardLogDetail";
+	}
+	
+	
+	/**
+	 * 显示我的中奖记录
+	 * @return 中奖记录信息
+	 * @throws Exception 异常
+	 */
+	@Action("/member/score/getMyAwardLogList")
+	public void getMyAwardLogList() throws Exception {
+		int ruleId = paramInt("ruleId");
+		user = getSessionUser();
+		model.setUser(user);
+		model.setRule(scoreRuleAwardService.getRuleAwardByRuleId(ruleId));
+		PageDataList<UserScoreAwardModel> pageDataList = userScoreAwardService.getUserScoreAwardList(model);
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));	
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+}

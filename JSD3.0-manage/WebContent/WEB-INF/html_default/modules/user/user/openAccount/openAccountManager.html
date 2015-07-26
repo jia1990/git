@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canView = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  480;
+	var winHeight = 520;
+	
+	var editTitle = "审核证明资料";
+	var editUrl =  "/modules/user/user/openAccount/openAccountEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	
+	
+	var viewTitle = "查看审核情况";
+	var viewUrl =  "/modules/user/user/openAccount/openAccountViewPage.html";
+	var viewWinParmeters = "'{0}','"+viewTitle+"',"+winWidth+","+winHeight+",'"+viewUrl+"'";
+	
+	
+	
+	
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'openAccountList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'userId',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			//sortName : 'userId',
+			//sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [          
+			{ field: 'userName', title: '用户名', width: 100, fixed:true,checkbox : false},
+			{ field: 'realName', title: '真实姓名', width: 200, fixed:true,sortable:false },
+			{ field: 'cardNo', title: '身份证号', width: 180, fixed:true,sortable:false },
+			{ field: 'certificateType', title: '证件类型', width: 20, sortable:false,
+				formatter: function(value,row,index){
+					if(value == "00"){
+						return "身份证"
+					}else if(value == "01"){
+						return "军官证"
+					}else{
+						return value;
+					}
+				}
+			},
+			{ field: 'addTime', title: '添加时间', width: 60, sortable:false,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'operateTime', title: '审核时间', width: 60, sortable:false,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			
+			{ field: 'status', title: '审核状态', width: 80, fixed:true,sortable:false, 
+				formatter: function(value,row,index){
+					return verifyStatus(value);
+				}	
+			},
+			{ field: 'remark', title: '备注', width: 50, sortable:false },
+			  {	field : 'action',
+				title : '操作',
+				width :40,
+				fixed:true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if(row.status == "0"){ 
+						if ($.canEdit) {
+							str += "<@secAuthorizeUrl value='/user/userIdentifyVerifyBtn.html' >";
+							str = $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="审核"/>', row.userId, '${theme_dir}/css/images/extjs_icons/pencil.png');
+							str += "</@secAuthorizeUrl>";
+						}
+					}else{
+						if ($.canView) {
+							str += "<@secAuthorizeUrl value='/user/userIdentifyViewBtn.html' >";
+							str = $.formatString('<img onclick="$.fn.dataGridOptions.viewFun('+viewWinParmeters+');" src="{1}" title="查看"/>', row.userId, '${theme_dir}/css/images/extjs_icons/book_open.png');
+							str += "</@secAuthorizeUrl>";
+						}
+					}
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			},
+		});
+	});
+</script>
+</head>
+<body  style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false" >
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox" >
+			<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" autocomplete="off" id="userName"/></li>
+            		<li>真实姓名 ：<input type="text" name="realName" autocomplete="off" id="realName"/></li>
+            		<li>审核状态：
+            		<select name=status class="type" id="status">
+	                  <option value="99">全部</option>
+	                  <option value="0" selected="selected">待审核</option>
+	                  <option value="1">审核通过</option>
+	                  <option value="2">审核未通过</option>
+	                </select> 
+	                </li> 
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,385 @@
+
+package com.rongdu.p2psys.core.sms;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.web.context.ContextLoader;
+import org.springframework.web.context.WebApplicationContext;
+
+import com.ddtkj.p2psys.sms.domain.SmsInterface;
+import com.ddtkj.p2psys.sms.service.SmsInterfaceService;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.constant.Constant;
+
+/**
+ * @描述: 公共短信接口类
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-2-10   
+ */
+public class PublicSmsPortalImpl implements SmsPortal {
+	
+	private static Logger logger = Logger.getLogger(PublicSmsPortalImpl.class);
+	private SmsInterfaceService smsInterfaceService;
+
+	@Override
+	public String getSPName() {
+		WebApplicationContext ctx = ContextLoader.getCurrentWebApplicationContext();
+		smsInterfaceService = (SmsInterfaceService) ctx.getBean("smsInterfaceService");
+		SmsInterface sms = smsInterfaceService.findByStatus(SmsInterface.SMS_STATUS_ENABLE);
+		String smsPassageName = "";
+		if (sms != null) {
+			if (SmsInterface.SMS_NID_SDTY.equals(sms.getNid())) {
+				smsPassageName = SmsInterface.SMS_NID_SDTY_CN;
+			}else if (SmsInterface.SMS_NID_SHCL.equals(sms.getNid())) {
+				smsPassageName = SmsInterface.SMS_NID_SHCL_CN;	
+			}
+		}
+		return smsPassageName;
+	}
+
+
+	@Override
+	public String send(String phone, String content) {
+		WebApplicationContext ctx = ContextLoader.getCurrentWebApplicationContext();
+		smsInterfaceService = (SmsInterfaceService) ctx.getBean("smsInterfaceService");
+		SmsInterface sms = smsInterfaceService.findByStatus(SmsInterface.SMS_STATUS_ENABLE);
+		String signContent = sms.getSignContent();
+		if (StringUtil.isNotBlank(signContent)) {
+			content = content + signContent;
+		}
+		String result = "";
+		String restime = "";
+		String rescode = "";
+		if (sms != null && StringUtil.isNotBlank(phone)) {
+			
+			if (SmsInterface.SMS_NID_SDTY.equals(sms.getNid())) {
+				result = SDTYSmsPortalImpl.mt(phone, content, "", "", "", sms);
+				rescode = result;
+				result = getSDTYResultByRespCode(StringUtil.toInt(convertSDTYResultMsg(result)));
+				logger.info("通过短信通道："+SmsInterface.SMS_NID_SDTY_CN+"发送短信至"+phone+", result："+result);
+			}else if (SmsInterface.SMS_NID_SHCL.equals(sms.getNid())) {
+				result = SHLCSmsPortal.sendMsgPost(phone, content, false, "", "", sms);	
+				restime = StringUtils.substringBefore(result, ",");
+				rescode = StringUtils.substringAfter(result, ",");
+				result = getResultByRespCode(StringUtil.toInt(rescode));
+				logger.info("通过短信通道："+SmsInterface.SMS_NID_SHCL_CN+"发送短信至"+phone+", result："+result);
+			}
+		}
+		return "result:"+result+",phone"+phone+",restime"+restime+",rescode"+rescode;
+	}
+
+	@Override
+	public Map<String, Object> getUseInfo() {
+		WebApplicationContext ctx = ContextLoader.getCurrentWebApplicationContext();
+		smsInterfaceService = (SmsInterfaceService) ctx.getBean("smsInterfaceService");
+		SmsInterface sms = smsInterfaceService.findByStatus(SmsInterface.SMS_STATUS_ENABLE);
+		// 剩余短信条数
+		int remainNum = 0;
+		// 产品ID，接口有可能有多个产品
+		int productID = 0;
+		String result = "";
+		if(sms != null){
+			if (SmsInterface.SMS_NID_SDTY.equals(sms.getNid())) {
+				result = SDTYSmsPortalImpl.getBalance(sms);
+				remainNum = StringUtil.toInt(result);
+				result = getSDTYBalanceResultByRespCode(result);
+			}else if (SmsInterface.SMS_NID_SHCL.equals(sms.getNid())) {
+				result = SHLCSmsPortal.queryBalance(sms);	
+				productID = StringUtil.toInt(convertResultMsg(result, SmsInterface.SMS_RESULT_QUERY_BALANCE_PID));
+				remainNum = StringUtil.toInt(convertResultMsg(result, SmsInterface.SMS_RESULT_QUERY_BALANCE_REMAIN));
+				result = getBalanceResultByRespCode(StringUtil.toInt(convertResultMsg(result, SmsInterface.SMS_RESULT_QUERY_RESPCODE)));		
+				logger.info("查询短信通道："+SmsInterface.SMS_NID_SHCL_CN+"余额, result："+result);
+			}
+		}
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		map.put("remainNum", remainNum);
+		map.put("productID", productID);
+		map.put("result", result);
+		return map;
+	}
+	
+	
+	@Override
+	public Map<String, Object> getSmsUseInfo(SmsInterface smsInterface) {
+		WebApplicationContext ctx = ContextLoader.getCurrentWebApplicationContext();
+		smsInterfaceService = (SmsInterfaceService) ctx.getBean("smsInterfaceService");
+		SmsInterface sms = smsInterfaceService.findById(smsInterface.getId());
+		// 已使用短信条数
+		int remainNum = 0;
+		// 产品ID，接口有可能有多个产品
+		int productID = 0;
+		String result = "";
+		String productresult = "";
+		if(sms != null){
+			if (SmsInterface.SMS_NID_SDTY.equals(sms.getNid())) {
+				result = SDTYSmsPortalImpl.getBalance(sms);
+				remainNum = StringUtil.toInt(result);
+				result = getSDTYBalanceResultByRespCode(result);
+				logger.info("查询短信通道："+SmsInterface.SMS_NID_SDTY_CN+"余额, result："+result);
+			}else if (SmsInterface.SMS_NID_SHCL.equals(sms.getNid())) {
+				result = SHLCSmsPortal.queryBalance(sms);
+				productresult = StringUtils.substringAfter(result, System.getProperty("line.separator"));
+				logger.info("查询短信通道："+SmsInterface.SMS_NID_SHCL_CN+"余额,result:"+result+"。productresult:"+productresult);
+				productID = StringUtil.toInt(StringUtils.substringBefore(productresult, ","));
+				remainNum = StringUtil.toInt(StringUtils.substringAfter(productresult, ",").replace(System.getProperty("line.separator"), ""));
+				result = getBalanceResultByRespCode(StringUtil.toInt(convertResultMsg(result, SmsInterface.SMS_RESULT_QUERY_RESPCODE)));	
+			}
+		}
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		map.put("remainNum", remainNum);
+		map.put("productID", productID);
+		map.put("result", result);
+		return map;
+	}
+	
+	
+	/**
+	 * 处理返回结果字符串
+	 * @param  result
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	private String convertResultMsg(String result, int code) {
+		String[] results = result.split("\r\n");
+		if (result.equals(Constant.EXCEPTION_RESPONSE_CODE_STR)) {
+			return Constant.EXCEPTION_RESPONSE_CODE_STR; 
+		} else {
+			if (results.length > 0) {
+				String[] head = results [0].split(",");
+				if (code == SmsInterface.SMS_RESULT_QUERY_RESPTIME) {
+					result = head[0];
+				} else if(code == SmsInterface.SMS_RESULT_QUERY_RESPCODE) {
+					result = head[1];
+				}	
+			}
+			if (results.length > 1) {
+				String[] balance = results [1].split(",");
+				if(code == SmsInterface.SMS_RESULT_QUERY_BALANCE_PID) {
+					result = balance[0];
+				} else if (code == SmsInterface.SMS_RESULT_QUERY_BALANCE_REMAIN) {
+					result = balance[1];
+				}
+			}	
+			return result;
+		}	
+	}
+	
+	/**
+	 * 处理返回结果字符串,时代天元接口
+	 * @param  result
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	private String convertSDTYResultMsg(String result) {
+		if (StringUtil.isBlank(result)) {
+			return Constant.EXCEPTION_RESPONSE_CODE_STR;
+		} else if(StringUtil.isNotBlank(result) && result.length() > 8) {
+			return SmsInterface.SMS_RESULT_OK;
+		} else {
+			return result;
+		}
+	}
+	
+	/**
+	 * 根据响应码返回结果名
+	 * @param  code响应码
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	private String getResultByRespCode(int code){
+		String resultName = "";
+		switch (code) {
+			case 0:
+				resultName = "ok";
+				break;
+			case 101:
+				resultName = "无此用户";
+				break;
+			case 102:
+				resultName = "密码错";
+				break;
+			case 103:
+				resultName = "提交过快（提交速度超过流速限制）";
+				break;
+			case 104:
+				resultName = "系统忙（因平台侧原因，暂时无法处理提交的短信）";
+				break;
+			case 105:
+				resultName = "敏感短信（短信内容包含敏感词）";
+				break;
+			case 106:
+				resultName = "消息长度错（>536或<=0）";
+				break;
+			case 107:
+				resultName = "包含错误的手机号码";
+				break;
+			case 108:
+				resultName = "手机号码个数错（群发>50000或<=0;单发>200或<=0）";
+				break;
+			case 109:
+				resultName = "无发送额度（该用户可用短信数已使用完）";
+				break;
+			case 110:
+				resultName = "不在发送时间内";
+				break;
+			case 111:
+				resultName = "超出该账户当月发送额度限制";
+				break;
+			case 112:
+				resultName = "无此产品，用户没有订购该产品";
+				break;
+			case 113:
+				resultName = "extno格式错（非数字或者长度不对）";
+				break;
+			case 115:
+				resultName = "自动审核驳回";
+				break;
+			case 116:
+				resultName = "签名不合法，未带签名（用户必须带签名的前提下）";
+				break;
+			case 117:
+				resultName = "IP地址认证错,请求调用的IP地址不是系统登记的IP地址";
+				break;
+			case 118:
+				resultName = "用户没有相应的发送权限";
+				break;
+			case 119:
+				resultName = "用户已过期";
+				break;
+			default:
+				resultName = "连接超时或其他异常错误";
+				break;
+		}
+		return resultName;
+	}
+	
+	/**
+	 * 根据响应码返回余额查询结果
+	 * @param  code
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	private String getBalanceResultByRespCode(int code){
+		String balanceResult = "";
+		switch (code) {
+		case 0:
+			balanceResult = "ok";
+			break;
+		case 101:
+			balanceResult = "无此用户";
+			break;
+		case 102:
+			balanceResult = "密码错";
+			break;
+		case 103:
+			balanceResult = "查询过快（30秒查询一次）";
+			break;
+		default:
+			balanceResult = "连接超时或其他异常错误";
+			break;
+		}
+		return balanceResult;
+	}
+
+	/**
+	 * 根据响应码返回余额查询结果,时代天元接口
+	 * @param  code
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	private String getSDTYBalanceResultByRespCode(String code){
+		String balanceResult = "";
+		if (StringUtil.isBlank(code) || code.equals(Constant.EXCEPTION_RESPONSE_CODE_STR)) {
+			balanceResult = "error"; 
+		}else {
+			balanceResult = "ok";
+		}
+		return balanceResult;
+	}
+	
+	/**
+	 * 根据响应码返回结果名,时代天元接口
+	 * @param  code响应码
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	private String getSDTYResultByRespCode(int code){
+		String resultName = "";
+		switch (code) {
+			case 0:
+				resultName = "ok";
+				break;
+			case 1:
+				resultName = "没有需要取得的数据";
+				break;
+			case -1:
+				resultName = "重复注册";
+				break;
+			case -2:
+				resultName = "账号/密码不正确";
+				break;
+			case -4:
+				resultName = "余额不足";
+				break;
+			case -5:
+				resultName = "数据格式错误";
+				break;
+			case -6:
+				resultName = "参数有误";
+				break;
+			case -7:
+				resultName = "权限受限";
+				break;
+			case -8:
+				resultName = "流量控制错误";
+				break;
+			case -9:
+				resultName = "扩展码权限错误";
+				break;
+			case -10:
+				resultName = "内容长度长";
+				break;
+			case -11:
+				resultName = "内部数据库错误";
+				break;
+			case -12:
+				resultName = "序列号状态错误";
+				break;
+			case -13:
+				resultName = "没有提交增值内容";
+				break;
+			case -14:
+				resultName = "服务器写文件失败";
+				break;
+			case -15:
+				resultName = "文件内容base64编码错误";
+				break;
+			case -16:
+				resultName = "返回报告库参数错误";
+				break;
+			case -17:
+				resultName = "没有权限";
+				break;
+			case -18:
+				resultName = "上次提交没有等待返回不能继续提交";
+				break;
+			case -19:
+				resultName = "禁止同时使用多个接口地址";
+				break;
+			case -20:
+				resultName = "相同手机号，相同内容重复提交";
+				break;
+			case -22:
+				resultName = "Ip鉴权失败";
+				break;
+			default:
+				resultName = "连接超时或其他异常错误";
+				break;
+		}
+		return resultName;
+	}
+	
+}

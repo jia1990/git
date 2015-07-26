@@ -1,0 +1,160 @@
+package com.rongdu.p2psys.web.school;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.activity.domain.SchoolRecruit;
+import com.ddtkj.p2psys.activity.service.SchoolRecruitService;
+import com.ddtkj.p2psys.schooldict.domain.SchoolDict;
+import com.ddtkj.p2psys.schooldict.service.SchoolDictService;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.model.accountlog.noac.GetCodeLog;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+
+public class SchoolAction extends BaseAction<SchoolRecruit> implements ModelDriven<SchoolRecruit> {
+
+	@Resource
+	private SchoolDictService schoolDictService;
+	@Resource
+	private RegionService regionService;
+	@Resource
+	private NoticeService noticeService;
+	@Resource
+	private SchoolRecruitService schoolRecruitService;
+	private Map<String, Object> data;
+	/**
+	 * @author guojunhui@ddtkj.com 趣分期页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/school/recruit")
+	public String schoolRecruitPage() throws Exception {
+		return "recruit" ;
+	}
+	/**
+	 * @author guojunhui@ddtkj.com 趣分期页面
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/school/doRecruit")
+	public void schoolRecruit() throws Exception {
+		String validCode = request.getParameter("validCode");
+
+		String vCode = StringUtil.isNull(validCode);
+		data = new HashMap<String,Object>();
+		if ("".equals(vCode)||validCode == "") {
+			data.put("result", false);
+			data.put("msg", "验证码不能为空！");
+		} else if (!ValidateUtil.checkValidCode(vCode)) {
+			data.put("result", false);
+			data.put("msg", "验证码输入有误！");
+		}
+		checkMobileCode();
+		boolean phoneValid = (Boolean) data.get("result");
+		if(phoneValid){
+			model.setStatus("0");
+			schoolRecruitService.doRecruit(model);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 根据市获取学校
+	 * @throws Exception
+	 */
+	@Action("/school/getSchool")
+	public void getSchool() throws Exception{
+		int parentCode = paramInt("parentCode");
+		Region region = regionService.getRegionById(parentCode);
+		List<SchoolDict> schoolDicts = schoolDictService.getSchoolList(region.getCode());
+		printJson(getStringOfJpaObj(schoolDicts));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 发送验证码
+	 * @throws Exception
+	 */
+	@Action("/school/sendPhoneCode")
+	public void sendPhoneCode() throws Exception{
+		//JSDP-223 gjh 2015-7-15 start
+		data = new HashMap<String, Object>();
+		UserModel userModel = new UserModel();
+		userModel.setValidCode(paramString("validCode"));
+		try {
+			userModel.validRegRule();
+		} catch (Exception e) {
+			e.printStackTrace();
+			data.put("result", false);
+			data.put("code", "011");
+			data.put("msg", e.getMessage());
+			printJson(getStringOfJpaObj(data));
+			return;
+		}
+		//JSDP-223 gjh 2015-7-15 start
+		String phoneNo = paramString("phoneNo");
+		String nid = NoticeConstant.GET_REG_PHONE;
+		GetCodeLog blog = new GetCodeLog(null, null, null, phoneNo,nid);
+		blog.initCode(nid);
+		blog.doEvent();
+		printSuccess();
+	}
+	/**
+	 * @author 郭俊辉
+	 * 校验短信验证码
+	 * 
+	 * @throws Exception
+	 */
+	public void checkMobileCode() throws Exception {
+		String validCode = paramString("mobileCode");
+		String mobile = paramString("phoneNo");
+		
+		String mobileCode=null;
+		Map<String, Object> map=(Map<String, Object>)request.getSession().getAttribute("get_reg_phone_code");
+		if(map!=null&&map.size()>0){
+			mobileCode = (String)map.get("code");
+		}
+		
+		long verifyTime = noticeService.getNoticeAddTime("get_reg_phone",mobile);//获取发送时间
+		long vtime = StringUtil.toLong(Global.getValue("verify_code_time"));//获取系统时间
+		
+		data = new HashMap<String, Object>();
+		data.put("retype", "mobile");
+		if(mobile.equals(model.getPhoneNo())){
+			if(validCode.equals(mobileCode) && (System.currentTimeMillis() - verifyTime < vtime * 1000)){//验证码是否超时有效
+					data.put("result", true);
+					data.put("code", "002");
+					data.put("msg", "验证码正确！");
+				
+			}else{
+				if(!(System.currentTimeMillis() - verifyTime < vtime * 1000)){
+					request.getSession().removeAttribute(model.getPhoneNo() + "_get_reg_phone_code");
+				}
+				data.put("result", false);
+				data.put("code", "110");
+				data.put("msg", "验证码有误,或已失效！");
+			}
+		}else{
+			data.put("result", false);
+			data.put("code", "111");
+			data.put("msg", "当前手机号与提交手机号不同请重新输入！");//TODO 手机号与提交时的手机号不同时具体提示信息不明？郭俊辉
+		}
+		//printJson(getStringOfJpaObj(data));
+	}
+}

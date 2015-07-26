@@ -1,0 +1,304 @@
+package com.rongdu.p2psys.user.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.core.Global;
+import com.ddtkj.p2psys.user.domain.User; 
+
+/**
+ * 上传信息表
+ * 
+ * @author lhm
+ * @version 2.0
+ * @since 2014-04-03
+ */
+@Entity
+@Table(name = "rd_user_certification")
+public class UserCertification implements Serializable {
+	/**
+	 * 序列号
+	 */
+	private static final long serialVersionUID = 1L;
+	/**
+	 * 主键
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	/**
+	 * 用户ID
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;
+	/**
+	 * 上传类型
+	 */
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "type_id", referencedColumnName = "typeId")
+	private CertificationType attestationType;
+	/**
+	 * 说明信息
+	 */
+	private String name;
+	/**
+	 * 状态 0：待审核 1:审核通过 2：审核未通过
+	 */
+	private int status;
+	/**
+	 * 认证图片
+	 */
+	private String picPath;
+	/**
+	 * 积分
+	 */
+	private int credit;
+	/**
+	 * 审核时间
+	 */
+	private Date verifyTime;
+	/**
+	 * 审核人
+	 */
+	private long verifyUser;
+	/**
+	 * 审核备注
+	 */
+	private String verifyRemark;
+	/**
+	 * 添加时间
+	 */
+	private Date addTime;
+	/**
+	 * 添加IP
+	 */
+	private String addIp;
+
+	public UserCertification() {
+		super();
+	}
+
+	public UserCertification(User user, String picPath, CertificationType attestationType) {
+		super();
+		this.user = user;
+		this.attestationType = attestationType;
+		this.picPath = picPath;
+		this.addIp = Global.getIP();
+		this.addTime = new Date();
+	}
+
+	/**
+	 * 获取主键
+	 * 
+	 * @return 主键
+	 */
+	public long getId() {
+		return id;
+	}
+
+	/**
+	 * 设置主键
+	 * 
+	 * @param id 要设置的主键
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	/**
+	 * 获取用户ID
+	 * 
+	 * @return 用户ID
+	 */
+
+	public User getUser() {
+		return user;
+	}
+
+	/**
+	 * 设置用户ID
+	 * 
+	 * @param user 要设置的用户ID
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	/**
+	 * 获取上传类型
+	 * 
+	 * @return 上传类型
+	 */
+	public CertificationType getAttestationType() {
+		return attestationType;
+	}
+
+	/**
+	 * 设置上传类型
+	 * 
+	 * @param typeId 要设置的上传类型
+	 */
+	public void setAttestationType(CertificationType attestationType) {
+		this.attestationType = attestationType;
+	}
+
+	/**
+	 * 获取说明信息
+	 * 
+	 * @return 说明信息
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * 设置说明信息
+	 * 
+	 * @param name 要设置的说明信息
+	 */
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	/**
+	 * 获取状态
+	 * 
+	 * @return 状态
+	 */
+	public int getStatus() {
+		return status;
+	}
+
+	/**
+	 * 设置状态
+	 * 
+	 * @param status 要设置的状态
+	 */
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	/**
+	 * 获取认证图片
+	 * @return 认证图片路径
+	 */
+	public String getPicPath() {
+		return picPath;
+	}
+	/**
+	 * 设置认证图片路径
+	 * @param picPath  认证图片路径
+	 */
+	public void setPicPath(String picPath) {
+		this.picPath = picPath;
+	}
+
+	/**
+	 * 获取积分
+	 * 
+	 * @return 积分
+	 */
+	public int getCredit() {
+		return credit;
+	}
+
+	/**
+	 * 设置积分
+	 * 
+	 * @param credit 要设置的积分
+	 */
+	public void setCredit(int credit) {
+		this.credit = credit;
+	}
+
+	public Date getVerifyTime() {
+		return verifyTime;
+	}
+
+	public void setVerifyTime(Date verifyTime) {
+		this.verifyTime = verifyTime;
+	}
+
+	/**
+	 * 获取审核人
+	 * 
+	 * @return 审核人
+	 */
+	public long getVerifyUser() {
+		return verifyUser;
+	}
+
+	/**
+	 * 设置审核人
+	 * 
+	 * @param verifyUser 要设置的审核人
+	 */
+	public void setVerifyUser(long verifyUser) {
+		this.verifyUser = verifyUser;
+	}
+
+	/**
+	 * 获取审核备注
+	 * 
+	 * @return 审核备注
+	 */
+	public String getVerifyRemark() {
+		return verifyRemark;
+	}
+
+	/**
+	 * 设置审核备注
+	 * 
+	 * @param verifyRemark 要设置的审核备注
+	 */
+	public void setVerifyRemark(String verifyRemark) {
+		this.verifyRemark = verifyRemark;
+	}
+
+	/**
+	 * 获取添加时间
+	 * 
+	 * @return 添加时间
+	 */
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	/**
+	 * 设置添加时间
+	 * 
+	 * @param addTime 要设置的添加时间
+	 */
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	/**
+	 * 获取添加IP
+	 * 
+	 * @return 添加IP
+	 */
+	public String getAddIp() {
+		return addIp;
+	}
+
+	/**
+	 * 设置添加IP
+	 * 
+	 * @param addIp 要设置的添加IP
+	 */
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+}

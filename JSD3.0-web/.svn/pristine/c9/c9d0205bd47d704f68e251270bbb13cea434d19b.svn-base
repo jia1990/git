@@ -1,0 +1,49 @@
+package com.rongdu.p2psys.web.region;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+
+/**
+ * 行政区域Action
+ * 
+ * @author 李建云
+ * @version 3.0
+ * @since 2014年11月27日
+ */
+public class RegionAction extends BaseAction<Region> implements
+		ModelDriven<Region> {
+
+	@Resource
+	private RegionService regionService;
+
+	/**
+	 * 获取行政区域列表
+	 * @author 李建云
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/region/regionList", results = { @Result(name = "success", type = "ftl", location = "/borrowBespeak/bespeak.html") })
+	public String regionList() throws Exception {
+
+		String pId = this.getRequest().getParameter("pId");
+		List<Region> regionList = null;
+		if (pId == null) {
+			regionList = regionService.getRegionList(1);
+		} else {
+			int fid = Integer.parseInt(pId);
+			regionList = regionService.getRegionList(fid);
+		}
+		printJson(getStringOfJpaObj(regionList));
+		return "success";
+	}
+
+}

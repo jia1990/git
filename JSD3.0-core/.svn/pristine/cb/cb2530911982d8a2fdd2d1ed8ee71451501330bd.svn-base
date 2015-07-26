@@ -1,0 +1,168 @@
+package com.ddtkj.p2psys.borrow.model;
+
+import com.ddtkj.p2psys.borrow.model.worker.BaseBorrowWorker;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.borrow.model.worker.CreditBorrowWorker;
+import com.ddtkj.p2psys.borrow.model.worker.InstantLiveBorrowWorker;
+import com.ddtkj.p2psys.borrow.model.worker.MortgageBorrowWorker;
+import com.ddtkj.p2psys.borrow.model.worker.OffVouchBorrowWorker;
+import com.ddtkj.p2psys.borrow.model.worker.SecondBorrowWorker;
+import com.rongdu.p2psys.borrow.dao.BorrowConfigDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowConfigService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * 生成标工厂类
+ * 
+ * @author：lhm
+ * @version 2.0
+ * @since 2014年7月11日
+ */
+public final class BorrowHelper {
+	/**
+	 * 构造函数私有化
+	 */
+	private BorrowHelper() {
+
+	}
+
+	/**
+	 * 根据标属性，生出对应的标Worker对象
+	 * 
+	 * @param borrow 标对象
+	 * @return BorrowWorker
+	 */
+	public static BorrowWorker getWorker(Borrow borrow) {
+		 //JSDBET-944 投标优化    wcw 2015-04-15 start
+		BorrowConfigDao borrowConfigDao = (BorrowConfigDao) BeanUtil.getBean("borrowConfigDao");
+		BorrowConfig cfg =borrowConfigDao.find(new Long(borrow.getType()));
+		 //JSDBET-944 投标优化    wcw 2015-04-15 end
+		boolean flag = false; // 判断是否是发标或复审或投标
+		switch (borrow.getType()) {
+			case 100:
+				return new BaseBorrowWorker(borrow, cfg);
+			case Borrow.TYPE_SECOND:
+				borrow.setTimeLimit(1);
+				return new SecondBorrowWorker(borrow, cfg);
+			case Borrow.TYPE_CREDIT:
+				// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) { 
+					flag = true;
+				}
+				return new CreditBorrowWorker(borrow, cfg, flag);
+			case Borrow.TYPE_MORTGAGE:
+				// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) { 
+					flag = true;
+				}
+				return new MortgageBorrowWorker(borrow, cfg, flag);
+			case Borrow.TYPE_FLOW:
+				/*// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getScales() == -1) { 
+					flag = true;
+				}
+				return new FlowBorrowWorker(borrow, cfg, flag);*/
+				return null;
+			case Borrow.TYPE_OFFVOUCH:
+				 // 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new OffVouchBorrowWorker(borrow, cfg, flag);
+				
+			case Borrow.TYPE_MORTGAGE_ENERGY:
+				 // 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new InstantLiveBorrowWorker(borrow,cfg,flag);
+			case Borrow.TYPE_NETWORK:
+				 // 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new InstantLiveBorrowWorker(borrow,cfg,flag);
+			case Borrow.TYPE_AMORTIZE:
+				// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new MortgageBorrowWorker(borrow,cfg,flag);
+			default:
+				throw new RuntimeException("不正确的Borrow类型:" + borrow.getType());
+		}
+	}
+	/**
+	 * 根据标属性，生出对应的标Worker对象
+	 * 
+	 * @param borrowModel 标对象
+	 * @return BorrowWorker
+	 */
+	public static BorrowWorker getWorker(BorrowModel borrow) {
+		BorrowConfigService borrowConfigService = (BorrowConfigService) BeanUtil.getBean("borrowConfigService");
+		BorrowConfig cfg = borrowConfigService.find(new Long(borrow.getType()));
+		boolean flag = false; // 判断是否是发标或复审或投标
+		switch (borrow.getType()) {
+			case 100:
+				return new BaseBorrowWorker(borrow, cfg);
+			case Borrow.TYPE_SECOND:
+				borrow.setTimeLimit(1);
+				return new SecondBorrowWorker(borrow, cfg);
+			case Borrow.TYPE_CREDIT:
+				// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) { 
+					flag = true;
+				}
+				return new CreditBorrowWorker(borrow, cfg, flag);
+			case Borrow.TYPE_MORTGAGE:
+				// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) { 
+					flag = true;
+				}
+				return new MortgageBorrowWorker(borrow, cfg, flag);
+			case Borrow.TYPE_FLOW:
+				/*// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getScales() == -1) { 
+					flag = true;
+				}
+				return new FlowBorrowWorker(borrow, cfg, flag);*/
+				return null;
+			case Borrow.TYPE_OFFVOUCH:
+				 // 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new OffVouchBorrowWorker(borrow, cfg, flag);
+				
+			case Borrow.TYPE_MORTGAGE_ENERGY:
+				 // 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new InstantLiveBorrowWorker(borrow,cfg,flag);
+			case Borrow.TYPE_NETWORK:
+				 // 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new InstantLiveBorrowWorker(borrow,cfg,flag);
+			case Borrow.TYPE_AMORTIZE:
+				// 发标或复审或投标
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new InstantLiveBorrowWorker(borrow,cfg,flag);
+			case 999:
+				// 标的列表页全部标的状态标志
+				if (borrow.getStatus() == 0 || borrow.getStatus() == 3 || borrow.getStatus() == 1|| borrow.getStatus() == 19) {
+					flag = true;
+				}
+				return new InstantLiveBorrowWorker(borrow,cfg,flag);
+			default:
+				throw new RuntimeException("不正确的Borrow类型:" + borrow.getType());
+		}
+	}
+}

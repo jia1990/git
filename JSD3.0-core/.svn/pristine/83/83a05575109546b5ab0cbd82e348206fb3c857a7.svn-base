@@ -1,0 +1,1556 @@
+package com.ddtkj.p2psys.borrow.dao.impl;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.model.RankModel;
+import com.rongdu.p2psys.core.rule.IndexRuleCheck;
+import com.rongdu.p2psys.user.exception.UserException;
+
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Repository("borrowTenderDao")
+public class BorrowTenderDaoImpl extends BaseDaoImpl<BorrowTender> implements BorrowTenderDao{
+	@Override
+	public PageDataList<BorrowTenderModel> list(BorrowTenderModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if (model != null) {
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				param.addParam("user.userId", model.getUser().getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getUserName())) {
+				param.addParam("user.userName", Operators.LIKE, model.getUserName());
+			}
+			if (model.getStatus() != 99) {
+				if (model.getStatus() == 98) {// 前台查询投资人的所有投资
+					param.addParam("status", Operators.NOTEQ, -1);
+					param.addParam("status", Operators.NOTEQ, 0);
+					param.addParam("status", Operators.NOTEQ, 2);
+				} else if (model.getStatus() == 49) { // 4/49复审未通过;
+					SearchFilter orFilter1 = new SearchFilter("status", Operators.EQ, 4);
+					SearchFilter orFilter2 = new SearchFilter("status", Operators.EQ, 49);
+					param.addOrFilter(orFilter1, orFilter2);
+				} else if (model.getStatus() == 59) { // 5/59用户取消;
+					SearchFilter orFilter1 = new SearchFilter("status", Operators.EQ, 5);
+					SearchFilter orFilter2 = new SearchFilter("status", Operators.EQ, 59);
+					param.addOrFilter(orFilter1, orFilter2);
+				} else {
+					param.addParam("status", model.getStatus());
+				}
+			}
+			if (StringUtil.isNotBlank(model.getBorrowName())) {
+				param.addParam("borrow.name", Operators.LIKE, model.getBorrowName());
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		param.addOrder(OrderType.DESC, "id");
+
+		PageDataList<BorrowTender> pageDataList = findPageList(param);
+		PageDataList<BorrowTenderModel> pageDateList_ = new PageDataList<BorrowTenderModel>();
+		List<BorrowTenderModel> list = new ArrayList<BorrowTenderModel>();
+		pageDateList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				BorrowTender t = (BorrowTender) pageDataList.getList().get(i);
+				BorrowTenderModel tm = BorrowTenderModel.instance(t);
+				tm.setBorrowName(t.getBorrow().getName());
+				tm.setAccountYes(t.getBorrow().getAccountYes());
+				tm.setUserName(t.getUser().getUserName());
+				tm.setBorrowUserName(t.getBorrow().getUser().getUserName());
+				tm.setScales(t.getBorrow().getScales());
+				list.add(tm);
+			}
+		}
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+
+	/** 修改tender的待收本金和待收利息 **/
+	@Override
+	public void updateRepayTender(double capital, double interest, long id) {
+		String jpql = "UPDATE BorrowTender SET repaymentYesAccount = repaymentYesAccount + :repaymentYesAccount,"
+				+ "repaymentYesInterest = repaymentYesInterest + :repaymentYesInterest,waitAccount = waitAccount - :waitAccount,"
+				+ "waitInterest = waitInterest - :waitInterest WHERE id=:id";
+		Query query = em.createQuery(jpql);
+		query.setParameter("repaymentYesAccount", capital);
+		query.setParameter("repaymentYesInterest", interest);
+		query.setParameter("waitAccount", capital);
+		query.setParameter("waitInterest", interest);
+		query.setParameter("id", id);
+		query.executeUpdate();
+	}
+
+	@Override
+	public double hasTenderTotalPerBorrowByUserid(long borrowId, long userId) {
+		String jpql = "SELECT SUM(account) FROM BorrowTender WHERE borrow.id = :borrowId AND user.userId = :userId";
+		Query query = em.createQuery(jpql).setParameter("borrowId", borrowId).setParameter("userId", userId);
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return Double.parseDouble(query.getSingleResult().toString());
+		}
+		return 0;
+	}
+
+	@Override
+	public PageDataList<BorrowTenderModel> list(long borrowId, int page, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("borrow.id", borrowId);
+		//JSDP-158  wcw 2015-05-23 start
+		//param.addParam("status", 1);
+		param.addParam("account", Operators.GT,0);
+		//JSDP-158  wcw 2015-05-23 end
+		param.addOrder(OrderType.DESC, "addTime");
+		if (size != 0) {
+	        param.addPage(page, size);
+		} else {
+		    param.addPage(page);
+		}
+		PageDataList<BorrowTender> pageDataList = findPageList(param);
+		PageDataList<BorrowTenderModel> pageDataList_ = new PageDataList<BorrowTenderModel>();
+		List<BorrowTenderModel> list = new ArrayList<BorrowTenderModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				BorrowTender tender = (BorrowTender) pageDataList.getList().get(i);
+				BorrowTenderModel model = BorrowTenderModel.instance(tender);
+				String username = tender.getUser().getUserName();
+				String realName = tender.getUser().getRealName();
+				String borrowUserName = tender.getBorrow().getUser().getUserName();
+				
+				// 借款标类型
+				int borrowTimeType = tender.getBorrow().getBorrowTimeType();
+				// 借款期限
+				int timeLimit = tender.getBorrow().getTimeLimit();
+				model.setUser(null);
+				model.setBorrow(null);
+				if (size == 0) {
+	                model.setUserName(username.charAt(0)+"******"+username.charAt(username.length()-1));
+				} else {
+	                model.setUserName(username);
+				}
+				model.setRealName(realName);
+				model.setBorrowUserName(borrowUserName);
+				model.setBorrowTimeType(borrowTimeType);
+				model.setTimeLimit(timeLimit);
+				model.setLineId(i+1);
+				list.add(model);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+
+	/** 首页排行榜 **/
+	@SuppressWarnings("unchecked")
+	public List<RankModel> getRankList() {
+		String selSql = "select p3.userName,sum(p1.account) as tenderMoney from t_jsd_borrow_tender p1"
+				+ " left join rd_borrow p2 on p2.id=p1.borrow_id" + " left join t_jsd_user p3 on p3.userId=p1.userId"
+				+ " where ";
+		IndexRuleCheck rankCheck = (IndexRuleCheck) Global.getRuleCheck("index");
+		int day = rankCheck.rank.day;
+		String daySql = null;
+		if (rankCheck.rank.status == 1) {
+			daySql = "(p2.borrowTimeType <>1 or p2.time_limit >= " + day + ")";
+		} else {
+			daySql = "p2.borrowTimeType <> 1";
+		}
+		String conditSql = "and ((p2.type=" + Borrow.TYPE_MORTGAGE + " and p2.status in (3,6,7,8)) or (p2.type="
+				+ Borrow.TYPE_FLOW + " and p2.status in (1,3,6,7,8)))";
+		String groupSql = " group by p3.userName order by tenderMoney desc";
+		StringBuffer sb = new StringBuffer();
+		sb.append(selSql).append(daySql).append(conditSql).append(groupSql).append(" limit 0,50");
+		Query query = em.createNativeQuery(selSql);
+		return query.getResultList();
+	}
+
+	public int getTenderCountByBorrowid(long id) {
+		String sql = "SELECT COUNT(1) FROM t_jsd_borrow_tender AS tender,t_jsd_user AS user WHERE user.userId=tender.userId and tender.borrow_id=?";
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("id", id);
+		return (Integer) query.getSingleResult();
+	}
+
+	public PageDataList<BorrowTenderModel> getTenderListByBorrowid(long id, int page, int pernum) {
+		QueryParam param = QueryParam.getInstance();
+		String sql = "select t.*,collection.repay_time as repay_time,collection.repay_yes_time as repay_yes_time,collection.repay_account as repay_account,u.userName from t_jsd_borrow_tender t "
+				+ "left join rd_borrow_collection collection on t.id=collection.tender_id "
+				+ "left join t_jsd_user u on u.userId=t.userId "
+				+ "left join rd_borrow borrow on t.borrow_id = borrow.id where t.borrow_id=:borrowId group by t.id";
+		param.addParam("borrowId", id);
+		param.addPage(page, pernum);
+		return this.findPageListBySql(sql, param, BorrowTenderModel.class);
+	}
+
+	@Override
+	public List<BorrowTender> getNewTenderList() {
+		String sql = "SELECT t.* FROM t_jsd_borrow_tender t, t_jsd_user c, rd_borrow b WHERE t.userId=c.userId AND "
+				+ "t.borrow_id=b.id AND b.status in(1,3) order by t.add_time desc limit 0,5";
+		String[] names = new String[] {};
+		Object[] values = new Object[] {};
+		return listBySql(sql, names, values, BorrowTender.class);
+	}
+
+	@Override
+	public BorrowTender addBorrowTender(BorrowTender tender) {
+		return save(tender);
+	}
+
+	public double getUserTenderNum(long userId, Date beginDate, Date endDate) {
+		String sql = "select sum(tender.account) from t_jsd_borrow_tender tender, rd_borrow borrow "
+				+ "where tender.user_id = :userId and tender.borrow_id = borrow.id and borrow.type="
+				+ Borrow.TYPE_SECOND
+				+ " and(borrow.status in (1, 3, 6, 8)) and tender.add_time between :startTime and :endTime ";
+		long startTime = DateUtil.getTime(DateUtil.getFirstSecIntegralTime(beginDate));
+		long endTime = DateUtil.getTime(DateUtil.getLastSecIntegralTime(endDate));
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("userId", userId);
+		query.setParameter("startTime", startTime);
+		query.setParameter("endTime", endTime);
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return (Double) obj;
+		}
+		return 0;
+	}
+
+	public int getBorrowTenderTimes(long borrowId, long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("borrow.borrowId", borrowId);
+		param.addParam("user.userId", userId);
+		return this.countByCriteria(param);
+	}
+	
+	public int getBorrowTenderTimes(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addParam("status", 1);
+		return this.countByCriteria(param);
+	}
+
+	public BorrowTender modifyBorrowTender(BorrowTender tender) {
+		// JSDP-174 wcw 2015-06-09 start
+		String sql = "update t_jsd_borrow_tender set repayment_account = :repayment_account,wait_account = :wait_account,interest = :interest,"
+				+ "wait_interest = :wait_interest, status= :status,repayment_yes_interest = :repayment_yes_interest,account=:account where id = :id";
+		String[] names = new String[] { "repayment_account", "wait_account", "interest", "wait_interest", "status",
+				"repayment_yes_interest","account", "id" };
+		Object[] values = new Object[] { tender.getRepaymentAccount(), tender.getWaitAccount(), tender.getInterest(),
+				tender.getWaitInterest(), tender.getStatus(), tender.getRepaymentYesAccount(), tender.getAccount(),tender.getId() };
+		// JSDP-174 wcw 2015-06-09 end
+		int result = this.updateBySql(sql, names, values);
+		if (result < 1) {
+			return null;
+		}
+		super.refresh(find(tender.getId()));
+		return tender;
+	}
+
+	@Override
+	public double sumTenderAccount(long userId) {
+		String selSql = "select sum(p1.account) as num from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+				+ "  where ((b.status in(1,3,6,7,8) and b.type in (103,105)"
+				+ ") or (b.status in(1,7,8) and b.type in (113,115))) and p1.user_id=:userId";
+		Query query = em.createNativeQuery(selSql);
+		query.setParameter("userId", userId);
+		
+		Object sumTenderAccount = query.getSingleResult();
+		if(sumTenderAccount !=null){
+
+		return Double.parseDouble(sumTenderAccount.toString());
+		}
+		return 0.0;
+	}
+
+	@Override
+	public void updateStatus(long borrowId, int status, int preStatus) {
+		String sql = "UPDATE BorrowTender SET status = :status WHERE borrow.id = :borrowId AND status = :preStatus ";
+		Query query = em.createQuery(sql);
+		query.setParameter("borrowId", borrowId);
+		query.setParameter("status", status);
+		query.setParameter("preStatus", preStatus);
+		int result = query.executeUpdate();
+		if (result <= 0) {
+			throw new UserException("更新tender记录状态失败", 1);
+		}
+	}
+	
+	@Override
+    public void updateStatus(long id, int status){
+	    String sql = "UPDATE BorrowTender SET status = :status WHERE id = :id  ";
+        Query query = em.createQuery(sql);
+        query.setParameter("id", id);
+        query.setParameter("status", status);
+        int result = query.executeUpdate();
+        if (result <= 0) {
+            throw new UserException("更新tender记录状态失败", 1);
+        } 
+	}
+	@Override
+	public int getAutoTenderByUserId(long userId, byte tenderType, long borrowId, int status) {
+		String sql = "select count(*) from t_jsd_borrow_tender tender, rd_borrow borrow where borrow.id = tender.borrow_id "
+				+ "and borrow.status = :status and tender.user_id = :user_id and tender.borrow_id = :borrow_id and tender.tender_type = :tenderType";
+		Query query = em.createNativeQuery(sql);
+		query.setParameter("status", status);
+		query.setParameter("user_id", userId);
+		query.setParameter("borrow_id", borrowId);
+		query.setParameter("tenderType", tenderType);
+		BigInteger times = (BigInteger) query.getSingleResult();
+		return times.intValue();
+	}
+
+	@Override
+	public void modifyTenderBilNo(long id, String tenderBilNo) {
+		String sql = "UPDATE BorrowTender SET tender_bil_no = :tenderBilNo WHERE id = :id ";
+		Query query = em.createQuery(sql);
+		query.setParameter("id", id);
+		query.setParameter("tenderBilNo", tenderBilNo);
+		int result = query.executeUpdate();
+		if (result <= 0) {
+			throw new UserException("更新tender失败", 1);
+		}
+		
+	}
+	
+	@Override
+	public BorrowTender getTenderByBillNo(String tenderBillNo){
+		BorrowTender borrowTender = super.findObjByProperty("tenderBilNo", tenderBillNo);
+		if (borrowTender != null) {
+			return borrowTender;
+		}
+		return null;
+	}
+
+    @Override
+    public List<BorrowTender> getTenderByBorrowId(long id) {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("borrow.id", id);
+        return findByCriteria(param);
+    }
+    @Override
+    public List<BorrowTender> getTenderByBorrowIdAndStatus(long id,int status) {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("borrow.id", id);
+        param.addParam("status", status);
+        param.addParam("account", Operators.GT, 0);
+        return findByCriteria(param);
+    }
+  //JSDP-184 xingjia 20150618 start
+    @Override
+    public int getTenderByBorrowIdAndAddTimeCount(long id,Date startTime,Date endTime) {
+       /* QueryParam param = QueryParam.getInstance();
+        param.addParam("borrow.id", id);
+        param.addParam("addTime", Operators.GTE, startTime);
+        param.addParam("addTime", Operators.LTE, endTime);
+        param.addParam("status",1);
+        return findByCriteria(param);*/
+    	StringBuffer sb=new StringBuffer();
+    	sb.append("select count(1) from t_jsd_borrow_tender a,rd_borrow b where a.borrow_id=b.id and b.id=:id and a.add_time>=:startTime and a.add_time<=:endTime and a.status=1 and a.account>=1000");
+    	Query query = em.createNativeQuery(sb.toString());
+		query.setParameter("id", id);
+		query.setParameter("startTime", startTime);
+		query.setParameter("endTime", endTime);
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			BigInteger times = (BigInteger) query.getSingleResult();
+			return times.intValue();
+		}
+		return 0;
+    }
+    public List<BorrowTender> getTenderByBorrowIdAndAddTime(long id,Date startTime,Date endTime) {
+         QueryParam param = QueryParam.getInstance();
+         param.addParam("borrow.id", id);
+         param.addParam("addTime", Operators.GTE, startTime);
+         param.addParam("addTime", Operators.LTE, endTime);
+         param.addParam("status",1);
+         param.addParam("money",Operators.GTE,1000);
+         param.addOrder(OrderType.DESC, "id");
+         return findByCriteria(param);
+     }
+  //JSDP-184 xingjia 20150618 end
+   /* @SuppressWarnings("unchecked")
+    @Override
+    public PageDataList<Borrow> getBorrowlist(BorrowTenderModel model) {
+        StringBuffer jpql = new StringBuffer("SELECT p1.* FROM rd_borrow p1 , t_jsd_borrow_tender p2 WHERE p1.id = p2.borrow_id");
+        long userId =0;
+        Date startTime = null;
+        Date endTime = null;
+        String borrowName = "";
+        if (model != null) {
+            if (model.getUser() != null && model.getUser().getUserId() > 0) {
+                jpql.append(" AND p2.user_id = :userId");
+                userId = model.getUser().getUserId();
+            }
+            if (StringUtil.isNotBlank(model.getBorrowName()) && model.getBorrowName().length() > 0) {
+                jpql.append(" AND p1.name like :borrowName");
+                borrowName = model.getBorrowName();
+            }
+            if (StringUtil.isNotBlank(model.getStartTime())) {
+                startTime = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+                jpql.append(" AND p1.add_time >= :startTime");
+            }
+            if (StringUtil.isNotBlank(model.getEndTime())) {
+                endTime = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+                jpql.append(" AND p1.add_time <= :endTime");
+            }
+            if(model.getTime() > 0){
+                startTime = DateUtil.getDayStartTime(System.currentTimeMillis()/1000);
+                jpql.append(" AND p1.add_time >= :startTime AND p1.add_time <= :endTime");
+                if (model.getTime() == 7) {
+                    endTime = DateUtil.rollDay(startTime, 7);
+                    endTime = DateUtil.getDayEndTime(endTime.getTime() / 1000);
+                } else if (model.getTime() > 0 && model.getTime() < 4){
+                    endTime = DateUtil.rollMon(startTime, model.getTime());
+                    endTime = DateUtil.getDayEndTime(endTime.getTime() / 1000);
+                }
+            }
+        }
+        jpql.append(" GROUP BY p1.id ORDER BY p2.add_time DESC");
+        PageDataList<Borrow> pageDataList = new PageDataList<Borrow>();
+        Query query = em.createNativeQuery(jpql.toString(), Borrow.class);
+        if(userId > 0){
+            query.setParameter("userId", userId);
+        }
+        if(borrowName.length() > 0){
+            query.setParameter("borrowName", "%"+borrowName+"%");
+        }
+        if (startTime != null) {
+            query.setParameter("startTime", startTime);
+        }
+        if (endTime != null) {
+            query.setParameter("endTime", endTime);
+        }
+        Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+        query.setFirstResult((model.getPage() - 1) * model.getSize());
+        query.setMaxResults(model.getSize());
+        List<Borrow> list = query.getResultList();
+        pageDataList.setList(list);
+        pageDataList.setPage(page);
+        return pageDataList;        
+    }*/
+    
+    @SuppressWarnings("unchecked")
+    @Override
+    public PageDataList<Borrow> getBorrowlist(BorrowTenderModel model) {
+        StringBuffer jpql = new StringBuffer("SELECT p1.* FROM rd_borrow p1 , t_jsd_borrow_tender p2 WHERE p1.id = p2.borrow_id");
+        long userId =0;
+        Date startTime = null;
+        Date endTime = null;
+        String borrowName = "";
+        int type =0;
+        if (model != null) {
+            if (model.getUser() != null && model.getUser().getUserId() > 0) {
+                jpql.append(" AND p2.user_id = :userId");
+                userId = model.getUser().getUserId();
+            }
+            if (StringUtil.isNotBlank(model.getBorrowName()) && model.getBorrowName().length() > 0&& !"undefined".equals(model.getBorrowName())) {
+                jpql.append(" AND p1.name like :borrowName");
+                borrowName = model.getBorrowName();
+            }
+            if(StringUtil.isNotBlank(model.getType())){
+            	jpql.append(" AND p1.type = :type");
+                type = Integer.parseInt(model.getType());
+            }   
+            if (StringUtil.isNotBlank(model.getStartTime())) {
+                startTime = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+                jpql.append(" AND p1.add_time >= :startTime");
+            }
+            if (StringUtil.isNotBlank(model.getEndTime())) {
+                endTime = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+                jpql.append(" AND p1.add_time <= :endTime");
+            }
+            if(model.getTime() > 0 &&model.getTime()<9 ){
+                startTime = DateUtil.getDayStartTime(System.currentTimeMillis()/1000);
+                
+                if (model.getTime() == 7) {
+                    endTime = DateUtil.rollDay(startTime, -7);
+                    endTime = DateUtil.getDayEndTime(endTime.getTime() / 1000);
+                } else if (model.getTime() > 0 && model.getTime() < 4){
+                    endTime = DateUtil.rollMon(startTime, -model.getTime());
+                    endTime = DateUtil.getDayEndTime(endTime.getTime() / 1000);
+                }
+                
+                jpql.append(" AND p1.add_time >= :endTime AND p1.add_time <= :startTime");
+            }    
+        }
+        //jpql.append(" GROUP BY p1.id ORDER BY p2.add_time DESC");
+        jpql.append(" ORDER BY p2.add_time DESC");
+        PageDataList<Borrow> pageDataList = new PageDataList<Borrow>();
+        Query query = em.createNativeQuery(jpql.toString(), Borrow.class);
+        if(userId > 0){
+            query.setParameter("userId", userId);
+        }
+        if(type > 0){
+            query.setParameter("type", type);
+        }
+        if(borrowName.length() > 0){
+            query.setParameter("borrowName", "%"+borrowName+"%");
+        }
+        if (startTime != null) {
+            query.setParameter("startTime", startTime);
+        }
+        if (endTime != null) {
+            query.setParameter("endTime", endTime);
+        }
+        Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+        query.setFirstResult((model.getPage() - 1) * model.getSize());
+        query.setMaxResults(model.getSize());
+        List<Borrow> list = query.getResultList();
+        pageDataList.setList(list);
+        pageDataList.setPage(page);
+        return pageDataList;        
+    }
+
+    @Override
+    public int getInvestCountByDate(int i) {
+        String sql = "select count(distinct user_id) from t_jsd_borrow_tender where date_format(add_time,'%Y-%m-%d') = DATE_SUB(CURDATE(),INTERVAL ? DAY)";
+        Query query = em.createNativeQuery(sql).setParameter(1, i);
+        Object obj = query.getSingleResult();
+        int count = 0;
+        if (obj != null) {
+            count = ((BigInteger) query.getSingleResult()).intValue();
+        }
+        return count;
+    }
+
+   /* @Override
+    public int getInvestCountByDate(String date) {
+        String dateFormat = "%Y-%m-%d";
+        if (date.length() == 7) {
+            dateFormat = "%Y-%m";
+        }
+        String sql = "select count(distinct user_id) from t_jsd_borrow_tender where date_format(add_time,'"+dateFormat+"') = ?";
+        Query query = em.createNativeQuery(sql).setParameter(1, date);
+        Object obj = query.getSingleResult();
+        int count = 0;
+        if (obj != null) {
+            count = ((BigInteger) obj).intValue();
+        }
+        return count;
+    }*/
+    /**
+     * 最近7天投资人数统计
+     */
+    @Override
+    public int getInvestCountByDate(String date) {
+        String dateFormat = "%Y-%m-%d";
+        if (date.length() == 7) {
+            dateFormat = "%Y-%m";
+        }
+        String sql = "select count(distinct user_id) from t_jsd_borrow_tender where date_format(add_time,'"+dateFormat+"') = ?";
+        Query query = em.createNativeQuery(sql).setParameter(1, date);
+        Object obj = query.getSingleResult();
+        int count = 0;
+        if (obj != null) {
+            count = ((BigInteger) obj).intValue();
+        }
+        return count;
+    }
+
+
+    /**
+     * 投资人累计投资金额总和
+     */
+    @Override
+    public double tenderAccount() {
+        String selSql = "select sum(p1.account) as num from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+                + "  where ((b.status in(1,3,6,7,8) and b.type<>"
+                + Borrow.TYPE_FLOW
+                + ") or (b.status in(1,8) and b.type=" + Borrow.TYPE_FLOW + "))";
+        Query query = em.createNativeQuery(selSql);
+        Object obj = query.getSingleResult();
+        if(obj != null){
+            return Double.parseDouble(obj.toString());
+        }
+        return 0; 
+    }
+    
+    @Override
+    public double ultimoTenderAccount() {
+    	 String selSql = "select sum(p1.account) as num from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+             + "  where p1.add_time >(SELECT DATE_SUB(DATE_SUB(DATE_FORMAT(NOW(),'%y-%m-%d'),INTERVAL EXTRACT(DAY FROM NOW())-1 DAY),INTERVAL 1 MONTH) AS lastdate)" +
+             		" AND  p1.add_time < (SELECT DATE_SUB(DATE_SUB(DATE_FORMAT(NOW(),'%y-%m-%d'),INTERVAL EXTRACT(DAY FROM NOW()) DAY),INTERVAL 0 MONTH) AS firstdate)" +
+             		" AND ((b.status in(1,3,6,7,8) and b.type<>"
+             + Borrow.TYPE_FLOW
+             + ") or (b.status in(1,8) and b.type=" + Borrow.TYPE_FLOW + "))";
+	     Query query = em.createNativeQuery(selSql);
+	     Object obj = query.getSingleResult();
+	     if(obj != null){
+	         return Double.parseDouble(obj.toString());
+	     }
+	     return 0; 
+    }
+    
+    @Override
+    public double tenderTodayAccount() {
+        String selSql = "select sum(p1.account) as num from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+                + "  where ((b.status in(1,3,6,7,8) and b.type<>"
+                + Borrow.TYPE_FLOW
+                + ") or (b.status in(1,8) and b.type=" + Borrow.TYPE_FLOW + ")) and DATE(p1.add_time) = CURDATE()";
+        Query query = em.createNativeQuery(selSql);
+        Object obj = query.getSingleResult();
+        if(obj != null){
+            return Double.parseDouble(obj.toString());
+        }
+        return 0; 
+    }
+    @Override
+    public int getInvestUserCount() {
+        String sql = "SELECT COUNT(DISTINCT t.user_id) FROM t_jsd_borrow_tender t";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+    }
+    
+    /**
+     * 投资人累计收到利息总和（实际收到）
+     * @author 孙晓勇
+     */
+    @Override
+    public double tenderAllInterest() {
+        String sql = "SELECT SUM(t1.repayment_yes_interest) FROM t_jsd_borrow_tender t1 WHERE t1.status = 1";
+        Query query = em.createNativeQuery(sql);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+
+    /**
+     * 成功投资一次以上的用户数——投资人
+     * @author 孙晓勇
+     */
+	@Override
+	public int getTenderInvestUserCount() {
+		String sql = "SELECT COUNT(DISTINCT t1.user_id) AS num FROM t_jsd_borrow_tender t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND t1.status='1' AND t1.account > 0 AND t2.user_type = '10'";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+	}
+
+	/**
+     * 累计成功投资金额总和——投资人
+     * @author 孙晓勇
+     */
+	@Override
+	public double tenderInvestAccount() {
+		String sql = "SELECT SUM(account) AS num FROM t_jsd_borrow_tender t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND t1.status='1' AND t1.account > 0 AND t2.user_type = '10'";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Double.parseDouble(count.toString());
+        }
+        return 0;
+	}
+	
+	@Override
+	public List<Object[]> investTop10In() {
+		String sql = "SELECT user_name name,SUM(account) money " +
+				"FROM t_jsd_borrow_tender AS t,t_jsd_user AS u " +
+				"WHERE t.user_id =u.user_id AND " +
+				"t.add_time >= DATE_ADD(CURDATE(),INTERVAL -DAY(CURDATE())+1 DAY) " +
+				" GROUP BY t.user_id " +
+				"ORDER BY SUM(account) " +
+				"DESC LIMIT 10";
+        Query query = em.createNativeQuery(sql);
+        List list = query.getResultList();
+        
+		return list;
+	}
+	@Override
+	public double investAccountMax() {
+		String sql = "SELECT MAX(s.num) FROM (SELECT SUM(account) AS num FROM t_jsd_borrow_tender GROUP BY user_id) AS s";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Double.parseDouble(count.toString());
+        }
+        return 0;
+	}
+	@Override
+	public int investNumberMax() {
+		String sql = "SELECT MAX(s.num) FROM (SELECT COUNT(*) num FROM t_jsd_borrow_tender GROUP BY user_id) AS s";
+        Query query = em.createNativeQuery(sql);
+        Object count = query.getSingleResult();
+        if(count != null){
+            return Integer.parseInt(count.toString());
+        }
+        return 0;
+	}
+	@Override
+	public int investNumberSum() {
+		String sql = "SELECT COUNT(*) num FROM t_jsd_borrow_tender";
+		Query query = em.createNativeQuery(sql);
+		Object count = query.getSingleResult();
+		if(count != null){
+			return Integer.parseInt(count.toString());
+		}
+		return 0;
+	}
+
+
+	@Override
+	public double tenderedAccountsByDate(String dates) {
+		// TODO Auto-generated method stub
+        String dateFormat = "%Y-%m-%d";
+        if (dates.length() == 7) {
+            dateFormat = "%Y-%m";
+        }
+	 	String selSql = "select sum(p1.account) as num from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+                + "  where b.status in(1,3,6,7,8) and date_format(p1.add_time,'"+dateFormat+"') like  ?";
+        Query query = em.createNativeQuery(selSql).setParameter(1, "%"+dates+"%");
+        Object obj = query.getSingleResult();
+        if(obj != null){
+            return Double.parseDouble(obj.toString());
+        }
+		return 0;
+	}
+
+
+	@Override
+	public int ultimoTenderSum() {
+		 String selSql = "SELECT COUNT(s.num) FROM(select COUNT(p1.account) as num from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+             + "  where p1.add_time >(SELECT DATE_SUB(DATE_SUB(DATE_FORMAT(NOW(),'%y-%m-%d'),INTERVAL EXTRACT(DAY FROM NOW())-1 DAY),INTERVAL 1 MONTH) AS lastdate)" +
+             		" AND  p1.add_time < (SELECT DATE_SUB(DATE_SUB(DATE_FORMAT(NOW(),'%y-%m-%d'),INTERVAL EXTRACT(DAY FROM NOW()) DAY),INTERVAL 0 MONTH) AS firstdate)" +
+             		" AND ((b.status in(1,3,6,7,8) and b.type<>"
+             + Borrow.TYPE_FLOW
+             + ") or (b.status in(1,8) and b.type=" + Borrow.TYPE_FLOW + ")) GROUP BY p1.user_id)AS s";
+	     Query query = em.createNativeQuery(selSql);
+	     Object obj = query.getSingleResult();
+	     if(obj != null){
+	         return Integer.parseInt(obj.toString());
+	     }
+	     return 0; 
+	}
+
+	@Override
+	public PageDataList<BorrowTender> getSwingOutTender(User user,int page,int size) {
+		/*QueryParam param = QueryParam.getInstance() ;
+		List<Integer> s = new ArrayList<Integer>() ; 
+		s.add(6);
+		s.add(7);
+		param.addParam("borrow.status",Operators.IN,s) ;
+		param.addParam("user",user) ;
+		param.addParam("iscredit", 1) ;
+		return findByCriteria(param) ;*/
+		StringBuffer buffer = new StringBuffer("SELECT * FROM t_jsd_borrow_tender a,rd_borrow b where a.borrow_id=b.id and a.iscredit<>2 and b.is_swingout = 1 and ((b.type in(113) and b.status=1) or (b.type in(115) and b.status=1) or (b.type in (103) and b.status in (6,7))) and a.user_id = "+user.getUserId()+" ");
+		Query query = em.createNativeQuery(buffer.toString(), BorrowTender.class);
+		List<BorrowTender> clList =  query.getResultList() ;
+		Page npage = new Page(clList.size(),page, size) ;
+		PageDataList<BorrowTender> btpagelist = new PageDataList<BorrowTender>();
+		query.setFirstResult((page - 1) * size);
+		query.setMaxResults(size);
+		btpagelist.setList(query.getResultList());
+		btpagelist.setPage(npage);
+		return btpagelist;
+	}
+	@Override
+	public BorrowTender getSwingOutTenderByOne(User user,long id) {
+		QueryParam param = QueryParam.getInstance() ;
+		List<Integer> s = new ArrayList<Integer>() ; 
+		s.add(6);
+		s.add(7);
+		param.addParam("borrow.status",Operators.IN,s) ;
+		param.addParam("user",user) ;
+		param.addParam("id", id) ;
+		return  findByCriteriaForUnique(param) ;
+	}
+
+	@Override
+	public double getInvesterTenderAccount(long userId, Date startTime,
+			Date endTime) {
+		 String selSql = " SELECT SUM(p1.account) AS num FROM t_jsd_borrow_tender p1 LEFT JOIN rd_borrow b ON b.id=p1.borrow_id "
+	              +  " LEFT JOIN rd_verify_log v ON v.fid = p1.borrow_id "
+	              + " WHERE (b.status IN(3,6,7,8) AND v.verify_type=2 AND v.result=1 AND b.type IN (103,105)) "
+	              + " OR( b.status IN(1,7,8) AND b.type IN (113,115) ) "
+	              +"AND p1.user_id = :userId "
+	              + " AND v.time >= :startTime AND p1.add_time <= :endTime "; 
+		  
+	        Query query = em.createNativeQuery(selSql);
+	        
+	        query.setParameter("userId", userId);
+			query.setParameter("startTime", startTime);
+			query.setParameter("endTime", endTime);
+			
+	        Object obj = query.getSingleResult();
+	        if(obj != null){
+	            return Double.parseDouble(obj.toString());
+	        }
+	        return 0; 
+	}
+	
+	@Override
+	public double getInvesterTenderAccount(long userId, Date endTime) {
+		String selSql = " SELECT SUM(p1.account) AS num FROM t_jsd_borrow_tender p1 LEFT JOIN rd_borrow b ON b.id=p1.borrow_id "
+	              +  " LEFT JOIN rd_verify_log v ON v.fid = p1.borrow_id "
+				 + " WHERE b.status IN(1,3,6,7,8) AND v.result=1 AND p1.user_id = :userId "
+	              + " AND p1.add_time <= :endTime "; 
+		  
+	        Query query = em.createNativeQuery(selSql);
+	        
+	        query.setParameter("userId", userId);
+			query.setParameter("endTime", endTime);
+			
+	        Object obj = query.getSingleResult();
+	        if(obj != null){
+	            return Double.parseDouble(obj.toString());
+	        }
+	        return 0;
+	}
+	//JSDP-158  wcw 2015-05-23 start
+	@Override
+	public double getInvesterTenderAccountByUserAndBorrowType(long userId,
+			int type,int status) {
+		StringBuffer  selSql = new StringBuffer();
+		
+		selSql.append(" SELECT SUM(p1.account) AS num FROM t_jsd_borrow_tender p1 LEFT JOIN rd_borrow b ON b.id=p1.borrow_id ");
+		selSql.append(" LEFT JOIN rd_verify_log v ON v.fid = p1.borrow_id ");
+		
+			//能源宝和微企贷
+			if(type == Borrow.TYPE_MORTGAGE_ENERGY || type == Borrow.TYPE_NETWORK){
+				selSql.append(" WHERE b.status IN(1,7,8) ");		
+			}
+			//车贷宝和分期宝
+			if(type == Borrow.TYPE_MORTGAGE || type == Borrow.TYPE_AMORTIZE){
+				selSql.append(" WHERE b.status IN(3,6,7,8) AND v.verify_type=2 AND v.result=1 ");	
+			}
+			selSql.append(" and p1.status=:status");
+			selSql.append(" AND b.type = :type ");
+			selSql.append(" AND p1.user_id = :userId "); 
+		  
+	        Query query = em.createNativeQuery(selSql.toString());
+	        query.setParameter("status", status);
+	        query.setParameter("userId", userId);
+			query.setParameter("type", type);
+			
+	        Object obj = query.getSingleResult();
+	        if(obj != null){
+	            return Double.parseDouble(obj.toString());
+	        }
+	        return 0; 
+	}
+	//JSDP-158  wcw 2015-05-23 end
+	@Override
+	public int getInvesterTenderSum(long userId, Date startTime,
+			Date endTime) {
+		 
+		 String selSql = " SELECT count(p1.user_id) AS num FROM t_jsd_borrow_tender p1 LEFT JOIN rd_borrow b ON b.id=p1.borrow_id "
+	              +  " LEFT JOIN rd_verify_log v ON v.fid = p1.borrow_id "
+	              + " WHERE (b.status IN(3,6,7,8) AND v.verify_type=2 AND v.result=1 AND b.type IN (103,105)) "
+	              + " OR( b.status IN(1,7,8) AND b.type IN (113,115) ) "
+	              +"AND p1.user_id = :userId "
+	              + " AND v.time >= :startTime AND p1.add_time <= :endTime "; 
+		  
+	        Query query = em.createNativeQuery(selSql);
+	        
+	        query.setParameter("userId", userId);
+			query.setParameter("startTime", startTime);
+			query.setParameter("endTime", endTime);
+			
+	        Object obj = query.getSingleResult();
+	        if(obj != null){
+	            return Integer.parseInt(obj.toString());
+	        }
+	        return 0; 
+	}
+
+	@Override
+	public double getUserReturnedMoneySum(long userId, Date startTime, Date endTime) {
+		 String selSql = " SELECT SUM(p1.use_returned_money) AS num FROM t_jsd_borrow_tender p1 LEFT JOIN rd_borrow b ON b.id=p1.borrow_id "
+	              +  " LEFT JOIN rd_verify_log v ON v.fid = p1.borrow_id "
+				 + " WHERE b.status IN(1,3,6,7,8) AND v.result=1 AND p1.user_id = :userId "
+	              + " AND v.time >= :startTime AND p1.add_time <= :endTime "; 
+		  
+	        Query query = em.createNativeQuery(selSql);
+	        
+	        query.setParameter("userId", userId);
+			query.setParameter("startTime", startTime);
+			query.setParameter("endTime", endTime);
+			
+	        Object obj = query.getSingleResult();
+	        if(obj != null){
+	            return Double.parseDouble(obj.toString());
+	        }
+	        return 0; 
+	}
+	@Override
+	public List<BorrowTender> getUserOngoingBorrow(User user) {
+		QueryParam param = QueryParam.getInstance() ;
+		List<Integer> s = new ArrayList<Integer>() ; 
+		s.add(1);
+		s.add(3);
+		s.add(6);
+		s.add(7);
+		s.add(19);
+		param.addParam("borrow.status",Operators.IN,s) ;
+		param.addParam("user",user) ;
+		param.addParam("iscredit", 1) ;
+		return findByCriteria(param) ;
+	}
+
+	@Override
+	public List<BorrowTender> getSwingOutTender(User user) {
+		StringBuffer buffer = new StringBuffer("SELECT * FROM t_jsd_borrow_tender a,rd_borrow b where a.borrow_id=b.id and a.iscredit<>2 and b.is_swingout = 1 and ((b.type in(113) and b.status=1) or (b.type in(115) and b.status=1) or (b.type in (103) and b.status in (6,7))) and a.user_id = "+user.getUserId()+" ");
+		Query query = em.createNativeQuery(buffer.toString(), BorrowTender.class);
+		List<BorrowTender> clList =  query.getResultList() ;
+		return clList;
+	}
+	//fengguoqin@ddtlj.com JSDP-45 2015.6.19 start
+	@Override
+	public Map<String,Double> getTenderMoneySum() {
+		String selSql = "select sum(p1.account) as numMoney,count(p1.account) as num  from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+	             + "  where p1.add_time >(SELECT DATE_SUB( DATE_FORMAT(NOW(), '%y-%m-%d'), INTERVAL 1 DAY ) AS lastdate) " +
+	             		" AND  p1.add_time < (SELECT DATE_SUB(DATE_FORMAT(NOW(), '%y-%m-%d'),INTERVAL 0 DAY) AS firstdate) " +
+	             		" AND ((b.status in(1,3,6,7,8) and b.type not in (113,115)"+
+	              ") or (b.status in(1,8) and b.type in (113,115)))  AND p1.status =1 ";
+	//fengguoqin@ddtlj.com JSDP-45 2015.6.19 end 
+	     Query query = em.createNativeQuery(selSql);
+	     List lit = query.getResultList();
+	     Map<String,Double> moneyNum = new HashMap<String,Double>();
+	     Object[] object = new Object[2];
+	     object = (Object[]) lit.get(0);
+
+	     
+	     for(int i=0;i<object.length;i++){
+	    	 if(null != object[0]){
+	    		 moneyNum.put("numMoney",Double.parseDouble(object[0]+""));
+	    	 }else{
+	    		 moneyNum.put("numMoney",0.0);
+	    	 }
+	    	 moneyNum.put("num", Double.parseDouble(object[1]+""));
+	     }
+	     
+	     if(moneyNum != null){
+	         return moneyNum;
+	     }
+		return null;
+	}
+	// JSDP-185 sxy 20150623
+	@Override
+	public List<BorrowTender> excelTenderDatalist(BorrowTenderModel model) {
+		//JSDP-116 sxy 2015-05-18 start
+		StringBuffer  sql = new StringBuffer();
+		sql.append(" SELECT t1.id, t1.borrow_id, "
+				+ " CASE  t2.type "
+				+ " WHEN  103 THEN '车贷宝' "
+				+ " WHEN  113 THEN '能源宝' "
+				+ " WHEN  105 THEN '分期宝' "
+				+ " WHEN  115 THEN '网商贷' "
+				+ " ELSE '其他' END AS type, "
+				+ " t7.user_name as borrowUser, "
+				
+				//+ " t2.time_limit, "   //borrow_time_type
+				//+ " CASE  t2.time_limit "
+				+ " CASE  t2.borrow_time_type "
+				+ " WHEN  0 THEN CONCAT(t2.time_limit, '月') "
+				+ " WHEN  1 THEN CONCAT(t2.time_limit, '天') "
+				+ " ELSE '其他' END AS timelimit, "
+				
+				+ " t3.user_name, t3.add_time as time1, t3.real_name, "
+				+ " t6.no, t5.account_total, t1.money, t1.account, t1.repayment_account, "
+				//+ " t1.tender_type, "
+				
+				+ " CASE  t1.tender_type "
+				+ " WHEN  0 THEN '网站投标' "
+				+ " WHEN  1 THEN '自动投标' "
+				+ " WHEN  2 THEN '手机投标' "
+				+ " ELSE '其他' END AS borrowtype, "
+				
+				+ " CASE  t1.status "
+				+ " WHEN  0 THEN '投标处理中' "
+				+ " WHEN  1 THEN '成功' "
+				+ " WHEN  2 THEN '失败' "
+				+ " ELSE '其他' END AS tenderStatus, "
+				
+				+ " t1.add_time as time2, t1.add_ip "
+				
+				+ " FROM t_jsd_borrow_tender AS t1 "
+				+ " LEFT JOIN rd_borrow AS t2 ON t1.borrow_id = t2.id "
+				+ " LEFT JOIN t_jsd_user AS t3 ON t1.user_id = t3.user_id "
+				+ " LEFT JOIN t_jsd_user_cache AS t4 ON t3.user_id = t4.user_id "
+				+ " LEFT JOIN t_jsd_account AS t5 ON t3.user_id = t5.user_id "
+				+ " LEFT JOIN s_operator AS t6 ON t4.customer_user_id = t6.id "
+				+ " LEFT JOIN t_jsd_user AS t7 ON t7.user_id = t2.user_id "
+				+ " WHERE 1=1 ");
+		
+		// 投资人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" AND t3.user_name LIKE '%"+model.getUserName()+"%' ");
+		}
+		// 客服
+		if(StringUtil.isNotBlank(model.getCustomerUserId())){
+			sql.append(" AND t6.no LIKE '%"+model.getCustomerUserId()+"%' ");
+		}
+		// 标ID
+		if(0 < model.getBorrowId()){
+			sql.append(" AND t2.id = "+model.getBorrowId()+" ");
+		}
+		// 标种
+		if(StringUtil.isNotBlank(model.getType())){
+			sql.append(" AND t2.type = "+model.getType()+" ");
+		}
+		// 投标类型
+		if(99 != model.getTenderType() && 0 < model.getTenderType()){
+			if(model.getTenderType()==10){
+				sql.append(" AND t1.tender_type = 0 ");
+			}else if(model.getTenderType()==11){
+				sql.append(" AND t1.tender_type = 1 ");
+			}else if(model.getTenderType()==12){
+				sql.append(" AND t1.tender_type = 2 ");
+			}
+		}
+		// 投标状态
+		if(0 < model.getStatus()){
+			if(model.getStatus()==100){
+				sql.append(" AND t1.status = 0 ");
+			}else if(model.getStatus()==200){
+				sql.append(" AND t1.status = 1 ");
+			}else if(model.getStatus()==300){
+				sql.append(" AND t1.status = 2 ");
+			}
+		}
+		// JSDP-BUG109 sxy start
+		// 客服ID
+		if (model.getOperatorId()!=0) {
+			sql.append(" AND t4.customer_user_id = "+model.getOperatorId()+" ");
+		}
+		// 对账类型
+		if(StringUtil.isNotBlank(model.getCompareResult())){
+			if("null".equals(model.getCompareResult())){
+				sql.append(" AND t1.compare_result = IS NULL ");
+			}else{
+				sql.append(" AND t1.compare_result = '"+model.getCompareResult()+"' ");
+			}
+		}
+		// 投标时间-开始
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" AND t1.add_time >= '"+model.getStartTime()+"' ");
+		}
+		// 投标时间-结束
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" AND t1.add_time <= '"+model.getEndTime()+"' ");
+		}
+		
+		//--------------------------------------
+		Query query = em.createNativeQuery(sql.toString());
+		//--------------------------------------
+		/*
+		// 投资人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			query.setParameter("userName", model.getUserName());
+		}
+		// 客服
+		if (StringUtil.isNotBlank(model.getCustomerUserId())) {
+			query.setParameter("kefu", model.getCustomerUserId());
+		}
+		// 标ID
+		if (0 < model.getBorrowId()) {
+			query.setParameter("borrowId", model.getBorrowId());
+		}
+		// 标种
+		if (StringUtil.isNotBlank(model.getType())) {
+			query.setParameter("type", model.getType());
+		}
+		// 投标类型
+		if (-1 < model.getTenderType()) {
+			query.setParameter("tenderType", model.getTenderType());
+		}
+		// 对账类型
+		if (StringUtil.isNotBlank(model.getCompareResult())) {
+			query.setParameter("compareResult", model.getCompareResult());
+		}
+		// 投标时间-开始
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			query.setParameter("startTime", model.getStartTime());
+		}
+		// 投标时间-结束
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			query.setParameter("endTime", model.getEndTime());
+		}
+		*/
+		List tenderDataList = query.getResultList();
+		//JSDP-116 sxy 2015-05-15 start
+		return tenderDataList;
+	}
+
+	@Override
+	public PageDataList<BorrowTender> tenderMoneyStatisticsListForSQL(
+			BorrowTenderModel model, int page, int size) {
+
+			StringBuffer sql = new StringBuffer();
+			sql.append(" SELECT "
+					+ " t2.type, "
+					//+ " t2.borrow_time_type, "
+										
+					+ " CASE  t2.borrow_time_type "
+					+ " WHEN  0 THEN CONCAT(t2.time_limit, '月') "
+					+ " WHEN  1 THEN CONCAT(t2.time_limit, '天') "
+					+ " ELSE '其他' END AS timelimit, "
+										
+					+ " t1.user_id, "
+					+ " t3.user_name, t3.real_name,t5.account_total, "
+					+ " t1.money, t1.account, t1.repayment_account, "
+					
+					+ " concat(t1.tender_type), "
+					
+					+ " t1.add_time as time2,t1.compare_result "
+					
+					+ " FROM t_jsd_borrow_tender AS t1 "
+					+ " LEFT JOIN rd_borrow AS t2 ON t1.borrow_id = t2.id "
+					+ " LEFT JOIN t_jsd_user AS t3 ON t1.user_id = t3.user_id "
+					+ " LEFT JOIN t_jsd_user_cache AS t4 ON t3.user_id = t4.user_id "
+					+ " LEFT JOIN t_jsd_account AS t5 ON t3.user_id = t5.user_id "
+					+ " LEFT JOIN s_operator AS t6 ON t4.customer_user_id = t6.id "
+					+ " WHERE 1=1 ");
+			
+			
+			
+			// 投标类型
+			if (StringUtil.isNotBlank(model.getTenderTypeStr())) {
+				sql.append(" AND t1.tender_type = " + model.getTenderTypeStr() + " ");
+			}
+			// 投标状态
+			if (99 != model.getStatus()) {
+				sql.append(" AND t1.status = " + model.getStatus() + " ");
+			}
+			
+			// 时间类型
+			if (StringUtil.isNotBlank(model.getTimeType())) {
+				
+				// 昨天记录
+				if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+				}
+				// 今天记录
+				if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 一周内记录
+				if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+				}
+				// 本月记录
+				if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+					sql.append(" AND DATE_FORMAT(t1.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+				}
+				// 时间段记录
+				if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+					if (StringUtil.isNotBlank(model.getStartTime())) {
+						sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+								+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+					}
+					if (StringUtil.isNotBlank(model.getEndTime())) {
+						sql.append(" AND DATE_FORMAT(t1.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+								+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+					}
+				}
+				
+			}
+			
+			//sql.append("  AND t3.islocked != 'FF'");
+			sql.append("  ORDER BY t1.add_time DESC");
+			
+			Query query = em.createNativeQuery(sql.toString());
+			// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+			Page pages = new Page(query.getResultList().size(), size, page);
+			PageDataList<BorrowTender> pageList = new PageDataList<BorrowTender>();
+			query.setFirstResult((page - 1) * size);
+			query.setMaxResults(size);
+			List queryList = query.getResultList();
+			List<BorrowTender> userList = new ArrayList<BorrowTender>();
+			Object[] object = new Object[13];
+			for(int i=0;i<queryList.size();i++){
+				object = (Object[]) queryList.get(i);
+				BorrowTenderModel obj = new BorrowTenderModel();
+//				userM.setUserId((Long) object[0]);
+				// 标类型
+				obj.setType((object[0]).toString());
+				// 借款期限
+				obj.setTimeLimitStr(String.valueOf((object[1])));
+				// 借款人
+				obj.setBorrowUserName(String.valueOf((object[2])));
+				// 投标人
+				obj.setUserName(String.valueOf((object[3])));
+				// 真实姓名
+				obj.setRealName(String.valueOf((object[4])));
+				// 账户总额
+				obj.setTenderUserAccountStr(String.valueOf(object[5]));
+				// 投标金额
+				obj.setMoney(Double.valueOf(String.valueOf(object[6])));
+				// 有效投标金额
+				obj.setAccount(Double.valueOf(String.valueOf(object[7])));
+				// 回收本息
+				obj.setRepaymentAccount(Double.valueOf(String.valueOf(object[8])));
+				// 投标类型
+				obj.setTenderTypeStr(String.valueOf(object[9]));
+				// 投标时间
+				obj.setAddTime((Date) object[10]);
+				// 对账结果
+				obj.setCompareResult(String.valueOf(object[11]));
+				
+				
+				userList.add(obj);
+			}
+			
+			
+			pageList.setList(userList);
+			pageList.setPage(pages);
+
+			return pageList;
+			
+		
+		
+		
+		
+	}
+
+	// 2015年5月29日   sxy start
+	@Override
+	public List<BorrowTenderModel> tenderMoneyDataTotal(BorrowTenderModel model) {
+		StringBuffer  sql = new StringBuffer();
+		sql.append(" SELECT COALESCE(SUM(t1.money),0.00),COALESCE(SUM(t1.account),0.00),"
+				+ " COALESCE(SUM(t1.repayment_account),0.00),COALESCE(SUM(t1.interest),0.00) "
+				+ " FROM t_jsd_borrow_tender AS t1 "
+				+ " LEFT JOIN rd_borrow AS t2 ON t1.borrow_id = t2.id "
+				+ " LEFT JOIN t_jsd_user AS t3 ON t1.user_id = t3.user_id "
+				+ " LEFT JOIN t_jsd_user_cache AS t4 ON t3.user_id = t4.user_id "
+				//+ " LEFT JOIN t_jsd_account AS t5 ON t3.user_id = t5.user_id "	// 该处SQL会影响查询速度，确认无用
+				+ " LEFT JOIN s_operator AS t6 ON t4.customer_user_id = t6.id "
+				+ " WHERE 1=1 ");
+		
+		// 投资人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" AND t3.user_name LIKE '%"+model.getUserName()+"%' ");
+		}
+		// 客服
+		if(StringUtil.isNotBlank(model.getCustomerUserId())){
+			sql.append(" AND t6.no LIKE '%"+model.getCustomerUserId()+"%' ");
+		}
+		// 标ID
+		if(0 < model.getBorrowId()){
+			sql.append(" AND t2.id = "+model.getBorrowId()+" ");
+		}
+		// 标种
+		if(StringUtil.isNotBlank(model.getType()) && !"99".equals(model.getType())){
+			sql.append(" AND t2.type = "+model.getType()+" ");
+		}
+		// 投标类型
+		if(99 !=  model.getTenderType() && 0 < model.getTenderType()){
+			if(10 == model.getTenderType()){
+				sql.append(" AND t1.tender_type = 0 ");
+			}else if(11 == model.getTenderType()){
+				sql.append(" AND t1.tender_type = 1 ");
+			}else if(12 == model.getTenderType()){
+				sql.append(" AND t1.tender_type = 2 ");
+			}
+		}
+		// 对账类型
+		if(StringUtil.isNotBlank(model.getCompareResult())){
+			/*if("null".equals(model.getCompareResult())){
+				sql.append(" AND t1.compare_result IS NULL ");
+			}else{*/
+				sql.append(" AND t1.compare_result = '"+model.getCompareResult()+"' ");
+			/*}*/
+		}
+		// 投标时间-开始
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" AND t1.add_time >= '"+model.getStartTime()+"' ");
+		}
+		// 投标时间-结束
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" AND t1.add_time <= '"+model.getEndTime()+"' ");
+		}
+		// 状态
+		if (-1 < model.getStatus()) {
+			if(model.getStatus()==100){
+				sql.append(" AND t1.status = 0 ");
+			}else if(model.getStatus()==200){
+				sql.append(" AND t1.status = 1 ");
+			}else if(model.getStatus()==300){
+				sql.append(" AND t1.status = 2 ");
+			}
+			
+		}
+		/*
+		 * Query query = em.createNativeQuery(sql.toString()); List
+		 * tenderDataList = query.getResultList(); return tenderDataList;
+		 */
+
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		//Page pages = new Page(query.getResultList().size(), size, page);
+		//PageDataList<BorrowTender> pageList = new PageDataList<BorrowTender>();
+		//query.setFirstResult((page - 1) * size);
+		//query.setMaxResults(size);
+		List queryList = query.getResultList();
+		List<BorrowTenderModel> userList = new ArrayList<BorrowTenderModel>();
+		Object[] object = new Object[6];
+		//for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(0);
+			BorrowTenderModel obj = new BorrowTenderModel();
+			// 投标总额
+			obj.setMoneySum(Double.valueOf(String.valueOf((object[0]))));
+			// 有效投标总额
+			obj.setAccountSum(Double.valueOf((String.valueOf((object[1])))));
+			// 回收本息
+			obj.setRepaymentAccountSum(Double.valueOf((String.valueOf((object[2])))));
+			// 利息
+			obj.setInterestSum(Double.valueOf((String.valueOf((object[3])))));
+			
+			userList.add(obj);
+		//}
+		
+		//pageList.setList(userList);
+		//pageList.setPage(pages);
+
+		//return pageList;
+		
+		
+		return userList;
+		
+		
+	}
+	// JSDP-180 SXY 20150611
+	@Override
+	public double tenderMoneyDataTotalOfStatus(BorrowTenderModel model) {
+		StringBuffer  sql = new StringBuffer();
+		sql.append(" SELECT COALESCE(SUM(t1.money),0.00) "
+				+ " FROM t_jsd_borrow_tender AS t1 "
+				+ " LEFT JOIN rd_borrow AS t2 ON t1.borrow_id = t2.id "
+				+ " LEFT JOIN t_jsd_user AS t3 ON t1.user_id = t3.user_id "
+				+ " LEFT JOIN t_jsd_user_cache AS t4 ON t3.user_id = t4.user_id "
+				//+ " LEFT JOIN t_jsd_account AS t5 ON t3.user_id = t5.user_id "	// 该处SQL会影响查询速度，确认无用
+				+ " LEFT JOIN s_operator AS t6 ON t4.customer_user_id = t6.id "
+				+ " WHERE 1=1 ");
+		
+		// 投资人
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" AND t3.user_name LIKE '%"+model.getUserName()+"%' ");
+		}
+		// 客服
+		if(StringUtil.isNotBlank(model.getCustomerUserId())){
+			sql.append(" AND t6.no LIKE '%"+model.getCustomerUserId()+"%' ");
+		}
+		// 标ID
+		if(0 < model.getBorrowId()){
+			sql.append(" AND t2.id = "+model.getBorrowId()+" ");
+		}
+		// 标种
+		if(StringUtil.isNotBlank(model.getType()) && !"99".equals(model.getType())){
+			sql.append(" AND t2.type = "+model.getType()+" ");
+		}
+		// 投标类型
+		if(99 !=  model.getTenderType() && 0 < model.getTenderType()){
+			sql.append(" AND t1.tender_type = "+model.getTenderType()+" ");
+		}
+		// 对账类型
+		if(StringUtil.isNotBlank(model.getCompareResult())){
+			/*if("null".equals(model.getCompareResult())){
+				sql.append(" AND t1.compare_result IS NULL ");
+			}else{*/
+				sql.append(" AND t1.compare_result = '"+model.getCompareResult()+"' ");
+			/*}*/
+		}
+		// 投标时间-开始
+		if(StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" AND t1.add_time >= '"+model.getStartTime()+"' ");
+		}
+		// 投标时间-结束
+		if(StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" AND t1.add_time <= '"+model.getEndTime()+"' ");
+		}
+		// 状态
+		if(-1 < model.getStatus()) {
+			sql.append(" AND t1.status = "+model.getStatus()+" ");
+		}
+		
+		
+		/*
+		Query query = em.createNativeQuery(sql.toString());
+		List tenderDataList = query.getResultList();
+		return tenderDataList;
+		 */
+
+		Query query = em.createNativeQuery(sql.toString());
+
+		Object obj = query.getSingleResult();
+		if (obj != null) {
+			return Double.parseDouble(obj.toString());
+		} else {
+			return 0.00;
+		}
+		
+		
+		
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		//Page pages = new Page(query.getResultList().size(), size, page);
+		//PageDataList<BorrowTender> pageList = new PageDataList<BorrowTender>();
+		//query.setFirstResult((page - 1) * size);
+		//query.setMaxResults(size);
+		/*List queryList = query.getResultList();
+		List<BorrowTenderModel> userList = new ArrayList<BorrowTenderModel>();
+		Object[] object = new Object[6];
+		//for(int i=0;i<queryList.size();i++){
+		object = (Object[]) queryList.get(0);
+		BorrowTenderModel obj = new BorrowTenderModel();
+		// 投标总额
+		obj.setMoneySum(Double.valueOf(String.valueOf((object[0]))));
+		// 有效投标总额
+		obj.setAccountSum(Double.valueOf((String.valueOf((object[1])))));
+		// 回收本息
+		obj.setRepaymentAccountSum(Double.valueOf((String.valueOf((object[2])))));
+		// 利息
+		obj.setInterestSum(Double.valueOf((String.valueOf((object[3])))));
+		// 投资成功 
+		obj.setSuccessTenderMoneySum(Double.parseDouble(String.valueOf(object[4])));
+		// 投资失败
+		obj.setFailTenderMoneySum(Double.parseDouble(String.valueOf(object[5])));
+		userList.add(obj);*/
+		//}
+		//pageList.setList(userList);
+		//pageList.setPage(pages);
+		//return pageList;
+		//return userList;
+		
+		
+	}
+
+	@Override
+	public List borrowTenderRpActivity(Date startTime,
+			Date endTime, int borrowType, int validTime) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT bt.borrow_id"
+				    +" FROM rd_borrow rb,t_jsd_borrow_tender bt WHERE bt.borrow_id = rb.id AND "
+				    +" rb.status=1 AND rb.time_limit >="+validTime+" AND rb.type= "+borrowType+" "
+				    +" AND rb.borrow_time_type = 0"
+				    +" AND bt.add_time>='"+DateUtil.dateStr4(startTime) +"' AND bt.add_time<='"+ DateUtil.dateStr4(endTime) +"' GROUP BY bt.borrow_id");
+		Query query = em.createNativeQuery(sql.toString());
+		List list = query.getResultList();
+		return list;
+	}
+
+	@Override
+	public Map<String, Object> findMostMoneyByBorrowId(long borrowId,Date startTime,Date endTime) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT SUM(bt.money) as maxMoney,bt.user_id,u.user_name FROM t_jsd_borrow_tender bt,"
+				+ "t_jsd_user u WHERE u.user_id= bt.user_id");
+		if(borrowId!=0){
+			sql.append(" and bt.borrow_id=:borrowId");
+		}
+	    if(startTime!=null){
+	    	sql.append(" and bt.add_time>=:startTime");
+	    }
+	    if(endTime!=null){
+	    	sql.append(" and bt.add_time<=:endTime");
+	    }
+	    sql.append(" and bt.status=1");
+	    sql.append(" GROUP BY bt.user_id");
+	    sql.append(" order by maxMoney desc");
+		Query query = em.createNativeQuery(sql.toString());
+		if(borrowId!=0){
+			query.setParameter("borrowId", borrowId);
+		}
+		if(startTime!=null){
+	    	query.setParameter("startTime", startTime);
+	    }
+	    if(endTime!=null){
+	    	query.setParameter("endTime", endTime);
+	    }
+		Map<String, Object> mostMoney=new HashMap<String, Object>();;
+		try {
+			List list= query.getResultList();
+			Object object=null;
+			if(list.size()>0){
+				object=list.get(0);
+				Object[] obj = new Object[3];
+				obj = (Object[]) object;
+				mostMoney.put("tenderMoney", obj[0]);
+				mostMoney.put("userName", obj[2]);
+				mostMoney.put("userId", obj[1]);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			mostMoney=null;
+		}
+		return mostMoney;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.borrow.dao.BorrowTenderDao#tenderSumAccount(java.util.Date, java.util.Date, long)
+	 */
+	@Override
+	public double tenderSumAccount(Date startTime, Date endTime, long userId) {
+		
+		StringBuffer selSql = new StringBuffer("select sum(p1.account) as num from t_jsd_borrow_tender p1 left join rd_borrow b on b.id=p1.borrow_id"
+				+ "  where ((b.status in(1,3,6,7,8) and b.type in (103,105)"
+				+ ") or (b.status in(1,7,8) and b.type in (113,115)))");
+		if(0 != userId){
+			selSql.append(" and p1.user_id=:userId ");
+		}
+		if(null != startTime){
+			selSql.append(" and p1.add_time>=:startTime ");
+		}
+		if(null != endTime){
+			selSql.append(" and p1.add_time<=:endTime and p1.status=1");
+		}
+		Query query = em.createNativeQuery(selSql.toString());
+		if(0 != userId){
+			query.setParameter("userId", userId);
+		}
+		if(null != startTime){
+			query.setParameter("startTime", startTime);
+		}
+		if(null != endTime){
+			query.setParameter("endTime", endTime);
+		}
+		Object sumTenderAccount = query.getSingleResult();
+		if(sumTenderAccount !=null){
+			return Double.parseDouble(sumTenderAccount+"");
+		}
+		return 0.0;
+	}
+	
+	
+	
+}

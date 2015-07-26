@@ -1,0 +1,92 @@
+
+package com.ddtkj.p2psys.score.dao.impl;
+
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.score.dao.ScoreRuleAwardDao;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.score.exception.ScoreException;
+
+@Repository("scoreRuleAwardDao")
+public class ScoreRuleAwardDaoImpl extends BaseDaoImpl<ScoreRuleAward> implements ScoreRuleAwardDao {
+		
+	private static Logger logger = Logger.getLogger(ScoreRuleAwardDaoImpl.class);
+
+	@Override
+	public ScoreRuleAward getRuleAwardByAwardType(int awardType) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("award_type", awardType);
+		param.addParam("start_date", Operators.GTE, DateUtil.getIntegralTime());
+		param.addParam("end_date",  Operators.LTE, DateUtil.getIntegralTime());
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public List<ScoreRuleAward> getRuleAwardList() {
+		QueryParam param = QueryParam.getInstance();
+		return findByCriteria(param);
+	}
+
+	@Override
+	public void updateBestowMoney(long ruleId, double money) {
+		// update 抽奖规则表 set 领用金额 = 领用金额 +? where 总金额 > 领用金额 and id=xxx	
+		String sql = "UPDATE t_jsd_score_rule_award SET bestow_money = ifnull(bestow_money,0) + :bestow_money WHERE total_money>bestow_money AND id = :id";
+		String[] names = {"id", "bestow_money"};
+		Object[] values = {ruleId, money};
+		int count = updateBySql(sql, names, values);
+		if(count < 1){
+			throw new ScoreException("抽奖规则表领用金额更新失败");
+		}
+	}
+
+	@Override
+	public void updateTotalMoney(long ruleId, double money) {
+		String sql = "UPDATE t_jsd_score_rule_award SET total_money = :total_money WHERE id = :id";
+		String[] names = {"id", "total_money"};
+		Object[] values = {ruleId, money};
+		int count = updateBySql(sql, names, values);
+		if(count < 1){
+			throw new ScoreException("抽奖规则表总金额更新失败");
+		}
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatus(String status) {
+		return findObjByProperty("status", status);
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatusAndId(String status, long id) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", status);
+		param.addParam("id", Operators.NOTEQ, id);
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatusAndType(String status, long id,
+			String activityType) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", status);
+		param.addParam("id", Operators.NOTEQ, id);
+		param.addParam("activityType", activityType);
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public ScoreRuleAward getRuleAwardByStatusAndActiType(String status,
+			String activityType) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", status);
+		param.addParam("activityType", activityType);
+		return findByCriteriaForUnique(param);
+	}
+	
+}

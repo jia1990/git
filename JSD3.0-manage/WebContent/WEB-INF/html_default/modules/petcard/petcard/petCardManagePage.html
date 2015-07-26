@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>体验卡列表</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	
+ 	var dataGrid;
+ 	var winWidth =  950;
+	var winHeight = 600;
+	
+ 	var addwinWidth =  550;
+	var addwinHeight = 600;
+	
+	var addTitle = "添加体验卡";
+	var addUrl =  "/modules/petcard/petcard/addPetCardPage.html";
+	var editTitle = "编辑体验卡";
+	var editUrl =  "/modules/petcard/petcard/editPetCardPage.html";
+	
+	var deleteUrl = "/modules/petcard/petcard/articleDel.html";	//删除记录接口地址
+	
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+600+","+winHeight+",'"+editUrl+"'";
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	
+	var importTitle = "导入体验卡";
+	var importUrl =  "/modules/petcard/petcard/importPetCardExcelPage.html";
+	var importWinParmeters = "'{0}','"+importTitle+"',"+winWidth+","+winHeight+",'"+importUrl+"'";
+	
+	// 查看
+	var viewTitle = "查看信息";
+	var viewUrl = "/modules/petcard/petcard/viewPetCardPage.html";
+	var viewWinParmeters = "'{0}','" + viewTitle + "',550,600,'" + viewUrl + "'";
+	
+    var supplyWinTimeTitle = "云购中奖时间比对";
+	var supplyWinTimeUrl =  "/modules/petcard/petcard/supplyWinTimePage.html";
+	var supplyWinTimeParmeters = "'{0}','"+supplyWinTimeTitle+ "',550,580,'" + supplyWinTimeUrl+"'";
+	
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : '/modules/petcard/petcard/petCardManageList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			showFooter: true,
+			columns : [[ 		
+			//{ field: 'id',checkbox:true },
+			/* { field: 'id',formatter:function(value, row, index){
+				return "<input type='checkbox' name='selectid' class='idList' value="+row.idInt+">";
+			}}, */
+			{ field: 'idInt', title: '编号', width:60},
+			{ field: 'batchNo', title: '批次号', width: 160}, 
+			{ field: 'cardNo', title: '卡号', width: 160}, 
+			
+			//{ field: 'paw', title: '密码', width: 80},
+			{ field: 'type', title: '类型', width: 100,fixed:true, sortable:false,formatter:function(value, row, index){
+				if(row.type == "汇总信息："){
+					return "汇总信息：";
+				}else{
+					if(value=='pt'){
+						return "晋商贷体验卡";
+					}else if(value=='yt'){
+						return "云购体验卡";
+					}else{
+						return "其他";
+					}
+				}
+			}}, 
+			{ field: 'money', title: '金额', width: 150,formatter:function(value, row, index){
+				
+				if(value=='null'){
+					return "0";
+				}
+				return value+"元";
+			}},
+			
+			
+			{ field: 'isValid', title: '有效类型', width: 100,fixed:true, sortable:false,formatter:function(value, row, index){
+				
+				if(row.type == "汇总信息："){
+					return "";
+				}else{
+					if(value==0){
+						return "短期有效";
+					}else if(value==1){
+						return "永久有效";
+					}else{
+						return "未知";
+					}
+				}
+			
+			}}, 
+            { field: 'validTime', title: '有效时间', width: 100,fixed:true, sortable:false,formatter:function(value, row, index){
+            	
+            	if(row.type == "汇总信息："){
+					return "";
+				}else{
+	            	if(value == 0){
+	            		return "无";
+	            	}else{
+	            		return value+"天";
+	            	}
+				}
+            }}, 
+            
+            { field: 'addTime', title: '添加时间', width: 150,fixed:true, sortable:false,formatter:function(value, row, index){
+            	return getLocalTime(value,4);
+            }},
+           // { field: 'addUser', title: '添加人', width: 150,fixed:true, sortable:false}, 
+			{ field: 'status', title: '状态', width: 100,formatter:function(value, row, index){
+				if(row.type == "汇总信息："){
+					return "";
+				}else{
+				
+					if(value=='ua'){
+						return "未激活";
+					}else if(value=="da"){
+						return "已激活";
+					}else if(value=="dd"){
+						return "已失效";
+					}else if(value=="ud"){
+						return "已使用&未激活";
+					}else{
+						return "未知";
+					}
+				}
+			}},
+			{ field: 'userName', title: '消费用户', width: 100 ,formatter:function(value, row, index){
+				/* if(value=='null'){
+					return "0";
+				} */
+				return value;
+			}},
+			{ field: 'winTime', title: '中奖时间', width: 150,fixed:true, sortable:false,formatter:function(value, row, index){
+				return getLocalTime(value,4);
+			}}, 
+			{ field: 'activateTime', title: '激活时间', width: 160,fixed:true, sortable:false,formatter:function(value, row, index){
+				return getLocalTime(value,4);
+			}},
+			{ field: 'isExport', title: '是否导出', width: 100,fixed:true, sortable:false,formatter:function(value, row, index){
+				if(value=='0'){
+					return "未导出";
+				}else if(value == '1'){
+					return "已导出";
+				}
+			}}, 
+            {field : 'action',title : '操作',width :60,fixed:true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if(row.type == "汇总信息："){
+						return str;
+					}else{
+						if(row.status == 'ua'){
+							str += "<@secAuthorizeUrl value='/petcard/petcardEditBtn.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑" ondragstart="return false"/>', row.idInt, '${theme_dir}/css/images/extjs_icons/pencil.png');
+							str += "</@secAuthorizeUrl>";
+							str += '&nbsp;';
+							str += "<@secAuthorizeUrl value='/petcard/petcardSupplyWinTime.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.editFunTransfer('+supplyWinTimeParmeters+');" src="{1}" title="云购中奖时间补单"/>', row.cardNo, '${theme_dir}/css/images/extjs_icons/world/world_go.png');
+							str += "</@secAuthorizeUrl>";
+						}else{
+							str += "<@secAuthorizeUrl value='/petcard/petcardViewBtn.html' >";
+							str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewWinParmeters + ');" src="{1}" title="查看"/>', row.idInt, '${theme_dir}/css/images/extjs_icons/book_open.png');
+							str += "</@secAuthorizeUrl>";
+							str += '&nbsp;';
+						}
+						
+						//str += "<@secAuthorizeUrl value='/petcard/petcardDelBtn.html'>";
+						//str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+						//str += "</@secAuthorizeUrl>";
+						//str += '&nbsp;'; 
+					}
+					return str;
+				}
+			} 
+			 ]],
+			 toolbar : '#toolbar',
+			 onLoadSuccess : function() {
+					$('#searchForm table').show();
+					parent.$.messager.progress('close');
+					$(this).datagrid('tooltip',['content']);
+			 }
+		
+		});
+		
+		
+		
+		
+	});
+ 	 
+ 	 
+ 	// 储值卡导出Excel表
+	function exportExcel(){
+		var url = "/modules/petcard/petcard/petCardExcelForSelectList.html";
+		var batchNo = $("#batchNo").val();
+		var cardNo = $("#cardNo").val();
+		var userName = $("#userName").val();
+		var status = $("#status").val();
+		var type = $("#type").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?batchNo=" + batchNo + "&cardNo=" + cardNo + "&userName="+ userName + "&status=" + status + "&startTime=" + startTime
+					+ "&type="+ type + "&endTime=" + endTime;
+
+		window.location.href = url + sou;
+		
+		
+	} 
+ 	
+</script>
+
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>批次号：<input type="text" name="batchNo" id="batchNo" autocomplete="off"/></li>
+            		<li>卡号：<input type="text" name="cardNo" id="cardNo" autocomplete="off"/></li>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		
+            		<li>状态：
+	            		<select name="status" id="status" class="type">
+				            <option value="" selected="selected">全部</option>
+				            <option value="ua">未激活</option>
+				            <option value="da">已激活</option>
+				            <option value="dd">已失效</option>
+				            <option value="ud">已使用&未激活</option>
+						</select>
+					</li>
+            		<li>类型：
+	            		<select name="type" id="type" class="type">
+				            <option value="" selected="selected">全部</option>
+				            <option value="pt">晋商贷体验卡</option>
+				            <option value="yt">云购体验卡</option>
+						</select>
+					</li>
+            		
+            		<li>添加时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>		
+
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/petcard/petCardAddBtn.html'>	
+		<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,addwinWidth,addwinHeight,addUrl);" href="javascript:void(0);" class="addBtn" ondragstart="return false">添加</a>				
+		</@secAuthorizeUrl>
+		<@secAuthorizeUrl value='/petcard/petCardExcelBtn.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+		<@secAuthorizeUrl value='/petcard/petCardExcelImportBtn.html'>
+		<a id="a" onclick="$.fn.dataGridOptions.addFun(-1,importTitle,addwinWidth,addwinHeight,importUrl);"  href="javascript:void(0);" class="exportBtn">导入excel</a>
+		</@secAuthorizeUrl>	
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+
+</html>

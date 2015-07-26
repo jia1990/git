@@ -1,0 +1,144 @@
+package com.ddtkj.manage.action.analysis;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.analysis.model.UserSourceModel;
+import com.ddtkj.p2psys.analysis.service.UserSourceService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class AnalysisManageAction extends BaseAction implements ModelDriven<UserSourceModel> {
+
+	private UserSourceModel model = new UserSourceModel();
+	
+	@Resource
+	UserSourceService userSourceService;
+	private Map<String, Object> data;
+	
+	public UserSourceModel getModel() {
+		return model;
+	}
+	/**
+	 * 用户来源页面展示
+	 * @return
+	 */
+	@Action("/modules/analysis/userSourceManager")
+	public String userSourceManage(){
+		
+		return "userSourceManager";
+	}
+	/**
+	 * 用户来源查询
+	 * @throws IOException 
+	 */
+	@Action("/modules/analysis/userSourceList")
+	public void userSourceList() throws IOException{
+		data = new HashMap<String, Object>();
+		PageDataList<UserSourceModel> page = userSourceService.findPageDataList(model);
+		data.put("total", page.getPage().getTotal()); // 总行数
+		data.put("rows", page.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 根据来源查询详细的用户页面
+	 * @return
+	 */
+	@Action("/modules/analysis/userManageBySource")
+	public String userManageBySource(){
+		if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+			request.setAttribute("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+			request.setAttribute("endTime", model.getEndTime());
+		}
+		if(StringUtil.isNotBlank(model.getSourceURL())){
+			request.setAttribute("sourceURL", model.getSourceURL());
+		}
+		
+		return "userManageBySource";
+	}
+	/**
+	 * 根据来源查询详细的用户列表
+	 * @throws IOException 
+	 */
+	@Action("/modules/analysis/userManageBySourceList")
+	public void userManageBySourceList() throws Exception{
+		data = new HashMap<String, Object>();
+		//JSDP-166 xingjia 20150611 start
+		String sourceURL = paramString("sourceURL");
+		String w = sourceURL.replaceAll("XINGJIA", "?");
+		String a = w.replaceAll("JIAJIA", "&");
+		model.setSourceURL(a);
+		//JSDP-166 xingjia 20150611 end
+		PageDataList<UserSourceModel> page = userSourceService.findUserBySource(model);
+		data.put("total", page.getPage().getTotal()); // 总行数
+		data.put("rows", page.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 用户来源整体投资金额汇总页面
+	 * @return
+	 */
+	@Action("/modules/analysis/sourceAndInvestManage")
+	public String sourceAndInvestManage(){
+		
+		return "sourceAndInvestManage";
+	}
+	/**
+	 * 来源用户整体投资金额汇总查询
+	 * @throws IOException 
+	 */
+	@Action("/modules/analysis/sourceAndInvestList")
+	public void sourceAndInvestList() throws Exception{
+		data = new HashMap<String, Object>();
+		PageDataList<UserSourceModel> page = userSourceService.findSourceAndInvest(model);
+		data.put("total", page.getPage().getTotal()); // 总行数
+		data.put("rows", page.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 来源投资金额详细页面
+	 * @return
+	 */
+	@Action("/modules/analysis/sourceInvestDetailManage")
+	public String sourceInvestDetailManage() {
+		if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+			request.setAttribute("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+			request.setAttribute("endTime", model.getEndTime());
+		}
+		if(StringUtil.isNotBlank(model.getSourceURL())){
+			request.setAttribute("sourceURL", model.getSourceURL());
+		}
+		return "sourceInvestDetailManage";
+	}
+	/**
+	 * 来源投资金额详细查询
+	 * @throws IOException 
+	 */
+	@Action("/modules/analysis/sourceInvestDetailList")
+	public void sourceInvestDetailList() throws IOException{
+		data = new HashMap<String, Object>();
+		//JSDP-166 xingjia 20150611 start
+		String sourceURL = paramString("sourceURL");
+		String w = sourceURL.replaceAll("XINGJIA", "?");
+		String a = w.replaceAll("JIAJIA", "&");
+		model.setSourceURL(a);
+		//JSDP-166 xingjia 20150611 end
+		PageDataList<UserSourceModel> page = userSourceService.findSourceInvestDetail(model);
+		data.put("total", page.getPage().getTotal()); // 总行数
+		data.put("rows", page.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+
+}

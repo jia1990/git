@@ -1,0 +1,37 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/sub/marketer/marketerEdit.html',"修改成功！","修改失败！");
+	   
+	});
+</script>
+<div class="popForm sForm">
+	  	<div class="formitm">
+		     <label class="lab">用户名：</label>
+			 <div class="ipt">
+			 	${user.userName!}
+			 </div>
+		</div>
+			<div class="formitm">
+			     <label class="lab">手机号：</label>
+			    <div class="ipt">
+					${user.mobilePhone!}
+				 </div>
+			</div>
+	
+		<div class="formitm">
+		    <label class="lab">加盟商：</label>
+		    <div class="ipt">
+			<form id="form"  method="post">
+				<select name="branchId" id="branchId" class="pulldown">
+               		<#list branchList as item>
+               		
+					<option value="${item.id}"  <#if item.id==branch.id>selected="selected"</#if>>${item.name!}</option>
+					</#list>
+				</select>
+				<input type="hidden" name="userId" value="${user.userId!}">
+				<input type="hidden" name="branchEditToken" value="${branchEditToken!}">
+			</form>
+			</div>
+		</div>
+		
+</div>

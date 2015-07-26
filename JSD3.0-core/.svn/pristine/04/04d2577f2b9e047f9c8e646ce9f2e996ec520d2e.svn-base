@@ -1,0 +1,145 @@
+package com.ddtkj.p2psys.credit.executer;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.dao.AccountLogDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.domain.AccountSum;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.FreemarkerUtil;
+import com.rongdu.p2psys.account.dao.AccountSumDao;
+import com.rongdu.p2psys.account.dao.AccountSumLogDao;
+import com.rongdu.p2psys.account.domain.AccountSumLog;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.enums.EnumAccountSumProperty;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+
+/**
+ * 借款成功
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class CreditSuccessExecuter extends BaseExecuter {
+
+	protected AccountLogDao accountLogDao;
+	protected AccountDao accountDao;
+	protected AccountSumDao accountSumDao;
+	protected AccountSumLogDao accountSumLogDao;
+	protected UserCacheDao userCacheDao;
+	private String accountLogType = Constant.BORROW_SUCCESS;
+	private String sumLogRemarkTemplate = "借款合计：借款入账${money}元，标ID：[${borrow.id}]";
+
+	@Override
+	
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void prepare() {
+		accountLogDao = (AccountLogDao) BeanUtil.getBean("accountLogDao");
+		accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		accountSumDao = (AccountSumDao) BeanUtil.getBean("accountSumDao");
+		accountSumLogDao = (AccountSumLogDao) BeanUtil.getBean("accountSumLogDao");
+		userCacheDao = (UserCacheDao) BeanUtil.getBean("userCacheDao");
+	}
+
+	@Override
+	public void addAccountLog() {
+		
+		//借款人借款入账
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		log.setBorrowerEnterMoney(money);
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		log.setRepaymentTotal(account.getRepaymentTotal());
+		//JSDP-200  wcw 2015-06-29 start
+		log.setAccountTotal(account.getAccountTotal());
+		//JSDP-200  wcw 2015-06-29 end
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)1);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		// accountDao.modify(money, money, 0, 0, super.user.getUserId());
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		// 总金额
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),
+				money));
+		// 可用金额
+		account.setBorrowerEnterUsable((BigDecimalUtil.add(
+				account.getBorrowerEnterUsable(), money)));
+		//待还总额
+		account.setRepaymentTotal(BigDecimalUtil.add(account.getRepaymentTotal(),BigDecimalUtil.add(borrowerRepayInterest,money)));
+		if (account.getBorrowerUsableTotal() < 0) {
+			throw new AccountException("可用金额不足！", 1);
+		}
+		// 更新
+		accountDao.update(account);
+	}
+
+	@Override
+	public void handleAccountSum() {
+		/*accountSumDao.update(EnumAccountSumProperty.BORROW_CASH.getValue(), super.money, super.user.getUserId());
+
+		AccountSum sum = accountSumDao.findByUserId(super.user.getUserId());
+		AccountSumLog sumLog = new AccountSumLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		sumLog.setMoney(super.money);
+		sumLog.setBeforeMoney(sum.getAccumulativeBorrowCash());
+		sumLog.setRemark(getAccountSumLogRemark());
+		double afterMoney = sum.getAccumulativeBorrowCash() + super.money;
+		sumLog.setAfterMoney(afterMoney);
+		accountSumLogDao.save(sumLog);*/
+	}
+
+	public String getAccountSumLogRemark() {
+		/*try {
+			return FreemarkerUtil.renderTemplate(sumLogRemarkTemplate, Global.getTransfer());
+		} catch (Exception e) {
+		}*/
+		return "";
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+		//满标复审，调用放款
+		
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+}

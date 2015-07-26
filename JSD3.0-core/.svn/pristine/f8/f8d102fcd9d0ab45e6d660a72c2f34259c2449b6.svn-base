@@ -1,0 +1,151 @@
+package com.ddtkj.p2psys.account.executer;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.returnmoney.domain.ReturnMoneyUse;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * @描述：投资人提现银行转账成功
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月17日
+ */
+public class DrawBankSuccInvesterExecuter extends BaseExecuter {
+	private String accountLogType = Constant.CASH_SUCCESS;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId",
+				this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(
+				Constant.ADMIN_ID));
+		// 操作金额
+		log.setRechargeMoney(rechargeMoney);
+		log.setAwardMoney(awardMoney);
+		log.setInterestMoney(interestMoney);
+		log.setReturnCapitalMoney(returnCapitalMoney);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		// 账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		// 账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte) 0);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		// accountDao.modify(0, -money, money, user.getUserId());
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		// 账户总额
+		double useMoney=BigDecimalUtil.add(rechargeMoney,awardMoney,interestMoney,returnCapitalMoney);
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),-useMoney));
+		// 账户各类冻结金额
+		account.setFreezeUseAward(BigDecimalUtil.add(
+				account.getFreezeUseAward(), -awardMoney));
+
+		account.setFreezeUseReturnCapital(BigDecimalUtil.add(
+				account.getFreezeUseReturnCapital(), -returnCapitalMoney));
+
+		account.setFreezeUseInterest(BigDecimalUtil.add(
+				account.getFreezeUseInterest(), -interestMoney));
+
+		account.setFreezeUseRecharge(BigDecimalUtil.add(
+				account.getFreezeUseRecharge(), -rechargeMoney));
+        
+		//静态红包处理  账户总额减少  账户可用减少
+		double rpStaticMoney= (map.get("rpStaticMoney")==null?0.0:(Double)map.get("rpStaticMoney"));
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),-rpStaticMoney));
+		account.setAwardUsable(BigDecimalUtil.add(account.getAwardUsable(),-rpStaticMoney));
+		if (account.getRechargeUsable() < 0) {
+			throw new AccountException("充值可用金额不足！", 1);
+		}
+		if (account.getInterestUsable() < 0) {
+			throw new AccountException("利息可用金额不足！", 1);
+		}
+		if (account.getAwardUsable() < 0) {
+			throw new AccountException("奖励可用金额不足！", 1);
+		}
+		if (account.getReturnCapitalUsable() < 0) {
+			throw new AccountException("回款可用金额不足！", 1);
+		}
+		//JSDP-164 wcw 20150527 start
+		accountDao.modifyInvesterAccount(account, user.getUserId());
+		//accountDao.update(account);
+		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+
+	}
+
+	@Override
+	public void handlePoints() {
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.DRAW_RECHECK_SUCC);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+
+	}
+
+	@Override
+	public void handleInterface() {
+
+	}
+	
+	
+
+	@Override
+	public void handleReturnMoney() {
+		double returnMoney=BigDecimalUtil.add(returnCapitalMoney,interestMoney);
+		if(returnMoney>0){
+			//回款续投奖励生成
+			 ReturnMoneyUse r=new ReturnMoneyUse();
+			 r.setUser(user);
+			 int drawId=map.get("drawId")==null?0:Integer.parseInt((String)map.get("drawId"));
+			 r.setDrawId(drawId);
+			 r.setCashUseReturnMoney(returnMoney);
+			 r.setStatus(ReturnMoneyUse.RETURN_MONEY_USE_SUCCESS_STATUS);
+			 r.setRemark("使用回款金额："+r.getCashUseReturnMoney()+"");
+			 r.setAddTime(new Date());
+			 returnMoneyDao.save(r);
+		}
+	}
+
+	@Override
+	public void extend() {
+
+	}
+}

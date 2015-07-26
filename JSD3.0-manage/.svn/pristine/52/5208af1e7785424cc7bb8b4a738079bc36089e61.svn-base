@@ -1,0 +1,213 @@
+package com.ddtkj.manage.action.redPackage;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.ddtkj.p2psys.redpacket.model.RpUserLogModel;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpUseLogService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class ManageRedPackageAction extends BaseAction implements ModelDriven<RpProduceModel>{
+
+	private RpProduceModel model = new RpProduceModel();
+	@Resource
+	private RpProduceService rpProduceService;
+	
+	@Resource
+	private RpUseLogService rpUseLogService;
+	@Resource
+	private AccountService accountService;
+	private Map<String, Object> data;
+	
+	/**
+	 * 红包记录展示的页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/rpManagePage")
+	public String rpManagePage(){
+		return "rpManagePage";
+	}
+	/**
+	 * 红包记录查询方法
+	 * @throws Exception 
+	 */
+	@Action("/modules/redPackage/rpManageList")
+	public void rpManageList() throws Exception{
+		data = new HashMap<String, Object>();
+
+		PageDataList<RpProduceModel> pageDataList = rpProduceService.getRpSumPageList(model);
+		
+		data.put("total", pageDataList.getPage().getTotal()); // 总行数
+		data.put("rows", pageDataList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		
+	}
+	
+	/**
+	 * 红包详细记录页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/rpDetailManagePage")
+	public String rpDetailManagePage(){
+		if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+			request.setAttribute("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+			request.setAttribute("endTime", model.getEndTime());
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			request.setAttribute("userName", model.getUserName());
+		}
+		if(StringUtil.isNotBlank(model.getType())){
+			request.setAttribute("type", model.getType());
+		}
+		String typeConsume = paramString("typeConsume");
+		if(StringUtil.isNotBlank(typeConsume)){
+			request.setAttribute("typeConsume", typeConsume);
+			return "rpConsumeDetailManagePage";
+		}
+		return "rpDetailManagePage";
+	}
+	/**
+	 * 红包详细记录查询
+	 * @throws Exception 
+	 */
+	@Action("/modules/redPackage/rpDetailManagePageList")
+	public void rpDetailManageList() throws Exception{
+		data = new HashMap<String, Object>();
+		PageDataList<RpProduceModel> pageDataList = null;
+		PageDataList<RpUserLogModel> pageDataConsumeList = null;
+		if(StringUtil.isNotBlank(model.getTypeConsume())){//红包的消费
+			pageDataConsumeList = rpUseLogService.getPageDataList(model);
+			data.put("total", pageDataConsumeList.getPage().getTotal()); // 总行数
+			data.put("rows", pageDataConsumeList.getList()); // 集合对象
+		}else{//红包的产生
+			pageDataList = rpProduceService.getPageList(model);
+			data.put("total", pageDataList.getPage().getTotal()); // 总行数
+			data.put("rows", pageDataList.getList()); // 集合对象
+		}
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+	
+	/**JSDP-195 xingjia 20150624 start
+	 * 推荐好友所获取红包页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/recommendFriendPage")
+	public String recommendFriendPage(){
+		return "recommendFriendPage";
+	}
+	/**
+	 * 推荐好友所获取红包的查询方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/redPackage/recommendFriendList")
+	public void recommendFriendList() throws IOException{
+		data = new HashMap<String, Object>();
+		model.setRpStaticRes("static_rp_recommend");
+		PageDataList<RpProduceModel> rpProduceModelList = rpProduceService.getPageList(model);
+		data.put("total", rpProduceModelList.getPage().getTotal()); // 总行数
+		data.put("rows", rpProduceModelList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+	
+	/**
+	 * 推荐好友所获取红包导出excel
+	 */
+	@Action("/modules/redPackage/recommendFriendExcel")
+	public void recommendFriendExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		String title = "邀请好友获取的红包Excel表";
+		
+		String[] hearders = new String[] {"用户名","真实姓名","红包类型","红包状态","红包描述","产生总额","被推荐人","添加时间"};// 表头数组
+		String[] fields = new String[] {"object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]"};// 对象属性数组
+
+		List newList = rpProduceService.recommendFriendExcel(model);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+	}
+	//JSDP-195 xingjia 20150624 end
+	/**
+	 * 红包导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/rpSumMoneyExcel")
+	public void rpSumMoneyExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		
+		String title = "红包管理Excel表";
+		
+		String[] hearders = new String[] {"用户名","真实姓名","红包类型","产生总额","消费总额"};// 表头数组
+		String[] fields = new String[] {"2","3","4","0","1"};// 对象属性数组
+		
+		
+		List newList = rpProduceService.getExcelList(model);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcelt(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+	}
+	/**
+	 * 红包详情导出excel（产生和消费）
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/rpDetailExcel")
+	public void rpDetailExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String title = null;
+		String[] hearders = null;
+		String[] fields = null;
+		if(StringUtil.isNotBlank(model.getTypeConsume())){
+			title = "红包消费明细Excel表";
+			hearders = new String[] {"用户名","真实姓名","红包类型","消费金额","说明"};// 表头数组
+			fields = new String[] {"0","1","2","3","4"};// 对象属性数组
+		}else{
+			title = "红包产生明细Excel表";
+			hearders = new String[] {"用户名","真实姓名","红包类型","静态红包产生金额","动态红包产生金额","静态红包状态","静态红包有效时间","静态红包描述","动态红包描述","产生时间"};// 表头数组
+			fields = new String[] {"0","1","6","2","8","3","4","5","9","7"};// 对象属性数组
+		}
+		
+		List newList = rpProduceService.getDetailExcelList(model);
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcelt(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+	}
+	
+	
+	public RpProduceModel getModel() {
+		return model;
+	}
+	public void setModel(RpProduceModel model) {
+		this.model = model;
+	}
+
+}

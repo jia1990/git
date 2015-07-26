@@ -1,0 +1,80 @@
+
+<script type="text/javascript">
+$(function(){
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/redPackage/editRpActivityConfig.html'); //表单提交  参数1：表单id 参数2：表单action地址
+});
+</script>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">活动名称：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="activityName" value="${rpActivity.activityName!}" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">活动标识：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="activityType" value="${rpActivity.activityType!}" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+    	<div class="formitm">
+		     <label class="lab">规则关键词：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="keyWord" value="${rpActivity.keyWord!}" data-options="required: true">
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+			<label class="lab">奖励方式：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="awardType" value="rpMoney"  <#if rpActivity.awardType=='rpMoney'>checked="checked"</#if>/>红包
+				<input type="radio" name="awardType" value="petCard" <#if rpActivity.awardType=='petCard'>checked="checked"</#if>/>晋商贷体验卡
+				<input type="radio" name="awardType" value="score" <#if rpActivity.awardType=='score'>checked="checked"</#if>/>积分
+				
+		     </div>
+		</div>
+		<!-- 添加时间开始 -->
+		<div class="formitm" id="time">
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="startTime" id="startTime" value="${rpActivity.startTime!}" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="endTime" id="endTime" value="${rpActivity.endTime!}" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间结束 -->
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="op" <#if rpActivity.status=='op'>checked="checked"</#if>/>进行中
+				<input type="radio" name="status" value="cl" <#if rpActivity.status=='cl'>checked="checked"</#if>/>已停止
+		     </div>
+		</div>
+
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="remark"  value="${rpActivity.remark!}"maxlength="120"></textarea>	
+		     </div>
+		</div>
+		
+		<input name="rpActivityEditToken" value="${rpActivityEditToken!}" type="hidden">
+		<input name="id" value="${rpActivity.id!}" type="hidden">
+		<input name="addTime" value="${rpActivity.addTime!}" type="hidden">
+		<#if rpActivity.operator??>
+		<input name="optName" value="${rpActivity.operator.userName!}" type="hidden" >
+		</#if>
+		
+		     	
+	</form>
+</div>
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+

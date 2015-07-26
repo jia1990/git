@@ -1,0 +1,188 @@
+
+package com.ddtkj.p2psys.autotender.dao.impl;
+
+import java.math.BigInteger;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoSetDao;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+
+@Repository("borrowAutoSetDao")
+public class BorrowAutoSetDaoImpl extends BaseDaoImpl<BorrowAutoSet> implements BorrowAutoSetDao {
+
+
+	@Override
+	public PageDataList<BorrowAutoSetModel> list(
+			BorrowAutoSetModel model) {
+		
+		return null;
+	}
+ 
+	@Override
+	public List<BorrowAutoSet> getBorrowAutoSetList(long user_id) {
+		QueryParam param = QueryParam.getInstance();
+		//JSDBET-818 gjh 2015-3-28 start
+		param.addParam("user.userId", user_id);
+		//JSDBET-818 gjh 2015-3-28 end
+	    return findByCriteria(param);
+	}
+
+	@Override
+	public void deleteBorrowAutoSet(long id) {
+		String sql = " UPDATE t_jsd_borrow_auto_set SET status='33' WHERE id=? ";
+		Query query = em.createQuery(sql);	
+		query.setParameter("id", id);
+		int result = query.executeUpdate();
+		if(result < 1){
+			throw new BorrowException("删除自动投标设置失败！id："+id, 1);
+		}
+	}
+
+	@Override
+	public void updateAutoTime(BorrowAutoSet autoset) {
+		String jpql = " UPDATE t_jsd_borrow_auto_set SET update_time = :update_time, add_time = :add_time, add_ip = :add_ip WHERE user_id = :user_id ";
+		String[] names = new String[] { "update_time", "add_time", "add_ip", "user_id" };
+		Object[] values = new Object[] { autoset.getUpdateTime(), autoset.getAddTime(), autoset.getAddIp(), autoset.getUser().getUserId() };
+		int count = updateBySql(jpql, names, values);
+		if (count != 1) {
+			throw new BorrowException("更新自动投标updatetime失败！user_id="+autoset.getUser().getUserId(), 1);
+		}
+		this.refresh(this.findObjByProperty("user.userId", autoset.getUser().getUserId()));	
+	}
+
+	@Override
+	public int countBorrowAutoSet(Borrow borrow) {
+		StringBuffer sb = new StringBuffer();
+		String accountSql = "";
+		if (borrow.getType() == Borrow.TYPE_AMORTIZE) {
+			accountSql = " AND auto.tender_account >= 1 ";
+		} else {
+			accountSql = " AND auto.tender_account >= 100 ";
+		}
+		sb.append("SELECT count(1) FROM t_jsd_borrow_auto_set AS auto LEFT JOIN t_jsd_user AS u ON auto.user_id = u.user_id ");
+		sb.append(" LEFT JOIN t_jsd_user_cache cache ON auto.user_id = cache.user_id ");
+		sb.append(" WHERE u.islocked = 'NN' AND auto.status = '11' AND u.user_id != :user_id AND cache.user_type = '10' ");
+		sb.append(accountSql);
+		Query query = em.createNativeQuery(sb.toString());
+		query.setParameter("user_id", borrow.getUser().getUserId());
+		BigInteger autocount = (BigInteger) query.getSingleResult();
+		return autocount.intValue();
+
+	}
+
+	@Override
+	public List<BorrowAutoSet> getBorrowAutoSetList(Borrow borrow) {
+		StringBuffer sb = new StringBuffer();
+		String accountSql = "";
+		if (borrow.getType() == Borrow.TYPE_AMORTIZE) {
+			accountSql = " AND auto.tender_account >= 1 ";
+		} else {
+			accountSql = " AND auto.tender_account >= 100 ";
+		}
+		sb.append("SELECT auto.*,u.* FROM t_jsd_borrow_auto_set AS auto LEFT JOIN t_jsd_user AS u ON auto.user_id = u.user_id ");
+		sb.append(" LEFT JOIN t_jsd_user_cache cache ON auto.user_id = cache.user_id ");
+		sb.append(" WHERE u.islocked = 'NN' AND auto.status = '11' AND u.user_id != :user_id AND cache.user_type = '10' ");
+		sb.append(accountSql);
+		sb.append(" ORDER BY auto.vip_level DESC, auto.update_time ASC, auto.add_time ASC");
+		String[] names = new String[] { "user_id" };
+		Object[] values = new Object[] { borrow.getUser().getUserId() };
+		List<BorrowAutoSet> autolist = listBySql(sb.toString(), names, values);		
+		return autolist;		
+	}
+
+	@Override
+	public void callProcedure(BorrowAutoSet auto) {
+		Query query = em.createNativeQuery("{CALL proc_autoBorrowSort()}");
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateAutoStatusByUserId(String status, long userId) {
+		String jpql = " UPDATE t_jsd_borrow_auto_set SET status =:status WHERE user_id = :user_id ";
+		String[] names = new String[] { "status", "user_id" };
+		Object[] values = new Object[] { status, userId };
+		int count = updateBySql(jpql, names, values);
+		if (count != 1) {
+			throw new BorrowException("更新自动投标status失败！user_id="+userId, 1);
+		}
+		this.refresh(this.findObjByProperty("user.userId", userId));	
+	}
+
+	@Override
+	public void updateVipLevelByUserId(String memberLevel, long userId) {
+		String jpql = " UPDATE t_jsd_borrow_auto_set SET vip_level = :memberLevel WHERE user_id = :user_id ";
+		String[] names = new String[] { "memberLevel", "user_id" };
+		Object[] values = new Object[] { memberLevel, userId };
+		int count = updateBySql(jpql, names, values);
+		if (count != 1) {
+			throw new BorrowException("更新自动投标vip等级失败！user_id="+userId, 1);
+		}
+		this.refresh(this.findObjByProperty("user.userId", userId));		
+	}
+
+	@Override
+	public List<BorrowAutoSet> excelBorrowAutoSetDatalist(
+			BorrowAutoSetModel model) {
+			//JSDP-116 sxy 2015-06-18 start
+				StringBuffer  sql = new StringBuffer();
+				sql.append(" SELECT t1.id, ");
+				sql.append(" CASE t1.status WHEN  '0' THEN '不启用'  WHEN  '1' THEN '启用' WHEN  '2' THEN '已删除'  ELSE '未知' END AS statusTender, ");
+				sql.append(" t2.user_name, ");
+				sql.append(" t2.real_name, ");
+				sql.append(" t1.total_rank, ");
+				sql.append(" CASE t1.vip_level  WHEN  'N1' THEN '普通用户' WHEN 'V1' THEN '铜牌会员' ");
+				sql.append(" WHEN 'V2' THEN '银牌会员' WHEN 'V3' THEN '金牌会员' WHEN  'V4' THEN '钻石会员' ELSE '普通用户' END AS vipLevel, ");
+				sql.append(" t1.tender_account, ");
+				sql.append(" CASE t1.borrow_style_enable  WHEN 0 THEN '无限制' WHEN 1 THEN '按照配置规则' ELSE '其他'  END AS borrowStyleEnable, ");
+				sql.append(" CASE t1.timelimit_month_enable  WHEN 0 THEN '无限制' WHEN 1 THEN '按照配置规则' ELSE '其他'  END AS timelimitMonthEnable, ");
+				sql.append(" CASE t1.timelimit_day_enable  WHEN 0 THEN '无限制' WHEN 1 THEN '按照配置规则'  ELSE '其他'  END AS timelimitDayEnable, ");
+				sql.append(" CASE t1.apr_enable  WHEN 0 THEN '无限制' WHEN 1 THEN '按照配置规则'  ELSE '其他'  END AS aprEnable, ");
+				sql.append(" CASE t1.energy_enable  WHEN 0 THEN '不启用' WHEN 1 THEN '启用'  ELSE '其他'  END AS energyEnable, ");
+				sql.append(" CASE t1.car_enable  WHEN 0 THEN '不启用' WHEN 1 THEN '启用'  ELSE '其他'  END AS carEnable, ");
+				sql.append(" CASE t1.network_enable  WHEN 0 THEN '不启用' WHEN 1 THEN '启用'  ELSE '其他'  END AS networkEnable, ");
+				sql.append(" CASE t1.amortize_enable  WHEN 0 THEN '不启用' WHEN 1 THEN '启用'  ELSE '其他'  END AS amortizeEnable, ");
+				sql.append(" t1.add_time, ");
+				sql.append(" t1.update_time, ");
+				sql.append(" t1.add_ip ");
+				sql.append(" FROM t_jsd_borrow_auto_set AS t1  ");
+				sql.append(" LEFT JOIN t_jsd_user AS t2 ON t1.user_id = t2.user_id  ");
+				sql.append(" WHERE 1=1  ");
+				
+				// 用户名
+				if(StringUtil.isNotBlank(model.getUserName())){
+					sql.append(" AND t2.user_name LIKE  '%"+model.getUserName()+"%' ");
+				}
+				// 真实姓名
+				if(StringUtil.isNotBlank(model.getRealName())){
+					sql.append(" AND t2.real_name LIKE '%"+model.getRealName()+"%' ");
+				}
+				// 状态
+				if(StringUtil.isNotBlank(model.getStatus())){
+					sql.append(" AND t1.status = "+model.getStatus()+" ");
+				}
+				// 类型
+				if(StringUtil.isNotBlank(model.getBorrowTypes())){
+					if(!"all".equals(model.getBorrowTypes())){
+						sql.append(" AND t1.type = "+model.getBorrowTypes()+" ");
+					}
+				}
+				
+				Query query = em.createNativeQuery(sql.toString());
+				
+				List dataList = query.getResultList();
+				//JSDP-116 sxy 2015-06-18 start
+				return dataList;
+	}
+	
+}

@@ -1,0 +1,380 @@
+package com.ddtkj.p2psys.credit.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.credit.dao.CreditLogDao;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：债权购买记录DAO实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+@Repository("creditLogDao")
+public class CreditLogDaoImpl extends  BaseDaoImpl<CreditLog> implements CreditLogDao {
+	@Override
+	public PageDataList<CreditLog> getAll(QueryParam param) {
+		return findPageList(param);
+	}
+
+	@Override
+	public PageDataList<CreditLog> getDateByUser(User user,int page,int pageNum) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("buyUser", user);
+		param.addPage(page,pageNum) ;
+		return findPageList(param);
+	}
+
+	@Override
+	public PageDataList<CreditLog> getSwingOut(User user,int page,int size) {
+		StringBuffer buffer = new StringBuffer("SELECT cl.* FROM t_jsd_buy_credit cl LEFT JOIN t_jsd_credit_assignment ca ON cl.ca_id = ca.id LEFT JOIN rd_borrow b ON ca.borrow_id = b.id WHERE ((b.type in ('103') and b.status IN(6,7)) or (b.type in (113) and b.status in (1)) or (b.type in (115) and b.status in (1))) AND b.is_swingout=1 AND cl.status='01' AND cl.is_sell!=1 AND cl.buy_user_id = "+user.getUserId()+" ");
+		Query query = em.createNativeQuery(buffer.toString(), CreditLog.class);
+		Page pages = new Page(query.getResultList().size(), page,size);
+		query.setFirstResult((page - 1) * size);
+		query.setMaxResults(size);
+		List<CreditLog> clList =  query.getResultList() ;
+		PageDataList<CreditLog> pageDataList = new PageDataList<CreditLog>();
+		pageDataList.setList(clList);
+		pageDataList.setPage(pages);
+		return pageDataList;
+	}
+	@Override
+	public List<CreditLog> getSwingOutList(User user) {
+		StringBuffer buffer = new StringBuffer("SELECT cl.* FROM t_jsd_buy_credit cl LEFT JOIN t_jsd_credit_assignment ca ON cl.ca_id = ca.id LEFT JOIN rd_borrow b ON ca.borrow_id = b.id WHERE ((b.type in ('103') and b.status IN(6,7)) or (b.type in (113) and b.status in (1)) or (b.type in (115) and b.status in (1))) AND b.is_swingout=1 AND cl.status='01' AND cl.is_sell!=1 AND cl.buy_user_id = "+user.getUserId()+" ");
+		Query query = em.createNativeQuery(buffer.toString(), CreditLog.class);
+		List<CreditLog> clList =  query.getResultList() ;
+		return clList;
+	}
+	@Override
+	public double buyCreditMoneyTotal(User user, String status) {
+		String jpql = "SELECT SUM(buy_account) FROM t_jsd_buy_credit creditlog "+
+        		"WHERE buy_user_id = :userId AND status = :status ";
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+	
+	@Override
+	public double buyCreditMoneyTotal(User user, String status, Date startTime,
+			Date endTime) {
+		String jpql = "SELECT SUM(buy_account) FROM t_jsd_buy_credit creditlog "+
+        		"WHERE buy_user_id = :userId AND status = :status AND add_time >= :start AND add_time <= :end ";
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        Date start = DateUtil.valueOf(DateUtil.dateStr2(startTime) + " 00:00:00");
+      	Date end = DateUtil.valueOf(DateUtil.dateStr2(endTime) + " 23:59:59");
+      	query.setParameter("start", start);
+      	query.setParameter("end",end);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+	
+	@Override
+	public double buyCreditMoneyTotal(User user, String status, Date endTime) {
+		String jpql = "SELECT SUM(buy_account) FROM t_jsd_buy_credit creditlog "+
+        		"WHERE buy_user_id = :userId AND status = :status AND add_time <= :end ";
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+      	Date end = DateUtil.valueOf(DateUtil.dateStr2(endTime) + " 23:59:59");
+      	query.setParameter("end",end);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public int buyCreditCount(User user, String status) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("buyUser.userId", user.getUserId());
+		param.addParam("status", status);
+		return countByCriteria(param);
+	}
+	
+	@Override
+	public int buyCreditCount(User user, String status, Date startTime,
+			Date endTime) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("buyUser.userId", user.getUserId());
+		param.addParam("status", status);
+		Date start = DateUtil.valueOf(DateUtil.dateStr2(startTime) + " 00:00:00");
+		Date end = DateUtil.valueOf(DateUtil.dateStr2(endTime) + " 23:59:59");
+		param.addParam("addTime", Operators.GTE, start);
+		param.addParam("addTime",  Operators.LTE, end);
+		return countByCriteria(param);
+	}
+
+	
+	@Override
+	public int buyCreditCopiesCount(User user, String status) {
+		String jpql = "SELECT SUM(creditlog.buy_copies) FROM t_jsd_buy_credit creditlog "+
+        		"WHERE buy_user_id = :userId AND status = :status ";
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        int total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Integer.parseInt(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public double calcProfitAndLoss(User user, String status) {
+		String jpql = "SELECT SUM(creditlog.buy_value - creditlog.buy_account - creditlog.buy_fee) FROM t_jsd_buy_credit creditlog " +
+				"WHERE buy_user_id = :userId AND status = :status ";
+		Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("userId", user.getUserId());
+        query.setParameter("status", status);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public PageDataList<CreditLog> getByBorrow(long borrowid,int page,int size) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("creditAssignment.borrow.id",borrowid) ;
+		param.addPage(page,size) ;
+		return findPageList(param) ;
+	}
+
+	@Override
+	public List excelListCreditLog(CreditLogModel model) {
+
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT "
+				+"	cb.id,"
+				+"	b.name AS caName,"
+				+"  c.id AS caId,"
+				+"	case cb.status "
+				+"  when 00 then '未成交'"
+				+"  when 01 then '已成交'"
+				+"  when 02 then '撤回'"
+				+"  else '无' end ,"
+				+"	u2.user_name AS sellUserName,"
+				+"	u.user_name AS buyUserName,"
+				+"	cb.buy_time AS buyTime,"
+				+"	cb.buy_copies AS buyCopies,"
+				+"	cb.buy_value AS buyValue ,"
+				+"	cb.buy_account AS buyAccount,"
+				+"	cb.buy_fee AS buyFee,"
+				+"  CASE cb.buy_fee_status WHEN 1 THEN '已收取' WHEN 2 THEN '冻结中' WHEN 3 THEN '已退回' ELSE '未指定的状态' END  AS buyFeeStatusExport,"
+				+"	cb.sell_fee AS sellFee ,"
+				+"	CASE cb.sell_fee_status WHEN 1 THEN '已收取' WHEN 2 THEN '冻结中' WHEN 3 THEN '已退回' ELSE '未指定的状态' END AS sellFeeStatusExport ,"
+				+"	CASE cb.is_sell WHEN 1 THEN '售出' WHEN 2 THEN '未售出' ELSE '无' END AS isSellExport,"
+				+"	cb.add_time AS ADDTIME,"
+				+"	cb.add_ip AS addIp"
+				+" FROM"
+				+" t_jsd_buy_credit cb"
+				+" LEFT JOIN t_jsd_credit_assignment c ON cb.ca_id = c.id"
+				+" LEFT JOIN t_jsd_user u ON cb.buy_user_id = u.user_id"
+				+" LEFT JOIN rd_borrow b ON c.borrow_id = b.id"
+				+" LEFT JOIN t_jsd_user u2 ON c.sell_user_id = u2.user_id where 1=1 ");
+		//购买用户名         buyUserName   债权名：caName  债权转让id:caId  状态：status  购买时间
+		if (StringUtil.isNotBlank(model.getBuyUserName())){
+			sql.append(" and u.user_name like '%"+model.getBuyUserName()+"%'");
+		}
+		if (StringUtil.isNotBlank(model.getCaName())){
+			sql.append(" and b.name like '%"+model.getCaName()+"%'");
+		}
+		if (model.getCaId() > 0) {
+			sql.append(" and c.id =:cId");
+		}
+		if (StringUtil.isNotBlank(model.getStatus()) && !CreditLog.CRELOG_STATUS_ALL.equals(model.getStatus())){
+			sql.append(" and cb.status =:cbStatus");
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			sql.append(" and cb.add_time >=:startTime ");
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			sql.append(" and cb.add_time <:endTime ");
+		}
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if (model.getCaId() > 0) {
+			query.setParameter("cId", model.getCaId());
+		}
+		if (StringUtil.isNotBlank(model.getStatus()) && !CreditLog.CRELOG_STATUS_ALL.equals(model.getStatus())){
+			query.setParameter("cbStatus", model.getStatus());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			query.setParameter("startTime", model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			query.setParameter("endTime", model.getEndTime());
+		}
+		List list = query.getResultList();
+		
+		return list;
+
+	}
+
+	// 99 20150527 sxy
+	@Override
+	public PageDataList<CreditLog> getCreditInAssignmentListForSQL(
+			CreditLogModel model, int page, int size) {
+		
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT "
+				//+"	cb.id,"
+				+"	b.name AS caName, "
+				//+"  c.id AS caId,"
+				+"	cb.status, "
+				//+"  when 00 then '未成交'"
+				//+"  when 01 then '已成交'"
+				//+"  when 02 then '撤回'"
+				//+"  else '无' end ,"
+				+"	u2.user_name AS sellUserName, "
+				+"	u.user_name AS buyUserName, "
+				+"	cb.buy_time AS buyTime, "
+				+"	cb.buy_copies AS buyCopies, "
+				//+"	cb.buy_value AS buyValue ,"
+				+"	cb.buy_account AS buyAccount, "
+				+"	cb.buy_fee AS buyFee, "
+				+"  cb.buy_fee_status, "
+				//+"  CASE cb.buy_fee_status WHEN 1 THEN '已收取' WHEN 2 THEN '冻结中' WHEN 3 THEN '已退回' ELSE '未指定的状态' END  AS buyFeeStatusExport,"
+				+"	cb.sell_fee AS sellFee, "
+				+"  cb.sell_fee_status, "
+				//+"	CASE cb.sell_fee_status WHEN 1 THEN '已收取' WHEN 2 THEN '冻结中' WHEN 3 THEN '已退回' ELSE '未指定的状态' END AS sellFeeStatusExport ,"
+				//+"	CASE cb.is_sell WHEN 1 THEN '售出' WHEN 2 THEN '未售出' ELSE '无' END AS isSellExport,"
+				+ " cb.is_sell,"
+				+"	cb.add_time AS ADDTIME,"
+				+"	cb.add_ip AS addIp"
+				+" FROM"
+				+" t_jsd_buy_credit cb"
+				+" LEFT JOIN t_jsd_credit_assignment c ON cb.ca_id = c.id"
+				+" LEFT JOIN t_jsd_user u ON cb.buy_user_id = u.user_id"
+				+" LEFT JOIN rd_borrow b ON c.borrow_id = b.id"
+				+" LEFT JOIN t_jsd_user u2 ON c.sell_user_id = u2.user_id where 1=1 ");
+		
+		// 时间类型
+		if (StringUtil.isNotBlank(model.getTimeType())) {
+			
+			// 昨天记录
+			if (StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d') = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 DAY),'%y-%m-%d') ");
+			}
+			// 今天记录
+			if (StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d') = DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 一周内记录
+			if (StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d')  BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%y-%m-%d') AND  DATE_FORMAT(NOW(),'%y-%m-%d') ");
+			}
+			// 本月记录
+			if (StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())) {
+				sql.append(" AND DATE_FORMAT(cb.add_time,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m') ");
+			}
+			// 时间段记录
+			if (StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())) {
+				if (StringUtil.isNotBlank(model.getStartTime())) {
+					sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d %H:%i:%s') >= DATE_FORMAT('"
+							+ model.getStartTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+				if (StringUtil.isNotBlank(model.getEndTime())) {
+					sql.append(" AND DATE_FORMAT(cb.add_time,'%y-%m-%d %H:%i:%s') <= DATE_FORMAT('"
+							+ model.getEndTime() + "','%y-%m-%d %H:%i:%s') ");
+				}
+			}
+			
+		}
+		
+		// 状态为：复审通过
+		sql.append("  AND cb.status = '01' ");
+		
+		//sql.append("  AND u.islocked != 'FF' ");
+		sql.append("  ORDER BY cb.add_time DESC ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		Page pages = new Page(query.getResultList().size(), size, page);
+		PageDataList<CreditLog> pageList = new PageDataList<CreditLog>();
+		query.setFirstResult((page - 1) * size);
+		query.setMaxResults(size);
+		List queryList = query.getResultList();
+		List<CreditLog> dataList = new ArrayList<CreditLog>();
+		Object[] object = new Object[13];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			CreditLogModel obj = new CreditLogModel();
+//			userM.setUserId((Long) object[0]);
+			// 债权名
+			obj.setCaName((String.valueOf((object[0]))));
+			// 状态
+			obj.setStatus(String.valueOf((object[1])));
+			// 出售债权用户
+			obj.setSellUserName(String.valueOf((object[2])));
+			// 购买用户名
+			obj.setBuyUserName(String.valueOf((object[3])));
+			// 购买时间
+			obj.setBuyTime((Date)(object[4]));
+			// 购买份数
+			obj.setBuyCopies(Integer.valueOf(String.valueOf(object[5])));
+			// 购买花费金额
+			obj.setBuyAccount(Double.valueOf(String.valueOf(object[6])));
+			// 购买手续费
+			obj.setBuyFee(Double.valueOf(String.valueOf(object[7])));
+			// 购买手续费状态
+			obj.setBuyFeeStatus(Integer.valueOf(String.valueOf(object[8])));
+			// 出售手续费
+			obj.setSellFee(Double.valueOf(String.valueOf(object[9])));
+			// 出售手续费状态
+			obj.setSellFeeStatus(Integer.valueOf(String.valueOf(object[10])));
+			// 是否再售出
+			obj.setIsSell(Integer.valueOf(String.valueOf(object[11])));
+			// 添加时间
+			obj.setAddTime((Date)object[12]);
+			
+			
+			dataList.add(obj);
+		}
+		
+		
+		pageList.setList(dataList);
+		pageList.setPage(pages);
+
+		return pageList;
+		
+		
+	}
+	// 99 20150527 sxy
+}

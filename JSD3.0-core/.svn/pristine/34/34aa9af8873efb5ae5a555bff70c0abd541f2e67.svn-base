@@ -1,0 +1,79 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.redpacket.domain.ActivityRP;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.ddtkj.p2psys.redpacket.dao.ActivityDao;
+import com.ddtkj.p2psys.redpacket.dao.ActivityRPDao;
+import com.ddtkj.p2psys.redpacket.domain.Activity;
+import com.ddtkj.p2psys.redpacket.service.ActivityRPService;
+/**
+ * 活动 红包service实现类
+ * @author YJF
+ *
+ */
+
+@Service("activityRPService")
+public class ActivityRPServiceImpl implements ActivityRPService {
+
+	@Resource
+	private ActivityRPDao activityRPDao ;
+	@Resource
+	private ActivityDao activityDao;
+
+	@Override
+	public ActivityRP save(ActivityRP rp) {
+		Activity activity = rp.getActivity();
+		activityDao.save(activity);
+		return this.activityRPDao.save(rp);
+	}
+
+	@Override
+	public ActivityRP update(ActivityRP rp) {
+		// TODO Auto-generated method stub
+		Activity activity = rp.getActivity();
+		if(null != activity){
+			activityDao.update(activity);
+		}
+		return this.activityRPDao.update(rp);
+	}
+
+	@Override
+	public void delete(ActivityRP rp) {
+		this.activityRPDao.delete(rp.getId());
+	}
+
+	@Override
+	public PageDataList<ActivityRP> getPageDataList(Map<String,Object> map,
+			int currentPage, int pagenum) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance().addPage(currentPage, pagenum);
+		param.addParam("rp.isopen", "Y");
+		ActivityRP ar = (ActivityRP) map.get("model");
+		if(null != ar.getActivity() && null != ar.getActivity().getActName()){
+			param.addParam("activity.actName",Operators.LIKE,ar.getActivity().getActName());
+		}
+		if(null != ar.getActivity() && null != ar.getActivity().getBegintime()){
+			param.addParam("activity.begintime", Operators.GT,ar.getActivity().getBegintime());
+		}
+		if(null != ar.getActivity() && null != ar.getActivity().getEndtime()){
+			param.addParam("activity.endtime", Operators.LT, ar.getActivity().getEndtime());
+		}
+		
+		return this.activityRPDao.findPageList(param);
+	}
+
+	@Override
+	public ActivityRP getEntityById(long id) {
+		// TODO Auto-generated method stub
+		return this.activityRPDao.find(id);
+	}
+	
+}

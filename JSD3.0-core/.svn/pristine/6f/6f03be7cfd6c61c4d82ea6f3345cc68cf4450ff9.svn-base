@@ -1,0 +1,179 @@
+
+package com.ddtkj.p2psys.score.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.score.constant.ScoreAwardConstant;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述: 用户积分抽奖记录model
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-5   
+ */
+public class UserScoreAwardModel extends UserScoreAward {
+
+	private static final long serialVersionUID = 6068282417482954396L;
+
+	/** 当前页码 */
+	private int page = 1;
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	private String ruleName;		//规则名
+	private String realName;		//真实姓名
+	private String awardTypeStr;	//奖品类型
+	private String vipLevel;		//VIP奖品：VIP等级
+	private int vipValidMonth;		//VIP奖品：VIP有效期
+
+	private String awardValueStr;	//奖品属性值字符串
+	
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public String getRuleName() {
+		return ruleName;
+	}
+
+	public void setRuleName(String ruleName) {
+		this.ruleName = ruleName;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	public String getVipLevel() {
+		return vipLevel;
+	}
+
+	public void setVipLevel(String vipLevel) {
+		this.vipLevel = vipLevel;
+	}
+
+	public int getVipValidMonth() {
+		return vipValidMonth;
+	}
+
+	public void setVipValidMonth(int vipValidMonth) {
+		this.vipValidMonth = vipValidMonth;
+	}
+	
+	public String getAwardValueStr() {
+		return awardValueStr;
+	}
+
+	public void setAwardValueStr(String awardValueStr) {
+		this.awardValueStr = awardValueStr;
+	}
+	
+	public String getAwardTypeStr() {
+		return awardTypeStr;
+	}
+
+	public void setAwardTypeStr(String awardTypeStr) {
+		this.awardTypeStr = awardTypeStr;
+	}
+
+	public UserScoreAward prototype(){
+		UserScoreAward userScoreAward = new UserScoreAward();
+		BeanUtils.copyProperties(this, userScoreAward);
+		return userScoreAward;
+	}
+	
+	public static UserScoreAwardModel instance(UserScoreAward userScoreAward){
+		UserScoreAwardModel model = new UserScoreAwardModel();
+		BeanUtils.copyProperties(userScoreAward, model);
+		return model;
+	}
+	
+	public String convertAwardStatus(String awardStatus){
+		if(UserScoreAward.SCORE_AWARD_STATUS_SUCCESS.equals(awardStatus)){
+			return "中奖";
+		}else if(UserScoreAward.SCORE_AWARD_STATUS_FAIL.equals(awardStatus)){
+			return "未中奖";
+		}else if(UserScoreAward.SCORE_AWARD_STATUS_ALL.equals(awardStatus)){
+			return "全部";
+		}else{
+			return "未指定的抽奖状态";
+		}	
+	}
+	
+	public String convertReceiveStatus(String receiveStatus){
+		if(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_SUCCESS.equals(receiveStatus)){
+			return "已发放";
+		}else if(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_FAIL.equals(receiveStatus)){
+			return "未发放";
+		}else if(UserScoreAward.SCORE_AWARD_RECEIVESTATUS_ALL.equals(receiveStatus)){
+			return "全部";
+		}else{
+			return "未指定的奖励发放状态";
+		}	
+	}
+	
+	public String convertAwardType(int awardType){
+		if(awardType == ScoreAwardConstant.AWARD_OBJECTTYPE_MONEY){
+			return "现金";
+		}else if(awardType == ScoreAwardConstant.AWARD_OBJECTTYPE_SCORE){
+			return "积分";
+		}else if(awardType == ScoreAwardConstant.AWARD_OBJECTTYPE_VIP){
+			return "VIP奖励";
+		}else if(awardType == ScoreAwardConstant.AWARD_OBJECTTYPE_GOODS){
+			return "实物奖励";		
+		}else if(awardType == ScoreAwardConstant.AWARD_OBJECTTYPE_REDPACKET){
+			return "红包奖励";		
+		}else if(awardType == ScoreAwardConstant.AWARD_OBJECTTYPE_CARD){
+			return "云购卡奖励";		
+		}else{
+			return "未指定的奖品类型";
+		}
+	}
+}

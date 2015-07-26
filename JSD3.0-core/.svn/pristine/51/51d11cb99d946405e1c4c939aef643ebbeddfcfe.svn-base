@@ -1,0 +1,51 @@
+package com.ddtkj.p2psys.analysis.service;
+
+import com.ddtkj.p2psys.analysis.domain.UserSource;
+import com.ddtkj.p2psys.analysis.model.UserSourceModel;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+
+/**
+ * @描述：用户来源收集service接口
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+public interface UserSourceService {
+	/**
+	 * 保存用户来源关系
+	 * @param userSource
+	 * @return
+	 */
+	public UserSource saveUserSource(UserSource userSource);
+	/**
+	 * 根据用户id查询用户来源记录
+	 * @param userId
+	 * @return
+	 */
+	public UserSource findByUserId(long userId);
+	/**
+	 * 分页查询用户来源
+	 * @param userSourceModel
+	 * @return
+	 */
+	public PageDataList<UserSourceModel> findPageDataList(UserSourceModel userSourceModel);
+	/**
+	 * 根据用于来源查询详细的用户
+	 * @param userSourceModel
+	 * @return
+	 */
+	public PageDataList<UserSourceModel> findUserBySource(UserSourceModel userSourceModel);
+	/**
+	 * 来源用户所投资金额汇总
+	 * @param userSourceModel
+	 * @return
+	 */
+	public PageDataList<UserSourceModel> findSourceAndInvest(UserSourceModel userSourceModel);
+	/**
+	 * 根据来源查询详细的用户投资金额
+	 * @param userSourceModel
+	 * @return
+	 */
+	public PageDataList<UserSourceModel> findSourceInvestDetail(UserSourceModel userSourceModel);
+}

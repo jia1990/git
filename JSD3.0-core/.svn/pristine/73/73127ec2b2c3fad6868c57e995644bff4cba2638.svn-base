@@ -1,0 +1,477 @@
+package com.rongdu.p2psys.core.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
+/**
+ * 管理员表
+ * 
+ * @author lhm
+ * @version 1.0
+ * @since 2014-03-17
+ */
+@Entity
+@Table(name = "s_operator")
+public class Operator implements Serializable  {
+	/**
+	 * 序列号
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	/**
+	 * 主键标示
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	/**
+	 * 姓名
+	 */
+	private String name;
+	/**
+	 * 用户名
+	 */
+	private String userName;
+	/**
+	 * 登录密码
+	 */
+	private String pwd;
+	/**
+	 * 部门
+	 */
+	private String department;
+	/**
+	 * 工号
+	 */
+	private String no;
+
+	@OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
+	private List<ManagerRole> managerRoles;
+	/**
+	 * qq
+	 */
+	private String qq;
+	/**
+	 * 头像保存路径
+	 */
+	private String path;
+	/**
+	 * 邮箱
+	 */
+	private String email;
+	/**
+	 * 电话
+	 */
+	private String phone;
+	/**
+	 * 手机
+	 */
+	private String mobile;
+	/**
+	 * 状态：0正常
+	 */
+	private int status;
+	//[JSDBET-839] sxy 2015年3月21日  start
+	/**
+	 * 登录次数
+	 */
+	private int loginCount;
+	/**
+	 * 是否删除:0不删除，1删除
+	 */
+	private boolean isDelete;
+	/**
+	 * 锁定状态:AY：管理员锁定  NN：未锁定  UY：用户登录锁定
+	 * @author sxy
+	 */
+	private String isLocked;
+	/**
+	 * 锁定备注
+	 * @author sxy
+	 */
+	private String lockRemark;
+	/**
+	 * 锁定时间
+	 * @author sxy
+	 */
+	private Date lockTime;
+	
+	public String isLockRemark() {
+		return lockRemark;
+	}
+
+	public void setLockRemark(String lockRemark) {
+		this.lockRemark = lockRemark;
+	}
+
+	public Date isLockTime() {
+		return lockTime;
+	}
+
+	public void setLockTime(Date lockTime) {
+		this.lockTime = lockTime;
+	}
+
+
+	public String isLocked() {
+		return isLocked;
+	}
+
+	public void setLocked(String isLocked) {
+		this.isLocked = isLocked;
+	}
+
+
+	public int getLoginCount() {
+		return loginCount;
+	}
+
+	public void setLoginCount(int loginCount) {
+		this.loginCount = loginCount;
+	}
+	//[JSDBET-839] sxy 2015年3月21日  end
+
+	/**
+	 * 最后登录IP
+	 */
+	private String loginIp;
+	/**
+	 * 最后登录时间
+	 */
+	private Date loginTime;
+	/**
+	 * 添加时间
+	 */
+	private Date addTime;
+	/**
+	 * 添加者
+	 */
+	private String addManager;
+	/**
+	 * 修改时间
+	 */
+	private Date updateTime;
+	/**
+	 * 修改者
+	 */
+	private String updateManager;
+	/**
+	 * 备注
+	 */
+	private String remark;
+	private Date updatePwdTime = new Date();//修改密码时间
+
+	public Operator() {
+		super();
+	}
+
+	public Operator(long id) {
+		super();
+		this.id = id;
+	}
+
+	/**
+	 * 获取主键标示
+	 * 
+	 * @return 主键标示
+	 */
+	public long getId() {
+		return id;
+	}
+
+	/**
+	 * 设置主键标示
+	 * 
+	 * @param id 要设置的主键标示
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	/**
+	 * 获取姓名
+	 * 
+	 * @return 姓名
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * 设置姓名
+	 * 
+	 * @param name 要设置的姓名
+	 */
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getPwd() {
+		return pwd;
+	}
+
+	public void setPwd(String pwd) {
+		this.pwd = pwd;
+	}
+
+	public String getDepartment() {
+		return department;
+	}
+
+	public void setDepartment(String department) {
+		this.department = department;
+	}
+
+	/**
+	 * 获取工号
+	 * 
+	 * @return 工号
+	 */
+	public String getNo() {
+		return no;
+	}
+
+	/**
+	 * 设置工号
+	 * 
+	 * @param no 要设置的工号
+	 */
+	public void setNo(String no) {
+		this.no = no;
+	}
+
+	public String getQq() {
+		return qq;
+	}
+
+	public void setQq(String qq) {
+		this.qq = qq;
+	}
+
+	public String getPath() {
+		return path;
+	}
+
+	public void setPath(String path) {
+		this.path = path;
+	}
+
+	/**
+	 * 获取邮箱
+	 * 
+	 * @return 邮箱
+	 */
+	public String getEmail() {
+		return email;
+	}
+
+	/**
+	 * 设置邮箱
+	 * 
+	 * @param email 要设置的邮箱
+	 */
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	/**
+	 * 获取电话
+	 * 
+	 * @return 电话
+	 */
+	public String getPhone() {
+		return phone;
+	}
+
+	/**
+	 * 设置电话
+	 * 
+	 * @param phone 要设置的电话
+	 */
+	public void setPhone(String phone) {
+		this.phone = phone;
+	}
+
+	/**
+	 * 获取手机
+	 * 
+	 * @return 手机
+	 */
+	public String getMobile() {
+		return mobile;
+	}
+
+	/**
+	 * 设置手机
+	 * 
+	 * @param mobile 要设置的手机
+	 */
+	public void setMobile(String mobile) {
+		this.mobile = mobile;
+	}
+
+	/**
+	 * 获取状态：0正常
+	 * 
+	 * @return 状态：0正常
+	 */
+	public int getStatus() {
+		return status;
+	}
+
+	/**
+	 * 设置状态：0正常
+	 * 
+	 * @param status 要设置的状态：0正常
+	 */
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	
+
+	public boolean isDelete() {
+		return isDelete;
+	}
+
+	public void setDelete(boolean isDelete) {
+		this.isDelete = isDelete;
+	}
+
+	public String getIsLocked() {
+		return isLocked;
+	}
+
+	public void setIsLocked(String isLocked) {
+		this.isLocked = isLocked;
+	}
+
+	public String getLockRemark() {
+		return lockRemark;
+	}
+
+	public Date getLockTime() {
+		return lockTime;
+	}
+
+	/**
+	 * 获取最后登录IP
+	 * 
+	 * @return 最后登录IP
+	 */
+	public String getLoginIp() {
+		return loginIp;
+	}
+
+	/**
+	 * 设置最后登录IP
+	 * 
+	 * @param loginIp 要设置的最后登录IP
+	 */
+	public void setLoginIp(String loginIp) {
+		this.loginIp = loginIp;
+	}
+
+	/**
+	 * 获取最后登录时间
+	 * 
+	 * @return 最后登录时间
+	 */
+	public Date getLoginTime() {
+		return loginTime;
+	}
+
+	/**
+	 * 设置最后登录时间
+	 * 
+	 * @param loginTime 要设置的最后登录时间
+	 */
+	public void setLoginTime(Date loginTime) {
+		this.loginTime = loginTime;
+	}
+
+	/**
+	 * 获取添加时间
+	 * 
+	 * @return 添加时间
+	 */
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	/**
+	 * 设置添加时间
+	 * 
+	 * @param addTime 要设置的添加时间
+	 */
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public List<ManagerRole> getManagerRoles() {
+		return managerRoles;
+	}
+
+	public void setManagerRoles(List<ManagerRole> managerRoles) {
+		this.managerRoles = managerRoles;
+	}
+
+	public String getAddManager() {
+		return addManager;
+	}
+
+	public void setAddManager(String addManager) {
+		this.addManager = addManager;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public String getUpdateManager() {
+		return updateManager;
+	}
+
+	public void setUpdateManager(String updateManager) {
+		this.updateManager = updateManager;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public Date getUpdatePwdTime() {
+		return updatePwdTime;
+	}
+
+	public void setUpdatePwdTime(Date updatePwdTime) {
+		this.updatePwdTime = updatePwdTime;
+	}
+	
+
+}

@@ -1,0 +1,79 @@
+package com.ddtkj.p2psys.activity.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.activity.domain.ActivityPublish;
+import com.ddtkj.p2psys.activity.model.ActivityPublishModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * 活动Service
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 2.0
+ * @since 2015年1月10日
+ */
+public interface ActivityPublishService {
+
+	/**
+	 * 列表
+	 * 
+	 * @param nid
+	 * @param size
+	 * @return
+	 */
+	List<ActivityPublishModel> listBySize(String type, int size);
+
+	/**
+	 * 分页
+	 * 
+	 * @param nid
+	 * @param page
+	 * @return
+	 */
+	PageDataList<ActivityPublishModel> list(String type, int page);
+	/**
+     * 分页
+     * @param model
+     * @return
+     */
+	PageDataList<ActivityPublishModel> list(ActivityPublishModel model);
+
+	/**
+	 * 活动列表
+	 * 
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<ActivityPublishModel> activityList(ActivityPublishModel model, int pageNumber, int pageSize);
+	
+	/**
+	 * 添加活动
+	 */
+	void activityAdd(ActivityPublish activity);
+
+	/**
+	 * 根据ID查询实体
+	 * 
+	 * @param id
+	 * @return
+	 */
+	ActivityPublish find(long id);
+
+	/**
+	 * 修改活动
+	 * 
+	 * @param ActivityPublish
+	 */
+	void activityEdit(ActivityPublish activity);
+
+	
+	/**
+	 * 修改活动
+	 * @param ActivityPublish 文章对象
+	 */
+	void update(ActivityPublish activity);
+
+}

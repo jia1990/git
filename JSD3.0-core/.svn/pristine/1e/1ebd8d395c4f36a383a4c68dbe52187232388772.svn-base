@@ -1,0 +1,136 @@
+package com.ddtkj.p2psys.activity.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.activity.dao.SchoolRecruitDao;
+import com.ddtkj.p2psys.activity.domain.SchoolRecruit;
+import com.ddtkj.p2psys.activity.model.SchoolRecruitModel;
+import com.ddtkj.p2psys.activity.service.SchoolRecruitService;
+import com.ddtkj.p2psys.schooldict.domain.SchoolDict;
+import com.ddtkj.p2psys.schooldict.service.SchoolDictService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+
+@Service("schoolRecruitService")
+public class SchoolRecruitServiceImpl implements SchoolRecruitService {
+
+	@Resource
+	private SchoolRecruitDao schoolRecruitDao;
+	@Resource
+	private RegionDao regionDao;
+	@Resource
+	private SchoolDictService schoolDictService;
+	
+	@Override
+	public SchoolRecruit doRecruit(SchoolRecruit schoolRecruit) {
+		schoolRecruit.setAddTime(new Date());
+		schoolRecruit.setAddIp(Global.getIP());
+		return schoolRecruitDao.save(schoolRecruit);
+	}
+
+	@Override
+	public PageDataList<SchoolRecruit> schoolRecruitList(
+			SchoolRecruit schoolRecruit, int page, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(page, size);
+		if(schoolRecruit != null){
+			if(!schoolRecruit.getStatus().equals("0")){
+				param.addParam("status", schoolRecruit.getStatus());
+			}else {
+				param.addParam("status", "0");
+			}
+			if(!StringUtil.isBlank(schoolRecruit.getSchool())){
+				param.addParam("schoolName", Operators.LIKE, schoolRecruit.getSchool());
+			}
+			param.addOrder(OrderType.DESC, "addTime");
+		}
+		PageDataList<SchoolRecruit> pageDataList = schoolRecruitDao.findPageList(param);
+		return pageDataList;
+	}
+
+	@Override
+	public SchoolRecruit find(long id) {
+		return schoolRecruitDao.find(id);
+	}
+
+	@Override
+	public void schoolRecruitEdit(SchoolRecruit schoolRecruit) {
+		schoolRecruitDao.update(schoolRecruit);
+	}
+
+	@Override
+	public PageDataList<SchoolRecruitModel> list(SchoolRecruit schoolRecruit, int page, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(page, size);
+		
+		if(schoolRecruit != null){
+			if(!StringUtil.isBlank(schoolRecruit.getStatus())){
+				param.addParam("status", schoolRecruit.getStatus());
+			}
+			
+			if(!StringUtil.isBlank(schoolRecruit.getSchool())){
+				param.addParam("realName", Operators.LIKE, schoolRecruit.getRealName());
+			}
+			param.addOrder(OrderType.DESC, "addTime");
+		}
+		PageDataList<SchoolRecruit> pList = schoolRecruitDao.findPageList(param);
+		PageDataList<SchoolRecruitModel> pageDataList = new PageDataList<SchoolRecruitModel>();
+		List<SchoolRecruitModel> bmList = new ArrayList<SchoolRecruitModel>();
+		pageDataList.setPage(pList.getPage());
+		if (pList.getList().size() > 0) {
+			for (int i = 0; i < pList.getList().size(); i++) {
+				SchoolRecruit b = (SchoolRecruit) pList.getList().get(i);
+				SchoolRecruitModel bm = SchoolRecruitModel.instance(b);
+				
+				Region regionProv = regionDao.findById(b.getProvince());
+				Region regionCity = regionDao.findById(b.getCity());
+				//Region regionCounty = regionDao.findById(b.getCity());
+				if (regionProv != null) {
+					bm.setProvinceName(regionProv.getName());
+				}else{
+					//bm.setProvinceName(bm.getProvince());
+				}
+				if (regionCity != null) {
+					bm.setCityName(regionCity.getName());
+				}else{
+					//bm.setCityName(bm.getCity());
+				}
+				/*if (regionCounty != null) {
+					bm.setCountyName(regionCounty.getName());
+				}else{
+					bm.setCountyName(bm.getCountyName());
+				}*/
+				//查询对应学校
+				SchoolDict schoolDict = schoolDictService.getSchool(b.getSchool());
+				bm.setSchoolStr(schoolDict.getName());
+				
+				
+				bmList.add(bm);
+			}
+		}
+		pageDataList.setList(bmList);
+		return pageDataList;
+	}
+	
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<SchoolRecruitModel> excelListSchoolRecruit(
+			SchoolRecruitModel model) {
+		return schoolRecruitDao.excelListSchoolRecruit(model);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+}

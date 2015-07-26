@@ -1,0 +1,160 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：投资人账户可用资金1.0转账到3.0账户 
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月26日 
+ */
+@Entity
+@Table(name ="t_jsd_account_transfer")
+public class AccountTransfer implements Serializable{
+	private static final long serialVersionUID = -6904876060794197147L;
+	
+	public static final String ACCOUNT_TRANSFER_SUCCESS="00"; //转账成功
+	public static final String ACCOUNT_TRANSFER_FAIL="99"; //转账失败
+	public static final String ACCOUNT_TRANSFER_APPLY="66"; //转账申请中
+	public static final String ACCOUNT_TRANSFER_ERROR="01"; //其他异常；
+	public static final String ACCOUNT_TRANSFER_YMD_SUCCESS="02"; //第三方交易订单号重复
+	public static final String ACCOUNT_TRANSFER_LOCAL_SUCCESS="03"; //本地交易订单号重复
+	//JSDP-156 xingjia 2015-05-22 start
+	public static final String ACCOUNT_TRANSFER_YUNGOU_FAIL="65";//转账云购处理失败
+	//JSDP-156 xingjia 2015-05-22 start
+	//JSDP-55 gjh 2015-04-22 start
+	public static final String ACCOUNT_TRANSFER_VERIFY_NOT="77";//转账审核不通过
+	//JSDP-55 gjh 2015-04-22 end
+	
+	//JSDP-156 xingjia 2015-05-22 start
+	public static final String ACCOUNT_TRANSFER_YUNGOU_YMD_SUC = "05";//转账云购一麻袋处理成功
+	public static final String ACCOUNT_TRANSFER = "4";//3.0转账云购（用于云购）
+	//JSDP-156 xingjia 2015-05-22 start
+
+	@Id
+	private String transferNo; //流水号
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user; //用户
+	//JSDBET-943 wcw 2015-04-14 start   //JSDP-37 wcw 2015-04-25 start
+	private int transferType ;//转账类型： 03:1.0转账3.0 、 01:充值卡转账  、02:还款转账    00:汇潮转账、04:3.0转账云购
+	//JSDBET-943 wcw 2015-04-14 end    //JSDP-37 wcw 2015-04-25 start
+	private double transferAmount; //转账金额
+	private String transferStatus;  //转账状态
+	private String transferMsg;//转账返回信息
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime; //记录添加时间
+	private String addIp; //添加IP
+	//JSDP-55 gjh 2015-04-21 start
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "pop_user_id")
+	private User popUser; //转出用户
+	private String addUser;
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date updateTime;
+	private String updateUser;
+	//JSDP-55 gjh 2015-04-21 end
+	//JSDP-55 gjh 2015-04-23 start 
+	private String remark;
+	//JSDP-55 gjh 2015-04-23 end 
+	public String getTransferNo() {
+		return transferNo;
+	}
+	public void setTransferNo(String transferNo) {
+		this.transferNo = transferNo;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public double getTransferAmount() {
+		return transferAmount;
+	}
+	public void setTransferAmount(double transferAmount) {
+		this.transferAmount = transferAmount;
+	}
+	public String getTransferStatus() {
+		return transferStatus;
+	}
+	public void setTransferStatus(String transferStatus) {
+		this.transferStatus = transferStatus;
+	}
+	
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public String getTransferMsg() {
+		return transferMsg;
+	}
+	public void setTransferMsg(String transferMsg) {
+		this.transferMsg = transferMsg;
+	}
+	//JSDBET-943 wcw 2015-04-14 start
+	public int getTransferType() {
+		return transferType;
+	}
+	public void setTransferType(int transferType) {
+		this.transferType = transferType;
+	}
+	//JSDBET-943 wcw 2015-04-14 end
+	//JSDP-55 gjh 2015-04-21 start
+	public User getPopUser() {
+		return popUser;
+	}
+	public void setPopUser(User popUser) {
+		this.popUser = popUser;
+	}
+	public String getAddUser() {
+		return addUser;
+	}
+	public void setAddUser(String addUser) {
+		this.addUser = addUser;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getUpdateUser() {
+		return updateUser;
+	}
+	public void setUpdateUser(String updateUser) {
+		this.updateUser = updateUser;
+	}
+	//JSDP-55 gjh 2015-04-21 end
+	//JSDP-55 gjh 2015-04-23 start
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	//JSDP-55 gjh 2015-04-23 end
+	
+}

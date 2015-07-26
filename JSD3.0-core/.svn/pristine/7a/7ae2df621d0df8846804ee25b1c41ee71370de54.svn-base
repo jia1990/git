@@ -1,0 +1,27 @@
+package com.ddt.test.util;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+/**
+ * spring工具类，用于核心的service或dao的测试
+ * @author ddt_xinggw  
+ * **/
+public class BeanUtil {
+
+	private final static ApplicationContext context;
+	static {
+		context = new ClassPathXmlApplicationContext("applicationContext.xml");
+	}
+    /**
+     * 从spring容器中获取bean
+     * @param  id 
+     *                 bean的注册名称
+     * @param  type
+     *                 bean的运行期间类型
+     * @return  返回type表示的实例   
+     * */
+	public static <T> T getBean(String id, Class<T> type) {
+
+		return context.getBean(id, type);
+	}
+}

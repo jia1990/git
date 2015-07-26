@@ -1,0 +1,37 @@
+<script type="text/javascript">
+    $(function() {
+        $('#collectionListGrid').datagrid({
+            url : '/modules/creditassignment/credit/showCollectionList.html?caId=${id}',
+            fit : true,
+            fitColumns : false,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            columns : [ [
+              { field: 'userName', title: '用户名', width: 120, sortable:false },          
+              { field: 'capital', title: '待收本金', width: 140, sortable:false,formatter:function(value,row,index){
+            	  return value+"元";
+              }},
+              { field: 'interest', title: '待收利息', width: 140, sortable:false,formatter:function(value,row,index){
+            	  return value+"元";
+              }},  
+              { field: 'repayAward', title: '待收奖励', width: 140,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  if(row.repayAwardStatus == 0){
+            		  return row.repayAward+"元"; 
+            	  }else if(row.repayAwardStatus == 1){
+            		  return 0+"元";  
+            	  }
+              }} 
+    
+              ] ]
+        }); 
+        
+    });
+</script>
+
+<table id="collectionListGrid"></table>

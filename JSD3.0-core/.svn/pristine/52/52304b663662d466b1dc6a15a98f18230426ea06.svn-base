@@ -1,0 +1,40 @@
+package com.ddtkj.p2psys.goods.dao.impl;
+
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+import javax.persistence.Query;
+import com.ddtkj.p2psys.goods.dao.GoodsCategoryDao;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsCategory;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+@Repository("ddtkjGoodsCategoryDao")
+public class GoodsCategoryDaoImpl  extends BaseDaoImpl<DdtkjGoodsCategory> implements GoodsCategoryDao{
+	
+	/**
+	 * 查询商品数-根据商品分类编号查询
+	 * @author sunxiaoyong@ddtkj.com
+	 * @param id
+	 * @return
+	 */
+	public int getGoodsCategoryId(int goodsCategoryId) {
+		
+		String sql = "SELECT COUNT(*) FROM t_jsd_goods t1,t_jsd_goods_category t2 WHERE t1.category_id = t2.id AND t1.category_id = ?1";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter(1, goodsCategoryId);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return (int) Double.parseDouble(obj.toString());
+        }
+        return 0;
+        
+	}
+	
+	@Override
+	public List<DdtkjGoodsCategory> getCategorySecond() {
+		List<DdtkjGoodsCategory> list = null;
+		String sql = "FROM DdtkjGoodsCategory WHERE parentId IN (SELECT id FROM DdtkjGoodsCategory WHERE parentId = 0)";
+        Query query = em.createQuery(sql, DdtkjGoodsCategory.class);
+        list = query.getResultList();
+        return list;
+	}
+}

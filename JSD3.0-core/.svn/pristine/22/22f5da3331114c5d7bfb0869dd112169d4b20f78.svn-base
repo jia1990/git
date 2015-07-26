@@ -1,0 +1,168 @@
+package com.ddtkj.p2psys.fillorder.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * 补单记录表
+ * 
+ * @version 3.0
+ * @since 2015-04-17
+ * @author 孙晓勇
+ */
+@Entity
+@Table(name = "t_jsd_fillorder_log")
+public class FillOrderLog implements Serializable {
+
+	private static final long serialVersionUID = -3137348608695539182L;
+
+	public static final String ORDER_RECHARGE = "recharge"; //充值订单标识
+	
+	public static final String ORDER_DRAW = "draw"; 		//提现订单标识
+	//JSDP-55 gjh 2015-04-23 start
+	public static final String ORDER_TRANSFER = "transfer"; //转账订单标识
+	//JSDP-55 gjh 2015-04-23 end
+	//JSDP-156 xingjia 2015-05-22 start
+	public static final String ORDER_TRANSFER_YUNGOU = "transfer_yungou";//3.0转账云购
+	//JSDP-156 xingjia 2015-05-22 start
+	/**
+	 * 主键
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+
+	//JSDP - BUG32  sxy
+	/**
+	 * 审核人
+	 */
+	private int optUser;
+	//JSDP - BUG32  sxy
+
+	/**
+	 * 补单类型 recharge
+	 */
+	private String type;
+
+	/**
+	 * 关联补单类型的ID
+	 */
+	private String fid;
+
+	/**
+	 * 补单结果
+	 */
+	private int result;
+
+	/**
+	 * 备注
+	 */
+	private String remark;
+
+	/**
+	 * 时间
+	 */
+	private Date optTime;
+	
+	/**
+	 * ip
+	 */
+	private String ip;
+
+	public FillOrderLog() {
+		super();
+	}
+
+	public FillOrderLog(String type, String fid) {
+		super();
+		this.type = type;
+		this.fid = fid;
+		this.optTime = new Date();
+		this.ip = Global.getIP();
+	}
+
+	public FillOrderLog(int optUser, String type, String fid, int result, String remark) {
+		super();
+		this.optUser = optUser;
+		this.type = type;
+		this.fid = fid;
+		this.result = result;
+		this.remark = remark;
+		this.optTime = new Date();
+		this.ip = Global.getIP();
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public int getOptUser() {
+		return optUser;
+	}
+
+	public void setOptUser(int optUser) {
+		this.optUser = optUser;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getFid() {
+		return fid;
+	}
+
+	public void setFid(String fid) {
+		this.fid = fid;
+	}
+
+	public int getResult() {
+		return result;
+	}
+
+	public void setResult(int result) {
+		this.result = result;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public Date getOptTime() {
+		return optTime;
+	}
+
+	public void setOptTime(Date optTime) {
+		this.optTime = optTime;
+	}
+
+	public String getIp() {
+		return ip;
+	}
+
+	public void setIp(String ip) {
+		this.ip = ip;
+	}
+
+	
+}

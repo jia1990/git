@@ -1,0 +1,640 @@
+package com.ddtkj.p2psys.tpp.ymd.version2;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.NameValuePair;
+import org.apache.log4j.Logger;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCashDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryBalance;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.tpp.ymd.version2.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.version2.model.YmdTransferDetails;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+import com.rongdu.p2psys.tpp.ips.model.IpsMerchentUserInfo;
+import com.rongdu.p2psys.tpp.ips.tool.XmlTool;
+import com.rongdu.p2psys.user.constant.UserConstant;
+
+/**
+ * 汇潮接口（一麻袋）
+ * 
+ * @author wcw
+ * @version 3.0
+ * @since 2014年11月25日
+ */
+public class YmdNewTPPWay extends BaseTPPWay {
+	private long userId;
+	private UserModel model;
+	private User user;
+	private AccountRechargeModel accountRechargeModel;
+	private String extra;
+	private Borrow borrow;
+	private BorrowTender borrowTender;
+	
+	public static final String webs2surl = Global.getValue("webs2surl");
+	public static final String webUrl = Global.getValue("weburl");
+	public static final String adminurl = Global.getValue("adminurl");
+	public static final String admins2surl = Global.getValue("admins2surl");
+	
+	private static Logger logger = Logger.getLogger(YmdNewTPPWay.class);
+	
+	/**
+	 * 无参构造函数
+	 */
+	public YmdNewTPPWay() {
+	}
+
+	public YmdNewTPPWay(UserModel model, User user, AccountRechargeModel accountRechargeModel, String extra, Borrow borrow) {
+		this.model = model;
+		this.user = user;
+		this.accountRechargeModel = accountRechargeModel;
+		this.extra = extra;
+		this.borrow = borrow;
+	}
+	
+	public YmdNewTPPWay(UserModel model, User user, AccountRechargeModel accountRechargeModel, String extra, Borrow borrow,BorrowTender borrowTender) {
+		this.model = model;
+		this.user = user;
+		this.accountRechargeModel = accountRechargeModel;
+		this.extra = extra;
+		this.borrow = borrow;
+		this.borrowTender = borrowTender;
+	}
+	/**
+	 * 汇潮开户
+	 */
+	@Override
+	public YmdRegister doRealname() {
+	    YmdRegister ymdRegister=new YmdRegister();
+	    //JSDBET-863 gjh 2015-3-28 start
+	    if(UserConstant.USER_NATURE_PERSION.equals(model.getUserNature())
+	    		|| (UserConstant.USER_NATURE_COMPANY.equals(model.getUserNature())
+	    				&& "1".equals(model.getUserCache().getLegalDraw()))){
+	        ymdRegister.setMode(UserConstant.OPEN_ACCOUNT_PERSION);
+	    	ymdRegister.setCardNo(model.getCardNO());
+	        ymdRegister.setAccountName(model.getMobilePhone());
+	    }else if(UserConstant.USER_NATURE_COMPANY.equals(model.getUserNature()) 
+	    		&& !"1".equals(model.getUserCache().getLegalDraw())){
+	        ymdRegister.setMode(UserConstant.OPEN_ACCOUNT_COMPANY);
+            ymdRegister.setAccountName(model.getEmail());
+            ymdRegister.setCardNo(model.getUserCache().getCompanyRegNo());
+	    }
+	    //JSDBET-863 gjh 2015-3-28 end
+	    ymdRegister.setWS_URL(ymdRegister.getSubmitUrl()+"/openAccount");
+	    ymdRegister.setNickName(model.getUserName());
+	    ymdRegister.setRealName(model.getRealName());
+        ymdRegister.setAdviceUrl(webUrl+"/public/ymd/ymdRegisterNotify.html");
+        ymdRegister.setReturnUrl(webUrl+"/public/ymd/ymdRegisterReturn.html");
+        ymdRegister.setRemark("开户");
+	    ymdRegister.createSign();
+	    ymdRegister.chineseEncoder();
+		return ymdRegister;
+	}
+
+	@Override
+	public YmdRecharge doRecharge() throws Exception {
+		YmdRecharge ymdRecharge=new YmdRecharge();
+		ymdRecharge.setWS_URL(ymdRecharge.getSubmitUrl()+"/hostingRecharge");
+		ymdRecharge.setNickName(user.getUserName());
+		ymdRecharge.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_RECHANGE));
+	 	ymdRecharge.setAdviceUrl(webUrl+"/public/ymd/ymdRechargeNotify.html");
+		ymdRecharge.setReturnUrl(webUrl+"/public/ymd/ymdRechargeReturn.html");
+		ymdRecharge.setAmount(XmlTool.format2Str(accountRechargeModel.getRechargeAmount()));
+		ymdRecharge.setFee("0.00");
+		ymdRecharge.setRemark("充值");
+		ymdRecharge.createSign();	
+		ymdRecharge.chineseEncoder();
+		return ymdRecharge;
+	}
+
+	/**
+	 * 转账（单笔）
+	 * @param transferType 转账交易类型  trade：麻袋不收取手续费   repay ：麻袋收取手续费   现阶段均配置为trade 
+	 * @param transferNo  交易批次号
+	 * @param oriMerBillNo 交易流水号
+	 * @param trdAmt 转账金额
+	 * @param fromApiId 转出人
+	 * @param toApiId 转入人   如果是平台，则使用平台商户号即可
+	 * @return 交易实体
+	 */
+	public static YmdTransfer transfer(String transferType,String transferNo, 
+			String oriMerBillNo, String trdAmt, String fromApiId, String toApiId) {
+		YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(transferNo);
+		ymdTransfer.setTradeType(transferType);
+		StringBuffer details = new StringBuffer();
+		YmdTransferDetails row=new YmdTransferDetails();
+		row.setOutTradeNo(oriMerBillNo);
+		row.setOutName(fromApiId);
+		row.setInName(toApiId);
+		row.setAmount(trdAmt);
+		row.setRemark("转账");
+        details.append(row.getTranXml(row.getParamNames()));
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		try {
+			ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade.action?transData="+xml);
+			String res = ymdTransfer.submitReturnStatus(ymdTransfer.getWS_URL());
+			logger.info("一麻袋单笔转账交易处理状态====【"+ymdTransfer.getErrMsg(res, "一麻袋请求失败，")+"】");
+			ymdTransfer.setErrCode(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+		return ymdTransfer;
+	}
+	/**
+	 * 转账（单笔）
+	 * @param transferType 转账交易类型  trade：麻袋不收取手续费   repay ：麻袋收取手续费   现阶段均配置为trade 
+	 * @param transferNo  交易批次号
+	 * @param oriMerBillNo 交易流水号
+	 * @param trdAmt 转账金额
+	 * @param fromApiId 转出人
+	 * @param toApiId 转入人   如果是平台，则使用平台商户号即可
+	 * @return 交易实体
+	 */
+	public static YmdTransfer transferFreeze(Map<String, Object> map) {
+		String transferNo=(String) map.get("transferNo");
+		String transferType=(String) map.get("transferType");
+		String oriMerBillNo=(String) map.get("oriMerBillNo");
+		String fromApiId=(String) map.get("fromApiId");
+		String toApiId=(String) map.get("toApiId");
+		String trdAmt=(String) map.get("trdAmt");
+		String operTypeStr=StringUtil.isBlank((String) map.get("operType"))?"":(String) map.get("operType");
+		int operType=Integer.parseInt(operTypeStr);
+		String bidNo=(String) map.get("bidNo");
+		String bidAmount=(String) map.get("bidAmount");
+		YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(transferNo);
+		ymdTransfer.setTradeType(transferType);
+		ymdTransfer.setBidNo(bidNo);
+		ymdTransfer.setBidAmount(bidAmount);
+		ymdTransfer.setOperType(operType);
+		StringBuffer details = new StringBuffer();
+		YmdTransferDetails row=new YmdTransferDetails();
+		row.setOutTradeNo(oriMerBillNo);
+		row.setOutName(fromApiId);
+		row.setInName(toApiId);
+		row.setAmount(trdAmt);
+		row.setRemark("转账");
+        details.append(row.getTranXml(row.getParamNames()));
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		try {
+			ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade.action?transData="+xml);
+			String res = ymdTransfer.submitReturnStatus(ymdTransfer.getWS_URL());
+			logger.info("一麻袋单笔转账交易处理状态====【"+ymdTransfer.getErrMsg(res, "一麻袋请求失败，")+"】");
+			ymdTransfer.setErrCode(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+		return ymdTransfer;
+	}
+	/**
+	 * 转账（多笔）
+	 * @param transferType  transferType 转账交易类型  trade：麻袋不收取手续费   repay ：麻袋收取手续费   现阶段均配置为trade 
+	 * @param transferNo  交易批次号
+	 * @param list  转账交易明细记录
+	 * @return
+	 */
+	public static YmdTransfer transfer(String transferType,String transferNo,List<YmdTransferDetails> list) {
+		YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(transferNo);
+		ymdTransfer.setTradeType(transferType);
+		StringBuffer details = new StringBuffer();
+		YmdTransferDetails row=new YmdTransferDetails();
+		for(YmdTransferDetails y:list){
+			row.setOutTradeNo(y.getOutTradeNo());
+			row.setOutName(y.getOutName());
+			row.setInName(y.getInName());
+			row.setAmount(y.getAmount());
+			row.setRemark(y.getRemark());
+			details.append(row.getTranXml(row.getParamNames()));
+		}
+		logger.info("xml==="+details.toString());
+		ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		try {
+			logger.info("平台数字账户："+ymdTransfer.getAccountNumber());
+			logger.info("交易批次号："+transferNo+",trade xml==="+xml);
+			ymdTransfer.setTransData(xml);
+			List<NameValuePair> nvp=ymdTransfer.getHttpPostParams();
+			ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade.action");
+			String res = ymdTransfer.submitReturnStatus(ymdTransfer.getWS_URL(),nvp);
+			logger.info("一麻袋多笔转账交易处理状态====【"+ymdTransfer.getErrMsg(res, "一麻袋请求失败，")+"】");
+			ymdTransfer.setErrCode(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return  new  YmdTransfer();
+		}
+		return ymdTransfer;
+	}
+	
+	/**
+	 * 交易付款（投标、满标复审、还款）
+	 * @param accountNumber 一麻袋系统的数字账户，7位数字账户
+	 * @param tradeNo 		商户交易号
+	 * @param tradeType 	交易类型
+	 * @param operType 		操作类型（0：冻结交易 1：直接转账）
+	 * @param bidNo 		商户平台标号
+	 * @param bidAmount 	标金额
+	 * @param returnURL 	页面返回地址
+	 * @param adviceURL 	服务器通知地址
+	 * @param outTradeNo 	商户流水号 
+	 * @param outName 		付款人昵称
+	 * @param inName 		收款人昵称
+	 * @param secureCode 	签名信息
+	 * @return 交易实体
+	 */
+	public static YmdTransfer tradepayment(Map<String, Object> map) {
+		String accountNumber=(String) map.get("accountNumber");
+		String tradeNo=(String) map.get("tradeNo");
+		String tradeType=(String) map.get("tradeType");
+		String operTypeStr=StringUtil.isBlank((String) map.get("operType"))?"":(String) map.get("operType");
+		int operType=Integer.parseInt(operTypeStr);
+		String bidNo=(String) map.get("bidNo");
+		String bidAmount=(String) map.get("bidAmount");
+		String returnURL=(String) map.get("returnURL");
+		String adviceURL=(String) map.get("adviceURL");
+		String outTradeNo=(String) map.get("outTradeNo");
+		String outName=(String) map.get("outName");
+		String inName=(String) map.get("inName");
+		String amount=(String) map.get("amount");
+		String remark=(String) map.get("remark");
+		String secureCode=(String) map.get("secureCode");
+		
+		YmdTransfer ymdTransfer = new YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(tradeNo);
+		ymdTransfer.setTradeType(tradeType);
+		ymdTransfer.setOperType(operType);
+		ymdTransfer.setBidNo(bidNo);
+		ymdTransfer.setBidAmount(bidAmount);
+		ymdTransfer.setReturnURL(returnURL);
+		ymdTransfer.setAdviceURL(adviceURL);
+		
+		/** 生成签名 */
+		StringBuffer details = new StringBuffer();
+		YmdTransferDetails row=new YmdTransferDetails();
+		row.setOutTradeNo(outTradeNo);
+		row.setOutName(outName);
+		row.setInName(inName);
+		row.setAmount(amount);
+		row.setRemark("交易付款");
+		row.setTradeNo(tradeNo);// 添加
+		row.setSecureCode(row.getSecureCode());
+        details.append(row.getTranXml(row.getParamNames()));
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+        ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade.action?transData="+xml);
+		return ymdTransfer;
+	}
+	
+	
+	/**
+	 * 交易付款退回（投标、转标等付款操作后需要进行回退）
+	 * @param tradeNo 		商户交易号
+	 * @param tradeType 	交易类型
+	 * @param adviceURL 	服务器通知地址
+	 * @param outTradeNo 	商户流水号 
+	 * @param outName 		付款人昵称
+	 * @param inName 		收款人昵称
+	 * @param amount 	           交易金额，大于0，保留两位小数
+	 * @param remark 	           备注
+	 * @param secureCode 	签名信息
+	 * @return 交易实体 
+	 */
+	public static YmdTransfer tradePaymentRefunded(Map<String, Object> map) {
+		String tradeNo=(String) map.get("tradeNo");
+		String tradeType=(String) map.get("tradeType");
+		String adviceURL=(String) map.get("adviceURL");
+		String outTradeNo=(String) map.get("outTradeNo");
+		String outName=(String) map.get("outName");
+		String inName=(String) map.get("inName");
+		String amount=(String) map.get("amount");
+		String remark=(String) map.get("remark");
+		
+		YmdTransfer ymdTransfer = new YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(tradeNo);
+		ymdTransfer.setTradeType(tradeType);
+		ymdTransfer.setAdviceURL(adviceURL);
+	    String[] paramNames=new String[]{"accountNumber","tradeNo","tradeType","adviceURL","tranlist"};	
+		 ymdTransfer.setParamNames(paramNames);
+		
+		StringBuffer details = new StringBuffer();
+		YmdTransferDetails row=new YmdTransferDetails();
+		row.setOutTradeNo(outTradeNo);
+		row.setOutName(outName);
+		row.setInName(inName);
+		row.setAmount(amount);
+		row.setRemark(remark);
+		row.setTradeNo(tradeNo);
+		row.setSecureCode(row.getSecureCode());
+		
+        details.append(row.getTranXml(row.getParamNames()));
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade.action?transData="+xml);
+		return ymdTransfer;
+	}
+	
+	
+	/**
+	 * 交易付款完成（投标、转标等付款操作后需要进行冻结交易退回的功能）
+	 * @param accountNumber 一麻袋系统的数字账户，7位数字账户
+	 * @param tradeNo 		商户交易号
+	 * @param tradeType 	交易类型
+	 * @param operType 		操作类型（0：冻结交易 1：直接转账）
+	 * @param bidNo 		商户平台标号
+	 * @param bidAmount 	标金额
+	 * @param returnURL 	页面返回地址
+	 * @param adviceURL 	服务器通知地址
+	 * @param outTradeNo 	商户流水号 
+	 * @param outName 		付款人昵称
+	 * @param inName 		收款人昵称
+	 * @param secureCode 	签名信息
+	 * @return 交易实体
+	 */
+	public static YmdTransfer paymentTransactionCompleted(Map<String, Object> map,List<YmdTransferDetails> list) {
+		String tradeNo=(String) map.get("tradeNo");
+		String tradeType=(String) map.get("tradeType");
+		String adviceURL=(String) map.get("adviceURL");
+		YmdTransfer ymdTransfer = new YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(tradeNo);
+		ymdTransfer.setTradeType(tradeType);
+		ymdTransfer.setAdviceURL(adviceURL);
+	    String[] paramNames=new String[]{"accountNumber","tradeNo","tradeType","adviceURL","tranlist","feelist"};	
+		 ymdTransfer.setParamNames(paramNames);
+		StringBuffer details = new StringBuffer();
+		StringBuffer details2 = new StringBuffer();
+		YmdTransferDetails row = new YmdTransferDetails();
+		for (int i = 0; i < list.size(); i++) {
+			if (i < 2) {
+				row.setOutTradeNo(list.get(i).getOutTradeNo());
+				row.setOutName(list.get(i).getOutName());
+				row.setInName(list.get(i).getInName());
+				row.setAmount(list.get(i).getAmount());
+				row.setRemark(list.get(i).getRemark());
+				row.setTradeNo(tradeNo);
+				row.setSecureCode(row.getSecureCode());
+				details.append(row.getTranXml(row.getParamNames()));
+			} else {
+				row.setOutTradeNo(list.get(i).getOutTradeNo());
+				row.setOutName(list.get(i).getOutName());
+				row.setInName(list.get(i).getInName());
+				row.setAmount(list.get(i).getAmount());
+				row.setRemark(list.get(i).getRemark());
+				row.setTradeNo(tradeNo);
+				row.setSecureCode(row.getSecureCode());
+				details2.append(row.getTranXml(row.getParamNames()));
+			}
+		}
+        ymdTransfer.setTranlist(details.toString());
+	    ymdTransfer.setFeelist(details2.toString());
+        
+        String xml=ymdTransfer.allXml();
+		ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade.action?transData="+xml);
+		return ymdTransfer;
+	}
+	
+	
+	/**
+	 * 查询一麻袋账户余额
+	 * @param nickName   第三方账户昵称（平台用户名）
+	 * @return
+	 * @throws Exception
+	 */
+	public static YmdQueryBalance checkBalance(String nickName) throws Exception{
+		YmdQueryBalance y=new YmdQueryBalance();
+		y.setNickName(nickName);
+		//签名
+		y.createSign();
+		//y.setWS_URL(y.getSubmitUrl()+"/hostingCheckBalance");
+		y.setWS_URL(y.getQueryUrl()+"/hostingCheckBalance");
+		List<NameValuePair> formparams =y.getHttpPostParams();
+		//汇潮返回查询处理结果----xml字符串
+		String returnXml=y.submitReturnXml(y.getWS_URL(),formparams);
+		//-----解析xml字符串-------start
+		XmlTool xml=new XmlTool();
+		xml.SetDocument(returnXml);
+		y.setAccountNumber(xml.getNodeValue("accountNumber"));
+		y.setStatus(xml.getNodeValue("status"));
+		logger.info("一麻袋查询账户余额状态====【"+y.getErrMsg(y.getStatus(), "一麻袋托管账户请求失败，请重新请求")+"】");
+		/*if(!"00".equals(y.getStatus())){
+			throw new BussinessException(y.getErrMsg(y.getStatus(), "一麻袋托管账户请求失败，请重新请求"));
+		}*/
+		if(!nickName.equals(y.getNickName())){
+			throw new BussinessException("一麻袋查询账户余额错误，错误原因=====昵称前后不一致");
+		}
+		y.setBalance(xml.getNodeValue("balance"));
+		y.setSecureCode(xml.getNodeValue("secureCode"));
+		y.setErrCode(y.getStatus());
+		//-----解析xml字符串-------end
+		return y;
+	}
+	/**
+	 * 查询交易记录
+	 * @param ymdQuery   交易查询实体
+	 * @return
+	 * @throws Exception
+	 */
+    public static YmdQueryReturn query(YmdQuery ymdQuery) throws Exception{
+    	//签名
+    	ymdQuery.createSign();
+    	//ymdQuery.setWS_URL(ymdQuery.getSubmitUrl()+"/hostingTradeQuery");
+    	ymdQuery.setWS_URL(ymdQuery.getQueryUrl()+"/hostingTradeQuery");
+    	List<NameValuePair> formparams = ymdQuery.getHttpPostParams();
+    	//汇潮返回查询处理结果----xml字符串
+    	String returnXml=ymdQuery.submitReturnXml(ymdQuery.getWS_URL(),formparams);
+    	//-----解析xml字符串-------start
+    	XmlTool xml=new XmlTool();
+    	xml.SetDocument(returnXml);
+    	YmdQueryReturn yrq=new YmdQueryReturn();
+    	yrq=yrq.getYmdReturnQuery(xml);
+    	logger.info(yrq.getErrMsg(yrq.getResultCode(), "一麻袋托管账户请求失败，请重新请求"));
+    	/*if(!"00".equals(yrq.getResultCode())){
+    		throw new BussinessException(yrq.getErrMsg(yrq.getResultCode(), "一麻袋托管账户请求失败，请重新请求"));
+    	}*/
+    	//-----解析xml字符串-------end
+        return yrq;     	
+    }
+    @Override
+	public YmdCash doNewCash (AccountDraw cash, User user, int cashnum,String province, String city, String bankCode) {
+    	YmdCash ymdCash=new YmdCash();
+    	String weburl=Global.getValue("weburl");
+    	ymdCash.setAccountNumber(ymdCash.getNumberId());
+    	ymdCash.setAdviceURL(weburl+"/public/ymd/ymdCashNotify.html");
+    	ymdCash.setOutTradeNo(cash.getDrawTradeNo());
+    	ymdCash.setBankName(cash.getBankName());
+    	ymdCash.setProvice(cash.getBankProvince());
+    	ymdCash.setCity(cash.getBankCity());
+    	ymdCash.setBranchName(cash.getBankBranchName());
+    	ymdCash.setNickName(user.getUserName());
+    	ymdCash.setCardNo(cash.getBankNo());
+    	ymdCash.setAmount(cash.getDrawInAccountAmount()+"");
+    	ymdCash.setFee(cash.getDrawFee()+"");
+    	ymdCash.setRemark("提现");
+    	YmdCashDetails details=new YmdCashDetails();
+    	details.setOutTradeNo(cash.getDrawTradeNo());
+    	details.setBankName(cash.getBankName());
+    	details.setProvice(cash.getBankProvince());
+    	details.setCity(cash.getBankCity());
+    	details.setBranchName(cash.getBankBranchName());
+    	details.setNickName(user.getUserName());
+    	details.setCardNo(cash.getBankNo());
+    	details.setAmount(cash.getDrawInAccountAmount()+"");
+    	details.setFee(cash.getDrawFee()+"");
+    	details.setRemark("提现");
+    	String transfer=details.getTranXml(details.getParamNames());
+    	ymdCash.setTransfer(transfer);
+    	String xml=ymdCash.allXml();
+    	String resCode="";
+    	try {
+    		ymdCash.setWS_URL(ymdCash.getSubmitUrl()+"/hostingWithdrawCash?transData="+xml);
+    		resCode = ymdCash.submitReturnStatus(ymdCash.getWS_URL());
+    		logger.info("一麻袋提现转账处理返回结果==【"+ymdCash.getErrMsg(resCode, "一麻袋托管账户请求失败，请重新请求")+"】");
+			/*if(!("0000").equals(resCode)){
+    			throw new BussinessException(ymdCash.getErrMsg(resCode, "一麻袋托管账户请求失败，请重新请求"));
+    		}*/
+			ymdCash.setErrCode(resCode);
+		} catch (IOException e) {
+			logger.info("汇潮托管提现异常信息=========="+e.getMessage());
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ymdCash;
+	}
+    
+    public long getUserId() {
+		return userId;
+	}
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+	public UserModel getModel() {
+		return model;
+	}
+
+	public void setModel(UserModel model) {
+		this.model = model;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getExtra() {
+		return extra;
+	}
+	
+	public void setExtra(String extra) {
+		this.extra = extra;
+	}
+
+	public AccountRechargeModel getAccountRechargeModel() {
+		return accountRechargeModel;
+	}
+
+	public void setAccountRechargeModel(AccountRechargeModel accountRechargeModel) {
+		this.accountRechargeModel = accountRechargeModel;
+	}
+
+	public Borrow getBorrow() {
+		return borrow;
+	}
+
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+
+	public BorrowTender getBorrowTender() {
+		return borrowTender;
+	}
+
+	public void setBorrowTender(BorrowTender borrowTender) {
+		this.borrowTender = borrowTender;
+	}
+
+	@Override
+	public IpsMerchentUserInfo queryMerUserInfo() throws Exception {
+		return null;
+	}
+	public static void main(String[] args) {
+		/*YmdQuery ymdQuery=new YmdQuery();
+		ymdQuery.setNumberId("1980092");
+		ymdQuery.setQueryUrl("http://gateway.yemadai.com");
+		ymdQuery.setMerchantKey("e06178c1ae3762d68c526c7d01c2bfc21103657ed0ac2c4e2323f02cf9d867b97e36561fc4be5c2b31127cd9f00efabf");
+		ymdQuery.setOutTradeNo("P3120150513154721678");
+		ymdQuery.setMode("trade");
+		YmdQueryReturn ymdQueryReturn=new YmdQueryReturn();
+		try {
+			ymdQueryReturn = YmdTPPWay.query(ymdQuery);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+		YmdQueryReturnDetails yrd=new YmdQueryReturnDetails();
+		if(list.size()>0){
+			yrd=list.get(0);
+		}*/
+		
+		/*YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber("1980092");
+		ymdTransfer.setSubmitUrl("http://gateway.yemadai.com");
+		ymdTransfer.setMerchantKey("e06178c1ae3762d68c526c7d01c2bfc21103657ed0ac2c4e2323f02cf9d867b97e36561fc4be5c2b31127cd9f00efabf");
+		ymdTransfer.setTradeNo("JB220150629170755233");
+		ymdTransfer.setTradeType("trade");
+		StringBuffer details = new StringBuffer();
+		YmdTransferDetails row=new YmdTransferDetails();
+		row.setOutTradeNo("P6320150629170755537");
+		row.setNumberId("1980092");
+		row.setOutName("1980092");
+		row.setInName("haihai520");
+		row.setAmount("0.07");
+		row.setMerchantKey("e06178c1ae3762d68c526c7d01c2bfc21103657ed0ac2c4e2323f02cf9d867b97e36561fc4be5c2b31127cd9f00efabf");
+		row.setRemark("系统计算修正误差金额");
+        details.append(row.getTranXml(row.getParamNames()));
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		try {
+			ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade.action?transData="+xml);
+			String res = ymdTransfer.submitReturnStatus(ymdTransfer.getWS_URL());
+			logger.info("一麻袋单笔转账交易处理状态====【"+ymdTransfer.getErrMsg(res, "一麻袋请求失败，")+"】");
+			ymdTransfer.setErrCode(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}*/
+	}
+}

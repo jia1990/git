@@ -1,0 +1,301 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+
+import com.alibaba.fastjson.JSON;
+
+/**
+ * @描述:VIP会员规则
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2015年01月23日
+ */
+public class VipRuleCheck extends RuleCheck {
+
+	private InviteVIP invite_vip;  //邀请好友送vip规则
+	private BuyVIP buy_vip;  //购买vip规则
+	
+
+
+    public InviteVIP getInvite_vip() {
+		return invite_vip;
+	}
+
+	public void setInvite_vip(InviteVIP invite_vip) {
+		this.invite_vip = invite_vip;
+	}
+
+	public BuyVIP getBuy_vip() {
+		return buy_vip;
+	}
+
+	public void setBuy_vip(BuyVIP buy_vip) {
+		this.buy_vip = buy_vip;
+	}
+
+
+
+
+	/**
+     * 购买vip规则
+     * @描述：
+     * @作者：wangchangwei@ddtkj.com
+     * @创建时间：2015年1月23日
+     */
+	public static class BuyVIP implements java.io.Serializable{
+		private static final long serialVersionUID = 6204239414085834822L;
+		private int  status;//状态（1：启用 0 ：未启用）  
+		private String remark;// 备注
+		private VipLevel v1;   //铜牌
+		private VipLevel v2;  //银牌
+		private VipLevel v3;  //金牌
+		private VipLevel v4;  //钻石
+		
+		
+		public int getStatus() {
+			return status;
+		}
+
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+
+		public String getRemark() {
+			return remark;
+		}
+
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+
+		public VipLevel getV1() {
+			return v1;
+		}
+
+
+		public void setV1(VipLevel v1) {
+			this.v1 = v1;
+		}
+
+
+		public VipLevel getV2() {
+			return v2;
+		}
+
+
+		public void setV2(VipLevel v2) {
+			this.v2 = v2;
+		}
+
+
+		public VipLevel getV3() {
+			return v3;
+		}
+
+
+		public void setV3(VipLevel v3) {
+			this.v3 = v3;
+		}
+
+
+		public VipLevel getV4() {
+			return v4;
+		}
+
+
+		public void setV4(VipLevel v4) {
+			this.v4 = v4;
+		}
+
+
+		public static class VipLevel implements java.io.Serializable{
+			private static final long serialVersionUID = -9168743887757314736L;
+			private int type;   // 1： 按照费率  2：按照固定金额
+			private VipRate vip_rate; //打折费率
+			private VipPrice[] list;   //按照固定金额
+			
+			/**
+			 * 按照每月设置价格算多月价格，并设置打折费率（比如说每月设置铜牌价格10元，那么三个月的铜牌价值为30元）
+			 * @描述：
+			 * @作者：wangchangwei@ddtkj.com
+			 * @创建时间：2015年1月23日
+			 */
+			public static class VipRate implements java.io.Serializable{
+				private static final long serialVersionUID = 3131745126019608529L;
+				private double price;  //每月价格
+				private double rate; //打折费率  （比如说设置算2个月铜牌价格为s1,每月铜牌价格为s2,月份为s3,打折费率为s4,公式：s1=s2*s3*s4）
+				public double getPrice() {
+					return price;
+				}
+				public void setPrice(double price) {
+					this.price = price;
+				}
+				public double getRate() {
+					return rate;
+				}
+				public void setRate(double rate) {
+					this.rate = rate;
+				}
+				
+			}
+			/**
+			 * 按照固定金额 （比如说12个月铜牌固定100元）
+			 * @描述：
+			 * @作者：wangchangwei@ddtkj.com
+			 * @创建时间：2015年1月23日
+			 */
+            public static class VipPrice implements java.io.Serializable{
+				private static final long serialVersionUID = -4444882972991280469L;
+				private int month;   //月份
+				private double price; //会员总价格
+				public int getMonth() {
+					return month;
+				}
+				public void setMonth(int month) {
+					this.month = month;
+				}
+				public double getPrice() {
+					return price;
+				}
+				public void setPrice(double price) {
+					this.price = price;
+				}
+			}
+            
+			public int getType() {
+				return type;
+			}
+			public void setType(int type) {
+				this.type = type;
+			}
+			public VipRate getVip_rate() {
+				return vip_rate;
+			}
+			public void setVip_rate(VipRate vip_rate) {
+				this.vip_rate = vip_rate;
+			}
+			public VipPrice[] getList() {
+				return list;
+			}
+			public void setList(VipPrice[] list) {
+				this.list = list;
+			}
+            
+		}
+	}
+	
+	
+	/**
+	 * 邀请好友送VIP
+	 * @描述：
+	 * @作者：wangchangwei@ddtkj.com
+	 * @创建时间：2015年1月23日
+	 */
+	public static class InviteVIP  implements java.io.Serializable{
+		private static final long serialVersionUID = 6666462310028541024L;
+		private int  status;//状态（1：启用 0 ：未启用）
+		private String remark;// 备注
+		private String is_three_attestation;// 是否三项认证（实名、手机、邮箱） Y：通过  N:不通过
+
+		private Invite_convert_vips[] list; //
+		
+		
+		public static class Invite_convert_vips  implements java.io.Serializable{
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1945627593496527957L;
+			private int invite_number;  //好友邀请人数
+			private int month;   //月份
+			private String  vip_level; //vip等级  v1:铜牌 v2:银牌 v3：金牌  v4: 钻石
+			public int getInvite_number() {
+				return invite_number;
+			}
+			public void setInvite_number(int invite_number) {
+				this.invite_number = invite_number;
+			}
+			public int getMonth() {
+				return month;
+			}
+			public void setMonth(int month) {
+				this.month = month;
+			}
+			public String getVip_level() {
+				return vip_level;
+			}
+			public void setVip_level(String vip_level) {
+				this.vip_level = vip_level;
+			}
+			
+		}
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public String getIs_three_attestation() {
+			return is_three_attestation;
+		}
+
+		public void setIs_three_attestation(String is_three_attestation) {
+			this.is_three_attestation = is_three_attestation;
+		}
+
+		public Invite_convert_vips[] getList() {
+			return list;
+		}
+
+		public void setList(Invite_convert_vips[] list) {
+			this.list = list;
+		}
+	}
+	
+
+	public VipRuleCheck() {
+
+	}
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+
+
+
+	
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = VipRuleCheck.class.getResourceAsStream("会员VIP规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n","").replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<VipRuleCheck> clazz = VipRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		VipRuleCheck test = (VipRuleCheck) jsonObj;
+
+	  System.out.println(test.toString());
+
+	}
+}

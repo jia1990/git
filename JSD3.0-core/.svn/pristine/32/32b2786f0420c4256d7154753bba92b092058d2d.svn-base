@@ -1,0 +1,236 @@
+package com.ddtkj.p2psys.account.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.dao.AccountLogDao;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+@Repository("accountLogDao")
+public class AccountLogDaoImpl extends BaseDaoImpl<AccountLog> implements AccountLogDao {
+
+	@Override
+	public PageDataList<AccountLogModel> accountLogList(AccountLogModel model, int pageNumber, int pageSize) {
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber, pageSize);
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			Date start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+			param.addParam("addTime", Operators.GTE, start);
+		}
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+			param.addParam("addTime", Operators.LTE, end);
+		}
+		if (StringUtil.isNotBlank(model.getUserName())) {
+			param.addParam("user.userName", Operators.LIKE, model.getUserName());
+		}
+		if (StringUtil.isNotBlank(model.getBorrowName())) {
+			param.addParam("borrow.name", Operators.LIKE, model.getBorrowName());
+		}
+//		param.addOrder(OrderType.DESC, "addTime");
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<AccountLog> pageDateList = super.findPageList(param);
+		PageDataList<AccountLogModel> pageDateList_ = new PageDataList<AccountLogModel>();
+		List<AccountLogModel> list = new ArrayList<AccountLogModel>();
+		pageDateList_.setPage(pageDateList.getPage());
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				AccountLog c = (AccountLog) pageDateList.getList().get(i);
+				AccountLogModel cm = AccountLogModel.instance(c);
+				try{
+    				cm.setToUserName(c.getToUser().getUserName());
+    				cm.setUserName(c.getUser().getUserName());
+    				list.add(cm);
+				}
+				catch(Exception e){
+                    e.printStackTrace();
+				}
+			}
+		}
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+
+	@Override
+	public List excelLogList(AccountLogModel model) {
+		
+		StringBuffer sql = new StringBuffer();
+		
+		// 该方法在从字典表中获取对应类型name值后，查询出的记录会出现重复
+		/*if(model.getUserType().equals("10")){
+			//sql.append("SELECT  al.id,u.user_name,userName_borrow.userName,d.name,al.account_total,al.recharge_money,al.award_money, "
+			sql.append("SELECT  al.id,u.user_name,al.to_user,d.name,al.account_total,al.recharge_money,al.award_money, "
+					+" al.rp_dynamic_money,al.interest_usable,al.award_usable,al.recharge_usable,al.rp_dynamic_usable, "
+					+" al.freeze_use_interest,"
+					+" al.freeze_use_recharge,al.freeze_use_return_capital,al.freeze_use_award,al.collection_total,"
+					+" al.return_capital_usable,CASE al.payments_type WHEN 1 THEN '收入' WHEN 2 THEN '支出' WHEN 0 THEN '不变' ELSE '无' END paymentsType, "
+					+" al.add_time,al.add_ip,al.trade_no,al.out_trade_no "
+					+" FROM t_jsd_account_log al, "
+					
+					+" LEFT JOIN "
+					+" (SELECT DISTINCT(t1.user_id) AS userId,t1.user_name AS userName FROM t_jsd_user t1,t_jsd_account_log t2 WHERE t1.user_id = t2.to_user) AS userName_borrow "
+					+" ON al.to_user = userName_borrow.userId, "
+					
+					+" t_jsd_user_cache uc,t_jsd_user u,s_dict d "
+					+" WHERE al.user_id=u.user_id AND u.user_id=uc.user_id and d.nid='account_type' AND d.value=al.type ");
+		}else if(model.getUserType().equals("11")){
+			sql.append("SELECT  al.id,u.user_name,al.to_user,d.name,al.account_total,al.recharge_usable,al.borrower_recharge_money, "
+					+" al.borrower_enter_money,al.borrower_enter_usable,al.borrower_freeze_use_recharge,al.borrower_freeze_use_enter, "
+					+" al.repayment_total,CASE al.payments_type WHEN 1 THEN '收入' WHEN 2 THEN '支出' WHEN 0 THEN '不变' ELSE '无' END paymentsType,al.add_time "
+					+" FROM t_jsd_account_log al,t_jsd_user_cache uc,t_jsd_user u,s_dict d"
+					+" WHERE al.user_id=u.user_id AND u.user_id=uc.user_id and d.nid='account_type' AND d.value=al.type ");
+		}else if(model.getUserType().equals("12")){
+			sql.append("SELECT  al.id id,u.user_name,al.to_user,d.name,al.account_total,al.recharge_usable,al.borrower_recharge_money, "
+					+" al.borrower_enter_money,al.borrower_enter_usable,al.borrower_freeze_use_recharge,al.borrower_freeze_use_enter, "
+					+" al.repayment_total, CASE al.payments_type WHEN 1 THEN '收入' WHEN 2 THEN '支出' WHEN 0 THEN '不变' ELSE '无' END paymentsType ,al.add_time "
+					+" FROM t_jsd_account_log al,t_jsd_user_cache uc,t_jsd_user u,s_dict d "
+					+" WHERE al.user_id=u.user_id AND u.user_id=uc.user_id AND d.nid='account_type' AND d.value=al.type ");
+		}else{
+			sql.append("SELECT  al.id id,u.user_name,al.to_user,d.name,al.account_total,al.recharge_usable,al.borrower_recharge_money, "
+					+" al.borrower_enter_money, "
+					+" CASE al.payments_type "
+					+" WHEN 1 THEN '收入' "
+					+" WHEN 2 THEN '支出' "
+					+" WHEN 0 THEN '不变' "
+					+" ELSE '无' "
+					+" END paymentsType ,al.add_time "
+					+" FROM t_jsd_account_log al,t_jsd_user_cache uc,t_jsd_user u,s_dict d "
+					+" WHERE "
+					+" al.user_id=u.user_id AND u.user_id=uc.user_id AND d.nid='account_type' AND d.value=al.type ");
+		}*/
+		// JSDP-208 sxy 20150703 start
+		if(model.getUserType().equals("10")){
+			sql.append("SELECT  DISTINCT(al.id),u.user_name,userName_borrow.userName,ddd.nnn,al.account_total,al.recharge_money,al.award_money, "
+					+" al.rp_dynamic_money,al.interest_usable,al.award_usable,al.recharge_usable,al.rp_dynamic_usable, "
+					+" al.freeze_use_interest,"
+					+" al.freeze_use_recharge,al.freeze_use_return_capital,al.freeze_use_award,al.collection_total,"
+					+" al.return_capital_usable,CASE al.payments_type WHEN 1 THEN '收入' WHEN 2 THEN '支出' WHEN 0 THEN '不变' ELSE '无' END paymentsType, "
+					+" al.add_time,al.add_ip,al.trade_no,al.out_trade_no "
+					+" FROM t_jsd_account_log al "
+					+" LEFT JOIN "
+					+" (SELECT DISTINCT(t1.user_id) AS userId,t1.user_name AS userName FROM t_jsd_user t1,t_jsd_account_log t2 WHERE t1.user_id = t2.to_user) AS userName_borrow "
+					+" ON al.to_user = userName_borrow.userId "
+					+" LEFT OUTER JOIN t_jsd_user u ON al.user_id=u.user_id "
+					+" LEFT OUTER JOIN t_jsd_user_cache uc ON u.user_id=uc.user_id "
+					+" LEFT JOIN (SELECT d.name AS nnn,d.value AS val FROM s_dict d WHERE d.status = 1 AND d.nid = 'account_type' ) AS ddd ON ddd.val = al.type "
+					+" WHERE 1=1 ");
+		}else if(model.getUserType().equals("11")){
+			sql.append("SELECT  DISTINCT(al.id),u.user_name,userName_borrow.userName,ddd.nnn,al.account_total,al.recharge_usable,al.borrower_recharge_money, "
+					+" al.borrower_enter_money,al.borrower_enter_usable,al.borrower_freeze_use_recharge,al.borrower_freeze_use_enter, "
+					+" al.repayment_total,CASE al.payments_type WHEN 1 THEN '收入' WHEN 2 THEN '支出' WHEN 0 THEN '不变' ELSE '无' END paymentsType,al.add_time "
+					+" FROM t_jsd_account_log al "
+					+" LEFT JOIN "
+					+" (SELECT DISTINCT(t1.user_id) AS userId,t1.user_name AS userName FROM t_jsd_user t1,t_jsd_account_log t2 WHERE t1.user_id = t2.to_user) AS userName_borrow "
+					+" ON al.to_user = userName_borrow.userId "
+					+" LEFT OUTER JOIN t_jsd_user u ON al.user_id=u.user_id "
+					+" LEFT OUTER JOIN t_jsd_user_cache uc ON u.user_id=uc.user_id "
+					+" LEFT JOIN (SELECT d.name AS nnn,d.value AS val FROM s_dict d WHERE d.status = 1 AND d.nid = 'account_type' ) AS ddd ON ddd.val = al.type "
+					+" WHERE 1=1 ");
+					
+					/*+" ,t_jsd_user_cache uc,t_jsd_user u,s_dict d"
+					+" WHERE al.user_id=u.user_id AND u.user_id=uc.user_id and d.nid='account_type' AND d.value=al.type ");*/
+		}else if(model.getUserType().equals("12")){
+			sql.append("SELECT  DISTINCT(al.id) id,u.user_name,userName_borrow.userName,ddd.nnn,al.account_total,al.recharge_usable,al.borrower_recharge_money, "
+					+" al.borrower_enter_money,al.borrower_enter_usable,al.borrower_freeze_use_recharge,al.borrower_freeze_use_enter, "
+					+" al.repayment_total, CASE al.payments_type WHEN 1 THEN '收入' WHEN 2 THEN '支出' WHEN 0 THEN '不变' ELSE '无' END paymentsType ,al.add_time "
+					+" FROM t_jsd_account_log al "
+					+" LEFT JOIN "
+					+" (SELECT DISTINCT(t1.user_id) AS userId,t1.user_name AS userName FROM t_jsd_user t1,t_jsd_account_log t2 WHERE t1.user_id = t2.to_user) AS userName_borrow "
+					+" ON al.to_user = userName_borrow.userId "
+					+" LEFT OUTER JOIN t_jsd_user u ON al.user_id=u.user_id "
+					+" LEFT OUTER JOIN t_jsd_user_cache uc ON u.user_id=uc.user_id "
+					+" LEFT JOIN (SELECT d.name AS nnn,d.value AS val FROM s_dict d WHERE d.status = 1 AND d.nid = 'account_type' ) AS ddd ON ddd.val = al.type "
+					+" WHERE 1=1 ");
+					/*+ ",t_jsd_user_cache uc,t_jsd_user u,s_dict d "
+					+" WHERE al.user_id=u.user_id AND u.user_id=uc.user_id AND d.nid='account_type' AND d.value=al.type ");*/
+		}else{
+			sql.append("SELECT  DISTINCT(al.id) id,u.user_name,userName_borrow.userName,ddd.nnn,al.account_total,al.recharge_usable,al.borrower_recharge_money, "
+					+" al.borrower_enter_money, "
+					+" CASE al.payments_type "
+					+" WHEN 1 THEN '收入' "
+					+" WHEN 2 THEN '支出' "
+					+" WHEN 0 THEN '不变' "
+					+" ELSE '无' "
+					+" END paymentsType ,al.add_time "
+					+" FROM t_jsd_account_log al "
+					+" LEFT JOIN "
+					+" (SELECT DISTINCT(t1.user_id) AS userId,t1.user_name AS userName FROM t_jsd_user t1,t_jsd_account_log t2 WHERE t1.user_id = t2.to_user) AS userName_borrow "
+					+" ON al.to_user = userName_borrow.userId "
+					+" LEFT OUTER JOIN t_jsd_user u ON al.user_id=u.user_id "
+					+" LEFT OUTER JOIN t_jsd_user_cache uc ON u.user_id=uc.user_id "
+					+" LEFT JOIN (SELECT d.name AS nnn,d.value AS val FROM s_dict d WHERE d.status = 1 AND d.nid = 'account_type' ) AS ddd ON ddd.val = al.type "
+					+" WHERE 1=1 ");
+					/*+ ",t_jsd_user_cache uc,t_jsd_user u,s_dict d "
+					+" WHERE "
+					+" al.user_id=u.user_id AND u.user_id=uc.user_id AND d.nid='account_type' AND d.value=al.type ");*/
+		}
+		// JSDP-208 sxy 20150703 start
+		//JSDP-116 xingjia 2015-05-19 start
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sql.append(" and u.user_name like '%"+model.getUserName()+"%'");
+		}
+		//JSDP-116 xingjia 2015-05-19 start
+		if(StringUtil.isNotBlank(model.getTradeNo())){
+			sql.append(" and al.trade_no like '%"+model.getTradeNo()+"%'");
+		}
+		
+		if(StringUtil.isNotBlank(model.getOutTradeNo())){
+			sql.append(" and al.out_trade_no like '%"+model.getOutTradeNo()+"%'");
+		}
+		
+		if(StringUtil.isNotBlank(model.getUserType())){
+			sql.append(" and uc.user_type ="+model.getUserType());
+		}
+		
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			sql.append(" and al.add_time >=:startTime ");
+		}
+		if(StringUtil.isNotBlank(model.getType())){
+			// JSDP-185 sxy 20150619 start
+			if(!"11".equals(model.getType())){
+				sql.append(" and al.type="+model.getType());
+			}
+		}
+
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			sql.append(" and al.add_time <:endTime ");
+		}
+		Query query = em.createNativeQuery(sql.toString());
+		
+		/*if(StringUtil.isNotBlank(model.getUserType())){
+			query.setParameter("userType",model.getUserType());
+		}*/
+		
+		if (StringUtil.isNotBlank(model.getStartTime())) {
+			Date start = DateUtil.valueOf(model.getStartTime());
+			query.setParameter("startTime", start);
+		}
+		/*if(StringUtil.isNotBlank(model.getType())){
+			// JSDP-185 sxy 20150619 start
+			if(!"11".equals(model.getType())){
+				query.setParameter("type", model.getType());
+			}
+		}*/
+		if (StringUtil.isNotBlank(model.getEndTime())) {
+			Date end = DateUtil.valueOf(model.getEndTime());
+			query.setParameter("endTime", end);
+		}
+		
+		List list = query.getResultList();
+		
+		return list;
+	}
+
+}

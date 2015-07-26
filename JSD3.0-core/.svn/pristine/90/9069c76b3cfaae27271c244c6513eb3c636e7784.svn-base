@@ -1,0 +1,62 @@
+
+package com.ddtkj.p2psys.cardaward.dao.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.cardaward.dao.MemberCardAwardDao;
+import com.ddtkj.p2psys.cardaward.domain.MemberCardAward;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.p2psys.score.exception.ScoreException;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+@Repository("memberCardAwardDao")
+public class MemberCardAwardDaoImpl extends BaseDaoImpl<MemberCardAward> implements MemberCardAwardDao {
+
+	@Override
+	public List<MemberCardAward> getCardAwardListByStatusAndTime(String status, Date startTime, Date endTime) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("isConvert", status);
+		param.addParam("addTime", Operators.GTE, startTime);
+		param.addParam("addTime", Operators.LTE, endTime);
+		return findByCriteria(param);
+	}
+
+	@Override
+	public double getCardTotalByStatusAndTime(String status, Date startTime, Date endTime) {
+		StringBuffer jpql = new StringBuffer("SELECT SUM(card.award_value) FROM t_jsd_member_card_award card ");
+        jpql.append("WHERE card.is_convert = :status AND card.add_time >= :startTime AND card.add_time <= :endTime ");
+        Query query = em.createNativeQuery(jpql.toString());
+        query.setParameter("status", status);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
+        double total = 0;
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+        	total = Double.parseDouble(obj.toString());
+        }
+        return total;
+	}
+
+	@Override
+	public void updateMemberCardAward(MemberCardAward cardAward) {
+		String sql = "UPDATE t_jsd_member_card_award SET is_convert = :status, trans_no = :transNo WHERE is_convert = :preStatus AND id = :id";
+		String[] names = {"status", "preStatus", "transNo", "id"};
+		Object[] values = {cardAward.getIsConvert(), MemberCardAward.CONVERT_STATUS_NO, cardAward.getTransNo(), cardAward.getId()};
+		int count = updateBySql(sql, names, values);
+		if(count < 1){
+			throw new ScoreException("抽奖购物卡状态更新失败");
+		}
+	}
+	
+}

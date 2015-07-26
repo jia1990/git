@@ -1,0 +1,54 @@
+package com.ddtkj.manage.action.user.noticeType;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.Page;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.domain.UserNoticeConfig;
+import com.rongdu.p2psys.user.model.UserNoticeConfigModel;
+import com.rongdu.p2psys.user.service.UserNoticeConfigService;
+
+
+public class ManageUserNoticeConfigAction  extends BaseAction<UserNoticeConfigModel> implements ModelDriven<UserNoticeConfigModel>{
+
+	Map<String,Object> data = null;
+	@Resource
+	private UserNoticeConfigService userNoticeConfigService;
+	/**
+	 * 获得用户通知配置页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/noticeConfig/userNoticeConfigManage")
+	public String userNoticeConfigManage() throws Exception {
+		return "userNoticeConfigManage";
+	}
+	
+	@Action(value = "/modules/noticeConfig/userNoticeConfigList")
+	public void userNoticeConfigList() throws Exception{
+		int page = paramInt("page");
+		int rows = paramInt("rows");
+		if(page == 0){
+			page = 1;
+		}
+		if(rows == 0){
+			rows = Page.ROWS;
+		}
+		data = new HashMap<String,Object>();
+		PageDataList<UserNoticeConfigModel> pageDataList = userNoticeConfigService.list(page,rows,model);
+		int totalPage = pageDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pageDataList.getList());
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		return;
+	}
+}

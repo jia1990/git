@@ -1,0 +1,93 @@
+
+package com.ddtkj.p2psys.autotender.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述: 自动投标设置查询dao
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-12   
+ */
+public interface BorrowAutoSetDao extends BaseDao<BorrowAutoSet> {
+	
+	/**
+	 * 查询用户自动投标设置, 分页
+	 * @param  borrowAutoSetModel
+	 * @return PageDataList<BorrowAutoSetModel> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<BorrowAutoSetModel> list(BorrowAutoSetModel borrowAutoSetModel);
+	
+	
+	/**
+	 * 根据用户id获取自动投标设置信息
+	 * @param user_id
+	 * @return List<BorrowAutoSet>
+	 */
+	List<BorrowAutoSet> getBorrowAutoSetList(long user_id);
+	
+	/**
+	 * 删除自动投标设置, 只更改状态
+	 * @param user_id
+	 * @return
+	 */
+	void deleteBorrowAutoSet(long user_id);
+	
+	/**
+	 * 投标后更新update_time
+	 * @param autoset
+	 * @return
+	 */
+	void updateAutoTime(BorrowAutoSet autoset);
+
+	/**
+	 * getBorrowAutoSetList
+	 * @param borrow
+	 * @return
+	 */
+	int countBorrowAutoSet(Borrow borrow);
+
+	/**
+	 * 获取符合条件的设置自动投标的用户列表
+	 * @param borrow
+	 * @return
+	 */
+	List<BorrowAutoSet> getBorrowAutoSetList(Borrow borrow);
+	
+	/**
+	 * 调用存储过程
+	 */
+	void callProcedure(BorrowAutoSet auto);
+	
+	/**
+	 * 更新用户自动投标设置状态
+	 * @param  status
+	 * @param  userId 
+	 * @throws Exception   
+	 */ 
+	void updateAutoStatusByUserId(String status, long userId);
+	
+	/**
+	 * 更新用户自动投标设置VIP等级
+	 * @param  memberLevel
+	 * @param  userId 
+	 * @throws Exception   
+	 */ 
+	void updateVipLevelByUserId(String memberLevel, long userId);
+	
+	/**
+	 * 自动投标设置更新
+	 * JSDP-116  sxy
+	 * @param borrowAutoSetModel
+	 * @return
+	 */
+	public List<BorrowAutoSet> excelBorrowAutoSetDatalist(BorrowAutoSetModel borrowAutoSetModel);
+	
+	
+}

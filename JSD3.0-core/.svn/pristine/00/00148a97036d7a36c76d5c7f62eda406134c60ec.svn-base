@@ -1,0 +1,187 @@
+package com.rongdu.p2psys.core.service.impl;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.article.dao.ArticlePicDao;
+import com.ddtkj.p2psys.article.domain.ArticlePic;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.dao.ArticleDao;
+import com.rongdu.p2psys.core.dao.SiteDao;
+import com.rongdu.p2psys.core.domain.Article;
+import com.rongdu.p2psys.core.domain.Site;
+import com.rongdu.p2psys.core.model.ArticleModel;
+import com.rongdu.p2psys.core.model.SiteTree;
+import com.rongdu.p2psys.core.model.Tree;
+import com.rongdu.p2psys.core.service.ArticleService;
+
+@Service("articleService")
+public class ArticleServiceImpl implements ArticleService {
+	private static final Logger logger = Logger.getLogger(ArticleServiceImpl.class);
+	@Resource
+	private ArticleDao articleDao;
+	// JSDP-131 SXY start
+	@Resource
+	private ArticlePicDao articlePicDao;
+
+	@Resource
+	private SiteDao siteDao;
+
+	@Override
+	public List<ArticleModel> listBySize(String nid, int size) {
+		return articleDao.listBySize(nid, size);
+	}
+
+	@Override
+	public PageDataList<ArticleModel> list(String nid, int page) {
+		return articleDao.list(nid, page);
+	}
+	@Override
+	public PageDataList<ArticleModel> list(ArticleModel model) {
+	    QueryParam param = QueryParam.getInstance();
+        if(model.getPrevId() != 0){
+        	param.addParam("site.pid", model.getPrevId());
+        }else{
+        	param.addParam("site.nid", model.getNid());
+        }
+        param.addParam("status", 1);
+        param.addParam("isDelete", 0);
+        param.addOrder(OrderType.DESC, "isTop");
+        param.addOrder(OrderType.DESC, "isRecommend");
+        //param.addOrder(OrderType.ASC, "sort");
+        param.addOrder(OrderType.DESC, "id");
+        param.addPage(model.getPage(), model.getSize());
+        PageDataList<Article> pageDataList = articleDao.findPageList(param);
+        PageDataList<ArticleModel> pageDataList_ = new PageDataList<ArticleModel>();
+        List<ArticleModel> list = new ArrayList<ArticleModel>();
+        List<Article> articles =  pageDataList.getList();
+        pageDataList_.setPage(pageDataList.getPage());
+        if (articles.size() > 0) {
+            for (int i = 0; i < articles.size(); i++) {
+                Article an = articles.get(i);
+                ArticleModel anm = ArticleModel.instance(an);
+                anm.setPicPath(Global.getValue("adminurl") + an.getPicPath());
+                anm.setNid(an.getSite().getNid());
+                list.add(anm);
+            }
+        }
+        pageDataList_.setList(list);
+        return pageDataList_;
+	}
+
+	@Override
+	public Article findBySiteId(long siteId) {
+		return articleDao.findBySiteId(siteId);
+	}
+
+	@Override
+	public PageDataList<ArticleModel> articleList(ArticleModel model, int pageNumber, int pageSize) {
+		return articleDao.articleList(model, pageNumber, pageSize);
+	}
+
+	@Override
+	public void articleAdd(Article article) {
+		articleDao.save(article);
+	}
+
+	@Override
+	public Article find(long id) {
+		return articleDao.find(id);
+	}
+
+	@Override
+	public void articleEdit(Article article) {
+		articleDao.articleEdit(article);
+	}
+
+	@SuppressWarnings("rawtypes")
+    @Override
+	public SiteTree getSiteTree() {
+		List<Site> list = siteDao.list();
+		SiteTree tree = new SiteTree(null, new ArrayList<Tree>());
+		for (Site s : list) {
+			SiteTree secTree = new SiteTree(s, new ArrayList<Tree>());
+			List<Site> sublist = siteDao.list(s.getId(), s.getStatus());
+			for (Site ss : sublist) {
+				SiteTree subTree = new SiteTree(ss, null);
+				secTree.addChild(subTree);
+			}
+			tree.addChild(secTree);
+		}
+		return tree;
+	}
+
+	@Override
+	public void update(Article article) {
+		logger.info(article);
+		//TODO 加入操作日志
+		articleDao.merge(article);
+	}
+	// JSDP-131 SXY start
+	public void update(Article article, List<ArticlePic> list, String siteNid, long delIds[]) {
+		logger.info(article);
+		
+		if(siteNid.equals("riskMoney")){
+			articlePicDao.save(list);
+			articleDao.merge(article);
+		    if (delIds != null) {
+	            for (long id : delIds) {
+	            	ArticlePic uu = articlePicDao.find(id);
+	            	articlePicDao.delete(id);
+	                String realPath = ServletActionContext.getServletContext().getRealPath(uu.getPicUrl());
+	                new File(realPath).delete();
+	            }
+	        }
+		}else{
+			//TODO 加入操作日志
+			articleDao.merge(article);
+			
+		}
+		
+	}
+	// JSDP-131 SXY start
+
+    @Override
+    public List<Long> getIds(Site site) {
+        List<Long> longs = new ArrayList<Long>();
+        if(site!=null){
+	        List<Object> list = articleDao.getIds(site);
+	        for (Object o : list) {
+	            longs.add((long)((Integer)o));
+	        }
+        }
+        return longs;
+    }
+
+	@Override
+	public PageDataList<ArticleModel> articleParamList(ArticleModel model,
+			int pageNumber, int pageSize) {
+		// TODO Auto-generated method stub
+		return articleDao.articleParamList(model, pageNumber, pageSize);
+	}
+
+	@Override
+	public List<ArticleModel> listAdBySize(String nid, int size) {
+		return articleDao.listAdBySize(nid, size);
+	}
+
+	@Override
+	public int findArticleBySiteId(long siteId) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("site.id", siteId);
+		param.addParam("isDelete",false);
+		return articleDao.countByCriteria(param);
+	}
+
+}

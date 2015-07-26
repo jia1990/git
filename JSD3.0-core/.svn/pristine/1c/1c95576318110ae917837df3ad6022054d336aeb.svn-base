@@ -1,0 +1,138 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：活动红包产生记录    JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+@Entity
+@Table(name="t_jsd_rp_activity_produce")
+public class RpActivityProduce {
+	//活动红包的产生
+	public static final String RP_ACTIVITY_RPODUCE_RULE="rpActivityProduceAndConsume";
+	
+	public static final String RP_RPODUCE_INDIANA_JONES="indianaJones";//红包的产生：夺宝骑兵
+	public static final String RP_RPODUCE_DRAGON="dragon";//红包的产生：端午节
+	public static final String RP_AWARD_FIRST_TENDER= "ft";//带头大哥
+	public static final String RP_AWARD_MOST_TENDER= "mt";//土豪
+	public static final String RP_AWARD_TERMINATOR_TENDER= "tt";//终结者
+	public static final String RP_AWARD_OLD_MOST_TENDER = "ot";//过期的
+	
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;//主键
+	private String activityType;//活动类型（8位） 端午:dragon
+	private double activityAward;//活动奖励
+	private Date addTime;//添加时间
+	@ManyToOne
+	@JoinColumn(name="award_user")
+	private User awardUser;//获取红包的人
+	private String remark;
+	private double tenderMoney;
+	private String awardType;//奖励类型  带头大哥  ft  土豪mt  终结者 tt
+	private long borrowId;//标的id
+
+	private int isEnable;//是否可用 0不可用，1可用
+	private String tradeNo;//流水号
+	//JSDP-203 20150720 xingjia start
+	private double rpConsume;//此红包消费的金额
+	private double rpUnvalid;//此红包已失效的金额
+	//JSDP-203 20150720 xingjia end
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	
+	public String getActivityType() {
+		return activityType;
+	}
+	public void setActivityType(String activityType) {
+		this.activityType = activityType;
+	}
+	public double getActivityAward() {
+		return activityAward;
+	}
+	public void setActivityAward(double activityAward) {
+		this.activityAward = activityAward;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public User getAwardUser() {
+		return awardUser;
+	}
+	public void setAwardUser(User awardUser) {
+		this.awardUser = awardUser;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	
+	public double getTenderMoney() {
+		return tenderMoney;
+	}
+	public void setTenderMoney(double tenderMoney) {
+		this.tenderMoney = tenderMoney;
+	}
+	public long getBorrowId() {
+		return borrowId;
+	}
+	public void setBorrowId(long borrowId) {
+		this.borrowId = borrowId;
+	}
+	public String getAwardType() {
+		return awardType;
+	}
+	public void setAwardType(String awardType) {
+		this.awardType = awardType;
+	}
+	public String getTradeNo() {
+		return tradeNo;
+	}
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+	public int getIsEnable() {
+		return isEnable;
+	}
+	public void setIsEnable(int isEnable) {
+		this.isEnable = isEnable;
+	}
+	public double getRpConsume() {
+		return rpConsume;
+	}
+	public void setRpConsume(double rpConsume) {
+		this.rpConsume = rpConsume;
+	}
+	public double getRpUnvalid() {
+		return rpUnvalid;
+	}
+	public void setRpUnvalid(double rpUnvalid) {
+		this.rpUnvalid = rpUnvalid;
+	}
+	
+	
+	
+}

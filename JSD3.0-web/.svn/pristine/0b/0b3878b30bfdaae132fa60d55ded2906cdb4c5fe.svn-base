@@ -1,0 +1,84 @@
+
+package com.rongdu.p2psys.web.borrow;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.autotender.model.BorrowAutoTenderModel;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoTenderService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 自动投标记录明细
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+public class BorrowAutoTenderAction extends BaseAction implements ModelDriven<BorrowAutoTenderModel> {
+	
+	private BorrowAutoTenderModel model = new BorrowAutoTenderModel();
+
+	@Override
+	public BorrowAutoTenderModel getModel() {
+		return model;
+	}
+	
+	@Resource 
+	BorrowAutoTenderService borrowAutoTenderService;
+	
+	Map<String, Object> data = new HashMap<String, Object>();
+	
+	
+	/**
+	 * 自动投标记录页面
+	 * @param  
+	 * @throws Exception   
+	 */ 
+	@Action("/member/autoInvest/autoInvestDetail")
+	public String autoInvestDetail(){
+		
+		return "autoInvestDetail";
+	}
+	
+	
+	/**
+	 * 自动投标记录明细列表
+	 * @return void 
+	 * @throws IOException 
+	 * @throws Exception   
+	 */ 
+	@Action("/member/autoInvest/autoInvestList")
+	public void autoInvestList() throws Exception{
+		User user = getSessionUser();
+		model.setUser(user);
+		PageDataList<BorrowAutoTenderModel> pageDataList = borrowAutoTenderService.list(model);
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	/**
+	 * 自动投标对定时标的处理
+	 * @throws Exception   
+	 */ 
+	@Action("/member/autoInvest/doAutoTenderFixed")
+	public void doAutoTenderFixed() throws Exception{
+		long borrowId = paramLong("bid");
+		String result = borrowAutoTenderService.doAutoTenderFixedByBorrowId(borrowId);
+		data.put("result", result);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+}

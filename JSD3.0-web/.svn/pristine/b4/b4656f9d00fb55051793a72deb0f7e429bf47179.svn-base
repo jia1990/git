@@ -1,0 +1,126 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.web.user;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck.FriendFirstInvest;
+import com.rongdu.p2psys.core.util.referrer.ReferrerUtils;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：投资人邀请有利页面展示
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2014年12月9日 
+ */
+public class RedPackageAction extends BaseAction implements  ModelDriven<UserModel>{
+	
+	
+	private UserModel model = new UserModel();
+	
+	@Resource
+	private UserService userService;
+	
+	private Map<String, Object> data;
+	
+	private  RedPacketProduceRuleCheck ruleCheck=(RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+	
+	
+	/**
+	 *@author  李建云
+	 * 投资人邀请页面
+	 * 
+	 * */
+	@Action("/member/invite/invite")
+	public String invite(){
+		
+		return "invite";
+	}
+	
+	/**
+	  * 
+	  * @author 李建云
+	  * 生成邀请链接
+	 * @throws Exception 
+	  * */
+	@Action("/member/invite/getInviteLink")
+	public void  getInviteLink() throws Exception{
+		
+		User user = this.getSessionUser();
+		
+		StringBuffer url = request.getRequestURL();  
+		String tempContextUrl = url.delete(url.length() - request.getRequestURI().length(), url.length()).append("/").toString();  
+		
+		String inviteUrl = tempContextUrl+"user/activity.html?id="+ReferrerUtils.getInstance().getdecodeIdStr(user) ;
+		
+		data = new HashMap<String,Object>();
+		
+		data.put("inviteUrl", inviteUrl);
+		
+		this.printJson(this.getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	/**
+	 * @author李建云
+	 * 
+	 * 投资人邀请奖励 未奖励邀请
+	 * 
+	 * */
+	@Action("/member/invite/unAwardedInviteList")
+	public void awardedInviteList()throws Exception  {	
+		
+		User user = this.getSessionUser();
+
+		PageDataList<UserModel> pageDataList = new PageDataList<UserModel>() ;
+		pageDataList = userService.getUnInviteAwardList(model, user.getUserId());
+		
+		 double thresholdMoney = 0.0;
+			if(ruleCheck != null){
+				FriendFirstInvest friendFirstInvest = ruleCheck.getStatic_rp().getRecommend().getFriend_invest().getFirst_invest();	
+				int status = friendFirstInvest.getStatus();
+				if(status ==1){
+					thresholdMoney = friendFirstInvest.getThreshold_money();
+				}	
+			}
+
+		data = new HashMap<String, Object>();
+		data.put("data", pageDataList);
+		data.put("thresholdMoney", thresholdMoney);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	public UserModel getModel() {
+		return model;
+	}
+
+	public void setModel(UserModel model) {
+		this.model = model;
+	}
+	
+}
+
+
+
+	

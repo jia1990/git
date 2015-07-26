@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>实名认证</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  480;
+	var winHeight = 500;
+	var editTitle = "实名认证审核";
+	var editUrl =  "/modules/user/user/userIdentify/userRealNameEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"','确定'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'userRealNameList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'id', title: '编号', width: 50, fixed:true,checkbox : false},
+			{ field: 'userName', title: '用户名', width: 80, checkbox : false},
+			{ field: 'realName', title: '真实姓名', width: 60, sortable:false },
+			{ field: 'cardId', title: '证件号码', width: 150, sortable:false},
+			{ field: 'realNameVerifyTime', title: '审核时间', width: 120, sortable:false,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'realNameVerifyRemark', title: '审核说明', width: 100, sortable:false },
+			{ field: 'realNameStatus', title: '状态', width: 100,fixed:true, sortable:false, 
+				formatter: function(value,row,index){
+					if (value == 0){
+						return "未认证";
+					} else if(value == 1){
+						return "已认证";
+					}else if(value == 2){
+						return "待审核";
+					}else if(value == -1){
+						return "认证未通过";
+					}
+					return "";
+				}	
+			},
+			  {	field : 'action',
+				title : '操作',
+				width :40,
+				formatter : function(value, row, index) {
+					var str = '';
+					if(row.userIdentify.realNameStatus == 2){
+						if ($.canEdit) {
+							str = $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="审核"/>', row.userIdentify.id, '${theme_dir}/css/images/rd/edit.png');
+						}
+					}
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			},
+			loadFilter: function(data){
+				$.each(data.rows,function(index,row){
+					if(row.userIdentify){
+						row.id=row.userIdentify.id;
+						row.realNameStatus=row.userIdentify.realNameStatus;
+						row.realNameVerifyTime=row.userIdentify.realNameVerifyTime;
+						row.realNameVerifyRemark=row.userIdentify.realNameVerifyRemark;
+					}
+					if(row.userCache){
+						row.sex=row.userCache.sex;
+					}
+				}); 
+				return data;
+			},
+		});
+	});
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userIdentify.user.userName" autocomplete="off"/></li>
+            		<li>真实姓名：<input type="text" name="userIdentify.user.realName" autocomplete="off"/></li>
+            		<li>状态：
+						<select name="userIdentify.realNameStatus"  class="status">
+							<option value=-2>全部</option>
+							<option value="2" selected="selected">待审核</option>
+							<option value="0">未认证</option>
+							<option value="1">已认证</option>
+							<option value="-1">未通过</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>商品管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+
+<script type="text/javascript">
+    var dataGrid;
+    var winWidth =  830;
+    var winHeight = 700;
+    var addTitle = "添加商品";
+	var addUrl =  "/modules/goods/goodsMessage/addGoodsPage.html";
+	/* 
+    var verifyTitle = "商品审核";
+    var verifyUrl =  "/modules/goods/goodsMessage/verifyGoodsPage.html";
+    var verifyWinParmeters = "'{0}','"+verifyTitle+"',920,650,'"+verifyUrl+"'";
+     */
+	var editSurveyTitle = "编辑商品信息";
+    var editSurveyUrl =  "/modules/goods/goodsMessage/editGoodsPage.html";
+    var editSurveyWinParmeters = "'{0}','"+editSurveyTitle+"',830,700,'"+editSurveyUrl+"'";
+	
+	var shelvesTitle = "商品上下架";
+    var shelvesUrl =  "/modules/goods/goodsMessage/shelvesGoodsPage.html";
+    var shelvesWinParmeters = "'{0}','"+shelvesTitle+"',920,650,'"+shelvesUrl+"'";
+    
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : '/modules/goods/goodsMessage/goodsList.html',
+            fit : true,
+            fitColumns : true,
+            border : true,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50,fixed:true, sortable:false },              
+              { field: 'name', title: '商品名', width: 200,fixed:true, sortable:false },
+              { field: 'userName', title: '所属商户', width: 200,fixed:true, sortable:false },
+              { field: 'goodsNo', title: '商品编码', width: 150,fixed:true, sortable:false },
+              { field: 'type', title: '类型', width: 50, sortable:false,
+              	formatter: function(value,row,index){
+              		if(value == 10){
+              			return "待上架";
+              		}else if(value == 11){
+              			return "已上架";
+              		}else if(value == 12){
+              			return "已下架";
+              		}
+                } 
+              },
+              { field: 'stock', title: '<a title="若库存为0则不会向用户展示">商品库存</a>', width: 50, sortable:false,
+            	formatter: function(value,row,index){
+            		return value+"件";
+              	} 
+              },
+              { field: 'costStr', title: "<a title='元'>商品价格</a>", width: 50, sortable:false,
+            	  formatter: function(value,row,index){
+  					//return value + "元";
+  					return value;
+  				  } 
+              }, 
+              { field: 'goodsApr', title: '商品年化利率', width: 50, sortable:false,
+            	  formatter: function(value,row,index){
+    					return value + "%";
+    	      	  }
+              },
+              { field: 'addUser', title: '添加人', width: 100, fixed:true,sortable:false}, 
+              { field: 'addTime', title: '添加时间', width: 150, fixed:true,sortable:false, 
+            	  	formatter: function(value,row,index){
+            	  		return getLocalTime(value,4);
+  				  	}  
+              }, 
+              { field: 'updateUser', title: '修改人', width: 100, fixed:true,sortable:false}, 
+              { field: 'updateTime', title: '更新时间', width: 150, fixed:true,sortable:false, 
+            	  	formatter: function(value,row,index){
+            	  		return getLocalTime(value,4);
+  				  	}  
+              }, 
+              { field : 'action',
+                title : '操作',
+                width :75,
+                fixed:true,
+                formatter : function(value, row, index) {
+                	//var status = row.status;
+                	//var type = row.type;
+                    var str = '';
+                    //if (status == 0) {
+                    	str += "<@secAuthorizeUrl value='/goods/goodsEditBtn.html'>";
+                    	str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editSurveyWinParmeters+');" src="{1}" title="编辑商品" ondragstart="return false" oncontextmenu="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+                    	str += "</@secAuthorizeUrl>";
+                    	str += '&nbsp;';
+					/* 	str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+verifyWinParmeters+');" src="{1}" title="审核"/>', row.id, '${theme_dir}/css/images/extjs_icons/key.png');
+						str += '&nbsp;';
+					}else if(status == 1){
+						if(type == 0 || type == -1){
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+shelvesWinParmeters+');" src="{1}" title="上架"/>', row.id, '${theme_dir}/css/images/extjs_icons/arrow/accept.png');
+							str += '&nbsp;';
+						}else if(type == 1){
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+shelvesWinParmeters+');" src="{1}" title="下架"/>', row.id, '${theme_dir}/css/images/extjs_icons/arrow/arrow_rotate_clockwise.png');
+							str += '&nbsp;';
+						}
+					}else if(status == -1){
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editSurveyWinParmeters+');" src="{1}" title="编辑商品"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+						str += '&nbsp;';
+					} */
+                    return str;
+                }
+            } ] ],
+            toolbar : '#toolbar',
+            onLoadSuccess : function() {
+                $('#searchForm table').show();
+                parent.$.messager.progress('close');
+            },
+            onRowContextMenu : function(e, rowIndex, rowData) {
+                e.preventDefault();
+                $(this).datagrid('unselectAll').datagrid('uncheckAll');
+                $(this).datagrid('selectRow', rowIndex);
+                $('#menu').menu('show', {
+                    left : e.pageX,
+                    top : e.pageY
+                });
+            }
+        });
+    });
+</script>
+
+</head>
+<body  style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+	           		<li>商品名：<input type="text" name="name"/></li>
+            		<li>所属用户名：<input type="text" name="userName"/></li>
+					<li>类型：
+						<select name="type" id="type">
+							<option value="99">全部</option>
+							<option value="10">待上架</option>
+							<option value="11">已上架</option>
+							<option value="12">已下架</option>
+						</select>
+					</li>
+					<!-- <li>状态：
+						<select name="status" id="status">
+							<option value="99">全部</option>
+							<option value="out">已售出</option>
+							<option value="in">未售出</option>
+						</select>
+					</li> -->
+					<!-- <li>开始时间：<input type="text" name="startTime" /></li>
+            		<li>结束时间：<input type="text" name="endTime" /></li> -->
+            		<li>时间：<input type="text" name="startTime" id="startTime"
+						class="searchTime" style="width: 140px;" />&nbsp;-&nbsp;<input
+						type="text" name="endTime" id="endTime" class="searchTime"
+						style="width: 140px;" /></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');" ondragstart="return false">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');" ondragstart="return false">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center',border:false">
+            <table id="dataGrid"></table>
+        </div>
+	</div>
+	<div id="toolbar" style="display: none;padding-top:25px;">	
+			<@secAuthorizeUrl value='/goods/goodsAddBtn.html'>	
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn" ondragstart="return false">添加</a>
+			</@secAuthorizeUrl>
+			<!-- <a onclick="addGoodsTab({title:addTitle,url:addUrl})" href="javascript:void(0);" class="addBtn">添加</a>		 -->
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

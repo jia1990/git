@@ -1,0 +1,172 @@
+package com.ddtkj.p2psys.goods.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * 分期宝 处理  商品购买者的冻结和待还  （jira上编号 JSDBET-780）
+ * 
+ * @author wcw
+ * @version 2.0
+ * @since 2015-3-12  
+ */
+public class BorrowGoodDecuctFreezeExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.INVEST;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		//操作金额
+		log.setBorrowerEnterMoney(borrowerEnterMoney);
+		log.setBorrowerRechargeMoney(borrowerRechargeMoney);
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		//账户多种冻结
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)0);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		// 扣除冻结，生成待收
+		// accountDao.modify(0, 0, -super.money, super.money,
+		// super.user.getUserId());
+		/*
+		 * Account account = new Account(user); double
+		 * useMoney=BigDecimalUtil.add
+		 * (rechargeMoney,awardMoney,interestMoney,returnCapitalMoney);
+		 * //账户多种冻结金额 account.setFreezeUseAward(-awardMoney);
+		 * account.setFreezeUseInterest(-interestMoney);
+		 * account.setFreezeUseRecharge(-rechargeMoney);
+		 * account.setFreezeUseReturnCapital(-returnCapitalMoney); //账户待收总额
+		 * account.setCollectionTotal(useMoney); accountDao.modify(account);
+		 */
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		double useMoney = BigDecimalUtil.add(borrowerEnterMoney,borrowerRechargeMoney);
+		// 冻结金额
+		account.setBorrowerFreezeUseEnter(BigDecimalUtil.add(account.getBorrowerFreezeUseEnter(),-borrowerEnterMoney));
+
+		account.setBorrowerFreezeUseRecharge(BigDecimalUtil.add(account.getBorrowerFreezeUseRecharge(),-borrowerRechargeMoney));
+
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),-useMoney));
+		
+		//待还总额
+		
+		account.setRepaymentTotal(BigDecimalUtil.add(account.getRepaymentTotal(),BigDecimalUtil.add(borrowerRepayInterest,money)));
+
+		if (account.getBorrowerFreezeUseEnter() < 0) {
+			throw new AccountException("满标复审通过，扣除商品购买者【"+user.getUserName()+"】冻结充值可用金额不足！", 1);
+		}
+		if (account.getBorrowerFreezeUseRecharge() < 0) {
+			throw new AccountException("满标复审通过，扣除商品购买者【"+user.getUserName()+"】冻结入账可用金额不足！", 1);
+		}
+	
+		// 更新
+		accountDao.update(account);
+	}
+
+	@Override
+	public void handleAccountSum() {
+		/*// 先取出更新前的account_sum
+		AccountSum accountSum = accountSumDao.findByUserId(super.user.getUserId());
+		// 取出可能扣款的值
+		double huikuan = accountSum.getAccumulativeReturnedMoney();
+		double usedHuikuan = accountSum.getAccumulativeUsedReturnedMoney();
+		double useHuikuan = BigDecimalUtil.sub(huikuan, usedHuikuan);
+
+		double huikuanInterest = accountSum.getAccumulativeReturnMoneyInterest();
+		double usedHuikuanInterest = accountSum.getAccumulativeUsedReturnMoneyInterest();
+		double useHuikuanInterest = BigDecimalUtil.sub(huikuanInterest, usedHuikuanInterest);
+		useHuikuan = BigDecimalUtil.add(useHuikuan, useHuikuanInterest);
+		// 扣除回款的account_sum_log
+		double currHuikuan = 0;
+		// 本次使用的回款最大不能超过可用回款，
+		currHuikuan = (useHuikuan >= money) ? money : (useHuikuan);
+		if (currHuikuan > 0) {
+			int enableHuikuan = Global.getInt("huikuan_enable");
+			Map tranData = Global.getTransfer();
+			Borrow borrow = (Borrow) (tranData.get("borrow"));
+			BorrowTender tender = (BorrowTender) (tranData.get("tender"));
+
+			// 回款规则配置 秒标、净值标、天标投标不使用回款额度，不产生回款续投奖励
+			HuikuanConfRuleCheck rule = (HuikuanConfRuleCheck) Global.getRuleCheck("huikuanConf");
+			if (rule != null) {
+				double lowestHuikuan = rule.lowest_huikuan;
+				int miaoRefuse = rule.miaoRefuse;
+				int jinRefuse = rule.jinRefuse;
+				int dayRefuse = rule.dayRefuse;
+				if ((miaoRefuse != 1 || borrow.getType() != Borrow.TYPE_SECOND)
+						&& (jinRefuse != 1 || borrow.getType() != Borrow.TYPE_PROPERTY)
+						&& (dayRefuse != 1 || borrow.getBorrowTimeType() != 1) && enableHuikuan == 1
+						&& *//** tender.getAutoRepurchase() == 1 && **//*currHuikuan >= lowestHuikuan) {
+
+					this.huikuanManage(money);
+				}
+			}
+		}*/
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+		//满标复审解冻资金，并转账，汇潮采用一个投资人一次转账
+		/*if (BaseTPPWay.isOpenApi()) {
+			if(BaseTPPWay.apiCode().equals("2")){
+				IpsService ipsService = (IpsService)BeanUtil.getBean("ipsService");
+				List<Object> taskList = new ArrayList<Object>();
+				Borrow borrow = (Borrow) Global.getTransfer().get("borrow");
+				BorrowTender tender =(BorrowTender)Global.getTransfer().get("tender");
+				ipsService.transfer(borrow, tender, super.user, super.toUser, "1", "1", taskList);
+				ipsService.doIpsTask(taskList);
+			}
+		}*/
+		
+	}
+	
+	@Override
+	public void handleReturnMoney() {
+	}
+
+	@Override
+	public void extend() {
+		
+	}
+}

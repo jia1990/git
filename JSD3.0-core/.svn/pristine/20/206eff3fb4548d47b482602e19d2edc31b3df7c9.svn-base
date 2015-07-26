@@ -1,0 +1,110 @@
+package com.rongdu.p2psys.score.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.rongdu.p2psys.score.domain.ScoreLog;
+
+/**
+ * 积分日志扩展类
+ * @author Administrator
+ *
+ */
+public class ScoreLogModel extends ScoreLog {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4995109007852969885L;
+
+	public static ScoreLogModel instance(ScoreLog item) {
+		ScoreLogModel model = new ScoreLogModel();
+		BeanUtils.copyProperties(item, model);
+		return model;
+	}
+
+	public ScoreLog prototype() {
+		ScoreLog item = new ScoreLog();
+		BeanUtils.copyProperties(this, item);
+		return item;
+	}
+	
+	/** 用户名 **/
+	private String userName;
+	
+	
+	/** 日期范围：9：全部，7：最近七天 1：最近一个月 2：最近两个月，3 最近三个月 **/
+	private int time;
+	
+	/** 开始时间 **/
+	private String startTime;
+	
+	/** 结束时间 **/
+	private String endTime;
+	
+	/** 当前页数 **/
+	private int page;
+	
+	/** 分页数 **/
+	private int rows;
+	
+	private String scoreTypeName;//积分类型
+	
+	
+	
+
+	public String getScoreTypeName() {
+		return scoreTypeName;
+	}
+
+	public void setScoreTypeName(String scoreTypeName) {
+		this.scoreTypeName = scoreTypeName;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+}

@@ -1,0 +1,103 @@
+package com.ddtkj.p2psys.credit.dao.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.credit.dao.CollectionCreditDao;
+import com.ddtkj.p2psys.credit.domain.CollectionCredit;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+
+/**
+ * @描述：债权转让DAO实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+@Repository("collectionCreditDao")
+public class CollectionCreditDaoImpl extends  BaseDaoImpl<CollectionCredit> implements CollectionCreditDao  {
+
+	@Override
+	public List<CollectionCredit> findByOldCredit(CreditLog cl) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("creditLog.id", cl.getId()) ;
+		List<CollectionCredit> list = findByCriteria(param) ;
+		return list;
+	}
+	@Override
+    public List<CollectionCredit> findCollectionByCredit(long status,long ahead_time){
+		String repaymentTime=System.currentTimeMillis()/1000+ahead_time+"";
+    	String sql="select a.* from t_jsd_collection_credit a ,rd_borrow_collection b where a.collection_id=b.id and b.status="+status;
+    	StringBuffer sb=new StringBuffer();
+    	sb.append(sql);
+    	sb.append(" and b.repayment_time<="+repaymentTime);
+    	Query query = em.createNativeQuery(sb.toString(), CollectionCredit.class);
+		List<CollectionCredit> list = (List<CollectionCredit>) query.getResultList();
+		return list;
+    }
+	@Override
+    public int getCountByCollectionCredit(long ctype,long credit_assignment_id,long buy_credit_assignment_id){
+    	String sql="select count(1) from t_jsd_collection_credit  where  c_type="+ctype;
+    	StringBuffer sb=new StringBuffer();
+    	sb.append(sql);
+    	if(buy_credit_assignment_id>0){
+    		sb.append(" and buy_credit_assignment_id="+buy_credit_assignment_id);
+    	}else{
+    		if(credit_assignment_id>0){
+        		sb.append(" and credit_assignment_id="+credit_assignment_id);
+        	}
+    	}
+    	Query query = em.createNativeQuery(sb.toString(), Double.class);
+		Object obj =  query.getSingleResult();
+		if (obj != null) {
+			return Integer.parseInt(obj.toString());
+		}
+		return 0;
+    }
+	@Override
+    public CollectionCredit getCollectionCredit(long ptype,long credit_assignment_id,long buy_credit_assignment_id){
+    	String sql="select * from t_jsd_collection_credit  where  c_type="+ptype;
+    	StringBuffer sb=new StringBuffer();
+    	sb.append(sql);
+    	if(buy_credit_assignment_id>0){
+    		sb.append(" and buy_credit_assignment_id="+buy_credit_assignment_id);
+    	}else{
+    		if(credit_assignment_id>0){
+        		sb.append(" and credit_assignment_id="+credit_assignment_id);
+        	}
+    	}
+    	Query query = em.createNativeQuery(sb.toString(), BorrowCollection.class);
+		CollectionCredit collectionCredit =  (CollectionCredit) query.getSingleResult();
+		return collectionCredit;
+    }
+	@Override
+    public Object[] getTotalCollectionByCredit(long status,long credit_assignment_id,long buy_credit_assignment_id){
+    	String sql="select sum(repayment_account),sum(repayment_interest),sum(capital) from rd_borrow_collection  where  status="+status;
+    	StringBuffer sb=new StringBuffer();
+    	sb.append(sql);
+    	if(buy_credit_assignment_id>0){
+    		sb.append(" and a.buy_credit_assignment_id="+buy_credit_assignment_id);
+    	}else{
+    		if(credit_assignment_id>0){
+        		sb.append(" and a.credit_assignment_id="+credit_assignment_id);
+        	}
+    	}
+    	Query query = em.createNativeQuery(sb.toString(), BorrowCollection.class);
+    	Object[] object = (Object[])  query.getSingleResult();
+		return object;
+    }
+	@Override
+	public CollectionCredit getCollectinCreditByCid(long cid) {
+		QueryParam param = QueryParam.getInstance() ;
+		param.addParam("borrowCollection.id", cid) ;
+		return findByCriteriaForUnique(param);
+	}
+}

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>角色管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = false;
+</script>
+<script type="text/javascript">
+	$.canGrant = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  500;
+	var winHeight = 460;
+	var addTitle = "添加角色";
+	var addUrl =  "/modules/system/role/roleAddPage.html";
+	var editTitle = "编辑角色";
+	var editUrl =  "/modules/system/role/roleEditPage.html";
+	var grantRoleMenuTitle = "授权管理";
+	var grantRoleMenuUrl =  "/modules/system/role/roleEditMenuPage.html";
+	var deleteUrl = "/modules/system/role/roleDelete.html";	
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editWinParmeters = "'{0}','"+editTitle+"',500,300,'"+editUrl+"'";
+	var grantRoleMenuWinParmeters = "'{0}','"+grantRoleMenuTitle+"',"+winWidth+","+winHeight+",'"+grantRoleMenuUrl+"'";
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'roleList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 50,checkbox : false},
+			//{ field: 'loginRoleId', title: '当前登录角色名', width: 100,fixed:true, sortable:false },
+			{ field: 'name', title: '角色名', width: 100, sortable:false },
+			{ field: 'rolePname', title: '所属角色', width: 100, checkbox : false,
+				formatter:function(value,row,index){
+					if(value=='topRole'){
+						return '一级角色';
+					}else{
+						return value;
+					}
+				}
+			},
+			{ field: 'addUser', title: '添加者', width: 100, sortable:false },
+			{ field: 'addTime', title: '添加时间', width: 100, sortable:false,
+				formatter:function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{ field: 'remark', title: '备注', width: 120, sortable:false }, 
+			  {	field : 'action',
+				title : '操作',
+				width :100,
+				fixed :true,
+				formatter : function(value, row, index) {
+					var str = '';
+					
+					if(row.isDelete=='N'){
+						if ($.canAdd) {
+							str += "<@secAuthorizeUrl value='/role/roleAddBtn.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.addFun('+addWinParmeters+');" src="{1}" title="添加"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil_add.png');
+							str += "</@secAuthorizeUrl>";
+						}
+						str += '&nbsp;';
+						if ($.canEdit) {
+							str += "<@secAuthorizeUrl value='/role/roleEditBtn.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+							str += "</@secAuthorizeUrl>";
+						}
+						str += '&nbsp;';
+						if ($.canGrant) {
+							str += "<@secAuthorizeUrl value='/role/roleAuthorizeBtn.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.grantFun('+grantRoleMenuWinParmeters+');" src="{1}" title="授权"/>', row.id, '${theme_dir}/css/images/extjs_icons/key.png');
+							str += "</@secAuthorizeUrl>";
+						}
+						str += '&nbsp;';					
+						if ($.canDelete) {
+							if(row.id != '11' & row.id != '2'& row.id != '14'){
+							str += "<@secAuthorizeUrl value='/role/roleDelBtn.html'>";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+							str += "</@secAuthorizeUrl>";
+							}
+
+						}
+					}
+					
+					str += '&nbsp;';
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip');
+			}
+			
+		});
+	});
+	
+	function loadPid(val,rec,index) {
+		 $.ajax({
+		     url:'/modules/system/role/getRoleNameById.html', 
+			 data: {id:val}, 
+			 type:"GET",
+			 dataType:"json",
+			 success:function(data) {
+				 $("#pName"+index).html(data.pName);
+		     }
+		});		
+	}
+	
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox" >
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>角色名：<input type="text" name="name" autocomplete="off"/></li>
+            		<li>是否删除：<select name="isDelete" id="isDelete" class="type">
+	                  <option value="99" >全部</option>
+	                  <option value="Y">已删除</option>
+	                  <option value="N" selected="selected">未删除</option>
+	                </select></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">		
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>				
+			<!--<a onclick="batchDeleteFun();" href="javascript:void(0);" class="easyui-linkbutton" data-options="plain:true,iconCls:'delete'">批量删除</a>	-->	
+	</div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+package com.ddtkj.transfer;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.ddtkj.p2psys.transfer.service.AccountTransferService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class AccountTransferAction extends BaseAction implements ModelDriven<AccountTransferModel>{
+	AccountTransferModel  model = new AccountTransferModel();
+	@Resource
+	AccountTransferService accountTransferService;
+	public AccountTransferModel getModel() {
+		return model;
+	}
+	public void setModel(AccountTransferModel model) {
+		this.model = model;
+	}
+	@Resource
+	UserService userService;
+	Map<String, Object> data=new HashMap<String, Object>();
+	
+	
+	@Action("/accountTransfer/checkIsOpenAccount")
+	public void checkIsOpenAccount()throws Exception{
+		String userName=paramString("user_name");
+		String phone=paramString("phone");
+		data=accountTransferService.checkIsOpenAccount(userName, phone);
+		printJson(getStringOfJpaObj(data));
+	}
+	@Action("/accountTransfer/transfer")
+	public void accountTransfer()throws Exception{
+		String signInfo=paramString("signInfo");	
+		String cardId=paramString("card_id");
+		String realName=paramString("real_name");
+		AccountTransferModel atm=getTransfer();
+        User user=atm.getUser();
+        if(user!=null){
+        	if(!signInfo.equals(atm.getSignInfo())){
+        		data.put("transfer_status", AccountTransfer.ACCOUNT_TRANSFER_ERROR);
+				data.put("transfer_msg", "签名错误");
+        	}else if(!realName.equals(user.getRealName())&&!cardId.equals(user.getCardNO())){
+				data.put("transfer_status", AccountTransfer.ACCOUNT_TRANSFER_ERROR);
+				data.put("transfer_msg", "1.0账户与3.0用户信息不一致");
+			}else{
+				AccountTransfer at=new AccountTransfer();
+				at.setUser(user);
+				at.setTransferAmount(atm.getTransferAmount());
+				at.setAddIp(this.getRequestIp());
+				at.setTransferStatus(AccountTransfer.ACCOUNT_TRANSFER_APPLY);
+				at.setTransferNo(atm.getTransferNo());
+				at.setAddTime(new Date());
+				try {
+					data=accountTransferService.accountTransfer(user, at);
+				} catch (Exception e) {
+					data.put("transfer_status", AccountTransfer.ACCOUNT_TRANSFER_FAIL);
+					data.put("transfer_msg", e.getMessage());
+				}
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	public AccountTransferModel getTransfer(){
+		String transNo=paramString("trans_no");
+		String userName=paramString("user_name");
+		double transferAmount=paramDouble("trans_amount");
+		User user=new User();
+		user.setUserName(userName);
+		AccountTransferModel atm=new AccountTransferModel();
+		if(StringUtil.isNotBlank(userName)){
+			user=userService.getUserByUserName(userName);
+			atm.setUser(user);
+			atm.setTransferAmount(transferAmount);
+			atm.setTransferNo(transNo);
+			atm.init();
+		}
+		return atm;
+	}
+	
+
+	/*****前台用户的转账记录展示*****
+	/**
+	 *@author fengguoqin@ddtkj.com
+	 * 转账记录页面显示
+	 * @throws IOException 
+	 * */
+	@Action("/member/invest/accountransfer")
+	public String accountransfer() throws Exception{
+		
+		return "accountransfer";
+	}
+	/**
+	 *@author fengguoqin@ddtkj.com
+	 * 转账记录列表显示
+	 * @throws IOException 
+	 * */
+	@Action("/member/invest/accountransferList")
+	public void accountransferList() throws Exception{
+		int size = paramInt("size");
+		int page = paramInt("page");
+		data = new HashMap<String, Object>();
+		model.setUser(this.getSessionUser());
+		long userId = this.getSessionUser().getUserId();
+		model.getUser().setUserId(userId);
+		PageDataList<AccountTransferModel> list=accountTransferService.getForePageDataList(model);
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		
+	}
+}

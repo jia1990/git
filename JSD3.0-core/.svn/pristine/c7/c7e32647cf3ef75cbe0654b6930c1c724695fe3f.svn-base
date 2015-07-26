@@ -1,0 +1,83 @@
+package com.ddtkj.p2psys.authorize.dao.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.authorize.dao.ClientUserDao;
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.domain.ClientUser;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+/**
+ * 授权应用dao层实现
+ * @author sxy
+ * @version 3.0
+ * @date 2015年3月18日
+ *
+ */
+@Repository("clientUserDao")
+public class ClientUserDaoImpl extends BaseDaoImpl<ClientUser> implements ClientUserDao {
+
+	
+	
+	/**
+	 * 
+	 * 查询授权记录
+	 * 
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public ClientUserModel selectByUserAndClient(long userId, String clientId) {
+		
+		StringBuffer sql = new StringBuffer("SELECT * from t_jsd_client_user_info where server_user_id=?1 and client_id=?2");
+		
+		Query query = em.createNativeQuery(sql.toString(), ClientUser.class);
+		query.setParameter(1, userId);
+		query.setParameter(2, clientId);
+		
+		List<ClientUser> menuList = query.getResultList();
+		
+		ClientUserModel cum = new ClientUserModel();
+		
+		if (menuList != null && menuList.size() > 0) {
+			
+			cum.setUserName(menuList.get(0).getServerUserName());
+			cum.setPhone(menuList.get(0).getServerUserPhone());
+			cum.setOpenId(menuList.get(0).getOpenId());
+			
+			return cum;
+		}
+		return null;
+	}
+	
+	
+	/**
+	 * 
+	 * 添加授权记录
+	 * 
+	 */
+	
+	@Override
+	public void insertUserInfo(ClientUserModel cum,Client client) {
+		
+		ClientUser clientUser = new ClientUser();
+		
+		clientUser.setClientId(client.getClientId());
+		clientUser.setOpenId(cum.getOpenId()); 
+		clientUser.setServerUserId(cum.getServerUserId());
+		clientUser.setServerUserName(cum.getUserName());
+		clientUser.setServerUserPhone(cum.getPhone());
+		//其他
+		clientUser.setCreateDate(new Date());
+		
+		save(clientUser);
+		
+	}
+	
+	
+}

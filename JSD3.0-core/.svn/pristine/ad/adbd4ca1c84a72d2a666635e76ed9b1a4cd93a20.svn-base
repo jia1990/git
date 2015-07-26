@@ -1,0 +1,44 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import javax.annotation.Resource;
+
+import com.ddtkj.p2psys.redpacket.dao.RedPacketLogDao;
+import com.ddtkj.p2psys.redpacket.domain.RedPacketLog;
+import com.ddtkj.p2psys.redpacket.service.RedPacketLogService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+public class RedPacketLogServiceImpl implements RedPacketLogService {
+
+	@Resource
+	private RedPacketLogDao redPacketLogDao ;
+
+	@Override
+	public RedPacketLog save(RedPacketLog rp) {
+		return this.redPacketLogDao.save(rp);
+	}
+
+	@Override
+	public RedPacketLog update(RedPacketLog rp) {
+		return this.redPacketLogDao.update(rp);
+	}
+
+	@Override
+	public void delete(RedPacketLog rp) {
+		this.redPacketLogDao.delete(rp.getId());
+	}
+
+	@Override
+	public PageDataList<RedPacketLog> getAll(int currentpage, int pagenum) {
+		QueryParam param = QueryParam.getInstance().addPage(currentpage,pagenum);
+		// TODO Auto-generated method stub
+		return getAll(param);
+	}
+
+	@Override
+	public PageDataList<RedPacketLog> getAll(QueryParam param) {
+		// TODO Auto-generated method stub
+		return this.redPacketLogDao.getAll(param);
+	}
+	
+}

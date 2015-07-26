@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户积分抽奖记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+   
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'userScoreAwardList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'desc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 60,fixed:true, sortable:false },
+              { field: 'userName', title: '用户名', width: 100,fixed:true, sortable:false },
+              { field: 'realName', title: '真实姓名', width: 80,fixed:true, sortable:false },
+              { field: 'ruleName', title: '规则名', width: 160, fixed:true,sortable:false ,formatter: function(value,row,index){
+            	  return hideTitleName(row.ruleName,16);	
+              }},
+              { field: 'awardName', title: '奖品名称', width: 100,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  return hideTitleName(row.awardName,16);	
+              }},
+              { field: 'awardType', title: '奖品类型', width: 150,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  return getScoreAwardType(row.awardType,row.vipLevel,row.vipValidMonth);  
+              }},
+              { field: 'awardLevel', title: '奖品等级', width: 80, fixed:true,sortable:false ,formatter: function(value,row,index){
+            	  return awardLevel(row.awardLevel);	
+              }},
+              { field: 'awardValue', title: '奖品属性值', width: 100,fixed:true, sortable:false},
+              { field: 'transNo', title: '云购卡订单号', width: 160,fixed:true, sortable:false},
+            /*   { field: 'awardValue', title: '奖品属性值', width: 180,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  return getScoreAwardValue(row.awardType, row.awardValue);	
+              }}, */
+              { field: 'cardNo', title: '云购卡卡号', width: 160,fixed:true, sortable:false},
+              { field: 'status', title: '是否中奖', width: 100,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == "22"){
+             		 return "未中奖"; 
+             	  }else if(value == "11"){
+             	 	 return "中奖";
+             	  }else{
+             		 return "未中奖"; 
+             	  }
+              }},
+              { field: 'receiveStatus', title: '是否发放奖励', width: 100,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == "22"){
+             		 return "未发放"; 
+             	  }else if(value == "11"){
+             	 	 return "已发放";
+             	  }else{
+             		 return "未发放";
+             	  }
+              }},
+              { field: 'addTime', title: '抽奖时间', width: 150,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              }, 
+              { field: 'addIp', title: '抽奖IP', width: 150,fixed:true, sortable:false }
+              
+             ] ],
+             toolbar : '#toolbar'
+        }); 
+    });
+    
+    function exportExcel(){
+		var url = "/modules/user/score/exportUserScoreAward.html";
+		var userName = $("#userName").val();
+		var realName = $("#realName").val();
+		var status = $("#status").val();
+		var receiveStatus = $("#receiveStatus").val();
+		var awardType = $("#awardType").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var transNo = $("#transNo").val();
+		var cardNo = $("#cardNo").val();
+		var ruleName = $("#ruleName").val();
+		var sou = "?userName=" + userName + "&realName=" + realName + "&transNo=" + transNo + "&cardNo=" + cardNo + "&ruleName=" + ruleName + "&status=" + status + "&receiveStatus=" + receiveStatus + "&awardType=" + awardType + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询信息）</font></h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>真实姓名：<input type="text" name="realName" id="realName" autocomplete="off"/></li>
+            		<li>规则名：<input type="text" name="ruleName" id="ruleName" autocomplete="off"/></li>
+            			
+            		<li>是否中奖：
+		                <select name="status" id="status" class="type" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="22">未中奖</option>
+		                  <option value="11">中奖</option>
+		                </select>
+		            </li>	  
+		            <li>奖品类型：
+		                <select name="awardTypeStr" id="awardType" class="awardType" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="1">现金</option>
+		                  <option value="2">积分</option>
+		                  <option value="3">实物奖励</option>
+		                  <option value="4">VIP奖励</option>
+		                  <option value="5">静态红包奖励</option>
+		                  <option value="6">云购卡奖励</option>
+		                  <option value="7">投资劵</option>
+		                </select>
+		            </li>	
+		            <li>订单号：<input type="text" name="transNo" id="transNo" autocomplete="off"/></li>	
+		            <li>卡号：<input type="text" name="cardNo" id="cardNo" autocomplete="off"/></li>	
+		            <li>奖励发放状态：
+		                <select name="receiveStatus" id="receiveStatus" class="receiveStatus" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="22">未发放</option>
+		                  <option value="11">已发放</option>
+		                </select>
+		            </li>	    
+		            <li>抽奖时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>        
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>          	
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+   </div>
+        <@secAuthorizeUrl value='/exportUserScoreAward.html'>
+        <div id="toolbar" style="display: none;">		
+			<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>	
+			<span></span>   <!-- TODO : ajax参数化请求数据求和 ，类型分为现金、积分和实物-->
+		</div>
+	    </@secAuthorizeUrl>
+
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

@@ -1,0 +1,84 @@
+<!-- 查看体验卡消费记录(不使用)  -->
+<script type="text/javascript">
+$(function(){
+
+});
+</script>
+
+<style type="text/css">
+	.lab{
+		font-size:15px;
+		color:#393939;
+	}
+</style>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<input type="hidden" value="${petCardLog.id}" name="id" />
+    	<div class="formitm">
+		     <div class="ipt">
+		     	<span style="font-size:35px;text-align:center;color:#3D9EEF">晋商贷体验卡</span>
+		     </div>
+		</div>
+		<br />
+		<hr width="80%" color="#999"/>
+		<br />
+		<div class="formitm">
+		     <label class="lab" id="title_label">类型：</label>
+		     <div class="ipt">
+		     	<#if petCard.type?? && petCard.type =='pt'>
+		     	晋商贷体验卡&nbsp;
+		     	<#else>
+		     	其他&nbsp;
+		     	</#if>
+		     	
+		     </div>
+		</div>
+		<input type="hidden" name="type" value="pt"/>
+		
+		<!-- <div class="formitm" >
+		     <label class="lab">批次号：</label>
+		     <div class="ipt">
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">卡号：</label>
+		     <div class="ipt">
+		     </div>
+		</div> -->
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="ua" disabled="disabled" <#if petCardLog.status=='ua'>checked="checked"</#if>/> 未激活&nbsp;&nbsp;
+				<input type="radio" name="status" value="da" disabled="disabled" <#if petCardLog.status=='da'>checked="checked"</#if>/> 已激活&nbsp;&nbsp;
+				<input type="radio" name="status" value="dd" disabled="disabled" <#if petCardLog.status=='dd'>checked="checked"</#if>/> 已失效&nbsp;&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">金额：</label>
+		     <div class="ipt">
+		     	${petCardLog.money!} 元&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">消费用户：</label>
+		     <div class="ipt">
+		     	${petCard.userName!}&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">中奖时间：</label>
+		     <div class="ipt">
+		     	${petCard.winTime?string('yyyy-MM-dd HH:mm:ss')!}&nbsp;
+		     </div>
+		</div> 
+		<div class="formitm" >
+		     <label class="lab">激活时间：</label>
+		     <div class="ipt">
+		     	${petCardLog.activateTime?string('yyyy-MM-dd HH:mm:ss')!}&nbsp;
+		     </div>
+		</div>
+		
+	</form>
+</div>
+
+

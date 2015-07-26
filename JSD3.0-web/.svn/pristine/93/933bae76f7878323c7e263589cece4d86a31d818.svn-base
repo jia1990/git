@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<#include "../include/resource1.html">
+
+<body class="loginbg">
+<#assign nid="member">
+	<div class="loginTop">
+		<ul class="logintopList">
+			<li class="logo" style="background:none;"><a href="index.html"></a></li>
+			<li class="logoRight" style="float:left">登录</li>
+			<span class="c_esq"><i style="color:#0094d9;">400-080-3000</i>（24小时服务）</span>
+		</ul>
+	</div>
+	<div class="c_login_bj">
+		<div class="loginContent">
+			<div class="login_pic"><img class="loginContent-left" src="${webroot}${theme_dir}/images/password/login_text.png"></div>
+				
+			<div class="login_outer_div">
+				<ul class="change_form_login">
+				<!-- JSDBET-948 xingjia 2015-05-09 start-->
+					<li style='cursor:pointer'>旧系统</li>
+					<li class="ul_li_login clicklogin_li" style='cursor:pointer'>新系统</li>
+				<!-- JSDBET-948 xingjia 2015-05-09 start-->
+				</ul>
+				
+				<form name="login1" id="login1" method="post" action="http://old.jinshangdai.com/user/login.html"  class="ylogin_form1 ylogin_form"  style="display:none;">​​​​
+					 <div id="showCookie1" style="display:none;margin-bottom:12px;margin-top:-5px;color:#ea5154">
+						cookie未开启,请开启cookie<a id="noCookie" href="javascript:void(0);" style="color:#ABABAB;"><i style="font-style:italic;">如何开启</i></a>
+					</div>
+					<div class="user">
+						<span></span>
+						<input type="text" name="username" id="userName1" class="border" value="请输入用户名" tabindex="1"><br/>
+						<p class="c_error" style="width: 298px;"></p>
+					</div>
+					<div class="pas">
+						<span style="position:absolute;z-index:5"></span>
+						<input type="text" name="pas" class="border password1" tabindex="2"  value="请输入登录密码" style="position:relative;z-index:4;">
+						<input id="password1" name="password" size="25" tabindex="2" type="password"  style="opacity:0;filter:alpha(opacity=0);left:0;position:absolute;background: url('') no-repeat scroll 0px -424px "  />
+						<input type="hidden" name="encrypt" id="encrypt1" value="0" />
+						<p class="c_error" style="width: 298px;"></p>
+					</div>
+					<div class="validCode">
+						<input name="valicode" id="validCode1"  tabindex="3"  type="text"  maxlength="5" class="border" value="验证码">
+						<span style="float:right;width:136px;" onClick="document.getElementById('img').src='http://old.jinshangdai.com/validimg.html?t=' + Math.random();">
+							<img src="http://old.jinshangdai.com/validimg.html" id="img1" onClick="this.src='http://old.jinshangdai.com/validimg.html?t=' + Math.random();" width="142" height="44" border="0" alt="" style="width:136px;">
+						</span>
+						<div class="c_clear"></div>
+						<p class="c_error" style="margin-top: -4px;width: 150px;"></p>
+					</div>
+					<div class="check">
+		                <!-- <a class="" href="${webroot}/user/findpwd.html" style="float:left;color:#005580;">忘记密码？</a> -->
+					</div>
+					<div>
+						
+						<input type="submit" id="loginBtn1" class="denglu"  onclick="doEncrypt();"  value="立即登录">
+						<div class="c_clear"></div>
+					</div>
+					
+					<!-- <div class="line"><div style="float:left;margin-right: 40px;margin-top: 6px;padding-left:10px;"><i style="font-size:14px;color:#999999;">没有账号？</i><a href="register.html" style="color:#06b5ff;">免费注册</a>
+					</div> 使用合作平台登录<a class="QQ" href="/user/qqLogin.html"></a></div> -->
+					<div class="line"><div style="float:left;margin-right: 40px;margin-top: 6px;padding-left:10px;"><!-- <i style="font-size:14px;color:#999999;">没有账号？</i><a href="register.html" style="color:#06b5ff;">免费注册</a> -->
+					</div> <a href="" style="display: inline-block;height: 26px;margin-bottom: -6px;margin-left: 4px;width: 24px;"></a></div>
+	                 <input type="hidden" name="actionType"  value="login" />
+				</form>
+				<form name="login" id="login" method="post" action="doLogin.html" class="ylogin_form2 ylogin_form"  style="display:block;">​​​​
+					 <div id="showCookie" style="display:none;margin-bottom:12px;margin-top:-5px;color:#ea5154">
+						cookie未开启,请开启cookie<a id="noCookie" href="javascript:void(0);" style="color:#ABABAB;"><i style="font-style:italic;">如何开启</i></a>
+					</div>
+					<div class="user">
+						<span></span>
+						<input type="text" name="userName" id="userName" class="border" value="用户名/邮箱/手机号" tabindex="1"><br/>
+						<p class="c_error" style="width: 298px;"></p>
+					</div>
+					<div class="pas">
+						<span style="position:absolute;z-index:5"></span>
+						<input type="text" name="pas" class="border password" tabindex="2"  value="请输入登录密码" style="position:relative;z-index:4;">
+						<input id="password" name="password" size="25" tabindex="2" type="password"  style="opacity:0;filter:alpha(opacity=0);left:0;position:absolute;background: url('') no-repeat scroll 0px -424px "  />
+						<input type="hidden" name="encrypt" id="encrypt" value="0" />
+						<p class="c_error" style="width: 298px;"></p>
+					</div>
+					<div class="validCode">
+						<input name="validCode" id="validCode"  tabindex="3"  type="text"  maxlength="4" class="border" value="验证码">
+						<span style="float:right;width:136px;" onClick="document.getElementById('img').src='${webroot}/validimg.html?t=' + Math.random();">
+							<img src="${webroot}/validimg.html?t=' + Math.random();" id="img" onClick="this.src='${webroot}/validimg.html?t=' + Math.random();" width="142" height="44" border="0" alt="" style="width:136px;">
+						</span>
+						<div class="c_clear"></div>
+						<p class="c_error" style="margin-top: -4px;width: 150px;"></p>
+					</div>
+					<div class="check">
+		                <a class="" href="${webroot}/user/findpwd.html" style="float:left;color:#005580;">忘记密码？</a>
+					</div>
+					<div>
+						
+						<input type="submit" id="loginBtn" class="denglu"  onclick="doEncrypt();"  value="立即登录">
+						<div class="c_clear"></div>
+					</div>
+					
+					<div class="line">
+					<div style="float:left;margin-right: 28px;margin-top: 6px;padding-left:10px;"><i style="font-size:14px;color:#999999;">没有账号？</i><a href="register.html" style="color:#06b5ff;">免费注册</a></div>
+						<span> 使用合作平台登录<a class="QQ" href="/user/qqLogin.html"></a></span>
+					</div>
+					<a href="" style="display: inline-block;height: 26px;margin-bottom: -6px;margin-left: 4px;width: 24px;"></a>
+					<input type="hidden" name="pwd" id="pwd" value="" />
+					<input type="hidden" name="redirectURL" id="redirectURL" value="${redirectURL!}"/>
+					<input type="hidden" name="timeout" id="timeout" value="${timeout!}"/>
+					<input type="hidden" name="client_id"  value="${client_id!}"/>
+	               <input type="hidden" name="response_type"  value="${response_type!}"/>
+	                 <input type="hidden" name="callback"  value="${callback!}"/>
+				</form>
+			</div>
+		</div>
+		<div class="c_downloads">
+			<a href="" class="quick_download">
+				<img src="${webroot}${theme_dir}/images/password/download.png" width="159" height="49" border="0" alt="" class="c_shows">
+				<div class="c_down_kik"><img src="${webroot}${theme_dir}/images/header_footer/code.jpg" alt="二维码"></div>
+			</a>
+			<div class="c_client"><img src="${webroot}${theme_dir}/images/password/client.png" width="401" height="41" border="0" alt=""></div>
+		</div>
+	</div>
+	
+	<script>
+		seajs.use("${webroot}${theme_dir}/media/js/user/login")
+	</script>
+	<#include "../common/rsa.html">
+	<@formEncrypt encryptId_="#pwd" encryptId="#password" />
+	<#include "../include/loginFooter.html">
+</body>
+</html>

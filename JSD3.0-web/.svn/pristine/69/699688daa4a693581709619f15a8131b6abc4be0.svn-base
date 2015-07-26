@@ -1,0 +1,47 @@
+package com.ddtkj.test;
+
+import java.util.Date;
+
+import javax.annotation.Resource;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.transaction.TransactionConfiguration;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.user.service.UserService;
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations={"classpath:spring/applicationContext.xml"})
+@TransactionConfiguration(transactionManager="txManager", defaultRollback=false)
+public class MasterAndSlaveTest {
+	
+	 @Resource
+	 UserService userService;
+	 @Resource
+	 NoticeService noticeService;
+	 
+	 @Test
+     public void save(){
+			
+        try {
+			//long verifyTime = noticeService.getNoticeAddTime("get_reg_phone","13455456673");//获取发送时间
+			User user=new User();
+			user.setMobilePhone("13234553144");
+			user.setUserName("Angla31");
+			user.setPassword("C19502A551B829C17E860FF27BBEDC3E");
+			user.setAddIp("194.456.342.3");
+			user.setAddTime(new Date());
+			long verifyTime = noticeService.getNoticeAddTime("get_reg_phone","18354675747");//获取发送时间
+			//User inviteUser = (User)request.getSession().getAttribute("inviteUser");
+			User inviteUser = userService.getUserByInfo("Angla21");//获取推荐人
+			User u = userService.doRegisterNew(user,inviteUser);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+     }
+}

@@ -1,0 +1,112 @@
+package com.ddtkj.p2psys.credit.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+/**
+ * @描述：债权转让日志表
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月18日 
+ */
+@Entity
+@Table(name="t_jsd_ca_log")
+public class CaLog implements Serializable{
+
+	private static final long serialVersionUID = -2562330489321199268L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ;
+	@ManyToOne
+	@JoinColumn(name="ca_id")
+	private CreditAssignment creditAssignment ; //债权ID
+	private double caValue ;//当天价值
+	private double caAccount ; //当天价格
+	private double caDis ;  //折让费率
+	private double caSurplusCopies ; //当天剩余份数
+	private Date caPublishtime ; //债权发布时间
+	private Date addTime ; //记录添加时间
+	
+	public CaLog() {
+		super();
+	}
+	
+	/**
+	 * @param creditAssignment
+	 * @param caValue
+	 * @param caAccount
+	 * @param caDis
+	 * @param caSurplusCopies
+	 * @param caPublishtime
+	 * @param addTime
+	 */
+	public CaLog(CreditAssignment creditAssignment, double caValue,
+			double caAccount, double caDis, double caSurplusCopies,
+			Date caPublishtime, Date addTime) {
+		super();
+		this.creditAssignment = creditAssignment;
+		this.caValue = caValue;
+		this.caAccount = caAccount;
+		this.caDis = caDis;
+		this.caSurplusCopies = caSurplusCopies;
+		this.caPublishtime = caPublishtime;
+		this.addTime = addTime;
+	}
+
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public CreditAssignment getCreditAssignment() {
+		return creditAssignment;
+	}
+	public void setCreditAssignment(CreditAssignment creditAssignment) {
+		this.creditAssignment = creditAssignment;
+	}
+	public double getCaValue() {
+		return caValue;
+	}
+	public void setCaValue(double caValue) {
+		this.caValue = caValue;
+	}
+	public double getCaAccount() {
+		return caAccount;
+	}
+	public void setCaAccount(double caAccount) {
+		this.caAccount = caAccount;
+	}
+	public double getCaDis() {
+		return caDis;
+	}
+	public void setCaDis(double caDis) {
+		this.caDis = caDis;
+	}
+	public double getCaSurplusCopies() {
+		return caSurplusCopies;
+	}
+	public void setCaSurplusCopies(double caSurplusCopies) {
+		this.caSurplusCopies = caSurplusCopies;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public Date getCaPublishtime() {
+		return caPublishtime;
+	}
+	public void setCaPublishtime(Date caPublishtime) {
+		this.caPublishtime = caPublishtime;
+	}
+	
+}

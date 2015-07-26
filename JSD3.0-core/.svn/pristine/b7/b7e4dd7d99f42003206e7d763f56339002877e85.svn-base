@@ -1,0 +1,202 @@
+package com.ddtkj.p2psys.autotender.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述:自动投标设置Model
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-12   
+ */
+public class BorrowAutoSetModel extends BorrowAutoSet {
+	
+	private static final long serialVersionUID = -7981218926208383080L;
+	
+	/** 当前页码 */
+	private int page = 1;
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	/** 用户名 */
+	private String userName;
+	/** 真实姓名 */
+	private String realName;
+	
+	private String borrowStyleNew;	//还款方式用于Excel展示
+	private String timelimitMonthNew;	//借款期限(月)用于Excel展示
+	private String timelimitDayNew;	//借款期限(天)用于Excel展示
+	private String aprNew;			//年利率用于Excel展示
+	private String energyEnableNew;			//能源宝用于Excel展示
+	private String carEnableNew;			//车宝宝用于Excel展示
+	
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+
+	public static BorrowAutoSetModel instance(BorrowAutoSet autoset) {
+		BorrowAutoSetModel model = new BorrowAutoSetModel();
+		BeanUtils.copyProperties(autoset, model);
+		return model;
+	}
+
+	public BorrowAutoSet prototype() {
+		BorrowAutoSet autoset = new BorrowAutoSet();
+		BeanUtils.copyProperties(this, autoset);
+		return autoset;
+	}
+
+	public String getBorrowStyleNew() {
+		return borrowStyleNew;
+	}
+
+	public void setBorrowStyleNew(String borrowStyleNew) {
+		this.borrowStyleNew = borrowStyleNew;
+	}
+
+	public String getTimelimitMonthNew() {
+		return timelimitMonthNew;
+	}
+
+	public void setTimelimitMonthNew(String timelimitMonthNew) {
+		this.timelimitMonthNew = timelimitMonthNew;
+	}
+
+	public String getTimelimitDayNew() {
+		return timelimitDayNew;
+	}
+
+	public void setTimelimitDayNew(String timelimitDayNew) {
+		this.timelimitDayNew = timelimitDayNew;
+	}
+
+	public String getAprNew() {
+		return aprNew;
+	}
+
+	public void setAprNew(String aprNew) {
+		this.aprNew = aprNew;
+	}
+
+	public String getEnergyEnableNew() {
+		return energyEnableNew;
+	}
+
+	public void setEnergyEnableNew(String energyEnableNew) {
+		this.energyEnableNew = energyEnableNew;
+	}
+
+	public String getCarEnableNew() {
+		return carEnableNew;
+	}
+
+	public void setCarEnableNew(String carEnableNew) {
+		this.carEnableNew = carEnableNew;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public static String convertAutoSetStatus(String status){
+		if(BorrowAutoSet.AUTO_TENDER_SET_ENABLE.equals(status)) {
+			return "已启用";
+		}else if(BorrowAutoSet.AUTO_TENDER_SET_DISABLE.equals(status)){
+			return "未启用";
+		}else if(BorrowAutoSet.AUTO_TENDER_SET_DELETE.equals(status)){
+			return "已删除";
+		}else{
+			return "未指定的状态";
+		}
+	}
+	
+	public static String convertMemberLevel(String vipLevel){
+		if(MemberVip.MEMBER_LEVEL_V1.equals(vipLevel)){
+			return "铜牌会员";
+		}else if(MemberVip.MEMBER_LEVEL_V2.equals(vipLevel)){
+			return "银牌会员";
+		}else if(MemberVip.MEMBER_LEVEL_V3.equals(vipLevel)){
+			return "金牌会员";
+		}else if(MemberVip.MEMBER_LEVEL_V4.equals(vipLevel)){
+			return "钻石会员";
+		}else if(MemberVip.MEMBER_LEVEL_N1.equals(vipLevel)){
+			return "普通会员";
+		}else{
+			return "未指定的会员等级";
+		}
+	}
+	
+	public String convertEnable(boolean enable){
+		if(enable == true){
+			return "开启";
+		}else{
+			return "未开启";
+		}
+	}
+	
+	public String convertLimitEnable(boolean limitEnable){
+		if(limitEnable == true){
+			return "有限制";
+		}else{
+			return "无限制";
+		}
+	}
+	
+}

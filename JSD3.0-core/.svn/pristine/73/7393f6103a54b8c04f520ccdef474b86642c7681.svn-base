@@ -1,0 +1,29 @@
+package com.ddtkj.p2psys.schooldict.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.schooldict.dao.SchoolDictDao;
+import com.ddtkj.p2psys.schooldict.domain.SchoolDict;
+import com.ddtkj.p2psys.schooldict.service.SchoolDictService;
+import com.rongdu.common.model.jpa.QueryParam;
+
+@Repository("schoolDictService")
+public class SchoolDictServiceImpl implements SchoolDictService{
+	@Resource
+	private SchoolDictDao schoolDictDao; 
+	@Override
+	public SchoolDict getSchool(long id) {
+		
+		return schoolDictDao.find(id);
+	}
+	@Override
+	public List<SchoolDict> getSchoolList(String parentCode) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("parentCode", parentCode);
+		return schoolDictDao.findByCriteria(param);
+	}
+}

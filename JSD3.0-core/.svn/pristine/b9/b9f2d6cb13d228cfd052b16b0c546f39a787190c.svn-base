@@ -1,0 +1,755 @@
+package com.rongdu.p2psys.user.service.impl;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountSum;
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountOpenDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountOpenHistory;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.tpp.ymd.model.record.register.AccountOpenRecord;
+import com.ddtkj.p2psys.tpp.ymd.model.record.register.AccountOpenReturnRecord;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.dao.UserInvitedSummaryDao;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.RandomUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.dao.AccountBankDao;
+import com.rongdu.p2psys.account.dao.AccountSumDao;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.rule.ScoreProduceRuleCheck;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+import com.rongdu.p2psys.core.util.mail.Mail;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.score.constant.ScoreTypeConstant;
+import com.rongdu.p2psys.score.dao.ScoreDao;
+import com.rongdu.p2psys.score.dao.ScoreLogDao;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.score.model.scorelog.BaseScoreLog;
+import com.rongdu.p2psys.score.model.scorelog.tender.TenderScorePhoneLog;
+import com.rongdu.p2psys.score.model.scorelog.tender.TenderScoreRealnameLog;
+import com.rongdu.p2psys.tpp.TPPFactory;
+import com.rongdu.p2psys.tpp.TPPWay;
+import com.rongdu.p2psys.tpp.ips.model.IpsRegister;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+import com.rongdu.p2psys.user.dao.UserCreditDao;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+import com.rongdu.p2psys.user.dao.UserUploadDao;
+import com.rongdu.p2psys.user.dao.UserVipApplyDao;
+import com.rongdu.p2psys.user.domain.UserCredit;
+import com.rongdu.p2psys.user.domain.UserUpload;
+import com.rongdu.p2psys.user.domain.UserVipApply;
+import com.rongdu.p2psys.user.exception.UserException;
+import com.rongdu.p2psys.user.model.identify.UserIdentifyFactory;
+import com.rongdu.p2psys.user.model.identify.UserIdentifyWay;
+import com.rongdu.p2psys.user.service.UserCacheService;
+
+@Service("userCacheService")
+public class UserCacheServiceImpl implements UserCacheService {
+
+	Logger logger = Logger.getLogger(UserCacheServiceImpl.class);
+
+	@Resource
+	private UserCacheDao userCacheDao;
+	@Resource
+	private AccountDao accountDao;
+	@Resource
+	private UserIdentifyDao userIdentifyDao;
+	@Resource
+	private UserVipApplyDao userVipApplyDao;
+/*	@Resource
+	private YjfDao yjfDao;*/
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private AccountBankDao accountBankDao;
+	@Resource
+	private AccountSumDao accountSumDao;
+	@Resource
+	private UserCreditDao userCreditDao;
+	@Resource
+	private ScoreDao scoreDao;
+	@Resource
+	private ScoreLogDao scoreLogDao;
+	@Resource
+	private UserUploadDao userUploadDao;
+	@Resource
+	private RpProduceDao rpProduceDao ;
+	@Resource
+	private AccountOpenDao  accountOpenDao;
+	@Resource
+	private UserInvitedSummaryDao userInvitedSummaryDao;
+	@Resource
+	private RegionDao regionDao;
+	
+	@Override
+	public UserCacheModel getUserCache(long userId) {
+		return userCacheDao.getUserCache(userId);
+	}
+
+	public UserCache findByUserId(long userId) {
+		return userCacheDao.findObjByProperty("user.userId", userId);
+	}
+
+	@Override
+	public String getUserCard_id(long userId) {
+		return "";
+		// return userCacheDao.getUserCard_id(userId);
+	}
+
+	@Override
+	public Object doRealname(User user, UserModel model) throws Exception {
+		/*//检测已经通过手机认证的手机号是否存在
+		ValidateUtil.checkVerifyOkPhoneExist(model.getMobilePhone());*/
+		//检测已经通过实名认证的身份证号是否存在
+	    //ValidateUtil.checkVerifyOkCardNoExist(model.getCardNO());
+		//ValidateUtil.checkCardNoExist(model.getCardNO());
+		//JSDP-56 fgq 4.21  start 身份证和真实姓名的校验
+		ValidateUtil.checkRealName(model.getRealName());
+		ValidateUtil.checkCardNo(model.getCardNO());
+		//JSDP-190  wcw 2015-06-24 start
+		//判断身份证号是否存在
+		ValidateUtil.checkCardNoExist(model.getCardNO(),user.getUserName());
+		//JSDP-190  wcw 2015-06-24 end
+		//JSDP-56 fgq 4.21  end 
+		logger.info("用户名为："+user.getUserName()+"的用户开户开始-----");
+	    User u=userDao.find(user.getUserId());
+	    logger.info("用户名为："+user.getUserName()+"的用户查询用户信息结束-----");
+		model = makeModel(model,u);
+	    u.setMobilePhone(model.getMobilePhone());
+	    u.setRealName(model.getRealName());
+		u.setCardNO(model.getCardNO());
+		userDao.update(u);
+		logger.info("用户名为："+user.getUserName()+"的用户修改用户信息结束-----");
+        String cardId = model.getCardNO();
+        logger.info("用户名为："+user.getUserName()+"的用户进行实名认证-----身份证号为："+ cardId);
+        
+        int length = cardId.length();
+        String sexNum;
+        if (length == 15) {
+            sexNum = cardId.substring(length - 1);
+        } else {
+            sexNum = cardId.substring(length - 2, length - 1);
+        }
+        // 获取性别 1:男,0:女
+        int sex = Integer.parseInt(sexNum) % 2;
+        logger.info("用户名为："+user.getUserName()+"的用户附属表查询用户附属信息结束-----");
+        UserCache userCache = u.getUserCache();
+        userCache.setSex(sex!=1?(sex!=2?"F":"X"):"M");
+        logger.info("用户名为："+user.getUserName()+"的用户地区录入");
+        //截取身份证号前6位
+  		if(StringUtil.isNotBlank(cardId) && cardId.length()>6){
+  			String address = cardId.substring(0,6);
+  			// JSDP - BUG111  20150511 SXY
+  			//省
+  			Region regionProvince = regionDao.findByCode(address.substring(0, 2)+"0000");
+  			if(regionProvince!=null){
+  				userCache.setProvince(regionProvince.getId()+"");
+  			}
+  			//市
+  			Region regionCity = regionDao.findByCode(address.substring(0, 4)+"00");
+  			if(regionCity!=null){
+  				userCache.setCity(regionCity.getId()+"");
+  			}
+  			//县/区
+  			Region regionArea = regionDao.findByCode(address);
+  			if(regionArea!=null){
+  				userCache.setArea(regionArea.getId()+"");
+  			}
+  			// JSDP - BUG111  20150511 SXY
+  		}
+        
+        userCacheDao.update(userCache);
+        logger.info("用户名为："+user.getUserName()+"的用户附属表修改用户附属信息结束-----");
+        //李建云加
+        //更新用户开户次数
+        userDao.modifythirdPartyOpenCount(user.getUserId(), 1);
+        logger.info("用户名为："+user.getUserName()+"的用户修改用户开户次数结束-----");
+		UserIdentifyFactory attestationFactory = new UserIdentifyFactory(u.getUserId(), model);
+		UserIdentifyWay attestationWay = attestationFactory.realname();
+		Object o = attestationWay.doRealname();
+		YmdRegister ymdRegister=(YmdRegister) o;
+		AbstractYmdEvent<AccountOpenHistory> y=new AccountOpenRecord(ymdRegister, u, "123.45.344");
+		y.doEvent();
+		logger.info("用户名为："+user.getUserName()+"的用户封装开户信息结束-----");
+		return o;
+		
+	}
+
+	private  static UserModel  makeModel(UserModel model,User user) {
+		model.setUserName(user.getUserName());
+		model.setEmail(user.getEmail());
+		model.setUserId(user.getUserId());
+		model.setUserNature(user.getUserCache().getUserNature());
+		model.setMobilePhone(user.getMobilePhone());
+		model.setUserType(user.getUserCache().getUserType());
+		model.setUserCache(user.getUserCache());
+		return model;
+	}
+	
+	@Override
+	public void modify(long userId, String card_id) {
+		userCacheDao.modify(userId, card_id);
+	}
+
+	@Override
+	public void modify(long userId, String card_id, String card_positive, String card_opposite) {
+		userCacheDao.modify(userId, card_id, card_positive, card_opposite);
+	}
+	
+	@Override
+	public void modify(long userId, UserModel model, String cardPositive, String cardOpposite) {
+		String cardId = model.getCardNO();
+		if (!StringUtil.isCard(model.getCardNO())) {
+			throw new UserException("身份证格式不对，请检查！", 1);
+		}
+		String sexNum;
+		if (cardId.length() == 15) {
+			sexNum = cardId.substring(cardId.length() - 1);
+		} else {
+			sexNum = cardId.substring(cardId.length() - 2);
+		}
+		// 获取性别 1:男,0:女
+		int sex = Integer.parseInt(sexNum) % 2;
+
+		User user = userDao.find(userId);
+		user.setRealName(model.getRealName());
+		user.setCardNO(cardId);
+		UserCache userCache = user.getUserCache();
+		userCache.setCardOpposite(cardPositive);
+		userCache.setCardPositive(cardPositive);
+		userCache.setSex(sex==1?(sex==2?"F":"X"):"M");
+		userCacheDao.update(userCache);
+	}
+	
+	@Override
+	public void userLockEdit(long userId, int status) {
+		userCacheDao.userLockEdit(userId, status);
+	}
+
+	/**
+	 * 申请vip业务处理
+	 */
+	@Override
+	public UserIdentify applyVip(User user) {
+		logger.debug("vip条件判断");
+
+		double vipFee = Global.getDouble("vip_fee");
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+
+		UserIdentify userIdentify = userIdentifyDao.findByUserId(user.getUserId());
+	
+	
+		//暂时先注释掉  wcw---2014-12-16
+		/*if (account.getUseMoney() < vipFee) {
+			throw new BussinessException("余额不足，请您充值", 1);
+		}*/
+
+		logger.debug("用户资金、操作日志、通知处理");
+		AbstractExecuter executer = ExecuterHelper.doExecuter("applyVipExecuter");
+		executer.execute(vipFee, user, null);
+
+		logger.debug("进入vip申请业务处理...");
+		UserVipApply userVipApply = new UserVipApply();
+		userVipApply.setAddIp(Global.IP_THREADLOCAL.get());
+		userVipApply.setRemark(Global.getTransfer().get("vipRemark") + "");// 备注
+		userVipApply.setAddTime(new Date());
+		userVipApply.setMoney(vipFee);
+		userVipApply.setStatus((byte) 0);
+		userVipApply.setUser(user);
+		userVipApplyDao.save(userVipApply);
+
+		//userIdentify.setVipStatus("93"); // 待审核状态
+		userIdentifyDao.update(userIdentify);
+
+		return userIdentify;
+	}
+
+	public void verifyVip(long userId) {
+		// ApplyVipLog
+		// "verfiVip"="com.rongdu.p2psys.user.executor.ApplyVipExecuter"
+		// "verfiVip"="com.rongdu.p2psys.user.executor.CustomApplyVipExecuter"
+		ExecuterHelper.doExecuter("verfiVip");
+		// VerfiVipVipExecuter e=new VerfiVipyVipExecuter();
+		// e.execute();
+	}
+
+	@Override
+	public void update(UserCache userCache) {
+		userCacheDao.merge(userCache);
+	}
+	@Override
+	public void update(UserCache userCache, List<UserUpload> list, long[] delIds) {
+	    userUploadDao.save(list);
+	    userCacheDao.merge(userCache);
+	    if (delIds != null) {
+            for (long id : delIds) {
+                UserUpload uu = userUploadDao.find(id);
+                userUploadDao.delete(id);
+                String realPath = ServletActionContext.getServletContext().getRealPath(uu.getPicPath());
+                new File(realPath).delete();
+            }
+        }
+	}
+
+	@Override
+	public PageDataList<UserCache> userCacheList(int pageNumber, int pageSize, UserCache model) {
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber, pageSize);
+		PageDataList<UserCache> plist = userCacheDao.findPageList(param);
+		return plist;
+	}
+
+	@Override
+	public void updateStatus() {
+		userCacheDao.updateStatus();
+	}
+	
+	@Override
+	public void ipsRegisterCall(User user, IpsRegister ips) {
+//		if (user.getApiStatus() != 1) { // TODO 于俊斐  不在USER表中了
+		    user.setMobilePhone(ips.getMobileNo());
+//			userDao.modifyPhone(user.getUserId(), ips.getMobileNo());
+		    user.setRealName(ips.getRealName());
+//			userDao.modifyRealname(user.getUserId(), ips.getRealName());
+			if(!"20".equals(user.getUserCache().getUserNature())){
+			    user.setUserName(ips.getRealName());
+//			    userDao.modifyUsername(user.getUserId(), ips.getRealName());
+			}
+			user.setCardNO(ips.getIdentNo());
+//			userDao.modify(user.getUserId(), ips.getIdentNo());
+			
+//			user.setApiId(ips.getIpsAcctNo()); // TODO 于俊斐  不在USER表中了
+//			user.setApiUsercustId(ips.getEmail()); // TODO 于俊斐  不在USER表中了
+//			user.setApiStatus(1);   // TODO 于俊斐  不在USER表中了
+			
+			userDao.update(user);
+//			userDao.modifyApi(user.getUserId(), ips.getIpsAcctNo(), "1",ips.getEmail());
+            userIdentifyDao.modifyMobilePhoneStatus(user.getUserId(), "86");
+            userIdentifyDao.modifyRealnameStatus(user.getUserId(), "83");
+            String cardId = ips.getIdentNo();
+            int length = cardId.length();
+            String sexNum;
+            if (length == 15) {
+                sexNum = cardId.substring(length - 1);
+            } else {
+                sexNum = cardId.substring(length - 2, length - 1);
+            }
+            // 获取性别 1:男,0:女
+            int sex = Integer.parseInt(sexNum) % 2;
+            UserCache userCache = user.getUserCache();
+            userCache.setSex(sex==1?(sex==2?"F":"X"):"M");
+            userCacheDao.update(userCache);
+            BaseScoreLog bLog = new TenderScorePhoneLog(user.getUserId());
+            bLog.doEvent();
+            BaseScoreLog bLog_ = new TenderScoreRealnameLog(user.getUserId());
+            bLog_.doEvent();
+			AccountBank bank=new AccountBank();
+			bank.setUser(user);
+			bank.setBankNo(ips.getBkAccNo());
+			bank.setBank(ips.getBankName());
+			bank.setAddTime(new Date());
+			bank.setStatus(1);
+			accountBankDao.save(bank);
+			// 用户第三方资金托管配置信息初始化
+			TPPWay way = TPPFactory.getTPPWay();
+			if(way != null){
+			    way.addUserTppConfig(user.getUserId());
+			}
+//		}
+	}
+
+	@Override
+	public void ymdRegisterCall(User user, YmdRegister ymd)throws Exception {
+		 try {
+			user=userDao.find(user.getUserId());
+			 logger.info("用户昵称为"+user.getUserName()+"的用户开户第三方回调业务处理开始");
+			  //00 表示汇潮开户已经成功  、83表示该用户在网站平台已经实名认证
+			 logger.info("用户昵称为"+user.getUserName()+"的用户是否开户===="+user.getThirdPartyIsOpen());
+			 logger.info("用户昵称为"+user.getUserName()+"的用户一麻袋处理状态==="+ymd.getErrCode());
+			 logger.info("用户昵称为"+user.getUserName()+"的用户实名认证状态===="+user.getUserIdentify().getRealNameStatus());
+			 if("N".equals(user.getThirdPartyIsOpen())&&"00".equals(ymd.getErrCode())&&!"83".equals(user.getUserIdentify().getRealNameStatus())){
+				  logger.info("用户昵称为"+user.getUserName()+"的用户开户第三方回调符合更新要求");
+				  user.setThirdPartyIsOpen("Y");
+			      if(UserConstant.USER_SORT_INVESTOR.equals(user.getUserCache().getUserType())){
+			    	  user.setThirdPartyAccount(user.getMobilePhone());
+			      }else if(UserConstant.USER_NATURE_PERSON.equals(user.getUserCache().getUserNature())){
+			    	  user.setThirdPartyAccount(user.getMobilePhone());
+			      }else{
+			    	  user.setThirdPartyAccount(user.getEmail());
+			      }
+				  userDao.update(user);
+				  UserIdentify ui = userIdentifyDao.findObjByProperty("user.userId", user.getUserId());
+				 // ui.setRealNameStatus("83");
+				 // userIdentifyDao.update(ui);
+				  //userIdentifyDao.modifyMobilePhoneStatus(user.getUserId(), "86");
+				 int count= userIdentifyDao.modifyRealnameStatus(user.getUserId(),"83","82");
+				 // 20150628 sxy 
+				 userIdentifyDao.modifyRealnameStatus(user.getUserId(), "83");
+				 if(count!=1){
+					 throw new BussinessException("更新用户实名认证状态失败", 1);
+				 }
+				  // 实名认证通过送积分，送红包
+				  Global.setTransfer("user", user);
+				  Global.setTransfer("type", "通过");
+				  BaseMsg msg = new BaseMsg(NoticeConstant.CERTIFY_REALNAME_STATUS);
+				  msg.doEvent(); 
+				  
+				  if(UserConstant.USER_SORT_INVESTOR.equals(user.getUserCache().getUserType())){
+					  //只有投资人才送红包
+					  if(UserConstant.USER_IDENTIFY_EMAIL_SUCCESS.equals(ui.getEmailStatus()) && UserConstant.USER_IDENTIFY_PHONE_SUCCESS.equals(ui.getMobilePhoneStatus())){  // 通过手机和邮箱认证才送
+						  // 各种认证过了送红包
+						  RedPacketProduceRuleCheck rpRuleCheck = (RedPacketProduceRuleCheck) Global.getRuleCheck("redPacketProduce");
+						  Map<String, Object>  registerdata = rpRuleCheck.registerRP() ;
+						 // Map<String, Object>  InviteUserdata = rpRuleCheck.recommendRP() ;
+						 // UserCache uc = userCacheDao.getUserCacheByUserId(user.getUserId()) ;
+						  //判断是平日还是活动日
+						  int  ordinaryStatus = 0;
+						  int  activityStatus = 0;
+						  if(null != registerdata.get("ordinary_day")){
+							  ordinaryStatus = (Integer) registerdata.get("ordinary_day");
+						  }
+						  if(null != registerdata.get("activity_day")){
+							  activityStatus = (Integer) registerdata.get("activity_day");
+						  }
+						  if(registerdata.size()>0){
+							  //JSDP-50 wcw 2015-4-18 start
+							 /* int money = 0;
+							  if(ordinaryStatus==1 && activityStatus ==0){//平日开启，活动日不开启
+								  money = NumberUtil.getInt(registerdata.get("rp_value").toString());
+							  }else if(ordinaryStatus==0 && activityStatus ==1){//平日不开启，活动日开启
+								  money = NumberUtil.getInt(registerdata.get("rp_value_activity").toString());
+							  }else if(ordinaryStatus==1 && activityStatus ==1){//平日开启，活动日开启，以活动日为准
+								  money = NumberUtil.getInt(registerdata.get("rp_value_activity").toString());
+							  }else{
+								  
+							  }*/
+							  double money = 0;
+							  if(ordinaryStatus==1 && activityStatus ==0){//平日开启，活动日不开启
+								  money = NumberUtil.getDouble(registerdata.get("rp_value").toString());
+							  }else if(ordinaryStatus==0 && activityStatus ==1){//平日不开启，活动日开启
+								  money = NumberUtil.getDouble(registerdata.get("rp_value_activity").toString());
+							  }else if(ordinaryStatus==1 && activityStatus ==1){//平日开启，活动日开启，以活动日为准
+								  money = NumberUtil.getDouble(registerdata.get("rp_value_activity").toString());
+							  }
+							  //JSDP-50 wcw 2015-4-18 end
+							  if(money>0){
+								  RpProduce pr = new RpProduce() ;
+								  pr.setUser(user);
+								  pr.setRpCreateTime(new Date());
+								  pr.setRpStaticMoney(money);
+								  pr.setRpStaticRes(RpProduce.STATIC_RP_RES_IDENTIFY);//静态红包来源实名认证
+								  pr.setRpStaticStatus(2);
+								  pr.setRpType(1);
+								//fgq  4.10  静态红包有效期  start
+								  int intYear = DateUtil.getTimeYear(new Date());
+								  Date yearEnddate = DateUtil.monthLastDay(intYear,12);
+								  long subDay = DateUtil.getSubDay(new Date(),yearEnddate);
+								  pr.setRpStaticValidTime((int)subDay);
+								//fgq  4.10  静态红包有效期  end
+								  rpProduceDao.save(pr) ;
+							  }
+							  
+						  }
+						  Map<String, Object>  InviteUserdata = rpRuleCheck.recommendRP();
+						  // 判断是否有推荐人
+						  if(user.getUserCache().getInviteUserId()!=0&&InviteUserdata.size()>0){
+							  //推荐人
+							  User ref = this.userDao.getUserById(user.getUserCache().getInviteUserId()) ;
+							  // 给推荐人红包
+							  double refmoney = 0;
+							  String refacName = null;
+							  //JSDP-50 wcw 2015-4-18 start
+							  /*if(ordinaryStatus==1 && activityStatus ==0){//平日开启，活动日不开启
+								  
+								  refmoney = NumberUtil.getInt(InviteUserdata.get("rp_value").toString()); 
+								  refacName = InviteUserdata.get("rp_activity_name").toString() ;
+							  }else if(ordinaryStatus==0 && activityStatus ==1){//平日不开启，活动日开启
+								  
+								  refmoney = NumberUtil.getInt(InviteUserdata.get("rp_value_activity").toString()); 
+								  refacName = InviteUserdata.get("rp_activity_name_activity").toString() ;
+							  }else if(ordinaryStatus==1 && activityStatus ==1){//平日开启，活动日开启，以活动日为准
+								  
+								  refmoney = NumberUtil.getInt(InviteUserdata.get("rp_value_activity").toString()); 
+								  refacName = InviteUserdata.get("rp_activity_name_activity").toString() ;
+							  }else{
+								  
+							  }*/
+							  
+							  //判断是平日还是活动日
+							  int  remmonOrdinaryStatus = 0;
+							  int  remmonActivityStatus = 0;
+							  
+							  if(null != InviteUserdata.get("recommon_ordinary_day")){
+								  remmonOrdinaryStatus = (Integer) InviteUserdata.get("recommon_ordinary_day");
+							  }
+							  if(null != InviteUserdata.get("recommon_activity_day")){
+								  remmonActivityStatus = (Integer) InviteUserdata.get("recommon_activity_day");
+							  }
+							  
+			                  if(remmonOrdinaryStatus==1 && remmonActivityStatus ==0){//平日开启，活动日不开启
+								  
+								  refmoney = NumberUtil.getDouble(InviteUserdata.get("rp_value").toString()); 
+								  refacName = InviteUserdata.get("rp_activity_name").toString() ;
+							  }else if(remmonOrdinaryStatus==0 && remmonActivityStatus ==1){//平日不开启，活动日开启
+								  
+								  refmoney = NumberUtil.getDouble(InviteUserdata.get("rp_value_activity").toString()); 
+								  refacName = InviteUserdata.get("rp_activity_name_activity").toString() ;
+							  }else if(remmonOrdinaryStatus==1 && remmonActivityStatus ==1){//平日开启，活动日开启，以活动日为准
+								  
+								  refmoney = NumberUtil.getDouble(InviteUserdata.get("rp_value_activity").toString()); 
+								  refacName = InviteUserdata.get("rp_activity_name_activity").toString() ;
+							  }
+			                  //JSDP-50 wcw 2015-4-18 end
+			                  if(refmoney>0){
+								  RpProduce refpr = new RpProduce() ;
+								  //推荐人
+								  refpr.setUser(ref);
+								  refpr.setRpCreateTime(new Date());
+								  refpr.setRpStaticMoney(refmoney);
+								  refpr.setRpStaticRes(RpProduce.STATIC_RP_RES_RECOMMENT);
+								  refpr.setRpStaticStatus(2);
+								  refpr.setRpType(1);
+								  //被推荐人
+								  refpr.setInvitedUser(user);
+								  refpr.setRpStaticReferrerName(user.getUserName());
+								  //fgq  4.10  静态红包有效期  start
+								  int intYear = DateUtil.getTimeYear(new Date());
+								  Date yearEnddate = DateUtil.monthLastDay(intYear,12);
+								  long subDay = DateUtil.getSubDay(new Date(),yearEnddate);
+								  refpr.setRpStaticValidTime((int)subDay);
+								  //fgq  4.10  静态红包有效期  end
+								  rpProduceDao.save(refpr) ;
+							  }	
+						  }
+					  }
+					  // 实名认证送积分
+					  ScoreProduceRuleCheck spRuleCheck = (ScoreProduceRuleCheck) Global.getRuleCheck("scoreProduce");
+					  if(spRuleCheck!=null){
+						  int scoreCount = (int) spRuleCheck.realnameVerifyScore();
+						  // 添加积分
+						  if(scoreCount!=-1){
+							  Score score = scoreDao.getScoreByUserId(user.getUserId()) ;
+							  if(score==null){
+								  score = new Score(user) ;
+								  score.setAddTime(new Date());
+								  score = scoreDao.save(score) ;
+							  }
+							  score.setTotalScore(score.getTotalScore()+scoreCount);
+							  score.setValidScore(score.getValidScore()+scoreCount);
+							  scoreDao.update(score) ;
+							  // 添加积分日志记录
+							  ScoreLog sl = new ScoreLog(score) ;
+							  sl.setUser(user);
+							  sl.setAddTime(new Date());
+							  sl.setScore(scoreCount);
+							  sl.setScoreTypeName("实名认证");
+							  sl.setScoreTypeNid(ScoreTypeConstant.SCORE_REAL_NAME);
+							  sl.setType(ScoreTypeConstant.SCORE_REAL_NAME);
+							  sl.setRemark("实名认证通过，获得"+scoreCount+"个积分。");
+							  scoreLogDao.save(sl) ;
+						  }
+					  }
+					  //更新邀请人数量 李建云加
+					  UserCache  userCache = userCacheDao.getUserCacheByUserId(user.getUserId());
+					  if(userCache != null && userCache.getInviteUserId()>0){
+						  userInvitedSummaryDao.modifyInviteTotal(userCache.getInviteUserId());
+					  }
+				  }
+			  }
+			  //修改开户记录表
+			  AbstractYmdEvent<AccountOpenHistory> abstractYmdEvent=new AccountOpenReturnRecord(ymd, user);
+			  abstractYmdEvent.doEvent();
+		} catch (Exception e) {
+			logger.info("开户异常信息==="+e.getMessage());
+		}
+//		}
+	}
+	@Override
+	public void save(UserCache model, List<UserUpload> list) {
+		User user = model.getUser();
+		checkInfo(model);
+		// 设置用户名为真实姓名
+		user.setUserName(user.getEmail());
+		user.setNickname(RandomUtil.getRandomNumString(7));
+		user.setAddTime(new Date());
+		user = userDao.save(user);
+		model.setUser(user);
+		// 用户附属信息
+		userCacheDao.save(model);
+		// 用户认证信息
+		userIdentifyDao.save(new UserIdentify(user));
+		// 资金账户
+		accountDao.save(new Account(user));
+		// 资金合计
+		accountSumDao.save(new AccountSum(user));
+		// 用户amount
+		userCreditDao.save(new UserCredit(user));
+		// 添加用户积分信息
+		// 2015年4月8日 04:01:54  除投资人外不送积分
+		
+		//	scoreDao.save(new Score(user));
+		//TODO 添加用户中心注册操作
+		// 发送激活邮件
+		// 后台开户实物照信息
+        if(null != list && 0!=list.size()){
+        	for (UserUpload uu : list) {
+                uu.setUser(user);
+                userUploadDao.save(uu);
+            }
+        }
+        Global.setTransfer("activeUrl", "/user/doRegisterStep1.html?id=" + Mail.getInstance().getdecodeIdStr(user));
+        Global.setTransfer("user", user);
+        AbstractExecuter executer = ExecuterHelper.doExecuter("userRegisterExecuter");
+        executer.execute(0, user);
+	}
+    /**
+     * 校验后台开户
+     * @param model
+     */
+	private void checkInfo(UserCache model){
+	    User user = model.getUser();
+	    int count = userDao.countByMobilePhone(user.getMobilePhone());
+        if (count > 0) {
+            throw new UserException("该手机号码已被使用！", 1);
+        }
+        if (!StringUtil.isPhone(user.getMobilePhone())) {
+            throw new UserException("手机号码格式不正确！", 1);
+        }
+        if (!ValidateUtil.isEmail(user.getEmail())) {
+            throw new UserException("借款人（负责人）邮箱格式错误！", 1);
+        }
+        int hasEmail = userDao.countByEmail(user.getEmail());
+        if (hasEmail > 0) {
+            throw new UserException("借款人邮箱已经被使用！", 1);
+        }
+        if (!"".equals(StringUtil.isNull(model.getCompanyEmail()))) {
+            if (!ValidateUtil.isEmail(model.getCompanyEmail())) {
+                throw new UserException("公司邮箱格式错误！", 1);
+            }
+//            int hasCompanyEmail = userDao.countByEmail(model.getCompanyEmail());
+//            if (hasCompanyEmail > 0) {
+//                throw new UserException("公司邮箱已经被使用！", 1);
+//            }
+        }
+        if (!StringUtil.isCard(user.getCardNO())) {
+            throw new UserException("身份证格式不对，请检查！", 1);
+        }
+    }
+	@Override
+	public PageDataList<UserCacheModel> userList(int pageNumber, int pageSize, UserCache model) {
+		QueryParam param = QueryParam.getInstance();
+		if (!StringUtil.isBlank(model.getCompanyName())) {
+			param.addParam("companyName", Operators.LIKE, model.getCompanyName());
+		}
+		if (!StringUtil.isBlank(model.getCompanyLawPerson())) {
+			param.addParam("companyLawPerson", Operators.LIKE, model.getCompanyLawPerson());
+		}
+
+		if(null!=model.getUser() && null!= model.getUser().getIsLocked()){
+			if(model.getUser().getIsLocked() != "99" && !"99".equals(model.getUser().getIsLocked())){
+				param.addParam("user.isLocked", model.getUser().getIsLocked());
+			}
+		}
+		
+		if(null!=model.getUser() && null!= model.getUser().getRealName() && !"".equals(model.getUser().getRealName())){
+			param.addParam("user.realName",Operators.LIKE, model.getUser().getRealName());
+		}
+		if(null!=model.getUser() && null!= model.getUser().getMobilePhone() && !"".equals(model.getUser().getMobilePhone())){
+			param.addParam("user.mobilePhone", Operators.LIKE, model.getUser().getMobilePhone());
+		}
+		// 借款类型
+		if(StringUtil.isNotBlank(model.getBorrowType())){
+			param.addParam("borrowType", model.getBorrowType());
+		}
+
+		param.addPage(pageNumber, pageSize);
+		param.addParam("userNature", model.getUserNature());
+		param.addParam("userType", model.getUserType());
+		param.addOrder(OrderType.DESC, "userId");
+		PageDataList<UserCache> plist = userCacheDao.findPageList(param);
+		PageDataList<UserCacheModel> uList = new PageDataList<UserCacheModel>();
+		uList.setPage(plist.getPage());
+		List<UserCacheModel> list = new ArrayList<UserCacheModel>();
+		if (plist.getList().size() > 0) {
+			for (int i = 0; i < plist.getList().size(); i++) {
+				UserCache userCache = (UserCache) plist.getList().get(i);
+				UserCacheModel userCacheModel = UserCacheModel.instance(userCache);
+				userCacheModel.setContactsCardId(userCache.getUser().getCardNO());
+				userCacheModel.setContactsRealName(userCache.getUser().getRealName());
+				userCacheModel.setContactsPhone(userCache.getUser().getMobilePhone());
+				if(userCache.getUser().getUserIdentify().getEmailStatus().equals("81")){
+					userCacheModel.setEmailStatus(true);
+				}else{
+					userCacheModel.setEmailStatus(false);
+				}
+				if (userCache.getUser().getPassword() != null && !"".equals(userCache.getUser().getPassword())) {
+	                userCacheModel.setEmailStatus(true);
+				}
+				list.add(userCacheModel);
+			}
+		}
+		uList.setList(list);
+		
+		return uList;
+	}
+
+	@Override
+	public UserCache findById(long id) {
+		return userCacheDao.find(id);
+	}
+
+	@Override
+	public void modifyPersonalData(UserCacheModel model) {
+		userCacheDao.modifyPersonalData(model);
+	}
+	
+
+
+	@Override
+    public List<User> getUserByAddress(UserModel userModel) {
+		
+        return userDao.getUserByAddress(userModel);
+    }
+
+	// JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<UserCache> excelListUser(UserCache model) {
+		return userCacheDao.excelListUser(model);
+	}
+	// JSDP-116 fengguoqin 2015-05-19 end
+
+}

@@ -1,0 +1,74 @@
+<div class="blockStyle" style="padding: 10px 0 0 30px;">
+		<!-- <table>
+			<tr>
+				<td class="home_icon_clock" style="padding:20px 0 30px 0"></td>
+				<td style="padding:20px 20px 30px 20px;font-size: 14px;">发标待审<p><span><a href="javascript:;" onclick="addTab('借款人确认待初审','/modules/loan/borrow/confirmedBorrowManager.html')">${trialBorrowCount!0}</a></span>个</p></td>
+				<td style="padding:20px 20px 30px 20px;font-size: 14px;">满标待审<p><span><a href="javascript:;" onclick="addTab('满标待审管理','/modules/loan/borrow/verifyFullBorrowManager.html')">${fullBorrowCount!0}</a></span>个</p></td>
+				<td></td>
+			</tr>
+			<tr>
+				<td class="home_icon_money" style="padding:0px 0 30px 0"></td>
+				<td style="padding:0px 20px 30px 20px;font-size: 14px;">今日待还<p><span><a href="javascript:;" onclick="addTab('还款管理','/modules/loan/repayment/repaymentManager.html')">${repayCount!0}</a></span>个</p></td>
+				<td style="padding:0px 20px 30px 20px;font-size: 14px;">充值待审<p><span><a href="javascript:;" onclick="addTab('充值查询','/modules/account/accountRecharge/accountRechargeManager.html')">${rechargeCount!0}</a></span>个</p></td>
+				<td style="padding:0px 20px 30px 20px;font-size: 14px;">提现待审<p><span><a href="javascript:;" onclick="addTab('提现初审','/modules/account/draw/accountDraw/firstTrialDrawPage.html')">${cashCount!0}</a></span>个</p></td>
+				<td style="padding:0px 20px 30px 20px;font-size: 14px;">提现复审<p><span><a href="javascript:;" onclick="addTab('提现复审','/modules/account/draw/accountDraw/recheckDrawPage.html')">${cashCountRecheck!0}</a></span>个</p></td>
+				
+				<td></td>
+			</tr>
+		</table> -->
+		
+		<!-- 增加结果值的判断，若数值大于99则显示99+ -->
+		<table>
+			<tr>
+				<td class="home_icon_clock" style="padding:20px 0 30px 0"></td>
+				
+				<#if trialBorrowCount gt 99>
+					<td style="padding:20px 20px 30px 20px;font-size: 14px;">发标待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('发标初审','/modules/loan/borrow/confirmedBorrowManager.html')">99</a></span><font color="#7C0120"><b>+</b></font>个</p></td>
+	    		<#else>
+	    			<td style="padding:20px 20px 30px 20px;font-size: 14px;">发标待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('发标初审','/modules/loan/borrow/confirmedBorrowManager.html')">${trialBorrowCount!0}</a></span>个</p></td>
+	    		</#if>
+				
+				<#if fullBorrowCount gt 99>
+					<td style="padding:20px 20px 30px 20px;font-size: 14px;">满标待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('满标复审管理','/modules/loan/borrow/verifyFullBorrowManager.html')">99</a></span><font color="#7C0120"><b>+</b></font>个</p></td>
+	    		<#else>
+	    			<td style="padding:20px 20px 30px 20px;font-size: 14px;">满标待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('满标复审管理','/modules/loan/borrow/verifyFullBorrowManager.html')">${fullBorrowCount!0}</a></span>个</p></td>
+				</#if>
+				
+				<td></td>
+			</tr>
+			
+			<tr>
+				<td class="home_icon_money" style="padding:0px 0 30px 0"></td>
+				
+				<#if repayCount gt 99>
+					<td style="padding:0px 20px 30px 20px;font-size: 14px;">今日待还<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('还款管理','/modules/loan/repayment/repaymentManager.html')">99</a></span><font color="#7C0120"><b>+</b></font>个</p></td>
+	    		<#else>
+	    			<td style="padding:0px 20px 30px 20px;font-size: 14px;">今日待还<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('还款管理','/modules/loan/repayment/repaymentManager.html')">${repayCount!0}</a></span>个</p></td>
+				</#if>
+				
+				<!--<#if rechargeCount gt 99>
+	    			<td style="padding:0px 20px 30px 20px;font-size: 14px;">充值待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('充值查询','/modules/account/accountRecharge/accountRechargeManager.html')">99</a></span><font color="#7C0120"><b>+</b></font>个</p></td>
+				<#else>
+					<td style="padding:0px 20px 30px 20px;font-size: 14px;">充值待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('充值查询','/modules/account/accountRecharge/accountRechargeManager.html')">${rechargeCount!0}</a></span>个</p></td>
+				</#if> -->
+				
+				<#if cashCount gt 99>
+	    			<td style="padding:0px 20px 30px 20px;font-size: 14px;">提现待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('提现初审','/modules/account/draw/accountDraw/firstTrialDrawPage.html')">99</a></span><font color="#7C0120"><b>+</b></font>个</p></td>
+				<#else>
+					<td style="padding:0px 20px 30px 20px;font-size: 14px;">提现待审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('提现初审','/modules/account/draw/accountDraw/firstTrialDrawPage.html')">${cashCount!0}</a></span>个</p></td>
+				</#if>
+				
+				<#if cashCountRecheck gt 99>
+	    			<td style="padding:0px 20px 30px 20px;font-size: 14px;">提现复审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('提现复审','/modules/account/draw/accountDraw/recheckDrawPage.html')">99</a></span><font color="#7C0120"><b>+</b></font>个</p></td>
+				<#else>
+					<td style="padding:0px 20px 30px 20px;font-size: 14px;">提现复审<p><span><a href="javascript:;" ondragstart="return false" onclick="addTab('提现复审','/modules/account/draw/accountDraw/recheckDrawPage.html')">${cashCountRecheck!0}</a></span>个</p></td>
+				</#if>
+				
+				<td></td>
+			</tr>
+		</table>
+		
+		
+</div>
+
+

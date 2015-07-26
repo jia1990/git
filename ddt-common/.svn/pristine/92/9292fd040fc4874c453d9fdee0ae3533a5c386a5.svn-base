@@ -1,0 +1,67 @@
+package com.ddtkj.common.fastjson;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.JSONLibDataFormatSerializer;
+import com.alibaba.fastjson.serializer.JSONSerializer;
+import com.alibaba.fastjson.serializer.SerializeConfig;
+import com.alibaba.fastjson.serializer.SerializeWriter;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+
+/**
+ * @描述:.fastjson实用工具
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2015年1月28日
+ */
+public class FastjsonMobileUtil {
+	private static final SerializeConfig config;
+	private static final SerializerFeature[] features = {
+			// 输出空置字段
+			SerializerFeature.WriteMapNullValue,
+			// list字段如果为null，输出为[]
+			SerializerFeature.WriteNullListAsEmpty,
+			// 数值字段如果为null，输出为0，而不是
+			SerializerFeature.WriteNullNumberAsZero,
+			// Boolean字段如果为null，输出为false
+			SerializerFeature.WriteNullBooleanAsFalse,
+			// 字符类型字段如果为null，输出为""，而不是null
+			SerializerFeature.WriteNullStringAsEmpty,
+		
+
+	// 使用单引号
+	// SerializerFeature.UseSingleQuotes
+
+	};
+	static {
+		config = new SerializeConfig();
+		config.put(java.util.Date.class, new JSONLibDataFormatSerializer()); // 使用和json-lib兼容的日期输出格式
+		config.put(java.sql.Date.class, new JSONLibDataFormatSerializer()); // 使用和json-lib兼容的日期输出格式
+		config.put(java.lang.Integer.class,
+				new FastJSONStringFormatSerializer());
+		config.put(java.lang.Double.class, new FastJSONStringFormatSerializer());
+		config.put(java.lang.Long.class, new FastJSONStringFormatSerializer());
+		config.put(java.lang.Float.class, new FastJSONStringFormatSerializer());
+	}
+
+	/**
+	 * @param obj
+	 * @return String
+	 * */
+	public static String obj2JSON(Object obj) {
+		return JSON.toJSONString(obj, config, features);
+	}
+
+	
+
+	/**
+	 * @param json
+	 * @param clzz
+	 *            目标运行期对象
+	 * @return T
+	 * */
+	public static <T> T json2Obj(String json, Class<T> clzz) {
+		return JSON.parseObject(json, clzz);
+	}
+
+	
+}
+

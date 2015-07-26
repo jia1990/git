@@ -1,0 +1,1388 @@
+package com.ddtkj.p2psys.user.model;
+
+import java.io.File;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.struts2.ServletActionContext;
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.core.tool.ZcxyId5Helper;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.ImageUtil;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.rule.LoginRuleCheck;
+import com.rongdu.p2psys.core.rule.RegisterRuleCheck;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+import com.rongdu.p2psys.user.domain.UserPwdQuestion;
+
+
+
+/**
+ * @描述：用户model
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月10日
+ */
+public class UserModel extends User {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1504927656891772496L;
+
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+
+	private String validCode; // 验证码
+	private String code; // 校验码 
+	private String newPwd; //修改密码新密码 
+	private String confirmNewPwd;  // 确认新密码
+	private String newPayPwd;  // 修改交易密码
+	private String confirmNewPayPwd;
+	private String confirmPassword; //注册时用户的二次确认密码
+	private File cardPositive; // 证件图片正面
+	private File cardOpposite; //证件图片反面 
+	private int question; //密保ID 
+	private String answer; // 密保答案
+	private String cardNO;  // 证件号
+	private UserCache userCache; // 用户附属信息
+	private UserIdentify userIdentify; // 用户认证信息
+	private String isLocked;
+	private long id; //用户认证ID 
+	private String addIp; // 用户注册时IP
+	private String question1; //验证密保
+	private String question2;
+	private String question3;
+	private String answer1;
+	private String answer2;
+	private String answer3;
+	private String sex;  // 性别
+	private String sexNew;//性别(用于excel)
+	private String isLockedNew;//用户状态(用于excel中)
+	private String password;//密码
+	private long branchId;// 加盟商id
+	private String branchName;//加盟商名称
+	
+	// BUG JSDP28 2015年4月16日 孙晓勇 start
+	
+	private String province;	// 省
+	private String city;		// 市
+	private String area;		// 区
+	
+	// BUG JSDP28 2015年4月16日  孙晓勇 end
+	
+	// 2015年5月6日 孙晓勇
+	// JSDPBUG-99 20150505  sxy
+	private String memberLevel;	// 用户等级
+	private String registerWayStr;	// 注册方式
+	private Date vipEndTime;	// vip到期时间
+	// 20150524
+	private String dataType;	// 数据类型，暂应用于注册和认证统计
+	
+	
+	public String getDataType() {
+		return dataType;
+	}
+	public void setDataType(String dataType) {
+		this.dataType = dataType;
+	}
+	public Date getVipEndTime() {
+		return vipEndTime;
+	}
+	public void setVipEndTime(Date vipEndTime) {
+		this.vipEndTime = vipEndTime;
+	}
+	public String getMemberLevel() {
+		return memberLevel;
+	}
+	public void setMemberLevel(String memberLevel) {
+		this.memberLevel = memberLevel;
+	}
+	
+	public String getRegisterWayStr() {
+		return registerWayStr;
+	}
+	public void setRegisterWayStr(String registerWayStr) {
+		this.registerWayStr = registerWayStr;
+	}
+
+
+
+	// 2015年4月23日 孙晓勇
+	private String timeType;
+	private String startTimeStr;
+	private String endTimeStr;
+	
+	private String proveType;
+	
+	private Date realNameVerifyTime;// 实名认证审核时间
+	private Date mobilePhoneVerifyTime;// 手机认证审核时间
+	private Date emailVerifyTime;//邮箱认证时间
+	
+	
+	public Date getRealNameVerifyTime() {
+		return realNameVerifyTime;
+	}
+
+	public void setRealNameVerifyTime(Date realNameVerifyTime) {
+		this.realNameVerifyTime = realNameVerifyTime;
+	}
+
+	public Date getMobilePhoneVerifyTime() {
+		return mobilePhoneVerifyTime;
+	}
+
+	public void setMobilePhoneVerifyTime(Date mobilePhoneVerifyTime) {
+		this.mobilePhoneVerifyTime = mobilePhoneVerifyTime;
+	}
+
+	public Date getEmailVerifyTime() {
+		return emailVerifyTime;
+	}
+
+	public void setEmailVerifyTime(Date emailVerifyTime) {
+		this.emailVerifyTime = emailVerifyTime;
+	}
+
+	public String getProveType() {
+		return proveType;
+	}
+
+	public void setProveType(String proveType) {
+		this.proveType = proveType;
+	}
+
+	public String getStartTimeStr() {
+		return startTimeStr;
+	}
+
+	public void setStartTimeStr(String startTimeStr) {
+		this.startTimeStr = startTimeStr;
+	}
+
+	public String getEndTimeStr() {
+		return endTimeStr;
+	}
+
+	public void setEndTimeStr(String endTimeStr) {
+		this.endTimeStr = endTimeStr;
+	}
+
+	public String getTimeType() {
+		return timeType;
+	}
+
+	public void setTimeType(String timeType) {
+		this.timeType = timeType;
+	}
+
+	public String getProvince() {
+		return province;
+	}
+
+	public void setProvince(String province) {
+		this.province = province;
+	}
+
+	public String getCity() {
+		return city;
+	}
+
+	public void setCity(String city) {
+		this.city = city;
+	}
+
+	public String getArea() {
+		return area;
+	}
+
+	public void setArea(String area) {
+		this.area = area;
+	}
+
+	private String userBorrowType;//用户借款标类型
+	private Date startTime;//开始时间
+	private Date endTime;//结束时间
+	
+	private String customerNo;//专属客服工号
+	public long getCustomerId() {
+		return customerId;
+	}
+
+	public void setCustomerId(long customerId) {
+		this.customerId = customerId;
+	}
+
+	private long customerId;//专属客服id
+	
+	public String getUserBorrowType() {
+		return userBorrowType;
+	}
+
+	public void setUserBorrowType(String userBorrowType) {
+		this.userBorrowType = userBorrowType;
+	}
+
+	//李建云加
+	private String openId;//用户外部ID
+	private int openType;//合作登录类型：1.qq；2.新浪微博登录
+	
+	public String getIsLockedNew() {
+		return isLockedNew;
+	}
+
+	public void setIsLockedNew(String isLockedNew) {
+		this.isLockedNew = isLockedNew;
+	}
+	
+	public String convertIsLock(String isLockedNew){
+		if(null !=isLockedNew){
+			
+			if(isLockedNew.equals("NN")){
+				isLockedNew = "未锁定";
+			}else if(isLockedNew.equals("AY")){
+				isLockedNew = "已锁定";
+			}else if(isLockedNew.equals("UY")){
+				isLockedNew = "挂起";
+			}else if(isLockedNew.equals("FF")){
+				isLockedNew = "销户";
+			}else{
+				isLockedNew = "不确定";
+			}
+		}
+		return isLockedNew;
+	}
+	
+
+	public String getMaritalStatus() {
+		return maritalStatus;
+	}
+
+	public void setMaritalStatus(String maritalStatus) {
+		this.maritalStatus = maritalStatus;
+	}
+
+	public String getSecondContactRealname() {
+		return secondContactRealname;
+	}
+
+	public void setSecondContactRealname(String secondContactRealname) {
+		this.secondContactRealname = secondContactRealname;
+	}
+
+	public String getSecondContactPhone() {
+		return secondContactPhone;
+	}
+
+	public void setSecondContactPhone(String secondContactPhone) {
+		this.secondContactPhone = secondContactPhone;
+	}
+
+	public String getRelationships() {
+		return relationships;
+	}
+
+	public void setRelationships(String relationships) {
+		this.relationships = relationships;
+	}
+
+	public RegisterRuleCheck getRegisterRuleCheck() {
+		return registerRuleCheck;
+	}
+
+	public void setRegisterRuleCheck(RegisterRuleCheck registerRuleCheck) {
+		this.registerRuleCheck = registerRuleCheck;
+	}
+
+	public LoginRuleCheck getLoginRuleCheck() {
+		return loginRuleCheck;
+	}
+
+	public void setLoginRuleCheck(LoginRuleCheck loginRuleCheck) {
+		this.loginRuleCheck = loginRuleCheck;
+	}
+
+	// JSDP-99 sxy  20150524
+	private int idInt;	//用户ID
+	
+	public int getIdInt() {
+		return idInt;
+	}
+	public void setIdInt(int idInt) {
+		this.idInt = idInt;
+	}
+
+
+
+	private String userNature;  // 用户性质
+	private String userType; //用户类型
+	private String userTypeNew;//用户类型(用于excel)
+	
+	private String emailStatus;//邮箱认证    未认证:80  邮箱认证通过:81 邮箱认证未通过：89
+	private String emailStatusNew;//邮箱认证(用于excel中)
+	private String realStatus;//实名认证  未认证:82实名认证通过:83 实名认证待审核 88 实名认证未通过:84;
+	private String realStatusNew;//实名认证(用于excel中)
+	private String mobilePhoneStatus;//手机认证     手机未认证:85 、手机认证通过:86 、手机认证未通过:87
+	private String mobilePhoneStatusNew;//手机认证(用于excel中)
+	
+	//wcw 2014-12-29 start
+	private String maritalStatus; //婚姻状况   0：保密  1：已婚  2：未婚
+	private String maritalStatusNew;//婚姻状况 (用于excel中)
+	//第二联系人相关
+	private String secondContactRealname; //第二联系人真实姓名
+	private String secondContactPhone; //第二联系人联系电话
+	private String relationships;//与本人关系
+	private RegisterRuleCheck registerRuleCheck = (RegisterRuleCheck) Global.getRuleCheck("register");
+	private LoginRuleCheck loginRuleCheck = (LoginRuleCheck) Global.getRuleCheck("login");
+
+	public static UserModel instance(User user) {
+		UserModel userModel = new UserModel();
+		BeanUtils.copyProperties(user, userModel);
+		return userModel;
+	}
+
+	public User prototype() {
+		User user = new User();
+		BeanUtils.copyProperties(this, user);
+		return user;
+	}
+
+	/**
+	 * 注册 检查提交的数据格式
+	 * 
+	 * @return
+	 */
+	public int validRegModel() {
+		if (!ValidateUtil.isUserName(getUserName())) {
+			throw new UserException("用户名格式错误！", 1);
+		}
+		if (StringUtil.isBlank(getEmail()) && StringUtil.isBlank(getMobilePhone())) {
+			throw new UserException("邮箱和手机不能同时为空！", 1);
+		}
+		if (StringUtil.isNotBlank(getEmail())&& !ValidateUtil.isEmail(getEmail())) {
+			throw new UserException("邮箱格式错误！", 1);
+		}
+		return -1;
+	}
+
+	/**
+	 * 注册 检查提交的密码数据格式
+	 * @return
+	 */
+	public int validRegPwdModel() {
+		if (StringUtil.isBlank(getPassword())) {
+			throw new UserException("密码不能为空！", 1);
+		}
+		if (StringUtil.isBlank(getConfirmNewPwd())) {
+			throw new UserException("确认密码不能为空！");
+		}
+		if (!getPassword().equals(getConfirmNewPwd())) {
+			throw new UserException("两次输入的密码不一致！");
+		}
+		return -1;
+	}
+	
+	/**
+	 * 校验验证码
+	 * 
+	 * @return
+	 */
+	public int validRegRule() {
+		if (registerRuleCheck!=null&&registerRuleCheck.enable_codeCheck) {
+			String vCode = StringUtil.isNull(getValidCode());
+			if (vCode.isEmpty()) {
+				throw new UserException(MessageUtil.getMessage("E30005"), 1);
+			}
+			if (!ValidateUtil.checkValidCode(vCode)) {
+				throw new UserException(MessageUtil.getMessage("E30006"), 1);
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * 登录 检查提交的数据格式
+	 * 
+	 * @return
+	 */
+	public int validLoginModel() {
+		if (StringUtil.isBlank(getUserName())) {
+			throw new UserException("用户名不能为空！", 1);
+		}
+		if (StringUtil.isBlank(getPassword())) {
+			throw new UserException("密码不能为空！", 1);
+		}
+		return -1;
+	}
+	
+	/**
+	 * QQ绑定检查提交的数据格式
+	 * 
+	 * @return
+	 */
+	public String validQQBoundModel(User user) {
+		if (StringUtil.isNotBlank(getPassword())) {
+			if (StringUtil.isBlank(getPassword())) {
+					throw new UserException("登录密码不能为空！", 1);
+			} else if (!MD5.encode(getPassword()).equals(user.getPassword())) {
+				throw new UserException("登录密码不正确！", 1);
+			}
+		}
+		return "OK";
+	}
+	
+	
+	/**
+	 * 开户提交数据验证提交的数据格式
+	 * 
+	 * @return
+	 */
+	public String validOpenThirdCountModel(User user) {
+		
+		if(!StringUtil.isNotBlank(user.getRealName())){
+			throw new UserException("真实姓名不能为空！", 1);
+		}
+		if(!StringUtil.isNotBlank(user.getCardNO())){
+			throw new UserException("身份证号不能为空！", 1);
+		}
+		if (!StringUtil.isNotBlank(user.getEmail())) {
+			throw new UserException("邮箱不能为空！", 1);
+		}
+		if(!StringUtil.isNotBlank(user.getMobilePhone())){
+			throw new UserException("手机号不能为空！", 1);
+		}
+		return "OK";
+	}
+	
+	/**
+	 * ID5实名校验
+	 * @param user
+	 * @throws Exception
+	 */
+	public void ID5Valid(User user)throws Exception{
+		List<Map<String, Object>> list=ZcxyId5Helper.ID5Result(user);
+		if (!list.isEmpty()) {
+			String status = list.get(0).get("status").toString(); // 状态  0  查询成功，1  未查到数据，2  
+			if (status.equals("0")) {
+				user.setRealType("00"); // 来源：00 本地ID5认证  01 汇潮ID5认证
+				String compStatus = list.get(1).get("compStatus")
+						.toString(); // 1 服务结果:库中无此号，请到户籍所在地进行核实！2
+										// 不一致 3 一致
+				int compStatusInt = Integer.parseInt(compStatus);
+				if(compStatusInt==1){
+					throw new BussinessException("非常抱歉，未能查到您的身份证信息！", 1);
+				}else if(compStatusInt==2){
+					throw new BussinessException("真实姓名与身份证信息不一致！", 1);
+				}
+			}else {
+				throw new BussinessException("ID5实名认证网站未绑定IP", 1);
+			}
+		}else{
+			throw new BussinessException("ID5异常，请联系客服！", 1);
+		}
+	}
+	
+	
+	/**
+	 * 登录 校验验证码
+	 * 
+	 * @return
+	 */
+	public int validLoginRule() {
+		if (loginRuleCheck.enable_codeCheck) {
+			String vCode = StringUtil.isNull(getValidCode());
+			if (vCode.isEmpty()) {
+				throw new UserException("验证码不能为空！", 1);
+			}
+			if (!ValidateUtil.checkValidCode(vCode)) {
+				throw new UserException("验证码错误！", 1);
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * 验证用户登录密码
+	 * 
+	 * @param user
+	 * @return
+	 */
+	public String validModifyPwdModel(User user) {
+		if (getPassword() == null) {
+			throw new UserException("请输入您的原密码！", 1);
+		} else if (!MD5.encode(getPassword()).equals(user.getPassword())) {
+			throw new UserException("原密码错误！", 1);
+		} else if (getPassword().equals(getNewPwd())) {
+			throw new UserException("新密码不能和原密码相同！", 1);
+		} else if (!getNewPwd().equals(getConfirmNewPwd())) {
+			throw new UserException("新密码和确认密码不相同！", 1);
+		} 
+		return "";
+	}
+	/**
+	 * 验证传入的交易密码是否正确
+	 */
+	public String validPayPwd(String paypwd){
+		if (MD5.encode(paypwd).equals( getPaypwd())){
+			return "OK" ;
+		}
+		return "NO" ;
+	}
+	/**
+	 * 验证用户支付密码
+	 *
+	 * 
+	 * @param user
+	 * @return
+	 */
+	public String validModifyPaypwdModel(User user) {
+		if (StringUtil.isNotBlank(user.getPassword())) {
+			if (StringUtil.isBlank(getPaypwd())) {
+				if(StringUtils.isNotBlank(user.getPaypwd())){
+					throw new UserException("请输入原交易密码！", 1);
+				}else{
+					return "OK" ;
+				}
+			} else if (!MD5.encode(getPaypwd()).equals(user.getPaypwd())) {
+				throw new UserException("原交易密码错误！", 1);
+			} else if (getPaypwd().equals(getNewPayPwd())) {
+				throw new UserException("新交易密码不能和原交易密码相同！", 1);
+			}
+		}
+		if (!getNewPayPwd().equals(getConfirmNewPayPwd())) {
+			throw new UserException("新交易密码和确认交易密码不相同！", 1);
+		}
+		return "OK";
+	}
+	/**
+	 * 找回交易密码验证
+	 *
+	 * 
+	 * @param user
+	 * @return
+	 */
+	public String validModifyPaypwdFind(User user) {
+		if (!getNewPayPwd().equals(getConfirmNewPayPwd())) {
+			throw new UserException("新交易密码和确认交易密码不相同！", 1);
+		}
+		return "OK";
+	}
+	/**
+	 * 通过邮箱找回密码 第一步校验
+	 * 
+	 * @return
+	 */
+	public String validGetPwdByEmailStep1() {
+		if (StringUtil.isBlank(getUserName())) {
+			throw new UserException("102");
+		}
+		if (StringUtil.isBlank(getEmail())) {
+			throw new UserException("121");
+		}
+		if (!ValidateUtil.isEmail(getEmail())) {
+			throw new UserException("122");
+		}
+		if (this.validCode.isEmpty()) {
+			throw new UserException(MessageUtil.getMessage("E30005"), 1);
+		}
+		if (!ValidateUtil.checkValidCode(getValidCode())) {
+			throw new UserException(MessageUtil.getMessage("E30006"));
+		}
+		return "";
+	}
+
+	/**
+	 * 通过邮箱找回密码 第二步校验
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	public String validGetPwdByEmailStep2() throws Exception {
+//		if (StringUtil.isBlank(getUserName())) {
+//			throw new UserException("用户名获取失败！");
+//		}
+		if (!ValidateUtil.checkPwdCode("get_pwd_email_code", getUserName(), getUserId(), getEmail(), "get_pwd_email", getCode())) {
+			throw new UserException("校验码错误或已失效，请重新获取！",1);
+		}
+		return "";
+	}
+
+	/**
+	 * 通过手机找回密码 第一步校验
+	 * 
+	 * @return
+	 */
+	public String validGetPwdByPhoneStep1(){
+//		if (StringUtil.isBlank(getUserName())) {
+//			throw new UserException("用户名不能为空！");
+//		}
+		if (StringUtil.isBlank(getMobilePhone())) {
+			throw new UserException("111", 1);//手机号码为空
+		}
+		if (!ValidateUtil.isPhone(getMobilePhone())) {
+			throw new UserException("112", 1);//手机号码格式不正确
+		}
+		if (this.validCode.isEmpty()) {
+			throw new UserException(MessageUtil.getMessage("E30005"), 1);
+		}
+		if (!ValidateUtil.checkValidCode(getValidCode())) {
+			throw new UserException(MessageUtil.getMessage("E30006"));
+		}
+		return "";
+	}
+
+	/**
+	 * 通过手机找回密码 第二步校验
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	public String validGetPwdByPhoneStep2() throws Exception {
+//		if (StringUtil.isBlank(getUserName())) {
+//			throw new UserException("用户名获取失败！", 1);
+//		}
+		if (!ValidateUtil.checkPwdCode("get_pwd_phone_code", getUserName(), getUserId(), getMobilePhone(), "get_pwd_phone", getCode())) {
+			throw new UserException("校验码错误或已失效，请重新获取！", 1);
+		}
+		return "";
+	}
+	/**
+	 * 手机号注册 第二步校验
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	public String validRegisterByPhoneStep2() throws Exception {
+//		if (StringUtil.isBlank(getUserName())) {
+//			throw new UserException("用户名获取失败！", 1);
+//		}
+		if (!ValidateUtil.checkPwdCode("phone_code_code", getUserName(), getUserId(), getMobilePhone(), "phone_code", getCode())) {
+			throw new UserException("校验码错误或已失效，请重新获取！", 1);
+		}
+		return "";
+	}
+	/**
+	 * @author guojunhui@ddtkj.com
+	 * 注册手机号 校验
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	public String validRegisterByPhone() throws Exception {
+//		if (StringUtil.isBlank(getUserName())) {
+//			throw new UserException("用户名获取失败！", 1);
+//		}
+		if (!ValidateUtil.checkPwdCode("get_reg_phone_code", getUserName(), getUserId(), getMobilePhone(), "get_reg_phone", getCode())) {
+			throw new UserException("校验码错误或已失效，请重新获取！", 1);
+		}
+		return "";
+	}
+	/**
+	 * @author guojunhui@ddtkj.com
+	 * 注册邮箱号 校验
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	public String validRegisterByEmail() throws Exception {
+//		if (StringUtil.isBlank(getUserName())) {
+//			throw new UserException("用户名获取失败！", 1);
+//		}
+		if (!ValidateUtil.checkPwdCode("get_reg_email_code", getUserName(), getUserId(), getMobilePhone(), "get_reg_email", getCode())) {
+			throw new UserException("校验码错误或已失效，请重新获取！", 1);
+		}
+		return "";
+	}
+	/**
+	 * 找回密码 校验密码重置
+	 * 
+	 * @return
+	 */
+	public int validGetPwdReset() {
+		if (StringUtil.isBlank(getUserName())) {
+			throw new UserException("用户名获取失败！", 1);
+		}
+		if (StringUtil.isBlank(getPassword())) {
+			throw new UserException("密码不能为空！", 1);
+		}
+		if (StringUtil.isBlank(getConfirmNewPwd())) {
+			throw new UserException("确认密码不能为空！", 1);
+		}
+		if (!getPassword().equals(getConfirmNewPwd())) {
+			throw new UserException("两次输入的密码不一致！", 1);
+		}
+		return -1;
+	}
+
+	/**
+	 * 修改绑定邮箱/手机前进行用户密码和密保校验
+	 */
+	public void validUserQuestion(User user, UserPwdQuestion question) {
+		if (StringUtil.isBlank(this.getPassword())) {
+			throw new UserException("登录密码不能为空！", 1);
+		}
+		if (StringUtil.isBlank(this.answer)) {
+			throw new UserException("请回答密保问题！", 1);
+		}
+		if (!user.getPassword().equals(MD5.getMD5ofStr(this.getPassword()))) {
+			throw new UserException("请输入正确的登录密码！", 1);
+		}
+		if (!question.getAnswer().equals(this.answer)) {
+			throw new UserException("密保回答不正确！", 1);
+		}
+	}
+
+	/**
+	 * 绑定邮箱校验
+	 */
+	@SuppressWarnings("unchecked")
+	public void validBindEmail() {
+		HttpServletRequest request = ServletActionContext.getRequest();
+		Map<String, Object> map = (Map<String, Object>) request.getSession().getAttribute("bindEmail_code");
+		UserIdentifyDao userIdentifyDao = (UserIdentifyDao) BeanUtil.getBean("userIdentifyDao");
+		int count = userIdentifyDao.countByEmail(getEmail());
+		if (count > 0) {
+			throw new UserException("该邮箱已被使用！", 1);
+		}
+
+		if (map == null || !this.code.equals(map.get("code").toString())) {
+			throw new UserException("校验码不正确！", 1);
+		}
+		if (StringUtil.isBlank(this.code)) {
+			throw new UserException("校验码为空！", 1);
+		}
+		if (StringUtil.isBlank(this.getEmail())) {
+			throw new UserException("邮箱为空！", 1);
+		}
+		if (!StringUtil.isEmail(this.getEmail())) {
+			throw new UserException("邮箱格式不正确！", 1);
+		}
+	}
+
+	/**
+	 * 绑定手机校验
+	 */
+	@SuppressWarnings("unchecked")
+	public void validBindPhone() {
+		HttpServletRequest request = ServletActionContext.getRequest();
+		Map<String, Object> map = ((Map<String, Object>) request.getSession().getAttribute("bindPhone_code"));
+		UserIdentifyDao userIdentifyDao = (UserIdentifyDao) BeanUtil.getBean("userIdentifyDao");
+		int count = userIdentifyDao.countByMobilePhone(getMobilePhone());
+		if (count > 0) {
+			throw new UserException("该手机号码已被使用！", 1);
+		}
+
+		if (map == null || !this.code.equals(map.get("code").toString())) {
+			throw new UserException("校验码不正确！", 1);
+		}
+		if (StringUtil.isBlank(this.code)) {
+			throw new UserException("校验码为空！", 1);
+		}
+		if (StringUtil.isBlank(this.getMobilePhone())) {
+			throw new UserException("手机号码为空！", 1);
+		}
+		if (!StringUtil.isPhone(this.getMobilePhone())) {
+			throw new UserException("手机号码格式不正确！", 1);
+		}
+	}
+	/**
+	 *  验证新邮箱验证码
+	 */
+	public void findPaypwdNewValidEmail(String todo,User user,String email) throws Exception{
+		if (!ValidateUtil.checkPwdCode(todo+"_code", user.getUserName(), user.getUserId(),email,todo, code)) {
+			throw new UserException("校验码错误或已失效！", 1);
+		}
+		if (StringUtil.isBlank(this.code)) {
+			throw new UserException("校验码为空！", 1);
+		}
+	}
+	/**
+	 *  验证邮箱验证码
+	 */
+	public void findPaypwdValidEmail(String todo,User user) throws Exception{
+		if (!ValidateUtil.checkPwdCode(todo+"_code", user.getUserName(), user.getUserId(),user.getEmail(),todo, code)) {
+			throw new UserException("校验码错误或已失效！", 1);
+		}
+		if (StringUtil.isBlank(this.code)) {
+			throw new UserException("校验码为空！", 1);
+		}
+	}
+	/**
+	 *  验证手机验证码
+	 */
+	public void findPaypwdValidMobile(String todo,User user) throws Exception{
+		if (!ValidateUtil.checkPwdCode(todo+"_code", user.getUserName(), user.getUserId(), user.getMobilePhone(),todo, code)) {
+			throw new UserException("校验码错误或已失效！", 1);
+		}
+		if (StringUtil.isBlank(this.code)) {
+			throw new UserException("校验码为空！", 1);
+		}
+	}
+	/**
+	 *  验证新手机验证码
+	 */
+	public void findNewPaypwdValidMobile(String todo,User user,String mobilephone) throws Exception{
+		if (!ValidateUtil.checkPwdCode(todo+"_code", user.getUserName(), user.getUserId(), mobilephone,todo, code)) {
+			throw new UserException("校验码错误或已失效！", 1);
+		}
+		if (StringUtil.isBlank(this.code)) {
+			throw new UserException("校验码为空！", 1);
+		}
+	}
+	/**
+	 * 验证设置密保问题的数据
+	 */
+	public void validForm() {
+		if (StringUtil.isBlank(this.answer1)) {
+			throw new UserException("第一个问题答案不能为空！", 1);
+		} else if (StringUtil.isBlank(this.answer2)) {
+			throw new UserException("第二个问题答案不能为空！", 1);
+		} else if (StringUtil.isBlank(this.answer3)) {
+			throw new UserException("第三个问题答案不能为空！", 1);
+		} else if ("-1".equals(question1)) {
+			throw new UserException("第一个问题不能为空！", 1);
+		} else if ("-1".equals(question2)) {
+			throw new UserException("第二个问题不能为空！", 1);
+		} else if ("-1".equals(question3)) {
+			throw new UserException("第三个问题不能为空！", 1);
+		} else if (question1.equals(question2) || question1.equals(question3) || question2.equals(question3)) {
+			throw new UserException("密保问题重复，请重新设置！", 1);
+		}
+	}
+	
+	/**
+	 * 验证上传文件
+	 */
+	public void validAttestationCommit(File file) {
+		if (file == null) {
+			throw new UserException("你上传的图片为空！", 1);
+		}
+		if (!ImageUtil.fileIsImage(file)) {
+			throw new UserException("您上传的图片无效，请重新上传！", 1);
+		}
+	}
+
+	public String getValidCode() {
+		return validCode;
+	}
+
+	public void setValidCode(String validCode) {
+		this.validCode = validCode;
+	}
+	
+	
+	
+	public UserIdentify getUserIdentify() {
+		return userIdentify;
+	}
+
+	public void setUserIdentify(UserIdentify userIdentify) {
+		this.userIdentify = userIdentify;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
+	}
+	
+	
+	
+	public String getEmailStatus() {
+		return emailStatus;
+	}
+
+	public void setEmailStatus(String emailStatus) {
+		this.emailStatus = emailStatus;
+	}
+	
+
+	public String getRealStatus() {
+		return realStatus;
+	}
+
+	public void setRealStatus(String realStatus) {
+		this.realStatus = realStatus;
+	}
+
+	public String getMobilePhoneStatus() {
+		return mobilePhoneStatus;
+	}
+
+	public void setMobilePhoneStatus(String mobilePhoneStatus) {
+		this.mobilePhoneStatus = mobilePhoneStatus;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	public String getNewPwd() {
+		return newPwd;
+	}
+
+	public void setNewPwd(String newPwd) {
+		this.newPwd = newPwd;
+	}
+
+	public String getConfirmNewPwd() {
+		return confirmNewPwd;
+	}
+
+	public void setConfirmNewPwd(String confirmNewPwd) {
+		this.confirmNewPwd = confirmNewPwd;
+	}
+
+	public String getNewPayPwd() {
+		return newPayPwd;
+	}
+
+	public void setNewPayPwd(String newPayPwd) {
+		this.newPayPwd = newPayPwd;
+	}
+
+	public String getConfirmNewPayPwd() {
+		return confirmNewPayPwd;
+	}
+
+	public void setConfirmNewPayPwd(String confirmNewPayPwd) {
+		this.confirmNewPayPwd = confirmNewPayPwd;
+	}
+
+	public String getConfirmPassword() {
+		return confirmPassword;
+	}
+
+	public void setConfirmPassword(String confirmPassword) {
+		this.confirmPassword = confirmPassword;
+	}
+
+	public File getCardPositive() {
+		return cardPositive;
+	}
+
+	public void setCardPositive(File cardPositive) {
+		this.cardPositive = cardPositive;
+	}
+
+	public File getCardOpposite() {
+		return cardOpposite;
+	}
+
+	public void setCardOpposite(File cardOpposite) {
+		this.cardOpposite = cardOpposite;
+	}
+
+	public int getQuestion() {
+		return question;
+	}
+
+	public void setQuestion(int question) {
+		this.question = question;
+	}
+
+	public String getAnswer() {
+		return answer;
+	}
+
+	public void setAnswer(String answer) {
+		this.answer = answer;
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getQuestion1() {
+		return question1;
+	}
+
+	public void setQuestion1(String question1) {
+		this.question1 = question1;
+	}
+
+	public String getQuestion2() {
+		return question2;
+	}
+
+	public void setQuestion2(String question2) {
+		this.question2 = question2;
+	}
+
+	public String getQuestion3() {
+		return question3;
+	}
+
+	public void setQuestion3(String question3) {
+		this.question3 = question3;
+	}
+
+	public String getAnswer1() {
+		return answer1;
+	}
+
+	public void setAnswer1(String answer1) {
+		this.answer1 = answer1;
+	}
+
+	public String getAnswer2() {
+		return answer2;
+	}
+
+	public void setAnswer2(String answer2) {
+		this.answer2 = answer2;
+	}
+
+	public String getAnswer3() {
+		return answer3;
+	}
+
+	public void setAnswer3(String answer3) {
+		this.answer3 = answer3;
+	}
+
+	public UserCache getUserCache() {
+		return userCache;
+	}
+
+	public void setUserCache(UserCache userCache) {
+		this.userCache = userCache;
+	}
+
+	public String getIsLocked() {
+		return isLocked;
+	}
+
+	public void setIsLocked(String isLocked) {
+		this.isLocked = isLocked;
+	}
+
+	public String getSex() {
+		return sex;
+	}
+
+	public void setSex(String sex) {
+		this.sex = sex;
+	}
+
+	public String getUserNature() {
+		return userNature;
+	}
+
+	public void setUserNature(String userNature) {
+		this.userNature = userNature;
+	}
+
+	public String getCardNO() {
+		return cardNO;
+	}
+
+	public void setCardNO(String cardNO) {
+		this.cardNO = cardNO;
+	}
+
+	public String getUserType() {
+		return userType;
+	}
+
+	public void setUserType(String userType) {
+		this.userType = userType;
+	}
+	
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size > 0 ? size : Page.ROWS;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getRealStatusNew() {
+		
+		return realStatusNew;
+	}
+
+	public void setRealStatusNew(String realStatusNew) {
+		this.realStatusNew = realStatusNew;
+	}
+	
+	
+	public String getEmailStatusNew() {
+		return emailStatusNew;
+	}
+
+	public void setEmailStatusNew(String emailStatusNew) {
+		this.emailStatusNew = emailStatusNew;
+	}
+
+	public String getMobilePhoneStatusNew() {
+		return mobilePhoneStatusNew;
+	}
+
+	public void setMobilePhoneStatusNew(String mobilePhoneStatusNew) {
+		this.mobilePhoneStatusNew = mobilePhoneStatusNew;
+	}
+	public String getSexNew() {
+		return sexNew;
+	}
+
+	public void setSexNew(String sexNew) {
+		this.sexNew = sexNew;
+	}
+
+	public String getUserTypeNew() {
+		return userTypeNew;
+	}
+
+	public void setUserTypeNew(String userTypeNew) {
+		this.userTypeNew = userTypeNew;
+	}
+
+	public String getMaritalStatusNew() {
+		return maritalStatusNew;
+	}
+
+	public void setMaritalStatusNew(String maritalStatusNew) {
+		this.maritalStatusNew = maritalStatusNew;
+	}
+	/**
+	 * 实名认证转化汉字
+	 * @param realStatusNew
+	 * @return
+	 */
+	public String convertRealStatusNew(String realStatusNew){
+		if(null != realStatusNew){
+			if(realStatusNew.equals("82")){
+				realStatusNew="未认证";
+			}else if(realStatusNew.equals("83")){
+				realStatusNew="已认证";
+			}else if(realStatusNew.equals("88")){
+				realStatusNew="认证待审核";
+			}else if(realStatusNew.equals("84")){
+				realStatusNew="认证未通过";
+			}else{
+				realStatusNew="不确认";
+			}
+		}
+		return realStatusNew;
+	}
+	/**
+	 * excel中用于转化汉字     未认证:80  邮箱认证通过:81 邮箱认证未通过：89
+	 * @param emailStatusNew
+	 * @return
+	 */
+	public String convertEmailStatusNew(String emailStatusNew){
+		if(null != emailStatusNew){
+			if(emailStatusNew.equals("80")){
+				emailStatusNew="未认证";
+			}else if(emailStatusNew.equals("81")){
+				emailStatusNew="已认证";
+			}else if(emailStatusNew.equals("89")){
+				emailStatusNew="认证未通过";
+			}else{
+				emailStatusNew = "不确定";
+			}
+		}
+		return emailStatusNew;
+	}
+	/**
+	 * excel中用于转化汉字    手机未认证:85 、手机认证通过:86 、手机认证未通过:87
+	 * @param mobilePhone
+	 * @return
+	 */
+	public String convertMobilePhoneStatusNew(String mobilePhoneStatusNew){
+		if(null != mobilePhoneStatusNew){
+			if(mobilePhoneStatusNew.equals("85")){
+				mobilePhoneStatusNew="未认证";
+			}else if(mobilePhoneStatusNew.equals("86")){
+				mobilePhoneStatusNew="已认证";
+			}else if(mobilePhoneStatusNew.equals("87")){
+				mobilePhoneStatusNew="认证未通过";
+			}else{
+				mobilePhoneStatusNew="不确定";
+			}
+		}
+		return mobilePhoneStatusNew;
+	}
+	
+	/**
+	 * 转化汉字
+	 * @param sex
+	 * @return
+	 */
+	public String convertSex(String sex){
+		if(null != sex){
+			if(sex.equals("M")){
+				sex="男";
+			}else if(sex.equals("F")){
+				sex="女";
+			}else{
+				sex="保密";
+			}
+		}
+		return sex;
+	}
+	/**
+	 * 转化汉字(用户类型)
+	 * @param userType
+	 * @return
+	 */
+	public String convertUserType(String userType ,String userNature){
+		if(null != userType){
+			if(userType.equals("10")){
+				userType="投资人";
+			}else if(userType.equals("11") && userNature.equals("20")){
+				userType="个人借款";
+			}else if(userType.equals("11") && userNature.equals("21")){
+				userType="企业借款";
+			}else if(userType.equals("12")){
+				userType="担保公司";
+			}else{
+				userType= "不确定";
+			}
+		}
+		return userType;
+	}
+	
+	/**
+	 * 婚姻状况(转化汉字)   0：保密  1：已婚  2：未婚
+	 * @param maritalStatusNew
+	 * @return
+	 */
+	public String convertMaritalStatus(String maritalStatusNew){
+		if(null != maritalStatusNew){
+			if(maritalStatusNew.equals("0")){
+				maritalStatusNew="保密";
+			}else if(maritalStatusNew.equals("1")){
+				maritalStatusNew="已婚";
+			}else if(maritalStatusNew.equals("2")){
+				maritalStatusNew="未婚";
+			}else{
+				maritalStatusNew="不确定";
+			}
+		}
+		return maritalStatusNew;
+	}
+
+	public String getOpenId() {
+		return openId;
+	}
+
+	public void setOpenId(String openId) {
+		this.openId = openId;
+	}
+
+	public int getOpenType() {
+		return openType;
+	}
+
+	public void setOpenType(int openType) {
+		this.openType = openType;
+	}
+
+	public String getCustomerNo() {
+		return customerNo;
+	}
+
+	public void setCustomerNo(String customerNo) {
+		this.customerNo = customerNo;
+	}
+
+	public Date getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+
+	public Date getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+
+	/**
+	 * @return the password
+	 */
+	public String getPassword() {
+		return password;
+	}
+
+	/**
+	 * @param password the password to set
+	 */
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	/**
+	 * @return 加盟商id
+	 */
+	public long getBranchId() {
+		return branchId;
+	}
+
+	/**
+	 * @param 加盟商id
+	 */
+	public void setBranchId(long branchId) {
+		this.branchId = branchId;
+	}
+
+	/**
+	 * @return 加盟商名称
+	 */
+	public String getBranchName() {
+		return branchName;
+	}
+
+	/**
+	 * @param 加盟商名称
+	 */
+	public void setBranchName(String branchName) {
+		this.branchName = branchName;
+	}
+
+	
+	
+	
+
+}

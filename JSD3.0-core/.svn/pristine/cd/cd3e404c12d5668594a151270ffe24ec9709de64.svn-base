@@ -1,0 +1,159 @@
+
+package com.ddtkj.p2psys.cardaward.service;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @描述: 购物卡转账service
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-31   
+ */
+public interface CardAwardTransferService {
+	
+	
+	/**
+	 * 更新云购转账记录请求状态
+	 * @param  cardAwardTransfer 
+	 * @throws Exception   
+	 */ 
+	void updateCardTransferStatus(CardAwardTransfer cardAwardTransfer);
+	
+	/**
+	 * 更新云购转账记录回调状态
+	 * @param  cardAwardTransfer 
+	 * @throws Exception   
+	 */ 
+	void updateCardTransferReceiveStatus(CardAwardTransfer cardAwardTransfer);
+	
+	/**
+	 * 
+	 * @param  cardAwardTransfer
+	 * @throws Exception   
+	 */ 
+	boolean dealCardTransfer(CardAwardTransfer cardAwardTransfer);
+	
+	
+	/**
+	 * 后台查询购物卡转账记录列表
+	 * @param  model
+	 * @return PageDataList<CardAwardTransferModel> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<CardAwardTransferModel> getCardTransferList(CardAwardTransferModel model);
+	
+	 /**
+	  * 对云购卡转账金额的汇总
+	  * @param  model
+	  * @throws Exception
+	  */
+	String transferTotal(CardAwardTransferModel model);
+	 
+	/**
+	 * 保存购物卡转账记录
+	 * @param  cardAwardTransfer
+	 * @throws Exception   
+	 */ 
+	CardAwardTransfer save(CardAwardTransfer cardAwardTransfer);
+	
+	/**
+	 * 根据订单号获取转账记录
+	 * @param  transNo
+	 * @throws Exception   
+	 */ 
+	CardAwardTransfer getCardTransferByTransNo(String transNo);
+	 
+	/**
+	 * 根据订单号更新云购转账记录
+	 * @param  transNo订单号 
+	 * @throws Exception   
+	 */ 
+	void updateCardTransferByTransNo(CardAwardTransfer cardAwardTransfer);
+	
+	/**
+	 * 转账业务逻辑处理
+	 * @param  cardAwardTransfer
+	 * @return boolean 
+	 * @throws Exception   
+	 */ 
+	boolean handelCardAwardTransfer(CardAwardTransfer cardAwardTransfer, ClientUserModel userInfo, String reqUrl); 
+	
+	/**	      此方法弃用
+	 * 云购卡转账回调
+	 * @param  tradeNo 
+	 * @throws Exception   
+	 */ 
+	void callBackTransfer(String tradeNo);	
+	
+	/**
+	 * 后台云购卡补单
+	 * @param  cardAwardTransfer
+	 * @param  userInfo
+	 * @param  reqUrl
+	 * @param  operator
+	 * @throws Exception   
+	 */ 
+	boolean handelCardAwardTransferManage(CardAwardTransfer cardAwardTransfer, ClientUserModel userInfo, String reqUrl, Operator operator);
+	
+	/**
+	 * 查询云购卡转账结果
+	 * @param  cardAwardTransfer
+	 * @param  queryUrl
+	 * @throws Exception   
+	 */ 
+	String queryCardAwardTransferResult(CardAwardTransfer cardAwardTransfer, String queryUrl);
+	
+	//JSDP-116 fengguoqin 2015-05-19 start
+	/**
+	 * excel导出云购转账记录
+	 * @param  transNo 
+	 * @throws Exception   
+	 */ 
+	List excelTransferList(CardAwardTransferModel model);
+	//JSDP-116 fengguoqin 2015-05-19 end
+	
+	void updateCardAwardTransferByTransNo(CardAwardTransfer cardAwardTransfer);
+	
+	/**
+	 * 抽奖转账到云购java版
+	 * @param  cardAwardTransfer
+	 * @return boolean 
+	 * @throws Exception   
+	 */ 
+	boolean handelCardAwardTransferYg(CardAwardTransfer cardAwardTransfer, User user, String reqUrl, String sign); 
+	
+	/**
+	 * 抽奖转账到云购java版，后台补单
+	 * @param  cardAwardTransfer
+	 * @param  userInfo
+	 * @param  reqUrl
+	 * @param  operator
+	 * @throws Exception   
+	 */ 
+	boolean handelCardAwardTransferManageYg(CardAwardTransfer cardAwardTransfer, User user, String reqUrl, String sign, Operator operator);
+	
+	/**
+	 * 查询云购新站，是否登录账户中心
+	 * @param  user
+	 * @throws Exception   
+	 */ 
+	boolean hasSignInAccountCenter(User user, String memberQueryUrl); 
+	
+	/**
+	 * 云购体验卡激活回调处理
+	 * @param  petCard 云购体验卡实体
+	 * @param  user    
+	 * @return boolean 
+	 * @throws Exception   
+	 */ 
+	boolean handelYgCardCallBack(User user, PetCard petCard);
+	
+}

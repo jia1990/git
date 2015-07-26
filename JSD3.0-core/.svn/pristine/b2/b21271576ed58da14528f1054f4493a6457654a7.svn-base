@@ -1,0 +1,183 @@
+
+package com.ddtkj.p2psys.autotender.model;
+
+import java.util.Date;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.rongdu.common.util.Page;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述:自动投标记录Model
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-15   
+ */
+public class BorrowAutoTenderModel extends  BorrowAutoTender {
+
+	private static final long serialVersionUID = -2806699036178998414L;
+	
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	/** 借款人用户名 **/
+	private String borrowUserName;
+	/** 投标人真实姓名 **/
+	private String realName;
+	/** 借款标添加时间 **/
+	private Date borrowAddTime;
+	/** 借款标类型 **/
+	private int borrowType;
+	/** 借款标进度 **/
+	private double borrowScales;
+	/** 借款标还款方式 **/
+	private String borrowStyle;
+	/** 借款标借款期限 **/
+	private String borrowTimeLimit;
+	
+	public BorrowAutoTenderModel() {
+		super();
+	}
+	
+	public String getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+	public String getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	public String getBorrowUserName() {
+		return borrowUserName;
+	}
+
+	public void setBorrowUserName(String borrowUserName) {
+		this.borrowUserName = borrowUserName;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+	
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getSize() {
+		return size;
+	}
+	public void setSize(int size) {
+		this.size = size;
+	}	
+	
+	public Date getBorrowAddTime() {
+		return borrowAddTime;
+	}
+
+	public void setBorrowAddTime(Date borrowAddTime) {
+		this.borrowAddTime = borrowAddTime;
+	}
+
+	public int getBorrowType() {
+		return borrowType;
+	}
+
+	public void setBorrowType(int borrowType) {
+		this.borrowType = borrowType;
+	}
+
+	public double getBorrowScales() {
+		return borrowScales;
+	}
+
+	public void setBorrowScales(double borrowScales) {
+		this.borrowScales = borrowScales;
+	}
+
+	public String getBorrowStyle() {
+		return borrowStyle;
+	}
+
+	public void setBorrowStyle(String borrowStyle) {
+		this.borrowStyle = borrowStyle;
+	}
+
+	public String getBorrowTimeLimit() {
+		return borrowTimeLimit;
+	}
+
+	public void setBorrowTimeLimit(String borrowTimeLimit) {
+		this.borrowTimeLimit = borrowTimeLimit;
+	}
+
+	public static BorrowAutoTenderModel instance(BorrowAutoTender autoTender) {
+		BorrowAutoTenderModel model = new BorrowAutoTenderModel();
+		BeanUtils.copyProperties(autoTender, model);
+		return model;
+	}
+
+	public BorrowAutoTender prototype() {
+		BorrowAutoTender autoTender = new BorrowAutoTender();
+		BeanUtils.copyProperties(this, autoTender);
+		return autoTender;
+	}
+	
+	public String convertStatus(String resultStatus){
+		if(BorrowAutoTender.AUTO_TENDER_RESULT_SUCCESS.equals(resultStatus)){
+			return "成功";
+		}else if(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL.equals(resultStatus)){
+			return "失败";
+		}else{
+			return "未指定的状态";
+		}
+	}
+	
+	public String convertBorrowStyle(int borrowStyle){
+		if(borrowStyle == Borrow.STYLE_INSTALLMENT_REPAYMENT){
+			return "等额本息";
+		}else if(borrowStyle == Borrow.STYLE_ONETIME_REPAYMENT){
+			return "一次性还";
+		}else if(borrowStyle == Borrow.STYLE_MONTHLY_INTEREST){
+			return "每月付息";
+		}else{
+			return "未指定的还款方式";
+		}
+	}
+	
+	public String convertTimeLimit(int timeLimit, int borrowTimeType){
+		if(borrowTimeType == Borrow.BORROW_TIME_TYPE_ISDAY){
+			return timeLimit+"天";
+		}else{
+			return timeLimit+"月";
+		}
+	}
+
+}

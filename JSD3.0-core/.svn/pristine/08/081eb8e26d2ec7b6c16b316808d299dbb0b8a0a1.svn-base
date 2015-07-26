@@ -1,0 +1,104 @@
+package com.ddtkj.p2psys.tpp.ymd.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+/**
+ * @描述：转账交易批次记录实体
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月8日
+ */
+@Entity
+@Table(name = "t_jsd_account_trade")
+public class AccountTransferTrade implements Serializable {
+
+	private static final long serialVersionUID = 8158819001118545559L;
+	@Id
+	private String tradeNo; // 商户交易批次号
+	private String tradeIsfree; // 本次交易第三方是否免费 Y:免费 N:收费
+	private double tradePayment; // 本次交易第三方收取费用
+	private Date tradeTime; // 交易时间
+	private double tradeAmount; // 交易总金额
+	private String tradeStatus; // 交易状态
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime; // 记录添加时间
+	private String addIp; // 记录添加IP
+
+	public AccountTransferTrade() {
+		super();
+	}
+
+	public String getTradeNo() {
+		return tradeNo;
+	}
+
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+
+
+
+	public String getTradeIsfree() {
+		return tradeIsfree;
+	}
+
+	public void setTradeIsfree(String tradeIsfree) {
+		this.tradeIsfree = tradeIsfree;
+	}
+
+
+	public double getTradePayment() {
+		return tradePayment;
+	}
+
+	public void setTradePayment(double tradePayment) {
+		this.tradePayment = tradePayment;
+	}
+
+	public Date getTradeTime() {
+		return tradeTime;
+	}
+
+	public void setTradeTime(Date tradeTime) {
+		this.tradeTime = tradeTime;
+	}
+
+	public double getTradeAmount() {
+		return tradeAmount;
+	}
+
+	public void setTradeAmount(double tradeAmount) {
+		this.tradeAmount = tradeAmount;
+	}
+
+	public String getTradeStatus() {
+		return tradeStatus;
+	}
+
+	public void setTradeStatus(String tradeStatus) {
+		this.tradeStatus = tradeStatus;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+}

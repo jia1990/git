@@ -1,0 +1,126 @@
+package com.ddtkj.manage.action.subbranch;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.subbranch.domain.Branch;
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.ddtkj.p2psys.subbranch.model.BranchModel;
+import com.ddtkj.p2psys.subbranch.service.BranchService;
+import com.ddtkj.p2psys.subbranch.service.MarketerBranchService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述：加盟商action管理类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+public class ManageSubbranchAction extends BaseAction<BranchModel> implements ModelDriven<BranchModel> {
+	
+	@Resource
+	private BranchService branchService;
+	@Resource
+	private MarketerBranchService marketerBranchService;
+	private Map<String, Object> data;
+	/**
+	 * 加盟商管理
+	 * @return
+	 */
+	@Action("/modules/sub/subbranch/subbranchManager")
+	public String subbranchManager(){
+		return "subbranchManager";
+	}
+	/**
+	 * 查询加盟商列表
+	 * @throws IOException 
+	 */
+	@Action("/modules/sub/subbranch/subbranchList")
+	public void findPageDataList() throws IOException{
+		data = new HashMap<String, Object>();
+		
+		PageDataList<BranchModel> branchModelList = branchService.pageDataList(model);
+		
+		
+		int totalPage = branchModelList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", branchModelList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 加盟商的添加页面
+	 * @return
+	 */
+	@Action("/modules/sub/subbranch/subbranchAddPage")
+	public String subbranchAddPage(){
+		saveToken("subbranchAddToken");
+		return "subbranchAddPage";
+	}
+	/**
+	 * 加盟商的添加方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/sub/subbranch/subbranchAdd")
+	public void subbranchAdd() throws IOException{
+		data = new HashMap<String, Object>();
+		Branch branch = model.prototype();
+		Branch brancht = branchService.saveBranch(branch);
+		checkToken("subbranchAddToken");
+		if(null != brancht){
+			data.put("result", true);
+			data.put("msg", "添加成功！");
+		}else{
+			data.put("result", true);
+			data.put("msg", "添加失败！");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 根据id删除加盟商
+	 * @throws IOException 
+	 */
+	@Action("/modules/sub/subbranch/subbranchDel")
+	public void delBranch() throws IOException {
+		data = new HashMap<String, Object>();
+		try {
+			//查询此加盟商下是否有市场专员
+			/*List<BranchMarketer> marketerList = marketerBranchService.findMarketerByBranchId(model.getId());
+			
+			if(marketerList.size()!=0){
+				data.put("result", true);
+				data.put("msg", "请先删除市场专员！");
+			}else{
+				branchService.delBranchById(model.getId());
+				data.put("result", true);
+				data.put("msg", "删除成功！");
+			}*/
+			
+			// JSDP-82 2015年4月30日   孙晓勇  start
+			int count = marketerBranchService.findMarketerCountByBranchId(model.getId());
+			
+			if(count != 0){
+				data.put("result", true);
+				data.put("msg", "该加盟商下存在市场专员，不能删除！");
+			}else{
+				branchService.delBranchById(model.getId());
+				data.put("result", true);
+				data.put("msg", "删除成功！");
+			}
+			// JSDP-82 2015年4月30日   孙晓勇  end
+			
+			
+		} catch (Exception e) {
+			data.put("result", true);
+			data.put("msg", "删除失败！");
+		}
+		
+		printJson(getStringOfJpaObj(data));
+	}
+}

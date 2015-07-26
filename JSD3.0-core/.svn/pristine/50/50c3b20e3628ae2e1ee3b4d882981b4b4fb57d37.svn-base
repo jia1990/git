@@ -1,0 +1,54 @@
+package com.ddtkj.p2psys.award.dao.jdbc;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.award.dao.ActivityConfigDao;
+import com.ddtkj.p2psys.award.domain.ActivityConfig;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+/**
+ * @描述：活动配置的dao层实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2014年12月12日
+ */
+@Repository("activityConfigDao")
+public class ActivityConfigDaoImpl extends BaseDaoImpl<ActivityConfig> implements ActivityConfigDao{
+
+	/**
+	 * 查询所有活动信息
+	 */
+	@Override
+	public PageDataList<ActivityConfig> getPagelist(QueryParam param) {
+		
+		return this.findAllPageList(param);
+	}
+
+	/**
+	 * 更新活动信息
+	 */
+	@Override
+	public ActivityConfig updateActivityConfig(ActivityConfig activityConfig) {
+		
+		return this.update(activityConfig);
+	}
+
+	/**
+	 * 根据id查找活动
+	 */
+	@Override
+	public ActivityConfig findActivityById(int actId) {
+		
+		return this.find(actId);
+	}
+
+	/**
+	 * 添加活动信息
+	 */
+	@Override
+	public void addActivityConfig(ActivityConfig activityConfig) {
+		
+		this.save(activityConfig);
+	}
+
+}

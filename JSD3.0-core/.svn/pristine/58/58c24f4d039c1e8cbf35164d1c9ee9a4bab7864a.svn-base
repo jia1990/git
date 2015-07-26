@@ -1,0 +1,31 @@
+package com.ddtkj.p2psys.analysis.service;
+
+import com.ddtkj.p2psys.analysis.domain.Analysis;
+
+/**
+ * @描述：用户来源收集service接口
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+public interface AnalysisService {
+	/**
+	 * 将获取到的session存入数据库中
+	 * @param analysis
+	 * @return
+	 */
+	public Analysis saveAnalysis(Analysis analysis);
+	/**
+	 * 根据sessionId获取用户来源
+	 * @param sessionId
+	 * @param sucUrl
+	 * @return
+	 */
+	public Analysis findAnalysisSource(String sessionId,String sucUrl);
+	/**
+	 * 使用sql语句存放url，分月表存放
+	 * @param analysis
+	 * @return
+	 */
+	public int saveAnalysisBySql(Analysis analysis);
+	
+}

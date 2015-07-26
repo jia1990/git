@@ -1,0 +1,272 @@
+package com.ddtkj.manage.action.phone;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.phone.domain.PhoneActivity;
+import com.ddtkj.p2psys.phone.domain.PhoneScrollPic;
+import com.ddtkj.p2psys.phone.model.PhoneScrollPicModel;
+import com.ddtkj.p2psys.phone.service.PhoneScrollPicService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 活动发布管理
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 3.0
+ * @since 2015年1月10日
+ */
+public class ManagePhoneScrollPicAction extends BaseAction<PhoneScrollPicModel> implements ModelDriven<PhoneScrollPicModel> {
+
+	@Resource
+	private PhoneScrollPicService phoneScrollPicService;
+
+    private Map<String, Object> data;
+    
+	/**
+	 * 手机轮展图页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/scrollPic/scrollPicManager")
+	public String scrollPicManager() throws Exception {
+		request.setAttribute("weburl", Global.getString("weburl"));
+		
+		return "scrollPicManager";
+	}
+
+	/**
+	 * 手机轮展图列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/scrollPic/scrollPicList")
+	public void scrollPicList() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null || "".equals(status) || StringUtil.isBlank(status)) {
+		    model.setStatus((byte)-1);
+		}
+		
+		// 标题
+		if(null != paramString("title") && "" != paramString("title")){
+			model.setTitle(paramString("title"));
+		}
+		
+		PageDataList<PhoneScrollPicModel> activityList = phoneScrollPicService.phoneScrollPicList(model, pageNumber, pageSize);
+		
+		data.put("total", activityList.getPage().getTotal()); // 总行数
+		data.put("rows", activityList.getList()); // 集合对象
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 手机轮展图列表（方法同上）
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/scrollPic/scrollPicParamList")
+	public void scrollPicParamList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null) {
+		    model.setStatus((byte)-1);
+		}
+		PageDataList<PhoneScrollPicModel> activityList = phoneScrollPicService.phoneScrollPicList(model, pageNumber, pageSize);
+		data.put("total", activityList.getPage().getTotal()); // 总行数
+		data.put("rows", activityList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 添加手机轮展图页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/scrollPic/scrollPicAddPage")
+	public String scrollPicAddPage() throws Exception {
+		saveToken("scrollPicAddToken");
+		return "scrollPicAddPage";
+	}
+
+	/**
+	 * 添加手机轮展图
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/scrollPic/scrollPicAdd")
+	public void scrollPicAdd() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		PhoneScrollPic phoneScrollPic = model.prototype();
+		
+		String linkPath = paramString("linkPath");
+		
+		phoneScrollPic.setLinkPath(linkPath);
+		phoneScrollPic.setAddTime(new Date());
+		phoneScrollPic.setAddIp(Global.getIP());
+		phoneScrollPic.setAddUser(getOperatorUserName());
+		
+		String picPath = imgUpload();
+		if (picPath != null) {
+			phoneScrollPic.setPicPath(picPath);
+		}
+		checkToken("scrollPicAddToken");
+		phoneScrollPicService.phoneScrollPicAdd(phoneScrollPic);
+		data.put("result", true);
+		data.put("msg", "保存成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 修改手机轮展图页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/scrollPic/scrollPicEditPage")
+	public String scrollPicEditPage() throws Exception {
+		
+		long id = paramLong("id");
+		PhoneScrollPic phoneScrollPic = phoneScrollPicService.find(id);
+		request.setAttribute("phoneScrollPic", phoneScrollPic);
+		saveToken("scrollPicEditToken");
+		return "scrollPicEditPage";
+	}
+
+	/**
+	 * 修改手机轮展图
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/scrollPic/scrollPicEdit")
+	public void scrollPicEdit() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		PhoneScrollPic phoneScrollPic = model.prototype();
+		
+		String linkPath = paramString("linkPath");
+		
+		phoneScrollPic.setLinkPath(linkPath);
+		phoneScrollPic.setId(id);
+		phoneScrollPic.setUpdateTime(Calendar.getInstance().getTime());
+		phoneScrollPic.setUpdateUser(getOperatorUserName());
+		String picPath = imgUpload();
+		
+        if (picPath != null) {
+        	phoneScrollPic.setPicPath(picPath);
+        }
+        checkToken("scrollPicEditToken");
+        phoneScrollPicService.update(phoneScrollPic);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 删除手机轮展图
+	 * @throws Exception
+	 */
+	@Action(value="/modules/phone/scrollPic/scrollPicDel")
+	public void scrollPicDel() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		PhoneScrollPic phoneScrollPic = phoneScrollPicService.find(id);
+		phoneScrollPic.setDelete(true);
+		phoneScrollPicService.update(phoneScrollPic);
+		data.put("result", true);
+		data.put("msg", "删除成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 修改显示状态（显示/隐藏）
+	 * @throws Exception
+	 *//*
+	@Action(value="/modules/phone/scrollPic/scrollPicUpdateStatus")
+	public void scrollPicUpdate() throws Exception{
+		// JSDP-BUG68 2015年4月30日 10:48:03   孙晓勇 start
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		String status = paramString("status");
+		int value = paramInt("value");
+		PhoneScrollPic phoneScrollPic = phoneScrollPicService.find(id);
+		//状态，2：隐藏，1：显示(显示状态：2：隐藏，1：显示)
+		if("status".equals(status)){
+			if(value==1){
+				phoneScrollPic.setStatus((byte) 2);
+			}else{
+				phoneScrollPic.setStatus((byte) 1);
+			}
+		}
+		phoneScrollPic.setUpdateUser(getOperatorUserName());
+		phoneScrollPic.setUpdateTime(Calendar.getInstance().getTime());
+		phoneScrollPicService.update(phoneScrollPic);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+		// JSDP-BUG68 2015年4月30日 10:48:03   孙晓勇 end
+	}*/
+	/**
+	 * 修改显示状态（显示/隐藏，是否置顶，是否推荐）
+	 * @throws Exception
+	 */
+	@Action(value="/modules/phone/scrollPic/scrollPicUpdateStatus")
+	public void activityUpdate() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		String type = paramString("type");
+		int value = paramInt("value");
+		PhoneScrollPic phoneScrollPic = phoneScrollPicService.find(id);
+		//状态，0：隐藏，1：显示(显示状态：2：隐藏，1：显示)
+		if("status".equals(type)){
+			if(value==1){
+				phoneScrollPic.setStatus((byte) 2);
+			}else{
+				phoneScrollPic.setStatus((byte) 1);
+			}
+		}
+		phoneScrollPic.setUpdateUser(getOperatorUserName());
+		phoneScrollPic.setUpdateTime(Calendar.getInstance().getTime());
+		phoneScrollPicService.update(phoneScrollPic);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 手机轮展图预览图片
+	 * @author 
+	 * @return
+	 */
+	@Action(value="/modules/phone/scrollPic/getPicPage")
+	public String phoneBannerPicPage() throws Exception{
+		
+		long id = paramLong("id");
+		PhoneScrollPic phoneScrollPic = phoneScrollPicService.find(id);
+		request.setAttribute("phoneScrollPic", phoneScrollPic);
+		return "getPicPage";
+	}
+
+}

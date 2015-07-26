@@ -1,0 +1,168 @@
+package com.ddtkj.p2psys.credit.service;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+/**
+ * @描述：转让记录Sercie
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+public interface CreditLogService {
+
+	/**
+	 * 添加一条够买记录
+	 * @param log  转让记录实体
+	 * @return
+	 */
+	public CreditLog save(User user,CreditAssignment creditAssignment,int buyCopies,double buyAccount )throws Exception ;
+	
+	/**
+	 * 查询所有购买记录 分页
+	 * @param param	条件
+	 * @return
+	 */
+	public PageDataList<CreditLog> getAll(QueryParam param) ;
+	/**
+	 * 查询所有购买记录 分页
+	 * @param param	条件
+	 * @return
+	 */
+	public PageDataList<CreditLog> getBuyBorrow(long borrowid,int page,int size) ;
+	/**
+	 * 查询用户的购买记录
+	 * @param user
+	 * @return
+	 */
+	public PageDataList<CreditLog> getDateByUser(UserModel user) ;
+	
+	public void creditVerifyFullSuccess(CreditAssignment ca)throws Exception ;
+	/**
+	 * 全部撤回  
+	 * @param ca  债权转让申请记录
+	 */
+	public void creditReCall(CreditAssignment ca);
+		
+	/**
+	 * 查询债权购买记录，分页
+	 * @param  model
+	 * @return PageDataList<CreditLogModel> 
+	 * @throws Exception   
+	 */ 
+	public PageDataList<CreditLogModel> getCreditLogList(CreditLogModel model);
+	
+	/**
+	 * 债权转让(买入)金额
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @author 孙晓勇
+	 * @param  model
+	 * @return PageDataList<CreditLogModel> 
+	 * @throws Exception   
+	 */ 
+	public PageDataList<CreditLogModel> getCreditInLogList(CreditLogModel model);
+	
+	public List<CreditLogModel> getCreditLogListTwo(CreditLogModel model);
+	/**
+	 * 计算用户转入债权金额
+	 * @param  user
+	 * @param  status  购买记录状态
+	 * @return double 
+	 * @throws Exception   
+	 */ 
+	double buyCreditMoneyTotal(User user, String status);
+	
+	/**
+	 * @author 李建云
+	 * 计算用户本月投资总额
+	 * @param  user
+	 * @param  status  购买记录状态
+	 * @return double 
+	 * @throws Exception   
+	 */ 
+	double buyCreditMoneyTotal(User user, String status,Date startTime,Date endTime);
+	
+	/**
+	 * @author 李建云
+	 * 计算用户截止某个时间点累计购买债权投资总额
+	 * @param  user
+	 * @param  status  购买记录状态
+	 * @return double 
+	 * @throws Exception   
+	 */ 
+	double buyCreditMoneyTotal(User user, String status,Date endTime);
+	
+	/**
+	 * 计算用户转入债权数量
+	 * @param user
+	 * @param status  购买记录状态
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	int buyCreditCount(User user, String status);
+	
+	/**
+	 *@author 李建云
+	 *债权投资 本月投资笔数 
+	 * 
+	 * */
+	int buyCreditCount(User user, String status,Date startTime,Date endTime);
+	
+	
+	/**
+	 * 计算用户转入债权份数
+	 * @param  user
+	 * @param  status 
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	int buyCreditCopiesCount(User user, String status);
+	
+	/**
+	 * 计算用户转入债权盈亏
+	 * @param  user
+	 * @param  status
+	 * @throws Exception   
+	 */ 
+	double calcProfitAndLoss(User user, String status);
+	
+	CreditLog getById(long id) ;
+	
+	/**
+	 * 债权转让复审不通过
+	 * @param  ca 
+	 * @throws Exception   
+	 */ 
+	public void creditVerifyFullFail(CreditAssignment ca) ;
+	
+	public void updateCL(CreditLog cl) ;
+	
+	//JSDP-116 xingjia 2015-05-18 start
+	/**
+	 * 使用sql查询债权的购买记录，导出excel
+	 * @param model
+	 * @return
+	 */
+	List excelListCreditLog(CreditLogModel model);
+	//JSDP-116 xingjia 2015-05-18 start
+	
+	/**
+	 * 统计-明细债权转让(买入)金额
+	 * 
+	 * // JSDPBUG-99 20150527  sxy
+	 * @author 孙晓勇
+	 * @param  model
+	 * @return PageDataList<CreditLogModel> 
+	 * @throws Exception   
+	 */ 
+	public PageDataList<CreditLog> getCreditInAssignmentListForSQL(CreditLogModel model, int page, int size);
+
+}

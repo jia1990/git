@@ -1,0 +1,76 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+/**
+ * 
+ * @描述：红包和活动关系实体类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月8日
+ */
+
+
+@Entity
+@Table(name="t_jsd_activity_rp")
+public class ActivityRP implements Serializable{
+	
+	private static final long serialVersionUID = 3916765922580583062L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name="rp_id")
+	private long id ;
+	@ManyToOne(cascade=CascadeType.REFRESH)
+	@JoinColumn(name="act_id")
+	private Activity activity ;  // 活动
+	@ManyToOne(cascade=CascadeType.REFRESH)
+	@JoinColumn(name="rp_type_id")
+	private RedPacket rp ;  // 红包
+	 
+	private double account ;  // 红包金额
+
+	
+	
+	
+	public Activity getActivity() {
+		return activity;
+	}
+
+	public void setActivity(Activity activity) {
+		this.activity = activity;
+	}
+	
+	public RedPacket getRp() {
+		return rp;
+	}
+
+	public void setRp(RedPacket rp) {
+		this.rp = rp;
+	}
+
+	public double getAccount() {
+		return account;
+	}
+
+	public void setAccount(double account) {
+		this.account = account;
+	}
+	
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+	
+}

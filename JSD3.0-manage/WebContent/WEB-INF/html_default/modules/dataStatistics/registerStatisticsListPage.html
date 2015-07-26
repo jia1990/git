@@ -1,0 +1,228 @@
+<html>
+<head>
+<title>用户管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.userLock = true;
+	$.userOff = false;
+</script>
+
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  500;
+	var winHeight = 300;
+
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : '/modules/dataStatistics/registerStatisticsList.html?timeType=${timeType}&registerWay=${registerWay!}&dataType=${dataType!}&startTime=${startTimeStr!}&endTime=${endTimeStr!}',
+			fit : true,
+			fitColumns : false,
+			border : false,
+			pagination : true,
+			idField : 'userId',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			
+			checkOnSelect : false,
+			selectOnCheck : false,
+			autoRowHeight : true,
+			nowrap : true,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'idInt', title: '编号', width: 60, fixed :true,checkbox : false},
+			{ field: 'userName', title: '用户名', width: 150, fixed :true,checkbox : false},
+			{ field: 'realName', title: '真实姓名', width: 100, sortable: false },
+			/* { field: 'sex', title: '性别', width: 50, fixed :true,sortable: false ,
+				formatter: function(value,row,index){
+					//M:男性 F:女性 X:保密
+					if(value == 'F'){
+						return "女";
+					}else if(value == 'M'){
+						return "男";
+					}else if(value == 'X'){
+						return "保密";
+					}
+					return "";
+				}
+			}, */
+			/* { field: 'email', title: '电子邮件', width: 150, sortable: false }, */
+			{ field: 'mobilePhone', title: '手机号码',fixed :true, width: 100, sortable: false },
+			{ field: 'cardNO', title: '身份证号码',fixed :true, width: 150, sortable: false },
+			/* { field: 'userNature', title: '开户个人或商户',fixed :true, width: 150, hidden:true },
+			{ field: 'customerNo', title: '客服工号',fixed :true, width: 150}, */
+			{ field: 'userType', title: '用户类型', width: 85, sortable: false ,
+				formatter: function(value,row,index){
+					var userNature = row.userNature;
+					if(value == 10){
+						return "投资用户";
+					}else if(value == 11 && userNature==20){
+						return "个人借款";
+					}else if(value == 11 && userNature==21){
+						return "企业借款";
+					}else if(value==12){
+						return "担保公司";
+					}else if(value==13){
+						return "商城用户";
+					}else{
+						return "注销用户";
+					}
+					return "";
+				}	
+			},
+			{ field: 'memberLevel', title: '会员等级', width: 80, sortable:false, 
+				formatter: function(value,row,index){
+					if(value=="N1"){
+						return "普通用户";
+					}else if(value=="V1"){
+						return "铜牌会员";
+					}else if(value=="V2"){
+						return "银牌会员";
+					}else if(value=="V3"){
+						return "金牌会员";
+					}else if(value=="V4"){
+						return "钻石会员";
+					}
+					return "";
+				}
+			},
+			{ field: 'emailStatus', title: '邮箱认证', width: 80, sortable:false, 
+				formatter: function(value,row,index){
+					//未认证:80邮箱认证通过:81
+					if(value==80){
+						return "未认证";
+					}else if(value==81){
+						return "已认证";
+					}
+					return "";
+				}
+			},
+			
+			{ field: 'mobilePhoneStatus', title: '手机认证', width: 80, sortable:false, 
+				formatter: function(value,row,index){
+					//手机未认证:85 、手机认证通过:86 、手机认证未通过:87
+					if(value==85){
+						return "未认证";
+					}else if(value==86){
+						return "已认证";
+					}else if(value==87){
+						return "认证未通过";
+					}
+					return "";
+				}
+			},
+			{ field: 'realStatus', title: '实名认证', width: 80, sortable:false, 
+				formatter: function(value,row,index){
+					//未认证:82实名认证通过:83 实名认证待审核 88 实名认证未通过:84;
+					if(value==82){
+						return "未认证";
+					}
+					if(value==83){
+						return "已认证";
+					}
+					if(value==88){
+						return "认证待审核";
+					}
+					if(value==84){
+						return "认证未通过";
+					}
+					return "不确定";
+				}
+			},
+			
+            { field: 'addTime', title: '注册时间', width: 140, fixed:true,sortable:false, 
+          	  	formatter: function(value,row,index){
+          	  		return getLocalTime(value,4);
+				}  
+            },
+            { field: 'registerWay', title: '注册方式', width: 60, fixed:true,sortable:false, 
+          	  	formatter: function(value,row,index){
+          	  		
+          	  		if(value == 'P'){
+          	  			value = 'PC端';
+          	  		}else if(value == 'M'){
+          	  			value = '手机端';
+          	  		}else{
+          	  			value = '未知';
+          	  		}
+          	  		
+          	  		return value;
+				}  
+            },
+           /*  { field: 'userCache.addIp', title: '注册IP', width: 140, fixed:true,sortable:false }, */
+            { field: 'isLocked', title: '状态', width: 100, sortable:false,formatter: function(value,row,index){
+				if(value=='NN'){
+					return "未锁定";
+				}
+				if(value=='AY'){
+					return "已锁定";
+				}
+				if(value=='UY'){
+					return "挂起";
+				}
+				if(value=='FF'){
+					return "已销户";
+				}
+				return value;
+			}
+			}, 
+            ] ],
+			loadFilter: function(data){
+				$.each(data.rows,function(index,row){
+					if(row.userIdentify){
+						row.realNameStatus=row.userIdentify.realNameStatus;
+					}
+					if(row.userCache){
+						row.sex=row.userCache.sex;
+						row.userType=row.userCache.userType;
+						row.status=row.userCache.status;
+					} 
+				}); 
+				return data;
+			},
+			toolbar : '#toolbar'
+		});
+	});
+	
+	
+	// 注册用户数据导出
+	function exportExcel(){
+		var url = "/modules/dataStatistics/userAllStatisticsExport.html?timeType=${timeType}&registerWay=${registerWay!}&dataType=${dataType!}&startTime=${startTimeStr!}&endTime=${endTimeStr!}";
+		/* var userName = $("#userName").val();
+		var realName = $("#realName").val();
+		var typeName = $("#typeName option:selected").val();
+		var lockType = $("#lockType option:selected").val();
+		var mobilePhone = $("#mobilePhone").val();
+		var email = $("#email").val();
+		var cardNO = $("#cardNO").val();
+		var customerNo = $("#customerNo").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&realName=" + realName +"&userType=" + typeName 
+				+ "&isLocked=" + lockType + "&mobilePhone=" + mobilePhone + "&email=" + email 
+				+ "&cardNO=" + cardNO + "&customerNo=" + customerNo + "&startTime=" + startTime
+				+ "&endTime="+endTime;
+		window.location.href = url + sou; */
+		window.location.href = url;
+	}
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">
+		&nbsp;
+		<@secAuthorizeUrl value='/user/userAllStatisticsExport.html'>
+			<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+	<script src="/plugins/laydate-v1.1/laydate.js"></script>
+	<script src="/themes/theme_default/js/date2.js"></script>
+</body>
+</html>

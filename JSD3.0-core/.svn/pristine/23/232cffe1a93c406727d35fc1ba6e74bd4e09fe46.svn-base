@@ -1,0 +1,380 @@
+package com.rongdu.p2psys.borrow.dao;
+
+import java.util.Date;
+import java.util.List;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * 待收Dao
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年4月10日
+ */
+public interface BorrowCollectionDao extends BaseDao<BorrowCollection> {
+
+	/**
+	 * 已赚利息
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	double getReceivedInterestSum(long userId);
+	
+
+	/**
+	 * 已赚逾期利息
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	 double getOverDueInterestSum(long userId);
+
+	/**
+	 * 列表
+	 * 
+	 * @param borrow_id
+	 * @param period
+	 * @return
+	 */
+	List<BorrowCollection> list(long borrowId, int period,int status);
+
+	/**
+	 * 计算投资人剩余待还本金
+	 * @param tenderId
+	 * @return
+	 */
+	public double getRemainderCapital(long tenderId);
+
+	/**
+	 * 所有待收利息
+	 * @param tenderId
+	 * @return
+	 */
+	public double getRemainderInterest(long tenderId);
+	
+    /**
+     * 当期所有待收利息
+     * @param borrowId
+     * @param period
+     * @return
+     */
+    public double getInterestByBorrowAndPeriod(long borrowId, int period);	
+
+	/**
+	 * 下期的待收利息
+	 * @param id
+	 * @param i
+	 * @return
+	 */
+	public BorrowCollection getCollectionByTenderAndPeriod(long tenderId, int period,int status);
+	
+	/**
+	 * 获取下一个待收
+	 * @param userId 用户ID
+	 * @return 待收信息
+	 */
+	BorrowCollection getNextCollectionByUserId(long userId);
+	/**
+	 * 待收笔数
+	 * @param userId 用户ID
+	 * @param collectionStatus 待收状态值
+	 * @return 待收笔数
+	 */
+	 int countCollect(long userId,long collectionStatus);
+	
+	/**
+	 * 已收笔数
+	 * @param userId 用户ID
+	 * @return 待收笔数
+	 */
+	int countCollected(long userId);
+	
+	/**
+	 * 获取待收的统计信息
+	 * @param userId 用户ID
+	 * @return 待收的统计信息
+	 */
+	BorrowCollectionModel getCollectStatistics(long userId);
+	
+	/**
+	 * 统计某个月份的待收金额
+	 * @param month 要统计的那个月份
+	 * @param userId 用户ID
+	 * @return 当月待收金额
+	 */
+	double getCollectByMonth(int month, long userId);
+	/**
+	 * 统计下一个待收日期的待收次数及待收金额
+	 * @param bm 待收model
+	 * @param nextCollectTime 下一个待收日期
+	 * @param userId 用户ID
+	 * @return  待收
+	 */
+	BorrowCollectionModel getBCMByCollectTime(BorrowCollectionModel bm, Date nextCollectTime, long userId);
+
+	/**
+	 * 获得提前还款剩余还款的本金
+	 * @param borrowId
+	 * @return
+	 */
+	public double getRemainderMoney(long borrowId);
+
+	/**
+	 * 更新投资人的待收状态
+	 * @param borrowId
+	 */
+	public void updatePriorRepayStatus(long borrowId);
+
+    /**
+     * 累计净收益
+     * @param user
+     * @return
+     */
+    public double accumulatedNetIncome(User user);
+
+    /**
+     * 在投金额
+     * @param user
+     * @return
+     */
+    public double inInvestAmount(User user, int status);
+
+    /**
+     * 今日收益
+     * @param user
+     * @return
+     */
+    public double sumTodayInterest(User user);
+    /**
+     * 根据用户获取待收利息总额
+     * @param user
+     * @return 待收利息总额
+     */
+    double getInterestByUser(User user);
+    
+    /**
+     * @author 李建云
+     * 根据用户购买债权获取本月已赚利息总额
+     * @param user
+     * @return 购买债权获取本月已赚利息总额
+     */
+    double getInterestByUser(User user,Date startTime,Date endTime);
+    
+    /**
+     * @author 李建云
+     * 根据用户购买债权和标类型获取待收利息总额
+     * @param user
+     * @return 待收利息总额
+     */
+    double getInterestByUser(User user,int type);
+    
+    /**
+     * 根据用户和时间获取待收利息总额
+     * @param user 用户 date 时间
+     * @return 待收利息日期和金额
+     */
+    List<Object[]> getInterestByUserAndDate(User user, String date);
+    /**
+     * 根据用户获取待收本金总额
+     * @param user
+     * @return 待收本金总额
+     */
+    double getCapitalByUser(User user);
+    
+    /**
+     * @author 李建云
+     * 根据用户购买债权和标类型获取待收本金总额
+     * @param user
+     * @return 待收本金总额
+     */
+    double getCapitalByUser(User user,int type);
+    
+    
+    /**
+     * 根据用户和时间获取待收本金总额
+     * @param user 用户 date 时间
+     * @return 待收本金日期和金额
+     */
+    List<Object[]> getCapitalByUserAndDate(User user, String date);
+    /**
+     * 待收日期集合
+     * @param user 用户 
+     * @return 待收日期集合
+     */
+    List<String> getCollectionDate(User user);
+    
+    /**
+     * 查询用户中心收款列表
+     * @param user
+     * @return
+     */
+    List<BorrowCollection> getMemberCollectionList(User user);
+    /**
+     * 查询待收记录个数
+     * @param model
+     * @return
+     */
+    public int getCollectionCount(BorrowCollectionModel model);
+    /**
+     * 查询用户中心收款列表
+     * @param user
+     * @return
+     */
+    List<BorrowCollection> getMemberCollectionList(User user,Borrow borrow,long tenderid);
+    /**
+     * 获取某个用户投的某个标的待收本息
+     * @param user
+     * @return
+     */
+    double getCollectionTotal(User user,Borrow borrow,long tenderid);
+    /**
+     * 获取某个用户投的某个标的待收本金
+     * @param user
+     * @return
+     */
+    double getCapitalTotal(User user,Borrow borrow,long tenderid);
+    /**
+     * 通过标ID、投标ID、待收状态三者来查询待收总额、待收利息、待收本金
+     * @param borrow
+     * @param tenderid
+     * @param status
+     * @return
+     */
+    public Object[] getCollectionRepayTotal(Borrow borrow,long tenderid,long status);
+    /**
+     * 通过标ID、投标ID、待收状态三者来查询待收本金
+     * @param borrow
+     * @param tenderid
+     * @param status
+     * @return
+     */
+    public double getCollectionRepayCapitalTotal(Borrow borrow,long tenderid,long status,long type);
+    /**
+     * 获取某个用户投的某个标的已收利息
+     * @param user
+     * @return
+     */
+    double getHaveInsterest(User user,Borrow borrow,long tenderid);
+    /**
+     * 获取某个用户根据投标ID以及期数查询待收记录
+     * @param user
+     * @return
+     */
+    BorrowCollection getThisPeriod(User user,Borrow borrow,int period,long tenderid);
+    /**
+     * 待收信息查询
+     */
+    PageDataList<BorrowCollection> getList(BorrowCollectionModel model);
+    
+    /**
+     * 待收信息查询（前台-我的收益）
+     * @param model
+     * @return
+     */
+    public PageDataList<BorrowCollection> getBorrowCollectionList(BorrowCollectionModel model);
+    /**
+     * 某个标的待收
+     */
+    PageDataList<BorrowCollection> getList(long borrowId, int page, int size, int lastPeriod);
+    /**
+     * 为用户赚取收益
+     * @return
+     */
+    double sumInterest();
+    
+    /**
+     * @author李建云
+     * 本月结清笔数
+     *  
+     */
+    int getCollectedSum(long userId, Date startTime,Date endTime,int type);
+    
+    /**
+     * @author李建云
+     * 本月已赚利息
+     *  
+     */
+    double getBorrowCollectedInterest(long userId, Date startTime,Date endTime);
+     
+    /**
+     *@author 李建云
+     *本月已赚逾期利息 
+     * */
+    double getBorrowCollectedLateInterest(long userId, Date startTime,Date endTime);
+    
+    /**
+     * 根据债权待收记录 查找待收本息
+     * @param user
+     * @return
+     */
+    double getCollectionTotalByCredit(CreditLog ca);
+    /**
+     *  根据债权待收记录 查找某期的待收
+     * @param user
+     * @return
+     */
+    BorrowCollectionModel getThisPeriodByCredit(CreditLog ca,int period);
+    /**
+     * 根据债权待收记录 获取某个用户投的某个标的待收本金
+     * @param user
+     * @return
+     */
+    double getCapitalTotalByCredit(CreditLog ca);
+    /**
+     * 根据债权待收记录 获取某个用户投的某个标的已收利息
+     * @param user
+     * @return
+     */
+    double getHaveInsterestByCredit(CreditLog ca);
+    
+    /**
+     * 统计某用户不同状态下（0：未还款 1：已还款） 的待收本金
+     * @param status
+     * @param userId
+     * @return
+     */
+    public double getCollectionSum(int status,long userId);
+    /**
+     * 即时生息自动还款  ----按照还款状态以及待还时间查询待收列表
+     * @param status
+     * @param aheadtime
+     * @return
+     */
+    public List<BorrowCollection> getCollectionListByStatus(int status,int aheadtime);
+
+    /**
+     * 汇总待收的总额
+     * @param model
+     * @return
+     */
+    String collectionTotal(BorrowCollectionModel model);
+    
+    /**
+	 * 投资人待收管理导出excel使用sql
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 sxy 2015-05-15 start
+	List<BorrowCollection> excelBorrowCollectionList(BorrowCollectionModel model);
+	//JSDP-116 sxy 2015-05-15 start
+	
+
+	/**
+	 * 查询页数（根据所查询的数据）
+	 * 用于分页
+	 * @author sxy
+	 * @param model
+	 * @return
+	 */
+	int listPageTotal(BorrowCollectionModel model);
+	
+	
+}

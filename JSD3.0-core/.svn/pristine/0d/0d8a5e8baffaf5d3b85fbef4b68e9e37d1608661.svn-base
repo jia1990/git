@@ -1,0 +1,115 @@
+
+package com.ddtkj.p2psys.score.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.score.constant.ScoreAwardConstant;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.score.exception.ScoreException;
+
+/**
+ * @描述: 抽奖规则model
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-5   
+ */
+public class ScoreRuleAwardModel extends ScoreRuleAward {
+	
+	private static final long serialVersionUID = 6079884529588366275L;
+
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+	
+	/**
+	 * 抽奖规则数据校验
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	public void validRuleAward(ScoreRuleAwardModel model){
+		if (model != null) {
+			if(StringUtil.isBlank(model.getName())){
+				throw new ScoreException("抽奖规则名必须填写",1);
+			}
+			if(StringUtil.isBlank(model.getStartDate()) || StringUtil.isBlank(model.getEndDate())){
+				throw new ScoreException("抽奖规则的开始时间和结束时间必须填写,有可能是抽奖时间格式错误，请核实",1);
+			}
+			if(model.getStartDate().after(model.getEndDate())){
+				throw new ScoreException("抽奖规则结束时间必须在开始时间之后",1);
+			}
+			if(model.getAwardType() == ScoreAwardConstant.AWARD_TYPE_POINT && model.getBasePoint() <= 0){
+				throw new ScoreException("抽奖类型为按积分抽奖时必须填写基准积分",1);
+			}
+			if(model.getTimeLimit() != ScoreAwardConstant.AWARD_TIMELIMIT_NONE  && model.getMaxTimes() <= 0){
+				throw new ScoreException("抽奖次数限制开启时必须填写最多抽奖次数",1);
+			}
+			if(model.getMoneyLimit() == ScoreAwardConstant.AWARD_MONEY_LIMIT && model.getTotalMoney() <= 0){
+				throw new ScoreException("金额限制开启时必须填写总金额",1);
+			}
+			if(StringUtil.isBlank(model.getContent())){
+				throw new ScoreException("抽奖规则的内容描述必须填写",1);
+			}
+		}
+	}
+	
+	public static ScoreRuleAwardModel instance(ScoreRuleAward scoreRuleAward){
+		ScoreRuleAwardModel model = new ScoreRuleAwardModel();
+		BeanUtils.copyProperties(scoreRuleAward, model);
+		return model;
+	}
+	
+	public ScoreRuleAward prototype(){
+		ScoreRuleAward scoreRuleAward = new ScoreRuleAward();
+		BeanUtils.copyProperties(this, scoreRuleAward);
+		return scoreRuleAward;
+	}
+}

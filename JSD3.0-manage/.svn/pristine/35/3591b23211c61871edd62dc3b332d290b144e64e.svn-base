@@ -1,0 +1,120 @@
+<script type="text/javascript">
+
+$(function() {
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/reward/activityAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址	
+    
+});
+</script>
+
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+
+    <div class="formitm">
+	     <label class="lab">活动名称：</label>
+	     <div class="ipt">
+	     	<input type="text" class="w400 easyui-validatebox" name="actName" data-options="required: true">
+	     	<b>*</b>
+	     </div>
+	</div>
+    
+    <div class="formitm" id="time">
+	     <label class="lab">开始时间：</label>
+	     <div class="ipt">
+	     	<input type="text" class="dateInput w200 easyui-validatebox" name="actStartTime" id="startTime" data-options="required: true"/>
+	     	<b>*</b>
+	     	&nbsp;
+	     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="actEndTime" id="endTime" data-options="required: true"/>
+	     	<b>*</b>
+	     </div>
+	</div>
+    <div class="formitm">
+	     <label class="lab">活动方式：</label>
+	     <div class="ipt">
+	     	<select name="actTakeWay" style="width:200px;">
+				<#list takeWayList as item>
+					<option value="${item.actWay}">${item.actWayDesc}</option>
+				</#list>
+			</select>
+	     	<b>*</b>
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">活动时间限制：</label>
+	     <div class="ipt">
+	     	<input type="radio" name="actLimitTime" value="1" checked="checked">&nbsp;不受限&nbsp;
+	     	<input type="radio" name="actLimitTime" value="0">&nbsp;受限
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">活动是否开启：</label>
+	     <div class="ipt">
+	     	<input type="radio" name="actOpen" value="0" checked="checked">&nbsp;不开启&nbsp;
+	     	<input type="radio" name="actOpen" value="1">&nbsp;开启
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">活动适用用户：</label>
+	     <div class="ipt">
+	     	<select name="actUserScope" style="width:200px;">
+					<option value="all">全部</option>
+					<option value="normal">普通用户</option>
+					<option value="vip">vip会员</option>
+			</select>
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">红包奖励：</label>
+	     <div class="ipt">
+	     	<input type="checkBox" class="w200 easyui-validatebox" name="activityAward.rpType" value="Y"  id="redpackage"/>&nbsp;&nbsp;&nbsp;
+	     	红包名称：<input type="text" class="w200 easyui-validatebox" name="activityAward.rpName" id="redpackageContent1"/>
+	     	&nbsp;红包金额：<input type="text" class="w200 easyui-validatebox" name="activityAward.rpMoney" id="redpackageContent2"/>
+	     	</div>
+	     <div class="ipt" style="padding-top: 10px;padding-left:30px;">
+	     	有效期限：<input type="text" class="w200 easyui-validatebox" name="activityAward.rpValidTime" data-options="validType:'numeric'" id="redpackageContent3"/>
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab" id="score">积分奖励：</label>
+	     <div class="ipt">
+	     	<input type="checkBox" class="w200 easyui-validatebox" name="activityAward.scoreType" value="Y"/>&nbsp;&nbsp;&nbsp;
+	     	奖励分值：<input type="text" class="w200 easyui-validatebox" name="activityAward.scoreName"/>
+	     </div>
+	</div>
+	<div class="formitm"  id="vip">
+	     <label class="lab">vip 奖励：</label>
+	     <div class="ipt">
+	     	<input type="checkBox" class="w200 easyui-validatebox" name="activityAward.vipType" value="Y"/>&nbsp;&nbsp;&nbsp;
+	     	vip 等级：
+	     	<select name="activityAward.vipLevel" style="width:165px;">
+					<option value="51">钻石会员</option>
+					<option value="52">白金会员</option>
+					<option value="53">vip会员</option>
+			</select>
+			&nbsp;拥有月数：
+			<input type="text" class="w200 easyui-validatebox" name="activityAward.vipLimitTime" data-options="validType:'numeric'">
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab" id="entity">实物奖励：</label>
+	     <div class="ipt">
+	     	<input type="checkBox" class="w200 easyui-validatebox" name="activityAward.goodsType" value="Y"/>&nbsp;&nbsp;&nbsp;
+	     	实物名称：<input type="text" class="w200 easyui-validatebox" name="activityAward.goodsName">
+			&nbsp;奖励数量：
+			<input type="text" class="w200 easyui-validatebox" name="activityAward.goodsQuantity" >
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab" id="cash">现金奖励：</label>
+	     <div class="ipt">
+	     	<input type="checkBox" class="w200 easyui-validatebox" name="activityAward.cashType" value="Y"/>&nbsp;&nbsp;&nbsp;
+	     	奖励金额：<input type="text" class="w200 easyui-validatebox" name="activityAward.cashMoney">
+	     </div>
+	</div>
+
+	</form>
+	</div>
+<!-- <script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script> -->
+
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>
+

@@ -1,0 +1,208 @@
+package com.ddtkj.p2psys.webpetcard.domain;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.core.util.CardAESUtils;
+
+/**
+ * @描述：晋商贷储值卡实体类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月1日
+ * @JIRA JSDP-171
+ */
+@Entity
+@Table(name = "t_jsd_pet_card")
+public class PetCard {
+	
+	public static final String TYPE_PET_CARD = "pt";//晋商贷体验卡
+	public static final String TYPE_PET_CARD_YG = "yt";//云购体验卡
+	
+	public static final String UN_CARD_STATUS = "ua";//未激活
+	public static final String ED_CARD_STATUS = "da";//已激活
+	public static final String DD_CARD_STATUS = "dd";//失效
+	public static final String UD_CARD_STATUS = "ud";//未激活，已使用
+	
+	// 晋商贷体验卡密码key值
+	public static final String JSD_PETCARD_KEY = "JINSHANGDAITOYUNGOU";
+
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = "id")
+	private long id;//主键id
+	private String batchNo;//批次号
+	private String status;//状态   未激活 ua，已激活da，失效dd
+	private String cardNo;//卡号
+	private String paw;//密码
+	private double money;//储值卡面值
+	//@ManyToOne(fetch = FetchType.LAZY)
+	//@JoinColumn(name = "user_id")
+	private long userId;
+	private String userName;//用户名
+	private String type;//类型  pt：晋商贷体验卡    yt:云购体验卡
+	private int isValid;//是否有效(0：有效   1：无效)
+	private int validTime;//有效时间
+	private Date winTime;//中奖时间
+	private Date activateTime;//激活时间
+	private Date addTime;//添加时间
+	private String addUser;//添加者
+	private Date updateTime;//更新时间
+	private String updateUser;//更新用户
+	private String remark;//备注
+	private String isExport;//是否导出
+	private String tradeNo;//充值时订单交易号
+	private String isCheck;//是否查看（0：未查看，1：已查看）
+	
+
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getBatchNo() {
+		return batchNo;
+	}
+	public void setBatchNo(String batchNo) {
+		this.batchNo = batchNo;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public String getCardNo() {
+		return cardNo;
+	}
+	public void setCardNo(String cardNo) {
+		this.cardNo = cardNo;
+	}
+	public String getPaw() {
+		return paw;
+	}
+	public void setPaw(String paw) {
+		this.paw = paw;
+	}
+	public double getMoney() {
+		return money;
+	}
+	public void setMoney(double money) {
+		this.money = money;
+	}
+	
+	public long getUserId() {
+		return userId;
+	}
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	public String getType() {
+		return type;
+	}
+	public void setType(String type) {
+		this.type = type;
+	}
+	public int getIsValid() {
+		return isValid;
+	}
+	public void setIsValid(int isValid) {
+		this.isValid = isValid;
+	}
+	public int getValidTime() {
+		return validTime;
+	}
+	public void setValidTime(int validTime) {
+		this.validTime = validTime;
+	}
+	public Date getWinTime() {
+		return winTime;
+	}
+	public void setWinTime(Date winTime) {
+		this.winTime = winTime;
+	}
+	public Date getActivateTime() {
+		return activateTime;
+	}
+	public void setActivateTime(Date activateTime) {
+		this.activateTime = activateTime;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddUser() {
+		return addUser;
+	}
+	public void setAddUser(String addUser) {
+		this.addUser = addUser;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getUpdateUser() {
+		return updateUser;
+	}
+	public void setUpdateUser(String updateUser) {
+		this.updateUser = updateUser;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public String getIsExport() {
+		return isExport;
+	}
+	public void setIsExport(String isExport) {
+		this.isExport = isExport;
+	}
+	public String getTradeNo() {
+		return tradeNo;
+	}
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+	public String getIsCheck() {
+		return isCheck;
+	}
+	public void setIsCheck(String isCheck) {
+		this.isCheck = isCheck;
+	}
+	
+	
+	//******************************   解密数据        ************************************
+	public static void main(String[] args) {
+	String decrypt = null;
+	// 数据库加密密码
+	String data = "gbmst6fCps0+tpcM9g6gqQ==";
+	try {
+	decrypt = CardAESUtils.aesDecrypt(data, PetCard.JSD_PETCARD_KEY);
+	
+	} catch (Exception e) {
+	e.printStackTrace();
+	}
+	    System.out.println("解密后：" + decrypt);
+	}
+	//*****************************************************************************
+	
+}

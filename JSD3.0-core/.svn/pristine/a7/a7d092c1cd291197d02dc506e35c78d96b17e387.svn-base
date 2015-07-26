@@ -1,0 +1,1139 @@
+package com.rongdu.p2psys.borrow.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+
+/**
+ * 借款标
+ * 
+ * @author lhm
+ * @version 2.0
+ * @since 2014-04-03
+ */
+@Entity
+@Table(name = "rd_borrow")
+public class Borrow implements Serializable {
+
+	/*********************** 标种 ****************************************/
+	/** 标种 :秒标 */
+	public static final int TYPE_SECOND = 101;
+	/** 标种 :信用标 */
+	public static final int TYPE_CREDIT = 102;
+	/** 标种 :给力标，抵押标 */
+	public static final int TYPE_MORTGAGE = 103;//抵押标，抵押物类型为车宝宝
+	/** 标种 :净值标 */
+	public static final int TYPE_PROPERTY = 104;
+	/** 标种 :流转标 */
+	public static final int TYPE_FLOW = 110;
+	/** 标种 :担保标 */
+	public static final int TYPE_OFFVOUCH = 112;
+	/** 标种 :即投即生息标种--能源宝 */
+	public static final int TYPE_MORTGAGE_ENERGY = 113;//抵押标抵押为类型为能源宝 
+	/** 标种 :即投即生息标种 */
+	public static final int TYPE_NETWORK = 115;//微企贷,和能源宝类似,没有抵押物
+	/** 标种 :分期宝 */
+	public static final int TYPE_AMORTIZE = 105;//分期宝 
+	
+	/*********************** 状态****************************************/
+	/** 状态 :管理员撤回处理中-2 */
+	/** 状态 :用户自己取消 */
+	public static final int STATUS_USER_CANCEL = -1;
+	/** 状态 :发标未初审 */
+	public static final int STATUS_PUBLISHING = 0;
+	/** 状态 :初审通过1*/
+	/** 状态 :初审通过，disruptor处理自动投标，结束后变为19*/
+	/** 状态 :初审不通过2 */
+	/** 状态 :满标复审通过 3*/
+	/** 状态 :满标复审通过，disruptor处理，3变成 6 */
+	/** 状态 :满标复审不通过4 */
+	/** 状态 :满标复审不通过，disruptor处理，4变成49 */
+	/** 状态 :后台管理员撤回 5*/
+	/** 状态 :后台管理员撤回，disruptor处理，5变成59 */
+	/** 状态 :部分还款中 7*/
+	/** 状态 :还款成功 8*/
+	/** 状态 :已登记待确认 9*/
+	/** 状态 :已确认待初审 11*/
+	
+	/*********************** 还款方式****************************************/	
+	/** 还款方式 :等额本息（按月分期还款） */
+	public static final int STYLE_INSTALLMENT_REPAYMENT = 1;
+	/** 还款方式 :利随本清（一次性还款） */
+	public static final int STYLE_ONETIME_REPAYMENT = 2;
+	/** 还款方式 :每月还息到期还本 */
+	public static final int STYLE_MONTHLY_INTEREST = 3;
+	
+	/** 借款期限类型 :天标 */
+	public static final int BORROW_TIME_TYPE_ISDAY = 1;
+	
+	/**
+	 * 序列号
+	 */
+	private static final long serialVersionUID = 1L;
+	/**
+	 * 主键
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	/**
+	 * 借款人
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;
+	/**
+	 * 借款标题
+	 */
+	private String name;
+	/**
+	 * 借款标信息详情
+	 */
+	private String content;
+	/**
+	 * 标种 
+	 */
+
+	private int type;
+
+	/**
+	 * 标状态 -1用户撤回;0等待初审;1初审通过;2初审未通过;3复审通过;4/49复审未通过;5/59管理员撤回;6还款中;7部分还款;8还款成功；
+	 *  汇潮新增状态  9：登记成功（对应汇潮接口文档中MG02500F） 11 募集中（只有为这个状态才能初审 （对应汇潮接口文档中MG02501F）），
+	 *   -2：撤回处理中（（对应汇潮接口文档中MG02503F））  5: 管理员撤回（对应汇潮接口文档中MG02505F）
+	 */
+	private int status;
+	/**
+	 * 期数
+	 */
+	private int period;
+	
+	/**
+	 * 合同借款总额
+	 * @author sunxiaoyong@ddtkj.com
+	 */
+	private double allAccount;
+	
+	/**
+	 * 父级合同号
+	 * @author sunxiaoyong@ddtkj.com
+	 */
+	private String dealParent;
+	
+	public double getAllAccount() {
+		return allAccount;
+	}
+
+	public void setAllAccount(double allAccount) {
+		this.allAccount = allAccount;
+	}
+
+	public String getDealParent() {
+		return dealParent;
+	}
+
+	public void setDealParent(String dealParent) {
+		this.dealParent = dealParent;
+	}
+
+	/**
+	 * 借款总额
+	 */
+	private double account;
+	/**
+	 * 实还总金额(已借)
+	 */
+	private double accountYes;
+	/**
+	 * 完成比例
+	 */
+	private double scales;
+	/**
+	 * 年利率
+	 */
+	private double apr;
+	/**
+	 * 还款方式 1按月分期还款; 2一次性还款;3每月还息到期还本
+	 */
+	private int style;
+	/**
+	 * 借款用途
+	 */
+	private String borrowUse;
+	/**
+	 * 标类 0月标 1天标
+	 */
+	private int borrowTimeType;
+	/**
+	 * 借款期限(月标)
+	 */
+	private int timeLimit;
+
+	// /**
+	// * 还款结束后奖励
+	// */
+	// private double lateAward;
+
+	/**
+	 * 定向密码
+	 */
+	private String pwd;
+	/**
+	 * 定时时间
+	 */
+	private Date fixedTime;
+	/**
+	 * 流转标金额
+	 */
+	private double flowMoney;
+	/**
+	 * 流转标的总份数
+	 */
+	private int flowCount;
+	/**
+	 * 流转标已经购买的份数
+	 */
+	private int flowYesCount;
+
+	/**
+	 * 流转标累计已购买的份数
+	 */
+	// private int flowTotalYesCount;
+	/**
+	 * 是否推荐标 0普通标; 1推荐标
+	 */
+	private boolean isRecommend;
+	/**
+     * 是否测试标 0非测试标; 1测试标
+     */
+    private int isTest;
+	/**
+	 * 最低投标金额
+	 */
+	private double lowestAccount;
+	/**
+	 * 最多投标金额
+	 */
+	private double mostAccount;
+	/**
+	 * 单笔最低限额
+	 */
+	private double lowestSingleLimit;
+	/**
+	 * 单笔最高限额
+	 */
+	private double mostSingleLimit;
+	/**
+	 * 有效时间(天数)
+	 */
+	private int validTime;
+	/**
+	 * 最大投标次数
+	 */
+	// private int mostTenderTimes;
+
+	/**
+	 * 应还本金
+	 */
+	private double repaymentAccount;
+	/**
+	 * 实还本金
+	 */
+	private double repaymentYesAccount;
+	/**
+	 * 实还利息
+	 */
+	private double repaymentYesInterest;
+
+	/**
+	 * 投标完成笔数
+	 */
+	private int tenderTimes;
+
+	/**
+	 * 添加时间
+	 */
+	private Date addTime;
+	/**
+	 * ip
+	 */
+	private String addIp;
+
+	/**
+	 * 截标前account值
+	 */
+	private double oldAccount;
+	
+	/**
+	 * 投标奖励  0没有奖励;1比例奖励;2分摊奖励
+	 */
+	private int award;
+	
+	/**
+	 * 按投标金额比例(0.1-6)
+	 */
+	 private double partAccount;
+	 
+	 /**
+	 * 分摊奖励金额
+	 */
+	private double funds;
+	
+	/**
+	 * 标的号
+	 */
+	private String bidNo;
+	/**
+	 * 登记时间
+	 */
+	private Date registerTime;
+	/**
+	 * 资产包性质
+	 */
+	private String portfolioProp;
+	/**
+	 * 合同号
+	 */
+	private String dealNo;
+	
+	private int star;//标的星级
+	private int financeScore;//财务实力评分
+	private int statusScore;//经营状况
+	private int sinkScore;//偿债保障
+	
+	
+	private String tradeNo;//商户批次号
+	
+	private String borrowManageFeeTradeNo; //借款手续费订单号
+	//JSDBET-872 wcw 2015-3-28 start
+	private String guaranteeTradeNo;//担保费订单号
+	
+	public String getGuaranteeTradeNo() {
+		return guaranteeTradeNo;
+	}
+
+	public void setGuaranteeTradeNo(String guaranteeTradeNo) {
+		this.guaranteeTradeNo = guaranteeTradeNo;
+	}
+	//JSDBET-872 wcw 2015-3-28 end
+	
+	// yjf 新加 start
+	
+	private int isSwingout ;  // 1 可以转出  0 不可以转出
+	
+	public int getIsSwingout() {
+		return isSwingout;
+	}
+
+	public void setIsSwingout(int isSwingout) {
+		this.isSwingout = isSwingout;
+	}
+	// end
+	
+	public String getBorrowManageFeeTradeNo() {
+		return borrowManageFeeTradeNo;
+	}
+
+	public void setBorrowManageFeeTradeNo(String borrowManageFeeTradeNo) {
+		this.borrowManageFeeTradeNo = borrowManageFeeTradeNo;
+	}
+
+	public String getTradeNo() {
+		return tradeNo;
+	}
+
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+
+	public int getStar() {
+		return star;
+	}
+
+	public void setStar(int star) {
+		this.star = star;
+	}
+
+	public int getFinanceScore() {
+		return financeScore;
+	}
+
+	public void setFinanceScore(int financeScore) {
+		this.financeScore = financeScore;
+	}
+
+	public int getStatusScore() {
+		return statusScore;
+	}
+
+	public void setStatusScore(int statusScore) {
+		this.statusScore = statusScore;
+	}
+
+	public int getSinkScore() {
+		return sinkScore;
+	}
+
+	public void setSinkScore(int sinkScore) {
+		this.sinkScore = sinkScore;
+	}
+
+	/**
+	 * 担保公司
+	 */
+	@ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "vouch_id")
+    private User vouchFirm;
+	
+	/**
+	 * 借款手续费收取方式  1：按照比例  2：按照固定资金
+	 * @author sunxiaoyong
+	 */
+	private String borrowManageCostWay;
+	
+	public String getBorrowManageCostWay() {
+		return borrowManageCostWay;
+	}
+
+	public void setBorrowManageCostWay(String borrowManageCostWay) {
+		this.borrowManageCostWay = borrowManageCostWay;
+	}
+
+	/**
+	 * 借款手续费率
+	 */
+	private double borrowManageRate;
+	/**
+	 * 担保费率
+	 */
+	private double guaranteeRate;
+	/**
+	 * 登记担保方时候的订单号
+	 */
+	private String guaranteeNo;
+	
+	/**
+	 * 获取主键
+	 * 
+	 * @return 主键
+	 */
+	public long getId() {
+		return id;
+	}
+
+	/**
+	 * 设置主键
+	 * 
+	 * @param id 要设置的主键
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	/**
+	 * 获取用户信息
+	 * 
+	 * @return 用户信息
+	 */
+	public User getUser() {
+		return user;
+	}
+
+	/**
+	 * 设置用户信息
+	 * 
+	 * @param user 要设置的用户信息
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	/**
+	 * 获取借款标题
+	 * 
+	 * @return 借款标题
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * 设置借款标题
+	 * 
+	 * @param name 要设置的借款标题
+	 */
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	/**
+	 * 获取借款标信息内容
+	 * 
+	 * @return 借款标信息内容
+	 */
+	public String getContent() {
+		return content;
+	}
+
+	/**
+	 * 设置借款标信息内容
+	 * 
+	 * @param content 要设置的借款标信息内容
+	 */
+	public void setContent(String content) {
+		this.content = content;
+	}
+
+	/**
+	 * 获取标种
+	 * 
+	 * @return 标种
+	 */
+	public int getType() {
+		return type;
+	}
+
+	/**
+	 * 设置标种
+	 * 
+	 * @param type 要设置的标种
+	 */
+	public void setType(int type) {
+		this.type = type;
+	}
+
+	/**
+	 * 标状态
+	 * 
+	 * @return 标状态
+	 */
+	public int getStatus() {
+		return status;
+	}
+
+	/**
+	 * 设置标状态
+	 * 
+	 * @param status 要设置的标状态
+	 */
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	/**
+	 * 获取期数
+	 * 
+	 * @return 期数
+	 */
+	public int getPeriod() {
+		return period;
+	}
+
+	/**
+	 * 设置期数
+	 * 
+	 * @param period 要设置的期数
+	 */
+	public void setPeriod(int period) {
+		this.period = period;
+	}
+
+	/**
+	 * 获取借款总额
+	 * 
+	 * @return 借款总额
+	 */
+	public double getAccount() {
+		return account;
+	}
+
+	/**
+	 * 设置借款总额
+	 * 
+	 * @param account 要设置的借款总额
+	 */
+	public void setAccount(double account) {
+		this.account = account;
+	}
+
+	/**
+	 * 获取年利率
+	 * 
+	 * @return 年利率
+	 */
+	public double getApr() {
+		return apr;
+	}
+
+	/**
+	 * 设置年利率
+	 * 
+	 * @param apr 要设置的年利率
+	 */
+	public void setApr(double apr) {
+		this.apr = apr;
+	}
+
+	/**
+	 * 获取借款用途
+	 * 
+	 * @return 借款用途
+	 */
+	public String getBorrowUse() {
+		return borrowUse;
+	}
+
+	/**
+	 * 设置借款用途
+	 * 
+	 * @param borrowUse 要设置的借款用途
+	 */
+	public void setBorrowUse(String borrowUse) {
+		this.borrowUse = borrowUse;
+	}
+
+	/**
+	 * 获取标类 0月标 1天标
+	 * 
+	 * @return 标类 0月标 1天标
+	 */
+	public int getBorrowTimeType() {
+		return borrowTimeType;
+	}
+
+	/**
+	 * 设置标类 0月标 1天标
+	 * 
+	 * @param borrowTimeType 要设置的标类 0月标 1天标
+	 */
+	public void setBorrowTimeType(int borrowTimeType) {
+		this.borrowTimeType = borrowTimeType;
+	}
+
+	/**
+	 * 获取借款期限(月标)
+	 * 
+	 * @return 借款期限(月标)
+	 */
+	public int getTimeLimit() {
+		return timeLimit;
+	}
+
+	/**
+	 * 设置借款期限(月标)
+	 * 
+	 * @param timeLimit 要设置的借款期限(月标)
+	 */
+	public void setTimeLimit(int timeLimit) {
+		this.timeLimit = timeLimit;
+	}
+
+	/**
+	 * 获取定向密码
+	 * 
+	 * @return 定向密码
+	 */
+	public String getPwd() {
+		return pwd;
+	}
+
+	/**
+	 * 设置定向密码
+	 * 
+	 * @param pwd 要设置的定向密码
+	 */
+	public void setPwd(String pwd) {
+		this.pwd = pwd;
+	}
+
+	/**
+	 * 获取定时时间
+	 * @return 定时时间
+	 */
+	public Date getFixedTime() {
+        return fixedTime;
+    }
+
+	/**
+	 * 设置定时时间
+	 * @param fixedTime 要设置的定时时间
+	 */
+    public void setFixedTime(Date fixedTime) {
+        this.fixedTime = fixedTime;
+    }
+
+    /**
+	 * 获取流转标金额
+	 * 
+	 * @return 流转标金额
+	 */
+	public double getFlowMoney() {
+		return flowMoney;
+	}
+
+	/**
+	 * 设置流转标金额
+	 * 
+	 * @param flowMoney 要设置的流转标金额
+	 */
+	public void setFlowMoney(double flowMoney) {
+		this.flowMoney = flowMoney;
+	}
+
+	/**
+	 * 获取流转标的总份数
+	 * 
+	 * @return 流转标的总份数
+	 */
+	public int getFlowCount() {
+		return flowCount;
+	}
+
+	/**
+	 * 设置流转标的总份数
+	 * 
+	 * @param flowCount 要设置的流转标的总份数
+	 */
+	public void setFlowCount(int flowCount) {
+		this.flowCount = flowCount;
+	}
+
+	/**
+	 * 获取流转标已经购买的份数
+	 * 
+	 * @return 流转标已经购买的份数
+	 */
+	public int getFlowYesCount() {
+		return flowYesCount;
+	}
+
+	/**
+	 * 设置流转标已经购买的份数
+	 * 
+	 * @param flowYesCount 要设置的流转标已经购买的份数
+	 */
+	public void setFlowYesCount(int flowYesCount) {
+		this.flowYesCount = flowYesCount;
+	}
+	/**
+	 * 获取是否推荐标 0普通标; 1推荐标
+	 * 
+	 * @return 是否推荐标 0普通标; 1推荐标
+	 */
+	public boolean isRecommend() {
+		return isRecommend;
+	}
+	/**
+	 * 设置是否推荐标 0普通标; 1推荐标
+	 * 
+	 * @param isRecommend 要设置的是否推荐标 0普通标; 1推荐标
+	 */
+	public void setRecommend(boolean isRecommend) {
+		this.isRecommend = isRecommend;
+	}
+
+    public int getIsTest() {
+        return isTest;
+    }
+
+    public void setIsTest(int isTest) {
+        this.isTest = isTest;
+    }
+
+    /**
+	 * 获取最低投标金额
+	 * 
+	 * @return 最低投标金额
+	 */
+	public double getLowestAccount() {
+		return lowestAccount;
+	}
+
+	/**
+	 * 设置最低投标金额
+	 * 
+	 * @param lowestAccount 要设置的最低投标金额
+	 */
+	public void setLowestAccount(double lowestAccount) {
+		this.lowestAccount = lowestAccount;
+	}
+
+	/**
+	 * 获取最多投标金额
+	 * 
+	 * @return 最多投标金额
+	 */
+	public double getMostAccount() {
+		return mostAccount;
+	}
+
+	/**
+	 * 设置最多投标金额
+	 * 
+	 * @param mostAccount 要设置的最多投标金额
+	 */
+	public void setMostAccount(double mostAccount) {
+		this.mostAccount = mostAccount;
+	}
+
+	/**
+	 * 获取单笔最低限额
+	 * 
+	 * @return 单笔最低限额
+	 */
+	public double getLowestSingleLimit() {
+		return lowestSingleLimit;
+	}
+
+	/**
+	 * 设置单笔最低限额
+	 * 
+	 * @param lowestSingleLimit 要设置的单笔最低限额
+	 */
+	public void setLowestSingleLimit(double lowestSingleLimit) {
+		this.lowestSingleLimit = lowestSingleLimit;
+	}
+
+	/**
+	 * 获取单笔最高限额
+	 * 
+	 * @return 单笔最高限额
+	 */
+	public double getMostSingleLimit() {
+		return mostSingleLimit;
+	}
+
+	/**
+	 * 设置单笔最高限额
+	 * 
+	 * @param mostSingleLimit 要设置的单笔最高限额
+	 */
+	public void setMostSingleLimit(double mostSingleLimit) {
+		this.mostSingleLimit = mostSingleLimit;
+	}
+
+	/**
+	 * 获取有效时间(天数)
+	 * 
+	 * @return 有效时间(天数)
+	 */
+	public int getValidTime() {
+		return validTime;
+	}
+
+	/**
+	 * 设置有效时间(天数)
+	 * 
+	 * @param validTime 要设置的有效时间(天数)
+	 */
+	public void setValidTime(int validTime) {
+		this.validTime = validTime;
+	}
+
+	/**
+	 * 获取还款方式 
+	 * 
+	 * @return 还款方式 
+	 */
+	public int getStyle() {
+		return style;
+	}
+
+	/**
+	 * 设置还款方式
+	 * 
+	 * @param style 要设置的还款方式 
+	 */
+	public void setStyle(int style) {
+		this.style = style;
+	}
+
+	/**
+	 * 获取实还总金额
+	 * 
+	 * @return 实还总金额
+	 */
+	public double getAccountYes() {
+		return accountYes;
+	}
+
+	/**
+	 * 设置实还总金额
+	 * 
+	 * @param accountYes 要设置的实还总金额
+	 */
+	public void setAccountYes(double accountYes) {
+		this.accountYes = accountYes;
+	}
+
+	/**
+	 * 获取应还本金
+	 * 
+	 * @return 应还本金
+	 */
+	public double getRepaymentAccount() {
+		return repaymentAccount;
+	}
+
+	/**
+	 * 设置应还本金
+	 * 
+	 * @param repaymentAccount 要设置的应还本金
+	 */
+	public void setRepaymentAccount(double repaymentAccount) {
+		this.repaymentAccount = repaymentAccount;
+	}
+
+	/**
+	 * 获取实还本金
+	 * 
+	 * @return 实还本金
+	 */
+	public double getRepaymentYesAccount() {
+		return repaymentYesAccount;
+	}
+
+	/**
+	 * 设置实还本金
+	 * 
+	 * @param repaymentYesAccount 要设置的实还本金
+	 */
+	public void setRepaymentYesAccount(double repaymentYesAccount) {
+		this.repaymentYesAccount = repaymentYesAccount;
+	}
+
+	/**
+	 * 获取实还利息
+	 * 
+	 * @return 实还利息
+	 */
+	public double getRepaymentYesInterest() {
+		return repaymentYesInterest;
+	}
+
+	/**
+	 * 设置实还利息
+	 * 
+	 * @param repaymentYesInterest 要设置的实还利息
+	 */
+	public void setRepaymentYesInterest(double repaymentYesInterest) {
+		this.repaymentYesInterest = repaymentYesInterest;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	/**
+	 * 获取ip
+	 * 
+	 * @return ip
+	 */
+	public String getAddIp() {
+		return addIp;
+	}
+
+	/**
+	 * 设置ip
+	 * 
+	 * @param addIp 要设置的ip
+	 */
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	/**
+	 * 获取完成比例
+	 * 
+	 * @return 完成比例
+	 */
+	public double getScales() {
+		return scales;
+	}
+
+	/**
+	 * 设置完成比例
+	 * 
+	 * @param scales 要设置的完成比例
+	 */
+	public void setScales(double scales) {
+		this.scales = scales;
+	}
+
+	public int getTenderTimes() {
+		return tenderTimes;
+	}
+
+	public void setTenderTimes(int tenderTimes) {
+		this.tenderTimes = tenderTimes;
+	}
+
+	public double getOldAccount() {
+		return oldAccount;
+	}
+
+	public void setOldAccount(double oldAccount) {
+		this.oldAccount = oldAccount;
+	}
+
+	public int getAward() {
+		return award;
+	}
+
+	public void setAward(int award) {
+		this.award = award;
+	}
+
+	public double getPartAccount() {
+		return partAccount;
+	}
+
+	public void setPartAccount(double partAccount) {
+		this.partAccount = partAccount;
+	}
+
+	public double getFunds() {
+		return funds;
+	}
+
+	public void setFunds(double funds) {
+		this.funds = funds;
+	}
+
+	public String getBidNo() {
+		return bidNo;
+	}
+
+	public void setBidNo(String bidNo) {
+		this.bidNo = bidNo;
+	}
+
+    public String getPortfolioProp() {
+        return portfolioProp;
+    }
+
+    public void setPortfolioProp(String portfolioProp) {
+        this.portfolioProp = portfolioProp;
+    }
+
+    public User getVouchFirm() {
+        return vouchFirm;
+    }
+
+    public void setVouchFirm(User vouchFirm) {
+        this.vouchFirm = vouchFirm;
+    }
+
+    public String getDealNo() {
+        return dealNo;
+    }
+
+    public void setDealNo(String dealNo) {
+        this.dealNo = dealNo;
+    }
+
+    public Date getRegisterTime() {
+        return registerTime;
+    }
+
+    public void setRegisterTime(Date registerTime) {
+        this.registerTime = registerTime;
+    }
+
+    
+    public double getBorrowManageRate() {
+        return borrowManageRate;
+    }
+
+    public void setBorrowManageRate(double borrowManageRate) {
+        this.borrowManageRate = borrowManageRate;
+    }
+
+    public double getGuaranteeRate() {
+        return guaranteeRate;
+    }
+
+    public void setGuaranteeRate(double guaranteeRate) {
+        this.guaranteeRate = guaranteeRate;
+    }
+
+    public String getGuaranteeNo() {
+        return guaranteeNo;
+    }
+
+    public void setGuaranteeNo(String guaranteeNo) {
+        this.guaranteeNo = guaranteeNo;
+    }
+	
+
+	/**
+     * 计算担保收益金额
+     * @return
+     */
+    public double getGuaranteeFee() {
+        double fee = 0;
+        if (this.borrowTimeType == 0) {// 如果是月标，则算月收益再乘以月数
+            fee = BigDecimalUtil.decimal(this.guaranteeRate*this.timeLimit*this.account/12/100,2);
+        } else {// 如果是天标，则算天收益再乘以天数
+            //一年以365天计算
+            fee =  BigDecimalUtil.decimal(this.guaranteeRate*this.timeLimit*this.account/365/100,2);
+        }
+        return fee;
+    }
+    
+    /**
+     * 计算担保收益金额
+     * @return
+     */
+    public double getGuaranteeFee(double tenderAccount) {
+        double fee = 0;
+        if (this.borrowTimeType == 0) {// 如果是月标，则算月收益再乘以月数
+            fee = BigDecimalUtil.decimal(this.guaranteeRate*this.timeLimit*tenderAccount/12/100,2);
+        } else {// 如果是天标，则算天收益再乘以天数
+            //一年以365天计算
+            fee =  BigDecimalUtil.decimal(this.guaranteeRate*this.timeLimit*tenderAccount/365/100,2);
+        }
+        return fee;
+    }
+    /**
+     * 获取平台可得的管理费率：
+     * @return
+     */
+    public double getBorrowManageFee() {
+        /**
+         * 费率计算规则：（登记的费率/100*借款金额-分给担保方的金额）*借款金额 
+         */
+        double manageFee =0;
+        double guaranteeFee = this.getGuaranteeFee();
+        manageFee=(this.account*this.borrowManageRate/100-guaranteeFee)/this.account;
+        return manageFee;
+    }
+    
+    public double getGuarantorMoney(){
+        // 环迅最高支持年利50%，担保金额考虑逾期，则担保金额最高为本金+本金*年利50%*借款期限/12/100
+        double guarantorMoney = 0;
+        if (this.getBorrowTimeType() == 0) {// 如果是月标，则算月收益再乘以月数
+            guarantorMoney = this.getAccount() + this.getAccount() * 0.5 * this.getTimeLimit() / 12;
+        } else {// 如果是天标，则算天收益再乘以天数
+            //一年以365天计算
+            guarantorMoney = this.getAccount() + this.getAccount() * 0.5 * this.getTimeLimit() / 365;
+        }
+        return guarantorMoney;
+    }
+
+
+}

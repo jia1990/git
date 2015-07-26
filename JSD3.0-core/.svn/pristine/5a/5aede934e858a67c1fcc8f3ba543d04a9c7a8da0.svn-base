@@ -1,0 +1,138 @@
+package com.rongdu.p2psys.core.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.model.OperatorModel;
+
+public interface OperatorService {
+
+	/**
+	 * 用户登录方法
+	 * 
+	 * @param userName 登录用户名
+	 * @param password 登录密码
+	 * @return 用户
+	 */
+	Operator login(String userName, String password) throws Exception;
+
+	/**
+	 * 添加用户方法
+	 * 
+	 * @param operator 用户对象
+	 * @param roleIdArr 用户选择角色数组
+	 */
+	void addOperator(Operator operator, String[] roleIdArr);
+
+	/**
+	 * 查询用户
+	 * 
+	 * @return list
+	 */
+	List<Operator> getUserList();
+
+	/**
+	 * 用户查询
+	 * 
+	 * @param id 主键ID
+	 * @return 用户信息
+	 */
+	Operator getUserById(long id);
+
+	/**
+	 * 用户修改
+	 * 
+	 * @param user 用户
+	 * @param roleIdArr 用户选择角色数组
+	 */
+	void userUpdate(Operator user, String[] roleIdArr);
+
+	/**
+	 * 用户删除
+	 * 
+	 * @param id 主键ID
+	 */
+	void userDelete(long id);
+
+	/**
+	 * 用户分页
+	 * 
+	 * @param param 查询参数
+	 * @return 分页
+	 */
+	PageDataList<Operator> getUserPageList(QueryParam param);
+
+	/**
+	 * 修改用户
+	 * 
+	 * @param user 用户
+	 */
+	void userUpdate(Operator user);
+
+	/**
+	 * 修改用户密码
+	 * 
+	 * @param user 用户
+	 */
+	void updateUserPwd(Operator user);
+
+	/**
+	 * 根据用户名查询用户信息
+	 * 
+	 * @param userName 用户名
+	 * @return 用户信息
+	 */
+	Operator getUserByUserName(String userName);
+	
+	/**
+	 * 根据角色获取此用户是否有下级用户
+	 * @param pid
+	 * @return
+	 */
+	List<Operator> getOperatorByRole(List<Integer> pid);
+	
+	/**
+	 * 根据用户角色获取用户分页
+	 * @param param
+	 * @return
+	 */
+	PageDataList<Operator> getOperatorListByRole(Map<String,Object> paramMap,QueryParam param);
+
+	/**
+	 * 获取用户
+	 * @param paramMap
+	 * @param param
+	 * @return
+	 */
+	PageDataList<Operator> getAOperatorListByRole(Map<String, Object> paramMap,QueryParam param);
+	/**
+	 * 根据id查询客服
+	 * @param id
+	 * @return
+	 */
+	Operator deleteKefuById(long id);
+	/**
+	 * 根据工号查询客服
+	 * @param customerNo
+	 * @return
+	 */
+	Operator getOperatorByNo(String customerNo);
+	
+	/**
+	 * 根据id查询删除的操作员
+	 * @param id
+	 * @param isDel
+	 * @return
+	 */
+	Operator getDelOptorById(long id,boolean isDel);
+	/**
+	 * 根据客服组长和专属客服的id查询客服，用于展示
+	 * @param paramMap
+	 * @param param
+	 * @return
+	 */
+	PageDataList<Operator> getKefuByRoleId(Map<String,Object> paramMap,QueryParam param);
+}

@@ -1,0 +1,341 @@
+package com.rongdu.manage.action.system;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.domain.Menu;
+import com.rongdu.p2psys.core.domain.Role;
+import com.rongdu.p2psys.core.domain.RoleMenu;
+import com.rongdu.p2psys.core.model.RoleModel;
+import com.rongdu.p2psys.core.service.MenuService;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.service.RoleService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 角色管理
+ * 
+ * @version 2.0
+ */
+public class RoleAction extends BaseAction implements ModelDriven<RoleModel> {
+
+	private RoleModel model = new RoleModel();
+
+	public RoleModel getModel() {
+		
+		return model;
+	}
+
+	@Resource
+	private OperatorService operatorService;
+	
+	@Resource
+	private RoleService roleService;
+
+	@Resource
+	private MenuService menuService;
+
+	private Map<String, Object> map = new HashMap<String, Object>();
+
+	/**
+	 * 角色管理页面
+	 * 
+	 * @return
+	 */
+	@Action("/modules/system/role/roleManager")
+	public String roleManager() throws Exception {
+		return "roleManager";
+	}
+
+	/**
+	 * 查询角色列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/system/role/roleList")
+	public void roleList() throws Exception {
+		//此用户所拥有的角色
+		List<Role> roleList = roleService.getRoleList(getOperatorId());
+		
+		//当前登录的角色名
+		Role loginRole = roleService.getRole(getOperatorId());
+		Long loginRoleIdStr = loginRole.getId();
+		String loginRoleId = loginRoleIdStr.toString();
+		//判读是否为超级管理员，如果是则全部查出角色，不加条件
+
+		List<Integer> idlist = new ArrayList<Integer>();
+		for(int i=0;i<roleList.size();i++){
+			Role role = roleList.get(i);
+			if(role.getId()!=11){
+				idlist.add((int) roleList.get(i).getId());
+			}
+			
+			model.setLoginRoleId(loginRoleId);
+		}
+		model.setIdlist(idlist);
+		// 设置当前登录角色名
+		model.setLoginRoleId(loginRoleId);
+		
+		PageDataList<Role> pageList = roleService.list(model);
+		
+		PageDataList<RoleModel> pageRoleList = new PageDataList<RoleModel>();
+		
+		List<RoleModel> roleModelList = new ArrayList<RoleModel>();
+		List<Role> rList = pageList.getList();
+		for(int i=0;i<rList.size();i++){
+			RoleModel rmodel = model.instance(rList.get(i));
+			
+			if(rList.get(i).isDelete()){
+				rmodel.setIsDelete("Y");
+			}else{
+				rmodel.setIsDelete("N");
+			}
+			int pid = rmodel.getPid();
+			if(pid!=0){
+				Role role = roleService.getRoleById(pid);
+				rmodel.setRolePid(role.getId());
+				rmodel.setRolePname(role.getName());
+			}else{
+				rmodel.setRolePid(0);
+				rmodel.setRolePname("topRole");
+			}
+			
+			rmodel.setLoginRoleId(loginRoleId);
+			roleModelList.add(rmodel);
+		}
+		pageRoleList.setPage(pageList.getPage());
+		pageRoleList.setList(roleModelList);
+		
+		int totalPage = pageRoleList.getPage().getTotal(); // 总页数
+		map.put("total", totalPage);
+		map.put("rows", pageRoleList.getList());
+		map.put("loginRoleId", loginRoleId);
+		printJson(getStringOfJpaObj(map));
+	}
+
+	
+	/**
+	 * 获取用户所拥有的角色
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/role/myRoleList")
+	public void myRoleList() throws Exception {
+		List<Role> roleList = roleService.getRoleList(getOperatorId());
+		map.put("rows", roleList);
+		printJson(getStringOfJpaObj(map));
+	}
+	/**
+	 * 根据id获取用户的角色
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/system/role/getRoleNameById")
+	public void getRoleNameById() throws Exception {
+		
+		Long id = Long.parseLong(request.getParameter("id"));
+		Role role = roleService.getRoleById(id);
+		if(null != role){
+			String pName = role.getName();
+			map.put("pName", pName);
+		}
+		printJson(getStringOfJpaObj(map));
+	}
+
+	/**
+	 * 角色添加页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/system/role/roleAddPage")
+	public String roleAddPage() throws Exception {
+		
+		//此用户所拥有的角色
+		List<Role> roleList = roleService.getRoleList(getOperatorId());
+		
+		//判读是否为超级管理员，如果是则全部查出角色，不加条件
+		Map<String,Object> paramMap = new HashMap<String, Object>();
+		List<Integer> idlist = new ArrayList<Integer>();
+
+		for(int i=0;i<roleList.size();i++){
+			Role role = roleList.get(i);
+			if(role.getId()!=11){
+				idlist.add((int) roleList.get(i).getId());
+			}
+			paramMap.put("pidList", idlist);
+		}
+		
+		List<Role> myRoleList = roleService.getRoleList(paramMap);
+		
+		
+
+		//此用户所拥有的菜单
+		List<Menu> menuList = menuService.menuUseList(getOperatorId(), Menu.MENU_ALL);
+		
+		
+		request.setAttribute("myRoleList", myRoleList);
+		request.setAttribute("menuList", menuList);
+		saveToken("roleAddToken");
+		return "roleAddPage";
+	}
+
+	/**
+	 * 角色添加
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/role/roleAdd")
+	public void roleAdd() throws Exception {
+		Role role = (Role) paramModel(Role.class);
+		String menuIdStr = request.getParameter("menuId");
+		if (StringUtil.isBlank(menuIdStr)) {
+			//printResult(MessageUtil.getMessage("I10004"), false);
+			throw new BussinessException("请选择菜单选择", 1);
+			//return;
+		}
+		String name = request.getParameter("name");
+		Role roleResult = roleService.getRoleByName(name);
+		
+		if(null!=roleResult){
+			throw new BussinessException("角色名称已存在！", 1);
+		}
+		String[] menuIdArr = menuIdStr.split(",");
+		if (menuIdArr == null || menuIdArr.length <= 0) {
+			printResult(MessageUtil.getMessage("I10004"), false);
+			return;
+		}
+		role.setAddUser(getOperator().getName());
+		//role.setAddUser(getOperator().getUserName());
+		checkToken("roleAddToken");
+		roleService.addRole(role, menuIdArr);
+		printResult(MessageUtil.getMessage("I10001"), true);
+	}
+
+	/**
+	 * 角色修改页面
+	 * 
+	 * @return 页面
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/role/roleEditPage")
+	public String roleEditPage() throws Exception {
+		Role role = roleService.getRoleById(this.model.getId());
+		request.setAttribute("role", role);
+		saveToken("roleEditToken");
+		return "roleEditPage";
+	}
+
+	/**
+	 * 角色修改
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/role/roleEdit")
+	public void roleEdit() throws Exception {
+		Role role = (Role) this.paramModel(Role.class);
+		role.setAddTime(model.getAddTime());
+		role.setUpdateUser(getOperator().getName());
+		//判断用户名是否被修改过
+		Role roleOld = roleService.getRoleById(role.getId());
+		if(!role.getName().equals(roleOld.getName())){
+			Role roleName = roleService.getRoleByName(role.getName());
+			if(null != roleName){
+				throw new BussinessException("该角色名已被使用！", 1);
+			}
+		}
+		checkToken("roleEditToken");
+		roleService.roleUpdate(role);
+		
+		printResult(MessageUtil.getMessage("I10002"), true);
+	}
+
+	/**
+	 * 角色删除（逻辑删除）
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/role/roleDelete")
+	public void roleDelete() throws Exception {
+		
+		// 得到要删除的角色，根据其id查询父级id是否存在，若存在，则提示不能够删除角色
+		Role role = roleService.sonRoleFind((int)model.getId());
+		// 得到要删除的角色，根据其id查询是否存在该角色的操作员，若存在，则不能删除该角色
+		int roleCount = roleService.getRoleId((int)model.getId());
+		
+		if(null != role){
+			throw new BussinessException("该角色存在子角色，不能删除！", 1);
+		}else{
+			if(0 != roleCount){
+				throw new BussinessException("该角色下存在用户，不能删除！", 1);
+			}else{
+				roleService.deleteRole(this.model.getId());
+				printResult(MessageUtil.getMessage("I10003"), true);
+			}
+		}
+	}
+
+	/**
+	 * 角色拥有的菜单修改
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/role/roleEditMenu")
+	public void roleEditMenu() throws Exception {
+		String menuIdStr = request.getParameter("menuId");
+		String[] menuIdArr = {};
+		if (menuIdStr != null && menuIdStr.length() > 0) {
+			menuIdArr = menuIdStr.split(",");
+		}
+		checkToken("roleEditMenuToken");
+		roleService.roleMenuUpdate(this.model.getId(), menuIdArr);
+		printResult(MessageUtil.getMessage("I10002"), true);
+	}
+
+	/**
+	 * 角色拥有的菜单修改查询
+	 * 
+	 * @throws Exception 异常
+	 * @return 页面
+	 */
+	@Action(value = "/modules/system/role/roleEditMenuPage")
+	public String roleEditMenuPage() throws Exception {
+		long id = this.paramLong("id");
+		if (id <= 0) {
+			printResult(MessageUtil.getMessage("I10007"), false);
+			return "roleEditMenuPage";
+		}
+		Role role = roleService.getRoleById(id);
+		
+		if(0 == role.getPid()){
+			
+			request.setAttribute("pName", "无");
+			
+		}else{
+			
+			Role pRole = roleService.getRoleById(role.getPid());
+			
+			request.setAttribute("pName", pRole.getName());
+		}
+		List<Menu> menuList = menuService.menuUseList();
+		List<RoleMenu> roleMenuList = role.getRoleMenus();
+		request.setAttribute("roleMenuList", roleMenuList);
+		request.setAttribute("role", role);
+		request.setAttribute("menuList", menuList);
+		request.setAttribute("id", id);
+		request.setAttribute("roleP", role.getPid());
+		saveToken("roleEditMenuToken");
+		return "roleEditMenuPage";
+	}
+
+}

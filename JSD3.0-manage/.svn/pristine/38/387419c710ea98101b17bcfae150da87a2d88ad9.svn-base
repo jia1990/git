@@ -1,0 +1,120 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/creditassignment/credit/caFullVerify.html',"复审成功！","复审失败！");
+	});
+</script>
+
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>债权名：</span>
+		${caName!}
+	</div>
+	<div class="showItem">
+		<span>出售债权用户名：</span>
+		${sellUserName!}
+	</div>
+	<div class="showItem">
+		<span>债权预期价值：</span>
+		${ca.creditValue!}
+	</div>
+	<div class="showItem">
+		<span>债权发布价格：</span>
+		${ca.creditPrice!}
+	</div>
+	<div class="showItem">
+		<span>债权转让费率：</span>
+		${ca.creditDis!}
+	</div>
+	<div class="showItem">
+		<span>债权转让份数：</span>
+		${ca.creditCopies!}
+	</div>
+	<div class="showItem">
+		<span>已售金额：</span>
+		${ca.soldAccount!}
+	</div>
+	<div class="showItem">
+		<span>已售份数：</span>
+		${ca.sellCopies!}
+	</div>
+	<div class="showItem">
+		<span>债权等级：</span>
+		<#if ca.level==1>
+			普通
+		<#elseif ca.level==2>
+			优质
+		<#else>
+			错误等级
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>债权状态：</span>
+		<#if ca.status=="00">
+			发布
+		<#elseif ca.status=="01">
+			初审通过
+		<#elseif borrow.status=="02">
+			初审未通过
+		<#elseif borrow.status=="03">
+			复审通过
+		<#elseif borrow.status=="04">
+			复审未通过
+		<#elseif borrow.status=="05">
+			撤回
+		<#else>
+			错误状态
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>是否违约提前转出：</span>
+		<#if ca.isBreach==1>
+			是，违约金：${ca.breachAccount!}
+		<#else>
+			否
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>债权转让截止时间：</span>
+		${ca.buyEndTime?string("yyyy-MM-dd HH:mm:ss")!}
+	</div>
+	<div class="showItem">
+		<span>添加时间：</span>
+		${ca.addTime?string("yyyy-MM-dd HH:mm:ss")!}
+	</div>
+	<div class="showItem">
+		<span>添加IP：</span>
+		${ca.addIp!}
+	</div>
+	<div class="showItem">
+		<span>初审时间：</span>
+		${ca.verifyTime?string("yyyy-MM-dd HH:mm:ss")!}
+	</div>
+	<div class="showItem">
+		<span>初审用户：</span>
+		${verifyUserName!}
+	</div>
+	<div class="showItem">
+		<span>初审备注：</span>
+		${ca.verifyRemark!}
+	</div>
+</div>
+<div class="popForm" style="padding-top:0;">
+<form id="form" method="post" enctype="multipart/form-data">
+	<div class="formitm">
+		<label class="lab">是否通过：</label>
+		<div class="ipt">
+		   	<label><input type="radio" name="status" class="easyui-validatebox" value="03" data-options="required: true" checked="checked" id="status"/>复审通过</label>
+			<label><input type="radio" name="status" class="easyui-validatebox" value="04" data-options="required: true" id="noStatus"/>复审不通过</label>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">审核备注：</label>
+		<div class="ipt">
+		   <textarea name="fullVerifyRemark" class="w400 easyui-validatebox" data-options="required: true"></textarea>
+		</div>
+	</div>
+	<input type="hidden" name="caFullVerifyToken" value="${caFullVerifyToken!}" >
+	<input type="hidden" name="id" value="${ca.id}"/>
+	<input type="hidden" name="actionType" value="caFullVerifyAction">
+</form>
+</div>

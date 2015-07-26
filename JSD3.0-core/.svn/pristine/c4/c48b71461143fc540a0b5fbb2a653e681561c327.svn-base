@@ -1,0 +1,641 @@
+
+package com.ddtkj.p2psys.score.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+import com.ddtkj.common.http.HttpResult;
+import com.ddtkj.common.http.HttpUtils;
+import com.ddtkj.common.util.security.SignUtils;
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.cardaward.dao.MemberCardAwardDao;
+import com.ddtkj.p2psys.core.util.CardAESUtils;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.member.dao.MemberVipAwardDao;
+import com.ddtkj.p2psys.member.domain.MemberVipAward;
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.score.constant.EnumAwardErrorType;
+import com.ddtkj.p2psys.score.constant.ScoreAwardConstant;
+import com.ddtkj.p2psys.score.dao.ScoreAwardDao;
+import com.ddtkj.p2psys.score.dao.ScoreRuleAwardDao;
+import com.ddtkj.p2psys.score.dao.UserScoreAwardDao;
+import com.ddtkj.p2psys.score.domain.AwardResult;
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.domain.UserScoreAward;
+import com.ddtkj.p2psys.score.model.ScoreAwardObjectModel;
+import com.ddtkj.p2psys.score.service.ScoreAwardService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck.YungouCardTransfer;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.score.constant.ScoreTypeConstant;
+import com.rongdu.p2psys.score.dao.ScoreDao;
+import com.rongdu.p2psys.score.dao.ScoreLogDao;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+@Service("scoreAwardService")
+public class ScoreAwardServiceImpl implements ScoreAwardService{
+	
+	private static Logger logger = Logger.getLogger(ScoreAwardServiceImpl.class);
+	
+	@Resource
+	private ScoreAwardDao scoreAwardDao;
+	@Resource
+	private UserScoreAwardDao userScoreAwardDao;
+	@Resource
+	private ScoreRuleAwardDao scoreRuleAwardDao;
+	@Resource
+	private ScoreDao scoreDao;
+	@Resource
+	private ScoreLogDao scoreLogDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private MemberVipAwardDao memberVipAwardDao;
+	@Resource
+	private RpProduceDao rpProduceDao;
+	@Resource
+	private MemberCardAwardDao memberCardAwardDao;
+	@Resource
+	private PetCardDao petCardDao;
+	
+	
+	@Override
+	public List<ScoreAward> getAwardObjectListByRuleId(long ruleId) {
+		return scoreAwardDao.getAwardObjectListByRuleId(ruleId);
+	}
+
+	@Override
+	public void addAwardObject(ScoreAward data) {
+		scoreAwardDao.save(data);
+	}
+
+	@Override
+	public void updateAwardObject(ScoreAward data) {
+		scoreAwardDao.update(data);
+	}
+
+	@Override
+	public ScoreAward getAwardObjectById(long awardId) {
+		return scoreAwardDao.find(awardId);
+	}
+
+	
+	
+	@Override
+	public AwardResult award(long ruleId, User user, double money) {
+		AwardResult result = new AwardResult();
+		boolean isSuccess = false;
+		ScoreRuleAward ruleAward = scoreRuleAwardDao.find(ruleId);
+		if (ruleAward == null) {
+			result.setError(EnumAwardErrorType.RESULT_INVALID_RULE_ID);
+			return result;
+		}
+		try {
+			// 抽奖规则数据校验
+			EnumAwardErrorType awardResultType = check(ruleAward, user.getUserId());
+			// 校验不通过的话，返回错误消息
+			if (awardResultType != null) {
+				result.setError(awardResultType);
+				return result;
+			}
+			List<ScoreAward> awardObjectList = scoreAwardDao.getAwardObjectListByRuleId(ruleAward.getId());
+			ScoreAward awardObject = getAwardObject(awardObjectList);
+			// 如果没有中奖并且不是100%中奖时，则判断为不中奖
+			if (awardObject == null && ruleAward.getIsAbsolute() != ScoreAwardConstant.AWARD_ISABSOLUTE) {
+				addUserAward(user, ruleAward, awardObject);
+				result.setError(EnumAwardErrorType.RESULT_NO_AWARD);
+				return result;
+			} else if (awardObject == null && ruleAward.getIsAbsolute() == ScoreAwardConstant.AWARD_ISABSOLUTE) {
+				awardObject = awardObjectList.get(awardObjectList.size() - 1);
+			}
+			// 判断是否有奖品数量限制
+			if (awardObject.getAwardLimit() != ScoreAwardConstant.AWARD_OBJECTLIMIT_NONE) {
+				// 剩余奖品数量
+				long awardObjectCnt = awardObject.getTotal() - awardObject.getBestow();
+				// 如果没有奖品并且不是100%中奖时，则判断为不中奖
+				if (awardObjectCnt == 0 && ruleAward.getIsAbsolute() != ScoreAwardConstant.AWARD_ISABSOLUTE) {
+					addUserAward(user, ruleAward, null);
+					result.setError(EnumAwardErrorType.RESULT_AWARD_OBJ_LIMIT);
+					return result;
+				}
+				// 如果没有奖品并且是100%中奖时，则变为概率最高的奖品
+				if (awardObjectCnt == 0 && ruleAward.getIsAbsolute() == ScoreAwardConstant.AWARD_ISABSOLUTE) {
+					// 奖励变为概率最高的奖品
+					awardObject = awardObjectList.get(awardObjectList.size() - 1);
+				}
+				// 更新奖品数量
+				scoreAwardDao.updateBestow(ruleAward.getId(), awardObject.getId());
+			}
+			// 判断是否有总金额限制
+			double awardMoney = 0;
+			if (ruleAward.getMoneyLimit() != ScoreAwardConstant.AWARD_MONEY_NONE) {
+				double availableMoney = ruleAward.getTotalMoney() - ruleAward.getBestowMoney();
+				// 按倍率抽奖时
+				if (ScoreAwardConstant.AWARD_TYPE_RATIO == ruleAward.getAwardType()) {
+					// 中奖金额
+					awardMoney = money * awardObject.getRatio();
+				} else {
+					awardMoney = awardObject.getAwardValue();
+				}
+				// 如果中奖金额>可用金额并且不是100%中奖时，则判断为不中奖
+				if (awardMoney > availableMoney && ruleAward.getIsAbsolute() != ScoreAwardConstant.AWARD_ISABSOLUTE) {
+					addUserAward(user, ruleAward, null);
+					result.setError(EnumAwardErrorType.RESULT_MONEY_LIMIT);
+					return result;
+				}
+				// 如果中奖金额>可用金额并且是100%中奖时，则变为概率最高的奖励
+				if (awardMoney > availableMoney && ruleAward.getIsAbsolute() == ScoreAwardConstant.AWARD_ISABSOLUTE) {
+					// 奖励变为概率最高的奖励
+					awardObject = awardObjectList.get(awardObjectList.size() - 1);
+					if (ScoreAwardConstant.AWARD_TYPE_RATIO == ruleAward.getAwardType()) {
+						awardMoney = money * awardObject.getRatio();
+					} else {
+						awardMoney = awardObject.getAwardValue();
+					}
+				}
+			} else {
+				// 按倍率抽奖时
+				if (ScoreAwardConstant.AWARD_TYPE_RATIO == ruleAward.getAwardType()) {
+					// 中奖金额
+					awardMoney = money * awardObject.getRatio();
+				} else {
+					awardMoney = awardObject.getAwardValue();
+				}
+			}
+			//云购卡对应奖项面值校验
+			List<PetCard> list = petCardDao.getYgCardByStatusAndType(PetCard.UN_CARD_STATUS, PetCard.TYPE_PET_CARD_YG, awardObject.getAwardValue());
+			if (ruleAward.getBackType() == ScoreAwardConstant.AWARD_BACKTYPE_AUTO && awardObject.getAwardValue() > 0 
+					&& ScoreAwardConstant.AWARD_OBJECTSTATUS_YES.equals(awardObject.getStatus())) {
+				if (awardObject.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_CARD && (list != null && list.size() == 0)) {
+					result.setError(EnumAwardErrorType.RESULT_YGCARD_NOT_ENOUGH);
+					return result;
+				}
+			}
+			//积分校验
+			EnumAwardErrorType awardResult = checkScore(ruleAward, user.getUserId());
+			// 校验不通过的话，返回错误消息
+			if (awardResult != null) {
+				result.setError(awardResult);
+				return result;
+			}
+			// 设定中奖信息
+			Score score = scoreDao.getScoreByUserId(user.getUserId());
+			result.setIs_success("True");
+			result.setLevelNo(String.valueOf(awardObject.getLevel()));
+			result.setName(awardObject.getName());
+			result.setMoney(String.valueOf(awardMoney));
+			result.setAwardType(String.valueOf(awardObject.getType()));
+			result.setScore(String.valueOf(score.getValidScore()));
+			if (awardObject.getName().length() > 10) {
+				result.setHideName(StringUtil.hideLastChar(awardObject.getName().substring(0, 10), 3));
+			}
+			
+			// 往中奖信息表中插入中奖记录
+			UserScoreAward userScoreAward = addUserAward(user, ruleAward, awardObject);					
+			//返现方式为自动返现处理
+			if (ruleAward.getBackType() == ScoreAwardConstant.AWARD_BACKTYPE_AUTO && awardObject.getAwardValue() > 0 
+					&& ScoreAwardConstant.AWARD_OBJECTSTATUS_YES.equals(awardObject.getStatus())) {
+				// 根据奖品类型处理
+				if (awardObject.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_MONEY) {
+					//	转账交易成功
+					String merchantId = Global.getValue("ymd_merchant_id");
+					AbstractExecuter scoreAwardSuccessExecuter = ExecuterHelper.doExecuter("scoreAwardSuccessExecuter");
+					Map<String, Object> map = new HashMap<String, Object>();
+			    	map.put("awardMoney", awardMoney);
+					scoreAwardSuccessExecuter.execute(map, user);
+					//	第三方转账
+					YmdTransfer ymdTransfer = YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_SMALL_SORT_SCORE_AWARD), 
+							TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_LARGE_SORT_SCORE_AWARD), awardMoney+"", merchantId, user.getUserName());
+					if(!"0000".equals(ymdTransfer.getErrCode())){
+				    	result.setError(EnumAwardErrorType.RESULT_AWARD_TRANSFER_ERROR);
+				    //	throw new BussinessException("积分抽奖转账失败原因:"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), 1);
+				    	//JSDBET-812 sgp 2015-3-14 start
+						throw new HandleException(ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败"), "积分抽奖异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_AWAED, 
+								ErrorLogConstant.CODE_SCORE_LOTTERY_TPOS, user, ErrorLogConstant.MODULE_SCORE_AWARD, user.getUserId(), 1);
+						//JSDBET-812 sgp 2015-3-14 end
+					}
+					// 更新领用金额
+					scoreRuleAwardDao.updateBestowMoney(ruleAward.getId(), awardMoney);
+				} else if (awardObject.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_SCORE) {
+					int objectValue = awardObject.getAwardValue();
+					scoreDao.updateScore(user.getUserId(), objectValue, objectValue, 0, 0);  
+					result.setScore(String.valueOf(scoreDao.getScoreByUserId(user.getUserId()).getValidScore()));
+					ScoreLog log = fillScoreLog(score);
+					log.setUser(user);
+					log.setScore(objectValue);
+					log.setScoreTypeName("抽奖奖励积分");
+					log.setScoreTypeNid(ScoreTypeConstant.AWARD_SCORE_OBJECT);
+					log.setType(ScoreTypeConstant.AWARD_SCORE_OBJECT);
+					log.setRemark("用户抽奖奖励积分，获得"+objectValue+"个积分。");
+					scoreLogDao.save(log);
+				} else if (awardObject.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_VIP && awardObject.getVipValidMonth() > 0) {
+					String vipLevel = awardObject.getVipLevel();
+					int vipValidMonth = awardObject.getVipValidMonth();
+					MemberVipAward memberVipAward = fillMemberVipAward(user, MemberVipAward.AWARD_RESOURCE_SCOREAWARD);
+					memberVipAward.setVipLevel(vipLevel);
+					memberVipAward.setVipValidMonth(vipValidMonth);
+					memberVipAwardDao.save(memberVipAward);	
+				} else if (awardObject.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_GOODS) {
+					//TODO 奖品类型为实物奖励的处理
+					
+				} else if (awardObject.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_REDPACKET) {
+					int objectValue = awardObject.getAwardValue();
+					RpProduce rp = fillRpProduce(user, RpProduce.DYNAMIC_RP_RES_SCOREAWARD);
+					rp.setRpDynamicMoney(objectValue);
+					rpProduceDao.save(rp);
+					//更新账户资金
+					Map<String, Object> map = new HashMap<String, Object>();
+					map.put("rpDynamicProduce", objectValue);
+					AbstractExecuter rpProduceExecuter = ExecuterHelper.doExecuter("rpDynamicProduceExecuter");
+					//交易对方为平台账号
+					rpProduceExecuter.execute(map, user, userDao.getUserById(1));
+				} else if (awardObject.getType() == ScoreAwardConstant.AWARD_OBJECTTYPE_CARD) {
+					if (list != null && list.size() > 0) {
+						PetCard petCard = (PetCard)list.get(0);			
+						//更新云购体验卡状态值为已使用
+						petCard.setStatus(PetCard.UD_CARD_STATUS);
+						petCard.setWinTime(new Date());
+						petCard.setUserName(user.getUserName());
+						petCard.setUserId(user.getUserId());
+						petCard = petCardDao.update(petCard);	
+						//更新抽奖记录对应的云购体验卡卡号
+						userScoreAward.setCardNo(petCard.getCardNo());
+						userScoreAwardDao.update(userScoreAward);
+						//发送通知到云购端
+						isSuccess = sendNoticeToYg(petCard, user);	
+						if (isSuccess) {
+							//发送云购体验卡中奖信息	
+							sendUserAwardMessage(user, awardObject, petCard);
+						}
+					}	
+				}
+			}
+			// 发送通知信息
+			sendUserAwardNotice(user, awardObject);
+		} catch (Exception e) {
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("积分抽奖失败，异常信息："+e.getMessage()+e.getCause(), "积分抽奖异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_AWAED,
+					ErrorLogConstant.CODE_SCORE_LOTTERY_SYS, user, ErrorLogConstant.MODULE_SCORE_AWARD, user.getUserId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+		return result;
+	}
+
+	/**
+	 * 发送通知到云购端,获得响应内容
+	 * @param  petCard
+	 * @throws Exception   
+	 */ 
+	private boolean sendNoticeToYg(PetCard petCard, User user) {
+		boolean result = false;
+		String noticeUrl = null;
+		String signKey = null;
+		HttpResult response = null;
+		Map<String, Object> paramMap = new HashMap<String, Object>();
+		if (EnableYungouCardTransfer() != null) {
+			noticeUrl = EnableYungouCardTransfer().getNoticeUrl();
+			signKey = EnableYungouCardTransfer().getYgsignkey();
+		}
+		paramMap.put("cardNo", petCard.getCardNo());
+		paramMap.put("winqTime", DateUtil.getTime(petCard.getWinTime()));
+		paramMap.put("sign", signKey);
+		if (StringUtil.isNotBlank(noticeUrl)) {
+			response = HttpUtils.sendGet(noticeUrl, SignUtils.signMap(paramMap, signKey));
+		}
+		logger.info("response content:" + response.getContent() + ",statusCode:"  + response.getStatusCode());
+		if (response != null) {
+			Map<String, Object> backMap = JSON.parseObject(response.getContent(), new TypeReference<Map<String, Object>>(){});
+			boolean status = (Boolean)backMap.get("status");
+			String msg = backMap.get("msg").toString();
+			if (status) {
+				result = true;
+				logger.info("response status:" + status + ",msg:" + msg);
+			} else {
+				throw new HandleException("云购体验卡通知回调失败，异常信息："+msg, "云购体验卡通知回调失败", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CARDTRANS,
+						ErrorLogConstant.CODE_PETCARD_SYS, user, ErrorLogConstant.MODULE_PETCARD, petCard.getId(), 1);
+			}
+		}
+		return result;
+	}
+	
+	private YungouCardTransfer EnableYungouCardTransfer(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(check != null && check.getYungouCardTransfer() != null && YunGouTransferRuleCheck.YUNGOUCARD_STATUS_ENABLE.equals(check.getYungouCardTransfer().getStatus())) {
+			return check.getYungouCardTransfer();
+		}
+		return null;
+	}
+	
+	/**
+	 * 往中奖信息表中插入相应记录（中奖，或者不中奖）
+	 * @param user 用户信息
+	 * @param ruleAward 规则信息
+	 * @param awardObject 中奖奖品信息
+	 */
+	private UserScoreAward addUserAward(User user, ScoreRuleAward ruleAward, ScoreAward awardObject) {
+		UserScoreAward userAward = new UserScoreAward();
+		userAward.setUser(user);
+		userAward.setUserName(user.getUserName());
+		userAward.setRule(ruleAward);
+		userAward.setAwardPoint(ruleAward.getBasePoint());
+		if (awardObject != null) {
+			userAward.setAwardValue(awardObject.getAwardValue());
+			userAward.setAwardType(awardObject.getType());
+			userAward.setAwardLevel(awardObject.getLevel());
+			userAward.setAward(awardObject);
+			userAward.setAwardName(awardObject.getName());
+			// 是否中奖:22不中，11中
+			userAward.setStatus(ScoreAwardConstant.AWARD_STATUS_YES);
+			userAward.setReceiveStatus(ScoreAwardConstant.AWARD_RECEIVESTATUS_NO);
+			if(ruleAward.getBackType() == ScoreAwardConstant.AWARD_BACKTYPE_AUTO && awardObject.getType() != ScoreAwardConstant.AWARD_OBJECTTYPE_CARD) {
+				userAward.setReceiveStatus(ScoreAwardConstant.AWARD_RECEIVESTATUS_YES);
+			}	
+		} else {
+			userAward.setStatus(ScoreAwardConstant.AWARD_STATUS_NO);
+		}
+		userAward.setAddTime(new Date());
+		userAward.setAddIp(Global.getIP());
+		return userScoreAwardDao.save(userAward);
+	}
+
+	/**
+	 * 发送积分抽奖通知信息
+	 * @param  user
+	 * @param  awardObject 奖品规则
+	 * @throws Exception   
+	 */ 
+	private void sendUserAwardNotice(User user, ScoreAward awardObject) {
+		Global.setTransfer("user", user);
+		Global.setTransfer("noticeTime", new Date());
+		Global.setTransfer("awardObjectName", awardObject.getName());
+		BaseMsg msg = new BaseMsg(NoticeConstant.SCORE_AWARD_SUCC);
+		msg.doEvent();
+	}
+	
+	/**
+	 * 发送积分抽奖中奖信息
+	 * @param  user
+	 * @param  awardObject 奖品规则
+	 * @param  petCard     抽奖云购卡实体
+	 * @throws Exception   
+	 */ 
+	private void sendUserAwardMessage(User user, ScoreAward awardObject, PetCard petCard) throws Exception {
+		Global.setTransfer("user", user);
+		Global.setTransfer("noticeTime", new Date());
+		Global.setTransfer("awardObjectName", awardObject.getName());
+		Global.setTransfer("cardNo", petCard.getCardNo());
+		String pwd = null;
+		YunGouTransferRuleCheck ruleCheck = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if (ruleCheck != null) {
+			pwd = CardAESUtils.aesDecrypt(petCard.getPaw(), ruleCheck.getYungou_petcard_key());
+		}
+		Global.setTransfer("pwd", pwd);
+		BaseMsg msg = new BaseMsg(NoticeConstant.SCORE_AWARD_SUCC_WIN_MSG);
+		msg.doEvent();
+	}
+	
+	/**
+	 * 抽奖规则数据校验
+	 * @param ruleAward 规则信息
+	 * @param userId 用户ID
+	 * @return 校验结果
+	 */
+	private EnumAwardErrorType check(ScoreRuleAward ruleAward, long userId) {
+		EnumAwardErrorType awardResultType = null;
+		// 如果规则ID不存在
+		if (ruleAward == null) {
+			awardResultType = EnumAwardErrorType.RESULT_INVALID_RULE_ID;
+			return awardResultType;
+		}
+		
+		//如果规则未启用
+		if (ScoreRuleAward.RULE_AWARD_STATUS_DISABLE.equals(ruleAward.getStatus())) {
+			awardResultType = EnumAwardErrorType.RESULT_RULE_STATUS_DISABLE;
+			return awardResultType;
+		}
+		
+		// 如果当前时间 < 抽奖开始时间
+		String currentTime = DateUtil.dateStr2(new Date());
+		String startTime = DateUtil.dateStr2(ruleAward.getStartDate());
+		String endTime = DateUtil.dateStr2(ruleAward.getEndDate());
+		if (currentTime.compareTo(startTime) < 0) {
+			awardResultType = EnumAwardErrorType.RESULT_BEFORE_START_TIME;
+			return awardResultType;
+		}
+		
+		// 如果当前时间 > 抽奖结束时间
+		if (currentTime.compareTo(endTime) > 0) {
+			awardResultType = EnumAwardErrorType.RESULT_AFTER_END_TIME;
+			return awardResultType;
+		}
+
+		// 如果有抽奖次数限制时
+		if (ruleAward.getTimeLimit() != ScoreAwardConstant.AWARD_TIMELIMIT_NONE) {
+			int userCnt = 0;
+			if (ruleAward.getTimeLimit() == ScoreAwardConstant.AWARD_TIMELIMIT_TOTAL) {
+				userCnt = userScoreAwardDao.getUserScoreAwardTotalCnt(ruleAward.getId(), userId);
+			} else if (ruleAward.getTimeLimit() == ScoreAwardConstant.AWARD_TIMELIMIT_DAY) {
+				userCnt = userScoreAwardDao.getUserScoreAwardDayCnt(ruleAward.getId(), userId);
+			}
+			// 如果用户的抽奖次数 大于或等于最大抽奖次数
+			if (userCnt >= ruleAward.getMaxTimes()) {
+				awardResultType = EnumAwardErrorType.RESULT_TIME_LIMIT;
+				return awardResultType;
+			}
+		}
+		return awardResultType;
+	}
+
+	
+	/**
+	 * 抽奖规则 可用积分校验
+	 * @param ruleAward 规则信息
+	 * @param userId 用户ID
+	 * @return 校验结果
+	 */
+	private EnumAwardErrorType checkScore(ScoreRuleAward ruleAward, long userId) {
+		EnumAwardErrorType awardResultType = null;
+		if (ruleAward.getAwardType() == ScoreAwardConstant.AWARD_TYPE_POINT) {
+			Score score = scoreDao.getScoreByUserId(userId);
+			User user = userDao.getUserById(userId);
+			if(score == null){
+				score = new Score(user) ;
+				score = scoreDao.save(score) ;
+			}
+			int validPoint = score.getValidScore();
+			int basePoint = ruleAward.getBasePoint();
+			// 如果用户可用积分 < 抽奖所需积分
+			if (validPoint < basePoint) {
+				awardResultType = EnumAwardErrorType.RESULT_POINT_LIMIT;
+				return awardResultType;
+			} else {
+				// 积分处理
+				int count = 0;
+				try {
+					count = scoreDao.editScoreExpenseValue(userId, basePoint);
+				} catch (Exception e) {	
+				}
+				if (count < 1) {
+					awardResultType = EnumAwardErrorType.RESULT_POINT_LIMIT;
+					return awardResultType;
+				}	
+				ScoreLog log = fillScoreLog(score);
+				log.setUser(user);
+				log.setScore(basePoint);
+				log.setScoreTypeName("积分抽奖");
+				log.setScoreTypeNid(ScoreTypeConstant.SCORE_AWARD);
+				log.setType(ScoreTypeConstant.SCORE_AWARD);
+				log.setRemark("用户进行积分抽奖，消费"+basePoint+"个积分。");
+				scoreLogDao.save(log);	
+			}
+		}
+		return awardResultType;
+	}
+	
+	
+	/**
+	 * 填充积分日志信息
+	 * @param  score积分实体
+	 * @return ScoreLog 
+	 * @throws Exception   
+	 */ 
+	private ScoreLog fillScoreLog(Score score){
+		ScoreLog log = new ScoreLog(score);
+		log.setAddTime(new Date());
+		log.setAddIp(Global.getIP());
+		return log;
+	}
+	
+	/**
+	 * 填充VIP奖励信息
+	 * @param  user
+	 * @param  awardResoure 奖励来源
+	 * @return MemberVipAward 
+	 * @throws Exception   
+	 */ 
+	private MemberVipAward fillMemberVipAward(User user, String awardResoure){
+		MemberVipAward vipAward = new MemberVipAward(user);
+		vipAward.setIsConvert(MemberVipAward.MEMBERVIP_NO_CONVERTED);
+		vipAward.setAwardResource(awardResoure);
+		vipAward.setAddTime(new Date());
+		return vipAward;
+	}
+	
+	/**
+	 * 填充红包产生信息
+	 * @param  user
+	 * @param  rpProduceResoure 红包产生来源
+	 * @throws Exception   
+	 */ 
+	private RpProduce fillRpProduce(User user, String rpProduceResoure){
+		RpProduce rp = new RpProduce();
+		rp.setUser(user);
+		rp.setRpDynamicRes(rpProduceResoure);
+		rp.setRpType(RpProduce.RP_DYNAMIC);
+		rp.setRpCreateTime(new Date());
+		return rp;
+	}
+	
+	/**
+	 * 取得本次中奖奖品信息
+	 * @param awardObjectList 奖品信息列表
+	 * @return 中奖奖品信息
+	 */
+	private ScoreAward getAwardObject(List<ScoreAward> awardObjectList) {
+		int start = getRandom();
+		for (ScoreAward awardObject : awardObjectList) {
+			// 总中奖概率 = min(sum(所有奖品的概率),100%)
+			if (start < awardObject.getRate()) {
+				return awardObject;
+			}
+			start -= awardObject.getRate();
+		}
+		return null;
+	}
+	
+	/**
+	 * 所有抽奖都是亿分之一的倍数
+	 * @return 随机数
+	 */
+	private int getRandom() {
+		Random r = new Random();
+		return r.nextInt(100000000);
+	}
+	
+	@Override
+	public PageDataList<ScoreAwardObjectModel> getAwardObjectList(
+			ScoreAwardObjectModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if(model != null){
+			if(StringUtil.isNotBlank(model.getName())){
+				param.addParam("name", model.getName());
+			}
+			if(model.getType() != 99 && model.getType() != 0){
+				param.addParam("type", model.getType());
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		param.addOrder(OrderType.ASC,"rate");
+		
+		PageDataList<ScoreAward> list = scoreAwardDao.findPageList(param);
+		PageDataList<ScoreAwardObjectModel> pageDataList = new PageDataList<ScoreAwardObjectModel>(); 
+		List<ScoreAwardObjectModel> awardObjectList = new ArrayList<ScoreAwardObjectModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i = 0; i < list.getList().size() ;i++){
+				ScoreAward scoreAward = (ScoreAward)list.getList().get(i);
+				ScoreAwardObjectModel awardObjectmodel = ScoreAwardObjectModel.instance(scoreAward);
+				ScoreRuleAward ruleAward = scoreAward.getRule();
+				awardObjectmodel.setRuleName(ruleAward.getName());
+				awardObjectList.add(awardObjectmodel);
+			}
+		}
+		pageDataList.setList(awardObjectList);
+		return pageDataList;
+	}
+
+	@Override
+	public ScoreAward getAwardObjectByRuleIdAndObjectId(long ruleId, long objectId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("rule.id", ruleId);
+		param.addParam("id", objectId);
+		return scoreAwardDao.findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public int delAwardObject(long ruleId, long objectId) {
+		return 0;
+	}
+	
+}

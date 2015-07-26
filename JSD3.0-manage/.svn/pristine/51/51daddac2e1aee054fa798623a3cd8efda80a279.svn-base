@@ -1,0 +1,179 @@
+package com.ddtkj.manage.action.goods;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsCategory;
+import com.ddtkj.p2psys.goods.model.GoodsCategoryModel;
+import com.ddtkj.p2psys.goods.service.GoodsCategoryService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+public class ManageGoodsCategoryAction extends BaseAction implements ModelDriven<DdtkjGoodsCategory> {
+
+	private GoodsCategoryModel model = new GoodsCategoryModel();
+	
+	@Override
+	public GoodsCategoryModel getModel() {
+		return model;
+	}
+	
+	@Resource
+	private GoodsCategoryService goodsCategoryService;
+	
+	private Map<String, Object> data;
+	
+	
+	/**
+	 * 商品分类展示页面
+	 * @return
+	 */
+	@Action("/modules/goods/goodsCategory/goodsCategoryManager")
+	public String goodsCategoryManager(){
+		return "goodsCategoryManager";
+	}
+	
+	/**
+	 * 商品分类数据展示
+	 * @return
+	 */
+	@Action("/modules/goods/goodsCategory/goodsCategoryList")
+	public void goodsCategoryList() throws Exception{
+		List<DdtkjGoodsCategory> list = goodsCategoryService.getCategoryList(model);
+		data = new HashMap<String, Object>();
+		data.put("total", 0); // 总行数
+		data.put("rows", list); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 添加商品分类页面
+	 * @return
+	 */
+	@Action("/modules/goods/goodsCategory/addGoodsCategoryPage")
+	public String addGoodsCategoryPage(){
+		
+		//List<GoodsCategory> parentList = goodsCategoryService.getCategoryParent(0);
+		
+		int id = paramInt("id");
+		DdtkjGoodsCategory goodsCategory = null;
+		
+		if(-1 != id){
+			goodsCategory = goodsCategoryService.getCategoryById(id);
+			request.setAttribute("pid", id);
+			request.setAttribute("name", goodsCategory.getName());
+		}else{
+			goodsCategory = goodsCategoryService.getCategoryById(0);
+			request.setAttribute("pid", "0");
+			request.setAttribute("name", "无");
+		}
+		this.saveToken("addGoodsCategoryPageToken");
+		//request.setAttribute("parentList", parentList);
+		return "addGoodsCategoryPage";
+	}
+	
+	/**
+	 * 添加商品分类
+	 * @return
+	 */
+	@Action("/modules/goods/goodsCategory/addGoodsCategory")
+	public void addGoodsCategory() throws Exception{
+		checkToken("addGoodsCategoryPageToken");
+		model.setAddUser(this.getOperatorUserName());
+		Boolean result = goodsCategoryService.addCategory(model);
+		if (result) {
+			printResult(MessageUtil.getMessage("I10001"), true);
+		} else {
+			printResult(MessageUtil.getMessage("I10004"), false);
+		}
+	}
+	
+	/**
+	 * 修改商品分类页面
+	 * @return
+	 */
+	@Action("/modules/goods/goodsCategory/editGoodsCategoryPage")
+	public String editGoodsCategoryPage(){
+		
+		DdtkjGoodsCategory category = goodsCategoryService.getCategoryById(model.getId());
+		request.setAttribute("category", category);
+		
+		// 查询上级分类编号所对应的名称
+		DdtkjGoodsCategory goodsCategory = goodsCategoryService.getCategoryById(category.getParentId());
+			
+		if(null != goodsCategory){
+			request.setAttribute("name", goodsCategory.getName());
+		}else{
+			request.setAttribute("name", "无");
+		}
+		this.saveToken("editGoodsCategoryPageToken");
+		
+		return "editGoodsCategoryPage";
+	}
+	
+	/**
+	 * 修改商品分类
+	 * @return
+	 */
+	@Action("/modules/goods/goodsCategory/editGoodsCategory")
+	public void editGoodsCategory() throws Exception{
+		checkToken("editGoodsCategoryPageToken");
+		model.setUpdateTime(new Date());
+		model.setUpdateUser(this.getOperatorUserName());
+		Boolean result = goodsCategoryService.editCategory(model);
+		if (result) {
+			printResult(MessageUtil.getMessage("I10002"), true);
+		} else {
+			printResult(MessageUtil.getMessage("I10005"), false);
+		}
+	}
+	
+	/**
+	 * 删除商品分类
+	 * @throws Exception
+	 */
+	@Action("/modules/goods/goodsCategory/deleteGoodsCategory")
+	public void articleDel() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		
+		List<DdtkjGoodsCategory> list = goodsCategoryService.getCategoryParent((int)id);
+		int count = goodsCategoryService.getGoodsCategoryId((int)id);
+		
+		if(0 != list.size() || count > 0){
+		
+			if(0 != list.size()){
+				data.put("result", false);
+				data.put("msg", "该类型下存在子分类，不能删除！");
+				throw new BussinessException("该类型下存在子分类，不能删除", 1);
+				//printResult(MessageUtil.getMessage("I10005"), false);
+			}
+			if(count > 0){
+				data.put("result", false);
+				data.put("msg", "该类型下存在商品，不能删除！");
+				throw new BussinessException("该类型下存在商品，不能删除", 1);
+				//printResult(MessageUtil.getMessage("I10005"), false);
+			}
+			//data.put("msg", "删除失败！");
+		}else{
+			DdtkjGoodsCategory category = goodsCategoryService.getCategoryById(id);
+			category.setDelete(true);
+			goodsCategoryService.update(category);
+			data.put("result", true);
+			data.put("msg", "删除成功！");
+			
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+}

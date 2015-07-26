@@ -1,0 +1,56 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record.register;
+
+import com.ddtkj.p2psys.tpp.ymd.dao.AccountOpenDao;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountOpenHistory;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRegister;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.ddtkj.p2psys.user.domain.User;
+
+public class AccountOpenReturnRecord extends AbstractYmdEvent<AccountOpenHistory>{
+
+	protected AccountOpenDao ymdOpenAccountDao;
+	
+	private AccountOpenHistory accountOpenHistory;
+	public AccountOpenReturnRecord(YmdRegister y,User u) {
+		init();
+		getT();
+		accountOpenHistory=ymdOpenAccountDao.findObjByProperty("user.userId", u.getUserId());
+		if(accountOpenHistory!=null){
+			t=accountOpenHistory;
+			t.setReturnMsg(y.returnSignInfoJsonStr());
+			if(!"00".equals(y.getErrCode())){
+			    t.setStatus(AccountOpenHistory.OPEN_ACCOUNT_FAIL);
+			}else{
+				t.setStatus(AccountOpenHistory.OPEN_ACCOUNT_SUCCESS);
+			}
+		}
+		
+	}
+	@Override
+	public void modifyRecord() {
+		if(accountOpenHistory!=null){
+            ymdOpenAccountDao.update(t);
+        }
+	} 
+
+	@Override
+	public void init() {
+		ymdOpenAccountDao=(AccountOpenDao) BeanUtil.getBean("accountOpenDao");
+	}
+
+	public AccountOpenDao getYmdOpenAccountDao() {
+		return ymdOpenAccountDao;
+	}
+
+	public void setYmdOpenAccountDao(AccountOpenDao ymdOpenAccountDao) {
+		this.ymdOpenAccountDao = ymdOpenAccountDao;
+	}
+	public AccountOpenHistory getAccountOpenHistory() {
+		return accountOpenHistory;
+	}
+	public void setAccountOpenHistory(AccountOpenHistory accountOpenHistory) {
+		this.accountOpenHistory = accountOpenHistory;
+	}
+	
+}

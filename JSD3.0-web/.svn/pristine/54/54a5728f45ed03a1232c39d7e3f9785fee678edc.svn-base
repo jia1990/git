@@ -1,0 +1,114 @@
+<#include "header.htm"/>
+<table class="forumline" cellspacing="1" cellpadding="3" width="100%" align="center" border="0">
+	<tr class="profile_head">
+		<td class="catleft" align="center" width="25%" height="28"><b>${I18n.getMessage("UserProfile.avatar")}</b></td>
+		<td class="catright" align="center" width="75%"><b>${I18n.getMessage("UserProfile.allAbout")} ${u.username}</b></td>
+    </tr>
+
+	<tr>
+		<td class="row1 border_rb" valign="top" align="center" height="6" style="padding: 50px 0;" >
+			<div class="user_img"><img src="${request.getContextPath()}/imgurl.html?userid=${u.id?c}&size=middle" border="0" /></div>
+			<#--<#if (u.avatar?exists && u.avatar?length > 0)>
+				<#if u.isExternalAvatar() || u.avatar.startsWith("http://")>
+					<#if avatarAllowExternalUrl>
+						<div class="user_img"><img src="${u.avatar}" border="0"></div>
+					</#if>
+				<#else>
+					<div class="user_img"><img src="${contextPath}/themes/bbs/images/avatar/${u.avatar}" border="0" /></div>
+				</#if>
+			</#if>-->
+			<span class="postdetails">
+				用户${I18n.getMessage("PostShow.ranking")}: ${rank.getRankTitle(u.rankId, u.totalPosts)}
+			</span>
+		</td>
+
+		<td class="row1 border_rb" valign="top" >
+			<table class="profile_details" cellspacing="0" cellpadding="10" width="50%" border="0">
+				<tr>
+					<td valign="middle" class="th" nowrap="nowrap" width="30%" align="center"><span class="gen">${I18n.getMessage("UserProfile.registrationDate")}:&nbsp;</span></td>
+					<td width="70%"><b><span class="gen">${u.registrationDate}</span></b></td>
+				</tr>
+				
+				<tr>
+					<td valign="top" class="th" nowrap="nowrap" align="center"><span class="gen">${I18n.getMessage("UserProfile.totalMessages")}:&nbsp;</span></td>
+					<td valign="top">
+						<#if (nposts > 0)>
+							<b><a class="gen" href="${JForumContext.encodeURL("/posts/listByUser/${u.id}")}">[${nposts}] ${I18n.getMessage("PostShow.userPosts")} ${u.username?html}</a> </b>
+						<#else>
+							<span class="gen">${I18n.getMessage("PostShow.noUserCreatedPosts")}</span>
+						</#if>
+					</td>
+				</tr>
+				<tr>
+					<td valign="top" class="th" nowrap="nowrap" align="center"><span class="gen">${I18n.getMessage("ForumListing.userCreatedTopics")}:</span></td>
+					<td>
+						<#if (ntopics > 0)>
+							<b><a class="gen" href="${JForumContext.encodeURL("/recentTopics/showTopicsByUser/${u.id}")}">[${ntopics}] ${I18n.getMessage("ForumListing.userTopics")?html} ${u.username?html}</a> </b>
+						<#else>
+							<span class="gensmall">${I18n.getMessage("ForumListing.noUserCreatedTopics")}</span>
+						</#if>
+						</td>
+				</tr>
+				<#if (u.from?exists && u.from?length > 0)>
+				<tr>
+					<td valign="middle" class="th" nowrap="nowrap" align="center"><span class="gen">${I18n.getMessage("UserProfile.from")}:&nbsp;</span></td>
+					<td><b><span class="gen">${u.from}</span></b></td>
+				</tr>
+				</#if>
+            
+				<#if (u.webSite?exists && u.webSite?length > 0)>
+				<tr>
+					<td valign="middle" class="th" nowrap="nowrap" align="center"><span class="gen">${I18n.getMessage("UserProfile.webSite")}:&nbsp;</span></td>
+					<td><span class="gen"><b><a href="${u.webSite}" target="_new">${u.webSite}</a></b></span></td>
+				</tr>
+				</#if>
+            
+				<#if (u.occupation?exists && u.occupation?length > 0)>
+				<tr>
+					<td valign="middle" class="th" nowrap="nowrap" align="center"><span class="gen">${I18n.getMessage("UserProfile.occupation")}:&nbsp;</span></td>
+					<td><b><span class="gen">${u.occupation}</span></b></td>
+				</tr>
+				</#if>
+            
+				<#if (u.interests?exists && u.interests?length > 0)>
+				<tr>
+					<td valign="top" class="th" nowrap="nowrap" align="center"><span class="gen">${I18n.getMessage("UserProfile.interests")}:</span></td>
+					<td><b><span class="gen">${u.interests}</span></b></td>
+				</tr>
+				</#if>
+            
+				<#if (u.biography?exists && u.biography?length > 0)>
+				<tr>
+					<td valign="top" class="th" nowrap="nowrap" align="center"><span class="gen">${I18n.getMessage("UserProfile.biography")}:</span></td>
+					<td><b><span class="gen">${u.biography}</span></b></td>
+				</tr>
+				</#if>
+			</table>
+		</td>
+	</tr>
+	<tr>
+		<td  valign="top" colspan="2" style="background:#fff;padding:20px 0;">
+			<table cellspacing="1" cellpadding="3" width="100%" border="0">
+			<#--    <#if (u.isViewEmailEnabled() && u.email?exists && u.email?length > 0)>
+			<tr>
+				<td valign="middle" nowrap="nowrap" align="right"><span class="gen">${I18n.getMessage("UserProfile.emailAddress")}:</span></td>
+				<td class="row1" valign="middle" width="100%">
+					<b><span class="gen">
+					<#assign e = u.email.split("@")/>
+					<a href="#" onclick="document.location = 'mailto:' + showEmail('${e[0]}', '${e[1]}');"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/icon_email.gif" border="0" /></a>
+					</span></b>
+				</td>
+			</tr>
+			</#if>
+			-->
+			<#if u.id != 1 && !session.deleted>
+			<tr>
+				<td align="center" ><a href="${JForumContext.encodeURL("/pm/sendTo/${u.id}")}" class="icon_pm"><img src="${contextPath}/themes/bbs/images/message.jpg"  alt="" /></a></td>
+			</tr>
+			</#if>
+            
+			</table>
+		</td>
+	</tr>
+</table>
+<#include "bottom.htm"/>

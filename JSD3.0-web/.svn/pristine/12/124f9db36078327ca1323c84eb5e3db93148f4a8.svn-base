@@ -1,0 +1,281 @@
+package com.rongdu.p2psys.web.redpacket;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.question.domain.Question;
+import com.ddtkj.p2psys.question.domain.QuestionAnswer;
+import com.ddtkj.p2psys.question.service.QuestionAnswerService;
+import com.ddtkj.p2psys.question.service.QuestionService;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpActivityService;
+import com.ddtkj.p2psys.redpacket.worker.RpActivityHelper;
+import com.ddtkj.p2psys.redpacket.worker.RpActivityWorker;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.RandomUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * 活动红包的产生查询 JSDP-215
+ * @author xingjia
+ *
+ */
+public class RpActivityAction extends BaseAction implements ModelDriven<RpActivityProduceModel> {
+	private RpActivityProduceModel model = new RpActivityProduceModel();
+	
+	@Resource
+	private RpActivityProduceService rpActivityProduceService;
+	@Resource
+	private QuestionService questionService;
+	@Resource
+	private QuestionAnswerService questionAnswerService;
+	@Resource
+	private RpActivityService rpActivityService;
+	private Map<String, Object> data;
+	
+	public RpActivityProduceModel getModel() {
+		return model;
+	}
+	public void setModel(RpActivityProduceModel model) {
+		this.model = model;
+	}
+	//fengguoqin JSDP-215 20150709  start
+	/**
+	 * 活动红包的产生
+	 */
+	@Action("/rpActivity/rpActivityProduceList")
+	public void rpActivityProduceList()throws Exception{
+		User user = this.getSessionUser();
+		data = new HashMap<String, Object>();
+		if(user==null){
+			this.redirect("/user/login.html");
+		}else{
+			model.setUserId(user.getUserId());
+			model.setIsEnable(1);
+			PageDataList<RpActivityProduceModel> rpActivityProduceDataList = rpActivityProduceService.getPageList(model);
+			data.put("data", rpActivityProduceDataList);
+			printJson(getStringOfJpaObj(data));
+			data=null;
+		}
+		//fengguoqin JSDP-215 20150709  end
+	}
+	//JSDP-203 20150720 xingjia start
+	/**
+	 * 查询用户是否获得开启宝箱的条件  JSDP-203
+	 * @throws Exception
+	 */
+	@Action("/rpActivity/rpActivityProduceOpen")
+	public void rpActivityProduceIndianaJonesList()throws Exception{
+		User user = getSessionUser();
+		data = new HashMap<String, Object>();
+		if(null != user){
+			if(StringUtil.isNotBlank(model.getIndex())){
+				data = rpActivityProduceService.getRpActivityProduceByOpen(user, model.getIndex());
+			}
+		}else{
+			data.put("result", false);
+			data.put("msg", "请先登录！");
+		}
+		printJson(getStringOfJpaObj(data));
+		data=null;
+	}
+	//JSDP-203 20150720 xingjia end
+	
+	/**
+	 * 获取题目
+	 */
+	@Action("/subject/questionList")
+	public void questionList() throws Exception{
+		User user = getSessionUser();
+		data = new HashMap<String,Object>();
+		if(null != user){//判断用户是否登录
+			List<Question> list = questionService.findAll();
+			if(list!=null && list.size()>0){
+				QueryParam param = QueryParam.getInstance();
+				param.addParam("user", user);
+				List<QuestionAnswer> answerList = questionAnswerService.getListByParam(param);//获取该用户此次回答的问题列表
+				List<Long> questionIdList = new ArrayList<Long>();
+				int rightAnswerCount = 0;
+				if(null !=answerList && answerList.size() >0){
+					for(QuestionAnswer a:answerList){
+						questionIdList.add(a.getQuestion().getId());
+						if(a.getStatus().equals(QuestionAnswer.STATUS_SUC)){
+							rightAnswerCount++;
+						}
+					}
+					data.put("answerCount", answerList.size());
+					if(answerList.size() == QuestionAnswer.MAX_ANSWER_SUM){//所有题都答完
+						double rewardMoney = 0;
+						if(rightAnswerCount >= 3){
+							param = QueryParam.getInstance();
+							param.addParam("activityType", RpActivityProduce.RP_RPODUCE_QUEDIONS);
+							param.addParam("awardUser", user);
+							List<RpActivityProduce> rpProduceList = rpActivityProduceService.rpActivityProduceListByParam(param);
+							if(null == rpProduceList || rpProduceList.size() <= 0){
+								questionAnswerService.answerRewardHandle(user);
+							}
+							rewardMoney = rightAnswerCount * QuestionAnswer.RIGHT_REWARD;
+							if(rightAnswerCount == QuestionAnswer.MAX_ANSWER_SUM){//全部正确
+								rewardMoney += QuestionAnswer.ALL_RIGHT_REWARD;
+							}
+						}
+						data.put("rewardMoney", rewardMoney);
+						data.put("rightAnswerCount", rightAnswerCount);
+						data.put("result",false);
+						data.put("code","02");
+						data.put("msg","所有题已答完");
+						printJson(getStringOfJpaObj(data));
+						data = null;
+						return;
+					}
+				}else{
+					data.put("answerCount", 0);
+				}
+				int random = getRandomQuestion(list,questionIdList, list.size());
+				Question question = list.get(random);
+				
+				if(question!=null){
+					data.put("content", question.getContent());
+					data.put("rightAnswerCount", rightAnswerCount);
+					data.put("questionId",question.getId());
+					int[] answerRandom = RandomUtil.getRangRandom(0,3,4);
+					String[] anwerArray = {question.getAnswer1(),question.getAnswer2(),question.getAnswer3(),question.getAnswer4()};
+					data.put("A",anwerArray[answerRandom[0]]);
+					data.put("B",anwerArray[answerRandom[1]]);
+					data.put("C",anwerArray[answerRandom[2]]);
+					data.put("D",anwerArray[answerRandom[3]]);
+					data.put("result",true);
+					printJson(getStringOfJpaObj(data));
+					data = null;
+					return;
+				}
+			}
+		}else{
+			data.put("result",false);
+			data.put("code","01");
+			data.put("msg","请先登录");
+			printJson(getStringOfJpaObj(data));
+			data = null;
+			return;
+		}
+	}
+	/**
+	 * 获取用户为答过的题随机数
+	 * @param list
+	 * @param idList
+	 * @param length
+	 * @return
+	 */
+	private int getRandomQuestion(List<Question> list,List<Long> idList,int length){
+		int random = RandomUtil.getRandomRange(0, length);
+		long id = list.get(random).getId();
+		while (idList.contains(id)) {
+			random = RandomUtil.getRandomRange(0, length);
+			id = list.get(random).getId();
+		};
+		return random;
+	}
+	/**
+	 * 用户答题
+	 * @throws Exception
+	 */
+	@Action("/subject/questionAnswer")
+	public void questionAnswer()throws Exception{
+		User user = getSessionUser();
+		data = new HashMap<String,Object>();
+		if(null != user){//判断用户是否登录
+			Question question = questionService.find(paramInt("questionId"));//TODO 1需取参
+			if(null != question){//判断问题是否存在
+				QueryParam param = QueryParam.getInstance();
+				param.addParam("user", user);
+				param.addParam("question", question);
+				List<QuestionAnswer> list = questionAnswerService.getListByParam(param);//获取该用户此次回答的问题列表
+				if(null != list && list.size() > 0){//问题列表不为空且大于零代表已回答此问题
+					data.put("result",false);
+					data.put("code","03");
+					data.put("msg","此问题已回答");
+					printJson(getStringOfJpaObj(data));
+					data = null;
+					return;
+				}else{//用户未回答过此问题
+					String answerStr = paramString("answerStr");//TODO 答案需取参
+					String answer = "";
+					if(answerStr.equals(question.getAnswer1())){
+						answer = "A";
+					}else if(answerStr.equals(question.getAnswer2())){
+						answer = "B";
+					}else if(answerStr.equals(question.getAnswer3())){
+						answer = "C";
+					}else if(answerStr.equals(question.getAnswer4())){
+						answer = "D";
+					}else{
+						data.put("result",false);
+						data.put("code","04");
+						data.put("msg","此答案有误");
+						printJson(getStringOfJpaObj(data));
+						data = null;
+						return;
+					}
+					QuestionAnswer questionAnswer = new QuestionAnswer();
+					questionAnswer.setAnswer(answer);
+					questionAnswer.setQuestion(question);
+					questionAnswer.setUser(user);
+					questionAnswer.setRightAnswer(question.getRightAnswer());
+					if(answer.equals(question.getRightAnswer())){
+						questionAnswer.setStatus(QuestionAnswer.STATUS_SUC);
+						questionAnswerService.save(questionAnswer);
+						data.put("result",true);
+						data.put("code","10");
+						data.put("msg","回答成功：答案正确");
+						printJson(getStringOfJpaObj(data));
+						data = null;
+						return;
+					}else{
+						questionAnswer.setStatus(QuestionAnswer.STATUS_FALL);
+						questionAnswerService.save(questionAnswer);
+						data.put("result",false);
+						data.put("code","11");
+						data.put("msg","回答成功：答案错误");
+						printJson(getStringOfJpaObj(data));
+						data = null;
+						return;
+					}
+				}
+			}else{//如果问题不存在
+				data.put("result",false);
+				data.put("code","02");
+				data.put("msg","此问题不存在");
+				printJson(getStringOfJpaObj(data));
+				data = null;
+				return;
+			}
+		}else{//如果用户未登录
+			data.put("result",false);
+			data.put("code","01");
+			data.put("msg","请先登录");
+			printJson(getStringOfJpaObj(data));
+			data = null;
+			return;
+		}
+	}
+	public static void main(String[] args) {
+		for(int i = 0 ; i <= 100;i++){
+			int random = RandomUtil.getRandomRange(0, 10);
+			System.out.println(random);
+		}
+	}
+}

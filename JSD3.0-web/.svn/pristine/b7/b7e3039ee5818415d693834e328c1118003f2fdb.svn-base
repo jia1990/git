@@ -1,0 +1,280 @@
+package com.rongdu.p2psys.web.article;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.alibaba.fastjson.JSONArray;
+import com.ddtkj.p2psys.article.domain.ArticlePic;
+import com.ddtkj.p2psys.article.model.ArticlePicModel;
+import com.ddtkj.p2psys.article.service.ArticlePicService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.domain.Article;
+import com.rongdu.p2psys.core.domain.Site;
+import com.rongdu.p2psys.core.model.ArticleModel;
+import com.rongdu.p2psys.core.model.SiteModel;
+import com.rongdu.p2psys.core.model.TreeModel;
+import com.rongdu.p2psys.core.service.ArticleService;
+import com.rongdu.p2psys.core.service.SiteService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 文章
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年4月1日 
+ */
+public class ArticleAction extends BaseAction implements ModelDriven<ArticleModel> {
+
+	private ArticleModel model = new ArticleModel();
+
+	@Override
+	public ArticleModel getModel() {
+		return model;
+	}
+
+	
+	public void setModel(ArticleModel model) {
+		this.model = model;
+	}
+
+
+	@Resource
+	private SiteService siteService;
+	@Resource
+	private ArticleService articleService;
+	@Resource
+	private ArticlePicService articlePicService;
+
+	private Map<String, Object> data;
+
+	/**
+	 * 文章列表/详情页
+	 * 
+	 * @return
+	 */
+	@Action("/article/detail")
+	public String detail() throws Exception {
+		Site site = siteService.findByNid(model.getNid());
+		List<Long> list = articleService.getIds(site);
+		int index = list.indexOf(model.getId());
+		if (index != 0 && index != -1) {
+			model.setPrevId(list.get(index - 1));
+		}
+		if (index != list.size()-1 && index != -1) {
+			model.setNextId(list.get(index + 1));
+		}
+		if (site == null) {
+			return "notfound";
+		}
+		List<Site> parentList = new ArrayList<Site>();
+		parentList = siteService.parentList(site, parentList);
+		Map<String, Object> subListMap = siteService.subListMap(site, model);
+		request.setAttribute("site", site);
+		request.setAttribute("parentList", parentList);
+		request.setAttribute("subListMap", subListMap);
+		return "detail";
+	}
+	
+	
+	/**
+	 * 文章列表/详情页
+	 * // JSDP-131 SXY start
+	 * @return
+	 */
+	@Action("/article/risk")
+	public String risk() throws Exception {
+		Site site = siteService.findByNid(model.getNid());
+		List<Long> list = articleService.getIds(site);
+		int index = list.indexOf(model.getId());
+		if (index != 0 && index != -1) {
+			model.setPrevId(list.get(index - 1));
+		}
+		if (index != list.size()-1 && index != -1) {
+			model.setNextId(list.get(index + 1));
+		}
+		if (site == null) {
+			return "notfound";
+		}
+		List<Site> parentList = new ArrayList<Site>();
+		parentList = siteService.parentList(site, parentList);
+		Map<String, Object> subListMap = siteService.subListMap(site, model);
+		request.setAttribute("site", site);
+		request.setAttribute("parentList", parentList);
+		request.setAttribute("subListMap", subListMap);
+		return "risk";
+	}
+	/**
+	 * 风险备用金详情页
+	 * // JSDP-131 SXY start
+	 * @return
+	 */
+	@Action("/article/riskDetailPic")
+	public void MoneyDetail() throws Exception {
+		
+		String id = paramString("id");
+		//data = new HashMap<String,Object>();
+		List<ArticlePic> piclists = articlePicService.getArticlePicByArticleId(Long.parseLong(id));
+		
+		Article art = articleService.find(Long.parseLong(id));
+		
+		if(art != null){
+			
+			List<ArticlePic> articlePicList = new ArrayList<ArticlePic>();
+			for (ArticlePic articlePic : piclists) {
+				ArticlePicModel picModel = new ArticlePicModel();
+				// 图片ID
+				picModel.setId(articlePic.getId());
+				// 文章标题
+				picModel.setTitle(art.getTitle());
+				// 图片路径
+				picModel.setPicUrl(articlePic.getPicUrl());
+				articlePicList.add(picModel);
+			}
+			//response.setContentType("text/json;charset=GBK");
+			//String jsonStr = "" + JSONArray.toJSONString(articlePicList);
+			//response.getWriter().write(jsonStr);
+			printJson(getStringOfJpaObj(articlePicList));
+			
+			
+		}
+		/*data.put("data", articlePicList);
+		//data.put("piclist", piclist);
+		printJson(getStringOfJpaObj(data));
+		data = null;*/
+		/*return;*/
+	}
+	
+  
+	/**
+	 * 文章列表 Ajax异步获取
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/article/list")
+	public void list() throws Exception {
+		data = new HashMap<String, Object>();
+		Site site = siteService.findByNid(model.getNid());
+		PageDataList<ArticleModel> pageDataList = null;
+		if(site!=null){
+			List<Site> siteList = siteService.findByNid(site.getId());
+			if(siteList.size() >0){
+				model.setPrevId(site.getId());
+			}
+			SiteModel m = SiteModel.instance(site, model.getNid());
+			m.validSiteForArticleList();
+			model.setNid(site.getNid());
+			pageDataList = articleService.list(model);
+		}
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	/**
+	 * @author 冯国琴
+	 * 合作伙伴分页数据显示
+	 * @throws Exception
+	 */
+	@Action("/aboutUs/partnerPageList")
+	public void partnerPageList() throws Exception {
+		data = new HashMap<String, Object>();
+		Site site = siteService.findByNid(model.getNid());
+		SiteModel m = SiteModel.instance(site, model.getNid());
+		m.validSiteForArticleList();
+		model.setNid(site.getNid());
+		model.setSize(20);
+		PageDataList<ArticleModel> pageDataList = articleService.list(model);
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+	/**
+	 * 媒体报道页面显示
+	 * 
+	 * @return
+	 */
+	@Action("/article/mediaDetail")
+	public String mediaDetail() throws Exception {
+		
+		Site site = siteService.findByNid(model.getNid());
+		List<Long> list = articleService.getIds(site);
+		int index = list.indexOf(model.getId());
+		if (index != 0 && index != -1) {
+			model.setPrevId(list.get(index - 1));
+		}
+		if (index != list.size()-1 && index != -1) {
+			model.setNextId(list.get(index + 1));
+		}
+		if (site == null) {
+			return "notfound";
+		}
+		List<Site> parentList = new ArrayList<Site>();
+		parentList = siteService.parentList(site, parentList);
+		Map<String, Object> subListMap = siteService.subListMap(site, model);
+		request.setAttribute("site", site);
+		request.setAttribute("parentList", parentList);
+		request.setAttribute("subListMap", subListMap);
+		return "mediaDetail";
+	}
+	
+
+	/**
+	 * 媒体报道跳转至第三方的点击量计算
+	 * 
+	 * @return
+	 */
+	@Action("/article/mediaDetail/clickNum")
+	public void mediaClickNum() throws Exception {
+		
+		siteService.clickNum(model.getId());
+	}
+	
+
+	
+	
+	/**
+	 * 晋商文化
+	 * 
+	 * @return
+	 */
+	@Action("/aboutUs/jsCulture")
+	public String jsCulture() throws Exception {
+		
+		Site site = siteService.findByNid(model.getNid());
+		List<Long> list = articleService.getIds(site);
+		int index = list.indexOf(model.getId());
+		if (index != 0 && index != -1) {
+			model.setPrevId(list.get(index - 1));
+		}
+		if (index != list.size()-1 && index != -1) {
+			model.setNextId(list.get(index + 1));
+		}
+		if (site == null) {
+			return "notfound";
+		}
+		List<Site> parentList = new ArrayList<Site>();
+		parentList = siteService.parentList(site, parentList);
+		Map<String, Object> subListMap = siteService.subListMap(site, model);
+		request.setAttribute("site", site);
+		request.setAttribute("parentList", parentList);
+		request.setAttribute("subListMap", subListMap);
+		return "jsCulture";
+	}
+	
+	
+}

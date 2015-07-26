@@ -1,0 +1,109 @@
+package com.rongdu.p2psys.web.borrow;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsCategory;
+import com.ddtkj.p2psys.goods.service.GoodsCategoryService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.BorrowBespeak;
+import com.rongdu.p2psys.borrow.service.BorrowBespeakService;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 预约借款
+ * 
+ * @author sj
+ * @since 2014-8-20
+ *
+ */
+public class BorrowBespeakAction extends BaseAction implements
+		ModelDriven<BorrowBespeak> {
+
+	@Resource
+	private BorrowBespeakService borrowBespeakService;
+	@Resource
+	private GoodsCategoryService goodsCategoryService;
+
+	private BorrowBespeak borrowBespeak = new BorrowBespeak();
+
+	private Map<String, Object> data = new HashMap<String, Object>();
+
+	@Override
+	public BorrowBespeak getModel() {
+		return borrowBespeak;
+	}
+
+	/**
+	 * 预约借款页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/borrowBespeak/bespeak")
+	public String bespeak() throws Exception {
+		initRSAME();
+		saveToken("bespeakToken");
+		List<DdtkjGoodsCategory> list = goodsCategoryService.getCategorySecond();
+		request.setAttribute("goods", list);
+		return "bespeak";
+	}
+
+	/**
+	 * 预约借款操作
+	 * @author 李建云
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/borrowBespeak/doBespeak")
+	public void doBespeak() throws Exception {
+
+		String validCode = request.getParameter("validCode");
+
+		String vCode = StringUtil.isNull(validCode);
+
+		if ("".equals(vCode)||validCode == "") {
+			data.put("result", false);
+			data.put("msg", "验证码不能为空！");
+		} else if (!ValidateUtil.checkValidCode(vCode)) {
+			data.put("result", false);
+			data.put("msg", "验证码输入有误！");
+		}else{
+			
+			if (borrowBespeak.getName() == null) {
+				data.put("result", false);
+				data.put("msg", "联系人不能为空！");
+			} else if (borrowBespeak.getTelephone() == null) {
+				data.put("result", false);
+				data.put("msg", "联系电话不能为空！");
+			} else if (borrowBespeak.getProvince() == null) {
+				data.put("result", false);
+				data.put("msg", "省份不能为空！");
+			} else if (borrowBespeak.getCity() == null ) {
+				data.put("result", false);
+				data.put("msg", "市不能为空！");
+			} else if (borrowBespeak.getCounty() == null) {
+				data.put("result", false);
+				data.put("msg", "区 (县)不能为空！");
+			} else {
+				data.put("result", true);
+				data.put("msg", "预约借款申请成功！");
+				checkToken("bespeakToken");
+				borrowBespeak = borrowBespeakService.doBespeak(borrowBespeak);
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+}

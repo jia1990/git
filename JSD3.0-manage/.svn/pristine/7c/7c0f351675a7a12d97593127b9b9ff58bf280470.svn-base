@@ -1,0 +1,329 @@
+<style>
+.showItem{width:340px;float:left;}
+.showItem2{
+	width:374px;float:left;}
+    
+.accountLogDiv{
+float: left;
+width: 350px;
+margin-bottom: 10px;
+-webkit-border-radius: 5px;
+-moz-border-radius: 5px;
+border-radius: 5px;
+font-family: "Microsoft YaHei","arial";
+font-size: small;
+line-height: 30px;
+}
+.accountLogDivB{
+height:100px;
+border: 1px solid #ddd;
+margin-bottom: 10px;
+-webkit-border-radius: 5px;
+-moz-border-radius: 5px;
+border-radius: 5px;
+font-family: "Microsoft YaHei","arial";
+line-height: 30px;
+}
+.accountLogDiv span{
+display:inline-block;width:176px;text-align:right;
+}
+.accountLogDivB span{
+display:inline-block;width:176px;text-align:right;
+}
+.popShow{
+width: 756px;
+text-align: left;
+display: inline-block;
+color: #333;
+font-family: "Microsoft YaHei","arial";
+line-height: 33px;
+}
+.popShow span{display:inline-block;width:176px;text-align:right;}
+.box{border:1px solid #ddd;overflow:hidden;border-radius:4px;margin-bottom:16px;}
+</style>
+<div class="accountLogDivB">
+		<div class="showItem2">
+			<span>用户名：</span>${user.userName!}
+		</div>
+		<div class="showItem2">
+			<span>真实姓名：</span>${user.realName!}
+		</div>
+		<div class="showItem2">
+			<span>交易类型：</span>
+			${accountLogModel.typeName!}
+		</div>
+		
+		<div class="showItem2">
+			<span>备注信息：</span>
+			<#if accountLogModel.remark != "">
+			<a title="${accountLogModel.remark!}">
+				${accountLogModel.remark[0..5]}....
+			</a>
+			</#if>
+		</div>
+		<div class="showItem2">
+			<span>账户总额：</span>
+			${accountLogModel.accountTotalStr!}
+		</div>
+		<#if userType=="10">
+		<div class="showItem2">
+			<span>待收总额：</span>
+			${accountLogModel.collectionTotalStr!}
+		</div>
+		
+		<#elseif  userType=="11">
+		<div class="showItem">
+			<span>待还金额：</span>
+			${accountLogModel.repaymentTotalStr!}
+		</div>
+		<#elseif userType=="12">
+			<div class="showItem">
+				<span>担保公司还款金额：</span>
+				${accountLogModel.repaymentTotalStr!}
+			</div>
+		<#else>
+		</#if>
+
+</div>
+<div class="popShow">
+		
+		<#if userType=="10">
+		<div class="box">
+			<div class="showItem useMoney">
+				<span>可用总额：</span>
+				${accountLogModel.usableMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+			
+				<div class="showItem">
+					<span>利息可用总额：</span>
+					${accountLogModel.interestUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>奖励可用总额：</span>
+					${accountLogModel.awardUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>充值可用总额：</span>
+					${accountLogModel.rechargeUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>回款可用总额：</span>
+					${accountLogModel.returnCapitalUsableStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box">
+			<div class="showItem freezeMoney">
+				<span>冻结总额：</span>
+				${accountLogModel.freezeUseMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>冻结使用利息金额：</span>
+					${accountLogModel.freezeUseInterestStr!}
+				</div>
+				<div class="showItem">
+					<span>冻结使用充值金额：</span>
+					${accountLogModel.freezeUseRechargeStr!}
+				</div>
+				<div class="showItem">
+					<span>冻结使用回款本金金额：</span>
+					${accountLogModel.freezeUseReturnCapitalStr!}
+				</div>
+				<div class="showItem">
+					<span>冻结使用奖励金额：</span>
+					${accountLogModel.freezeUseAwardStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box">
+			<div class="showItem optMoney">
+				<span>操作总额：</span>
+				${accountLogModel.optMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>充值操作金额：</span>
+					${accountLogModel.rechargeMoneyStr!}
+				</div>
+				<div class="showItem">
+					<span>奖励操作金额：</span>
+					${accountLogModel.awardMoneyStr!}
+				</div>
+				<div class="showItem">
+					<span>利息操作金额：</span>
+					${accountLogModel.interestMoneyStr!}
+				</div>
+				<div class="showItem">
+					<span>回款操作金额：</span>
+					${accountLogModel.returnCapitalMoneyStr!}
+				</div>
+				<div class="showItem">
+					<span>钱袋子操作金额：</span>
+					${accountLogModel.rpDynamicMoneyStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box">
+			<div class="showItem rpMoney">
+				<span>钱袋子总额：</span>
+				${accountLogModel.rpDynamicTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				
+				<div class="showItem">
+					<span>钱袋子可用金额：</span>
+					${accountLogModel.rpDynamicUsableStr!}
+				</div>
+				<div class="showItem">
+					<span>钱袋子冻结金额：</span>
+					${accountLogModel.freezeRpDynamicStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box">
+			<div class="showItem rpMoney">
+				<span>钱袋子操作总额：</span>
+				${accountLogModel.rpDynamicMoneyStr!}
+			</div>
+			<div class="accountLogDiv">
+				
+				<div class="showItem">
+					<span>钱袋子操作金额：</span>
+					${accountLogModel.rpDynamicMoneyStr!}
+				</div>
+			</div>
+		</div>
+		
+		
+		
+		
+	
+	<#elseif userType=="11">
+		<div class="box" style="width:771px;">
+			<div class="showItem">
+				<span>可用总额：</span>
+				${accountLogModel.borrowerUsableMoneyLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>充值可用总额：</span>
+					${accountLogModel.borrowerRechargeUsable!}
+				</div>
+				<div class="showItem">
+					<span>借款入账可用金额：</span>
+					${accountLogModel.borrowerEnterUsableStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box" style="width:771px;">
+			<div class="showItem">
+				<span>操作总额：</span>
+				${accountLogModel.optBorrowMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>借款人充值操作金额：</span>
+					${accountLogModel.borrowerRechargeMoneyStr!}
+				</div>
+				<div class="showItem">
+					<span>借款入账操作金额：</span>
+					${accountLogModel.borrowerEnterMoneyStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box" style="width:771px;">
+			<div class="showItem">
+				<span>冻结总额：</span>
+				${accountLogModel.freezeBorrowerMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>借款人冻结充值金额：</span>
+					${accountLogModel.borrowerFreezeUseRechargeStr!}
+				</div>
+				<div class="showItem">
+					<span>借款人冻结入账金额：</span>
+					${accountLogModel.borrowerFreezeUseEnterStr!}
+				</div>
+			</div>
+		</div>
+	<#elseif userType=="12">
+		<div class="box" style="width:771px;">
+			<div class="showItem">
+				<span>可用总额：</span>
+				${accountLogModel.usableMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>充值可用总额：</span>
+					${accountLogModel.borrowerRechargeUsable!}
+				</div>
+				<div class="showItem">
+					<span>担保公司入账可用金额：</span>
+					${accountLogModel.borrowerEnterUsableStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box" style="width:771px;">
+			<div class="showItem">
+				<span>操作总额：</span>
+				${accountLogModel.optBorrowMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>担保公司充值操作金额：</span>
+					${accountLogModel.borrowerRechargeMoneyStr!}
+				</div>
+				<div class="showItem">
+					<span>担保公司入账操作金额：</span>
+					${accountLogModel.borrowerEnterMoneyStr!}
+				</div>
+			</div>
+		</div>
+		<div class="box" style="width:771px;">
+			<div class="showItem">
+				<span>冻结总额：</span>
+				${accountLogModel.freezeBorrowerMoneyTotalLogz!}
+			</div>
+			<div class="accountLogDiv">
+				<div class="showItem">
+					<span>担保公司冻结充值金额：</span>
+					${accountLogModel.borrowerFreezeUseRechargeStr!}
+				</div>
+				<div class="showItem">
+					<span>担保公司冻结入账金额：</span>
+					${accountLogModel.borrowerFreezeUseEnterStr!}
+				</div>
+			</div>
+		</div>
+	<#else>
+	<div class="box" style="width:771px;">
+		<div class="showItem">
+			<span>可用总额：</span>
+			${accountLogModel.usableMoneyTotalLogz!}
+		</div>
+		<div class="accountLogDiv">
+			<div class="showItem">
+				<span>商城入账可用金额：</span>
+				${accountLogModel.borrowerEnterUsableStr!}
+			</div>
+		</div>
+	</div>
+	<div class="box" style="width:771px;">
+		<div class="showItem">
+			<span>操作总额：</span>
+			${accountLogModel.optBorrowMoneyTotalLogz!}
+		</div>
+		<div class="accountLogDiv">
+			<div class="showItem">
+				<span>商城入账操作金额：</span>
+				${accountLogModel.borrowerEnterMoneyStr!}
+			</div>
+		</div>
+	</div>
+	</#if>
+	
+
+</div>

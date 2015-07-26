@@ -1,0 +1,77 @@
+
+package com.ddtkj.p2psys.redpacket.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.redpacket.domain.RpWeixinLog;
+import com.rongdu.common.dao.BaseDao;
+
+/**
+ * @描述:微信奖励产生和使用DAO
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-5-22   
+ */
+public interface RpWeixinLogDao extends BaseDao<RpWeixinLog> {
+	
+	
+	/**
+	 * 校验数据
+	 * @param  map
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	public int verifyCondition(Map<String, Object> map);
+	
+	/**
+	 * 保存微信奖励
+	 * @param map 
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	public int saveWeixinReward(Map<String, Object> map);
+	
+	/**
+	 * 更新微信奖励使用状态
+	 * @param  rpWeixinLog
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	int updateWeixinLogStatus(String status, String preStatus, String sn, String phone);
+	
+	/**
+	 * 根据状态获取微信奖励红包记录实体
+	 * @param  status
+	 * @return RpWeixinData 
+	 * @throws Exception   
+	 */ 
+	RpWeixinLog getRpWeixinLogByStatus(String status);
+	
+	/**
+	 * 根据状态获取微信奖励红包记录实体列表
+	 * @param  status
+	 * @return List<RpWeixinLog> 
+	 * @throws Exception   
+	 */ 
+	List<RpWeixinLog> getRpWeixinLogList(String status);
+	
+	/**
+	 * 更新微信奖励使用状态
+	 * @param  rpWeixinLog
+	 * @return int 
+	 * @throws Exception   
+	 */ 
+	int updateWeixinLogStatusByPhone(RpWeixinLog rpWeixinLog);
+	
+	/**
+	 * 获取微信奖励记录表此用户的微信红包总额
+	 * @param  phone 手机号
+	 * @param  sn    批次号
+	 * @param  status 状态
+	 * @throws Exception   
+	 */ 
+	double getRpWeixinLogMoney(String phone, String sn, String status);
+	
+	List<RpWeixinLog> getRpWeixinLogListByPhone(String phone, String sn, String status);
+	
+}

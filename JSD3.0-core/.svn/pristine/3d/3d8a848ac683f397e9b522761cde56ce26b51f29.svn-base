@@ -1,0 +1,163 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.util.List;
+
+/**
+ * 自动投标配置/投标前验证
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-02-20
+ */
+public class AutoTenderConfRuleCheck extends RuleCheck {
+	
+	private static final long serialVersionUID = -5354610566206615903L;
+	/** 自动投标设置 **/
+	private AutoTender auto_tender;
+	/** 投标前验证 **/
+	private TenderValid tender_valid;
+	/** 投标次数限制 **/
+	private TenderLimit tender_limit;
+	private List<Integer> tender_type;
+	
+	public static final int STATUS_VALID_ENABLE = 1;	//自动投标启用验证
+	public static final int STATUS_REAL_ENABLE = 1;	//自动投标启用实名验证
+	public static final int STATUS_EMAIL_ENABLE = 1;	//自动投标启用邮箱验证
+	public static final int STATUS_PHONE_ENABLE = 1;	//自动投标启用手机验证
+	
+	public static class AutoTender implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -7107607063686884696L;
+		/** 1 启用自动投标   **/
+		private int status;
+		private double max_apr;
+		private double origin_account;
+		private double fqorigin_account;
+		
+		public int getStatus() {
+			return status;
+		}
+		public void setStatus(int status) {
+			this.status = status;
+		}
+		public double getMax_apr() {
+			return max_apr;
+		}
+		public void setMax_apr(double max_apr) {
+			this.max_apr = max_apr;
+		}
+		public double getOrigin_account() {
+			return origin_account;
+		}
+		public void setOrigin_account(double origin_account) {
+			this.origin_account = origin_account;
+		}
+		public double getFqorigin_account() {
+			return fqorigin_account;
+		}
+		public void setFqorigin_account(double fqorigin_account) {
+			this.fqorigin_account = fqorigin_account;
+		}
+		
+	}
+	
+	public static class TenderValid implements java.io.Serializable{
+		
+		private static final long serialVersionUID = -3511936260024435477L;
+		/** 1 启用验证 **/
+		private int status;
+		private int real_enable;
+		private int email_enable;
+		private int phone_enable;
+		
+		public int getStatus() {
+			return status;
+		}
+		public void setStatus(int status) {
+			this.status = status;
+		}
+		public int getReal_enable() {
+			return real_enable;
+		}
+		public void setReal_enable(int real_enable) {
+			this.real_enable = real_enable;
+		}
+		public int getEmail_enable() {
+			return email_enable;
+		}
+		public void setEmail_enable(int email_enable) {
+			this.email_enable = email_enable;
+		}
+		public int getPhone_enable() {
+			return phone_enable;
+		}
+		public void setPhone_enable(int phone_enable) {
+			this.phone_enable = phone_enable;
+		}
+		
+	}
+
+	public static class TenderLimit implements java.io.Serializable{
+
+		private static final long serialVersionUID = 630274177942677016L;
+		/** 1启用限制 **/
+		private int status;
+		private int max_times;
+		
+		public int getStatus() {
+			return status;
+		}
+		public void setStatus(int status) {
+			this.status = status;
+		}
+		public int getMax_times() {
+			return max_times;
+		}
+		public void setMax_times(int max_times) {
+			this.max_times = max_times;
+		}
+		
+	}
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+
+	public AutoTenderConfRuleCheck() {
+		super();
+	}
+
+	public AutoTender getAuto_tender() {
+		return auto_tender;
+	}
+
+	public void setAuto_tender(AutoTender auto_tender) {
+		this.auto_tender = auto_tender;
+	}
+
+	public TenderValid getTender_valid() {
+		return tender_valid;
+	}
+
+	public void setTender_valid(TenderValid tender_valid) {
+		this.tender_valid = tender_valid;
+	}
+
+	public TenderLimit getTender_limit() {
+		return tender_limit;
+	}
+
+	public void setTender_limit(TenderLimit tender_limit) {
+		this.tender_limit = tender_limit;
+	}
+
+	public List<Integer> getTender_type() {
+		return tender_type;
+	}
+
+	public void setTender_type(List<Integer> tender_type) {
+		this.tender_type = tender_type;
+	}
+	
+}

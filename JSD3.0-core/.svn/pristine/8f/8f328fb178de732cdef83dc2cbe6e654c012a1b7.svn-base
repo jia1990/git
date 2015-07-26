@@ -1,0 +1,189 @@
+package com.ddtkj.p2psys.member.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+@Entity
+@Table(name = "t_jsd_vip_log")
+public class MemberVipHistory implements Serializable{
+
+	private static final long serialVersionUID = 6113978451415069222L;
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;//标识id
+	@ManyToOne
+	@JoinColumn(name="user_id")
+	private User user;//会员id
+	private String userName;//会员名
+	private String vipLevel;//会员级别
+	private String vipProduceType;//会员产生类型'P1'现金购买p5" 会员升级购买  
+	private double vipFee;//会员费用
+	private Date startTime;//生效时间
+	private Date endTime;//到期时间
+	private int validMonth;//有效期(月)
+	private double beforeMoney;//升级前折算金额
+	private double upgradeMoney;//升级续费金额
+	private String upgradeBeforeLevel;//升级前会员级别
+	private int beforeId;//升级前会员记录标识
+	private String upgradeAfterLevel;//升级后会员级别
+	private Date addTime;//添加时间
+	private String isvalid;//N:失效Y:有效
+	
+	
+	
+	
+	/**
+	 * @param userId
+	 * @param userName
+	 * @param vipLevel
+	 * @param vipProduceType
+	 * @param vipFee
+	 * @param startTime
+	 * @param endTime
+	 * @param validMonth
+	 * @param beforeMoney
+	 * @param upgradeMoney
+	 * @param upgradeBeforeLevel
+	 * @param beforeId
+	 * @param upgradeAfterLevel
+	 * @param addTime
+	 * @param isvalid
+	 */
+	public MemberVipHistory(User user, String userName, String vipLevel,
+			String vipProduceType, double vipFee, Date startTime, Date endTime,
+			int validMonth, double beforeMoney, double upgradeMoney,
+			String upgradeBeforeLevel, int beforeId, String upgradeAfterLevel,
+			Date addTime, String isvalid) {
+		super();
+		this.user = user;
+		this.userName = userName;
+		this.vipLevel = vipLevel;
+		this.vipProduceType = vipProduceType;
+		this.vipFee = vipFee;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.validMonth = validMonth;
+		this.beforeMoney = beforeMoney;
+		this.upgradeMoney = upgradeMoney;
+		this.upgradeBeforeLevel = upgradeBeforeLevel;
+		this.beforeId = beforeId;
+		this.upgradeAfterLevel = upgradeAfterLevel;
+		this.addTime = addTime;
+		this.isvalid = isvalid;
+	}
+	public MemberVipHistory() {
+	}
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	public String getVipLevel() {
+		return vipLevel;
+	}
+	public void setVipLevel(String vipLevel) {
+		this.vipLevel = vipLevel;
+	}
+	public String getVipProduceType() {
+		return vipProduceType;
+	}
+	public void setVipProduceType(String vipProduceType) {
+		this.vipProduceType = vipProduceType;
+	}
+	public double getVipFee() {
+		return vipFee;
+	}
+	public void setVipFee(double vipFee) {
+		this.vipFee = vipFee;
+	}
+	public Date getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+	public Date getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+	public int getValidMonth() {
+		return validMonth;
+	}
+	public void setValidMonth(int validMonth) {
+		this.validMonth = validMonth;
+	}
+	public double getBeforeMoney() {
+		return beforeMoney;
+	}
+	public void setBeforeMoney(double beforeMoney) {
+		this.beforeMoney = beforeMoney;
+	}
+	public double getUpgradeMoney() {
+		return upgradeMoney;
+	}
+	public void setUpgradeMoney(double upgradeMoney) {
+		this.upgradeMoney = upgradeMoney;
+	}
+	public String getUpgradeBeforeLevel() {
+		return upgradeBeforeLevel;
+	}
+	public void setUpgradeBeforeLevel(String upgradeBeforeLevel) {
+		this.upgradeBeforeLevel = upgradeBeforeLevel;
+	}
+	public int getBeforeId() {
+		return beforeId;
+	}
+	public void setBeforeId(int beforeId) {
+		this.beforeId = beforeId;
+	}
+	public String getUpgradeAfterLevel() {
+		return upgradeAfterLevel;
+	}
+	public void setUpgradeAfterLevel(String upgradeAfterLevel) {
+		this.upgradeAfterLevel = upgradeAfterLevel;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getIsvalid() {
+		return isvalid;
+	}
+	public void setIsvalid(String isvalid) {
+		this.isvalid = isvalid;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}	
+}

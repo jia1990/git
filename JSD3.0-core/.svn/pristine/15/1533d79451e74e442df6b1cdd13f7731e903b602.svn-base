@@ -1,0 +1,37 @@
+package com.ddtkj.p2psys.redpacket.dao;
+
+import com.ddtkj.p2psys.redpacket.domain.RpUseLog;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+/**
+ * 
+ * @描述：红包使用记录DAO
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月30日
+ */
+public interface RpUseLogDao extends BaseDao<RpUseLog>{
+	
+	/**
+	 * 查询 使用记录
+	 * @param param
+	 * @return
+	 */
+	public PageDataList<RpUseLog> getAll(QueryParam param) ;
+	
+	/**
+	 * @author 李建云
+	 * 根据用户查询  已使用钱袋子总额
+	 * @param userid
+	 * @return
+	 */
+	public double getAllUseDynamicTotal(long userid) ;
+	/**
+	 * 根据标ID查询   使用钱袋子总额
+	 * @param borrowid
+	 * @return
+	 */
+	public double getAllByBorrow(long borrowid) ;
+	
+}

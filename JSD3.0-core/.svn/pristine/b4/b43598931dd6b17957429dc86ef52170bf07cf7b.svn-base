@@ -1,0 +1,909 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.io.Serializable;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.util.DateUtil;
+
+/**
+ * @描述:红包产生规则
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月18日
+ */
+public class RedPacketProduceRuleCheck extends RuleCheck {
+
+	private StaticRP static_rp;
+	private DynamicRP dynamic_rp;
+	//JSDP-203 xingjia 20150702 start
+	private DragonRP dragon;
+	private MidAutumnRP midAutumn;
+	//JSDP-203 xingjia 20150702 end
+
+	public RedPacketProduceRuleCheck() {
+	}
+
+	/**
+	 * 静态红包
+	 * */
+	public static class StaticRP implements java.io.Serializable {
+		private Register register;
+		private Recommend recommend;
+
+		public Register getRegister() {
+			return register;
+		}
+
+		public void setRegister(Register register) {
+			this.register = register;
+		}
+
+		public Recommend getRecommend() {
+			return recommend;
+		}
+
+		public void setRecommend(Recommend recommend) {
+			this.recommend = recommend;
+		}
+
+	};
+
+	/**
+	 * 注册送红包
+	 * */
+	private static class Register implements java.io.Serializable {
+		private OrdinaryDays ordinary_days;// 平日
+		private ActivityDays activity_days;// 活动日
+
+		public OrdinaryDays getOrdinary_days() {
+			return ordinary_days;
+		}
+
+		public void setOrdinary_days(OrdinaryDays ordinary_days) {
+			this.ordinary_days = ordinary_days;
+		}
+
+		public ActivityDays getActivity_days() {
+			return activity_days;
+		}
+
+		public void setActivity_days(ActivityDays activity_days) {
+			this.activity_days = activity_days;
+		}
+
+	};
+
+	/**
+	 * 推荐送红包
+	 * */
+	public static class Recommend implements java.io.Serializable {
+
+		private OrdinaryDays ordinary_days;
+		private ActivityDays activity_days;
+		private FriendInvest friend_invest;// 好友投資送紅包
+
+		public OrdinaryDays getOrdinary_days() {
+			return ordinary_days;
+		}
+
+		public void setOrdinary_days(OrdinaryDays ordinary_days) {
+			this.ordinary_days = ordinary_days;
+		}
+
+		public ActivityDays getActivity_days() {
+			return activity_days;
+		}
+
+		public void setActivity_days(ActivityDays activity_days) {
+			this.activity_days = activity_days;
+		}
+
+		public FriendInvest getFriend_invest() {
+			return friend_invest;
+		}
+
+		public void setFriend_invest(FriendInvest friend_invest) {
+			this.friend_invest = friend_invest;
+		}
+
+	};
+
+	public static class FriendInvest implements java.io.Serializable {
+		private FriendSingleInvest single_invest;
+		
+		public FriendFirstInvest first_invest;
+
+		
+		public FriendFirstInvest getFirst_invest() {
+			return first_invest;
+		}
+
+		public void setFirst_invest(FriendFirstInvest first_invest) {
+			this.first_invest = first_invest;
+		}
+
+		public FriendSingleInvest getSingle_invest() {
+			return single_invest;
+		}
+
+		public void setSingle_invest(FriendSingleInvest single_invest) {
+			this.single_invest = single_invest;
+		}
+
+	}
+
+	/**
+	 * 好友单笔投资送红包
+	 * */
+	private static class FriendSingleInvest implements java.io.Serializable {
+		private int status;
+		private double threshold_money;// 阀值金额
+		private double weighted_rate;// 加权比率
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public double getThreshold_money() {
+			return threshold_money;
+		}
+
+		public void setThreshold_money(double threshold_money) {
+			this.threshold_money = threshold_money;
+		}
+
+		public double getWeighted_rate() {
+			return weighted_rate;
+		}
+
+		public void setWeighted_rate(double weighted_rate) {
+			this.weighted_rate = weighted_rate;
+		}
+
+	}
+	
+	/**
+	 * 好友首次投资送红包
+	 * */
+	public static class FriendFirstInvest implements java.io.Serializable {
+		private int status;
+		private double threshold_money;// 阀值金额
+		private double weighted_rate;// 加权比率
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public double getThreshold_money() {
+			return threshold_money;
+		}
+
+		public void setThreshold_money(double threshold_money) {
+			this.threshold_money = threshold_money;
+		}
+
+		public double getWeighted_rate() {
+			return weighted_rate;
+		}
+
+		public void setWeighted_rate(double weighted_rate) {
+			this.weighted_rate = weighted_rate;
+		}
+
+	}
+	
+	//JSDP-184 xingjia 20150617 start
+	public static class DragonRP implements Serializable{
+		private int status;//1为开启 0为关闭
+		private String award_formula;//奖励金额公式（/1000*5）
+		private String activity_start;
+		private String acitivty_end;
+		private String activity_borrow_formula;//满足此活动的标的条件如（能源标|GTE|时间）
+		//JSDP-203 xingjia 20150630 start
+		private String activity_consume;//此活动的红包消费公式
+		//JSDP-203 xingjia 20150630 end
+		public int getStatus() {
+			return status;
+		}
+		public void setStatus(int status) {
+			this.status = status;
+		}
+		public String getAward_formula() {
+			return award_formula;
+		}
+		public void setAward_formula(String award_formula) {
+			this.award_formula = award_formula;
+		}
+		public String getActivity_start() {
+			return activity_start;
+		}
+		public void setActivity_start(String activity_start) {
+			this.activity_start = activity_start;
+		}
+		public String getAcitivty_end() {
+			return acitivty_end;
+		}
+		public void setAcitivty_end(String acitivty_end) {
+			this.acitivty_end = acitivty_end;
+		}
+		public String getActivity_borrow_formula() {
+			return activity_borrow_formula;
+		}
+		public void setActivity_borrow_formula(String activity_borrow_formula) {
+			this.activity_borrow_formula = activity_borrow_formula;
+		}
+		public String getActivity_consume() {
+			return activity_consume;
+		}
+		public void setActivity_consume(String activity_consume) {
+			this.activity_consume = activity_consume;
+		}
+		
+	}
+	//JSDP-184 xingjia 20150617 end
+	
+	
+	public static class MidAutumnRP implements Serializable{
+		private int status;//1为开启 0为关闭
+		private String award_formula_midAutumn;//奖励金额公式（/1000*5）
+		private String activity_midAutumn_start;
+		private String acitivty_midAutumn_end;
+		private String activity_midAutumn_borrow_formula;//满足此活动的标的条件如（能源标|GTE|时间）
+		private String activity_midAutumn_consume;//此活动的红包消费公式
+		
+		public int getStatus() {
+			return status;
+		}
+		public void setStatus(int status) {
+			this.status = status;
+		}
+		public String getAward_formula_midAutumn() {
+			return award_formula_midAutumn;
+		}
+		public void setAward_formula_midAutumn(String award_formula_midAutumn) {
+			this.award_formula_midAutumn = award_formula_midAutumn;
+		}
+		public String getActivity_midAutumn_start() {
+			return activity_midAutumn_start;
+		}
+		public void setActivity_midAutumn_start(String activity_midAutumn_start) {
+			this.activity_midAutumn_start = activity_midAutumn_start;
+		}
+		public String getAcitivty_midAutumn_end() {
+			return acitivty_midAutumn_end;
+		}
+		public void setAcitivty_midAutumn_end(String acitivty_midAutumn_end) {
+			this.acitivty_midAutumn_end = acitivty_midAutumn_end;
+		}
+		public String getActivity_midAutumn_borrow_formula() {
+			return activity_midAutumn_borrow_formula;
+		}
+		public void setActivity_midAutumn_borrow_formula(
+				String activity_midAutumn_borrow_formula) {
+			this.activity_midAutumn_borrow_formula = activity_midAutumn_borrow_formula;
+		}
+		public String getActivity_midAutumn_consume() {
+			return activity_midAutumn_consume;
+		}
+		public void setActivity_midAutumn_consume(String activity_midAutumn_consume) {
+			this.activity_midAutumn_consume = activity_midAutumn_consume;
+		}
+		
+		
+		
+	}
+	
+	/**
+	 * 动态红包
+	 * */
+	private static class DynamicRP implements java.io.Serializable {
+		private FeeRate fee_rate;
+		private DynOrdinaryDays ordinary_days;
+		private DynActivityDays activity_days;
+
+		public DynOrdinaryDays getOrdinary_days() {
+			return ordinary_days;
+		}
+
+		public void setOrdinary_days(DynOrdinaryDays ordinary_days) {
+			this.ordinary_days = ordinary_days;
+		}
+
+		public DynActivityDays getActivity_days() {
+			return activity_days;
+		}
+
+		public void setActivity_days(DynActivityDays activity_days) {
+			this.activity_days = activity_days;
+		}
+
+		public FeeRate getFee_rate() {
+			return fee_rate;
+		}
+
+		public void setFee_rate(FeeRate fee_rate) {
+			this.fee_rate = fee_rate;
+		}
+
+	};
+
+	/**
+	 * 平日红包设置
+	 * */
+	private static class OrdinaryDays implements java.io.Serializable {
+		private int rp_status; // 1开启,0关闭
+		private double rp_value;// 红包面值（元）
+		// private int rp_valid_day; // 红包有效天数(天)//
+		private String activity_name;// 活动名称
+
+		public int getRp_status() {
+			return rp_status;
+		}
+
+		public void setRp_status(int rp_status) {
+			this.rp_status = rp_status;
+		}
+
+		public double getRp_value() {
+			return rp_value;
+		}
+
+		public void setRp_value(double rp_value) {
+			this.rp_value = rp_value;
+		}
+
+		public String getActivity_name() {
+			return activity_name;
+		}
+
+		public void setActivity_name(String activity_name) {
+			this.activity_name = activity_name;
+		}
+	};
+
+	/**
+	 * 动态平日红包设置
+	 * */
+	private static class DynOrdinaryDays implements java.io.Serializable {
+		private int rp_status = 1; // 1开启,0关闭
+		private double rp_value;// 红包面值（元）
+		private int rp_valid_day; // 红包有效天数(天)
+		private String activity_name;// 活动名称
+		private long min_investment_amount;// 最小投资金额(针对投资动态红包)
+
+		public int getRp_status() {
+			return rp_status;
+		}
+
+		public void setRp_status(int rp_status) {
+			this.rp_status = rp_status;
+		}
+
+		public double getRp_value() {
+			return rp_value;
+		}
+
+		public void setRp_value(double rp_value) {
+			this.rp_value = rp_value;
+		}
+
+		public int getRp_valid_day() {
+			return rp_valid_day;
+		}
+
+		public void setRp_valid_day(int rp_valid_day) {
+			this.rp_valid_day = rp_valid_day;
+		}
+
+		public String getActivity_name() {
+			return activity_name;
+		}
+
+		public void setActivity_name(String activity_name) {
+			this.activity_name = activity_name;
+		}
+
+		public long getMin_investment_amount() {
+			return min_investment_amount;
+		}
+
+		public void setMin_investment_amount(long min_investment_amount) {
+			this.min_investment_amount = min_investment_amount;
+		}
+
+	}
+
+	/**
+	 * 活动日红包设置
+	 * */
+	private static class ActivityDays implements java.io.Serializable {
+		private int rp_status; // 1开启,0关闭
+		private double rp_value;// 红包面值（元）
+		// private int rp_valid_day;// 红包有效天数(天)
+		private String activity_name;// 活动名称
+		private String activity_start_date;// 开始日期
+		private String activity_end_date;// 结束日期
+
+		public int getRp_status() {
+			return rp_status;
+		}
+
+		public void setRp_status(int rp_status) {
+			this.rp_status = rp_status;
+		}
+
+		public double getRp_value() {
+			return rp_value;
+		}
+
+		public void setRp_value(double rp_value) {
+			this.rp_value = rp_value;
+		}
+
+		public String getActivity_name() {
+			return activity_name;
+		}
+
+		public void setActivity_name(String activity_name) {
+			this.activity_name = activity_name;
+		}
+
+		public String getActivity_start_date() {
+			return activity_start_date;
+		}
+
+		public void setActivity_start_date(String activity_start_date) {
+			this.activity_start_date = activity_start_date;
+		}
+
+		public String getActivity_end_date() {
+			return activity_end_date;
+		}
+
+		public void setActivity_end_date(String activity_end_date) {
+			this.activity_end_date = activity_end_date;
+		}
+
+	}
+
+	/**
+	 * 动态活动日红包设置
+	 * */
+	private static class DynActivityDays implements java.io.Serializable {
+		private int rp_status; // 1开启,0关闭
+		private double rp_value;// 红包面值（元）
+		private String activity_name;// 活动名称
+		private String activity_start_date;// 开始日期
+		private String activity_end_date;// 结束日期
+		private long min_investment_amount;// 投资金额(针对投资动态红包)
+
+		public int getRp_status() {
+			return rp_status;
+		}
+
+		public void setRp_status(int rp_status) {
+			this.rp_status = rp_status;
+		}
+
+		public double getRp_value() {
+			return rp_value;
+		}
+
+		public void setRp_value(double rp_value) {
+			this.rp_value = rp_value;
+		}
+
+		public String getActivity_name() {
+			return activity_name;
+		}
+
+		public void setActivity_name(String activity_name) {
+			this.activity_name = activity_name;
+		}
+
+		public String getActivity_start_date() {
+			return activity_start_date;
+		}
+
+		public void setActivity_start_date(String activity_start_date) {
+			this.activity_start_date = activity_start_date;
+		}
+
+		public String getActivity_end_date() {
+			return activity_end_date;
+		}
+
+		public void setActivity_end_date(String activity_end_date) {
+			this.activity_end_date = activity_end_date;
+		}
+
+		public long getMin_investment_amount() {
+			return min_investment_amount;
+		}
+
+		public void setMin_investment_amount(long min_investment_amount) {
+			this.min_investment_amount = min_investment_amount;
+		}
+
+	};
+
+	/**
+	 * 红包费率
+	 * 
+	 * */
+	private static class FeeRate implements java.io.Serializable {
+		private int status;
+		private double rate;
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public double getRate() {
+			return rate;
+		}
+
+		public void setRate(double rate) {
+			this.rate = rate;
+		}
+
+	}
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+
+	public StaticRP getStatic_rp() {
+		return static_rp;
+	}
+
+	public void setStatic_rp(StaticRP static_rp) {
+		this.static_rp = static_rp;
+	}
+
+	public DynamicRP getDynamic_rp() {
+		return dynamic_rp;
+	}
+
+	public void setDynamic_rp(DynamicRP dynamic_rp) {
+		this.dynamic_rp = dynamic_rp;
+	}
+
+	
+
+	
+
+	public DragonRP getDragon() {
+		return dragon;
+	}
+
+	public void setDragon(DragonRP dragon) {
+		this.dragon = dragon;
+	}
+
+	public MidAutumnRP getMidAutumn() {
+		return midAutumn;
+	}
+
+	public void setMidAutumn(MidAutumnRP midAutumn) {
+		this.midAutumn = midAutumn;
+	}
+
+	/**
+	 * 注册获取静态红包
+	 * 
+	 * @return map key(rp_value,rp_activity_name,rp_valid_day)
+	 *         <p>
+	 *         如果返回Map的size为0表示注册送静态红包功能关闭
+	 * */
+	public Map<String, Object> registerRP() {
+		Map<String, Object> data = new HashMap<String, Object>();
+		ActivityDays activity_days = static_rp.register.activity_days;// 活动日
+		OrdinaryDays ordinary_days = static_rp.register.ordinary_days;// 平日
+		
+		// 平日活动开启
+		if (ordinary_days.rp_status == 1) {
+			data.put("rp_value", ordinary_days.getRp_value());
+			data.put("rp_activity_name", ordinary_days.getActivity_name());
+			data.put("ordinary_day", 1);
+		}
+		// 活动日开启
+		if (activity_days.getRp_status() == 1) {
+			// 获取活动时间
+			String format = "yyyy-MM-dd";
+			Date startDate = DateUtil.getDate10ByStr(
+					activity_days.getActivity_start_date(), format);
+
+			Date endDate = DateUtil.getDate10ByStr(
+					activity_days.getActivity_end_date(), format);
+
+			long now = System.currentTimeMillis();
+			data.put("activity_day", 1);
+			// 在活动时间范围内
+			if (now >= startDate.getTime() && endDate.getTime() >= now) {
+				data.put("rp_value_activity", activity_days.getRp_value());
+				data.put("rp_value", activity_days.getRp_value());
+				data.put("rp_activity_name_activity", activity_days.getActivity_name());
+				return data;
+
+			}else{
+			// 不在活动时间内
+				// 如果平日还开启，则使用平日值
+				if (ordinary_days.rp_status == 1) {
+					data.put("rp_value", ordinary_days.getRp_value());
+					data.put("rp_activity_name_activity", ordinary_days.getActivity_name());
+					data.put("rp_value_activity", ordinary_days.getRp_value());
+				}else{
+				// 平日未开启，活动日开启且过期则无奖励
+					data.put("rp_value_activity", 0);
+					data.put("rp_value", 0);
+					data.put("rp_activity_name_activity", 0+"");
+
+				}
+				
+			}
+			
+		}
+
+		return data;
+
+	}
+
+	/**
+	 * 推荐好友单次获取红包
+	 * 
+	 * @return map key(rp_value,rp_activity_name,rp_valid_day)
+	 *         <p>
+	 *         如果Map的size为0表示推荐好友送红包功能关闭
+	 * 
+	 * */
+	public Map<String, Object> recommendRP() {
+		Map<String, Object> data = new HashMap<String, Object>();
+		ActivityDays activity_days = static_rp.recommend.activity_days;// 活动日
+		OrdinaryDays ordinary_days = static_rp.recommend.ordinary_days;// 平日
+		// 活动日开启
+		if (activity_days.getRp_status() == 1) {
+			// 获取活动时间
+			String format = "yyyy-MM-dd";
+			Date startDate = DateUtil.getDate10ByStr(
+					activity_days.getActivity_start_date(), format);
+
+			Date endDate = DateUtil.getDate10ByStr(
+					activity_days.getActivity_end_date(), format);
+
+			long now = System.currentTimeMillis();
+			data.put("recommon_activity_day", activity_days.getRp_status());
+			// 在活动时间范围内
+			if (now >= startDate.getTime() && endDate.getTime() >= now) {
+				
+				data.put("rp_value_activity", activity_days.getRp_value());
+				data.put("rp_activity_name_activity", activity_days.getActivity_name());
+				return data;
+			}else{
+				// 如果活动日开启则过期，而平日开启，则使用平日值
+				if(ordinary_days.rp_status == 1){
+					data.put("rp_value_activity", ordinary_days.getRp_value());
+					data.put("rp_activity_name_activity",ordinary_days.getActivity_name());
+				}else{
+				// 如果活动日过期，平日也关闭，则为0
+					data.put("rp_value_activity", 0);
+					data.put("rp_activity_name_activity",""+0);
+					
+				}
+			}
+
+		}
+		// 平日活动开启
+		if (ordinary_days.rp_status == 1) {
+			data.put("recommon_ordinary_day", ordinary_days.getRp_status());
+			data.put("rp_value", ordinary_days.getRp_value());
+			data.put("rp_activity_name", ordinary_days.getActivity_name());
+		}
+		return data;
+	}
+
+	/**
+	 * 推荐的好友投资返红包
+	 * 
+	 * @param tenderType
+	 *            标的类型
+	 * @param money
+	 *            好友投资金额
+	 * @param timeLimit
+	 *            标的期数
+	 * @return double 返还静态红包 如果返回-1表示送红包功能关闭
+	 * 
+	 * */
+	public double recFriendInvestRetRP(int tenderType, double money,
+			int timeLimit) {
+		double result = -1;
+		/*if (static_rp.recommend.friend_invest.single_invest.status == 1) {
+			if (money > static_rp.recommend.friend_invest.single_invest.threshold_money) {
+				 月标 
+				if (0 == tenderType) {
+					result = Math
+							.floor(money
+									* timeLimit
+									* (static_rp.recommend.friend_invest.single_invest.weighted_rate / 100d)
+									* 1.0d);
+				} else if (1 == tenderType) {
+					 天标 
+					result = Math
+							.floor(money
+									* (timeLimit / 30d)
+									* (static_rp.recommend.friend_invest.single_invest.weighted_rate / 100d));
+				}
+			}
+
+		}*/	
+		if (static_rp.recommend.friend_invest.first_invest.status == 1) {
+			if (money >= static_rp.recommend.friend_invest.first_invest.threshold_money) {
+				// 月标 
+				if (0 == tenderType) {
+					result = Math
+							.floor(money
+									* timeLimit
+									* (static_rp.recommend.friend_invest.first_invest.weighted_rate / 100d)
+									* 1.0d);
+				} else if (1 == tenderType) {
+					// 天标 
+					result = Math
+							.floor(money
+									* (timeLimit / 30d)
+									* (static_rp.recommend.friend_invest.first_invest.weighted_rate / 100d));
+				}
+			}
+
+		}
+
+		return result;
+
+	}
+
+	/**
+	 * 动态获取红包
+	 * 
+	 * @return map key(rp_value,rp_activity_name,rp_valid_day)
+	 *         <p>
+	 *         如果返回的map size为0表示动态红包功能关闭
+	 * 
+	 * */
+	public Map<String, Object> dynamicRP() {
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		if (dynamic_rp.fee_rate.status == 1) {
+			data.put("rp_rate_status", 1);
+			data.put("rp_rate_value", dynamic_rp.fee_rate.rate);
+			return data;
+		}
+
+		DynActivityDays activity_days = dynamic_rp.activity_days;// 活动日
+		DynOrdinaryDays ordinary_days = dynamic_rp.ordinary_days;// 平日
+		// 活动日开启
+		if (activity_days.getRp_status() == 1) {
+			// 获取活动时间
+			String format = "yyyy-MM-dd";
+			Date startDate = DateUtil.getDate10ByStr(
+					activity_days.getActivity_start_date(), format);
+
+			Date endDate = DateUtil.getDate10ByStr(
+					activity_days.getActivity_end_date(), format);
+
+			long now = System.currentTimeMillis();
+			// 在活动时间范围内
+			if (now >= startDate.getTime() && endDate.getTime() >= now) {
+				data.put("activity_day", 1);
+				data.put("rp_value_activity", activity_days.getRp_value());
+				data.put("rp_activity_name_activity", activity_days.getActivity_name());
+				data.put("min_investment_amount_activity",
+						activity_days.getMin_investment_amount());
+				return data;
+			}
+
+		}
+		// 平日活动开启
+		if (ordinary_days.rp_status == 1) {
+			data.put("ordinary_day", 1);
+			data.put("rp_value", ordinary_days.getRp_value());
+			data.put("rp_activity_name", ordinary_days.getActivity_name());
+			data.put("min_investment_amount",
+					ordinary_days.getMin_investment_amount());
+		}
+
+		return data;
+
+	}
+	//JSDP-184 xingjia 20150617 start
+	public Map<String,Object> dragonRp(){
+		Map<String, Object> data = new HashMap<String, Object>();
+		if(dragon.status == 1){
+			String format = "yyyy-MM-dd";
+			Date startDate = DateUtil.getDate10ByStr(
+					dragon.activity_start, format);
+
+			Date endDate = DateUtil.getDate10ByStr(
+					dragon.acitivty_end, format);
+
+			long now = System.currentTimeMillis();
+			if (now >= startDate.getTime() && endDate.getTime() >= now) {
+				data.put("activityRp_status", 1);
+				data.put("activityRp_borrow", dragon.activity_borrow_formula);
+				data.put("activityRp_award_formula", dragon.award_formula);
+				data.put("activityRp_start_time", startDate);
+				data.put("activityRp_end_time", endDate);
+			}
+		}
+		
+		return data;
+	}
+	//JSDP-184 xingjia 20150617 end	
+
+	
+	public Map<String,Object> midAutumnRp(){
+		Map<String, Object> data = new HashMap<String, Object>();
+		if(midAutumn.status == 1){
+			String format = "yyyy-MM-dd";
+			Date startDate = DateUtil.getDate10ByStr(
+					midAutumn.activity_midAutumn_start, format);
+
+			Date endDate = DateUtil.getDate10ByStr(
+					midAutumn.acitivty_midAutumn_end, format);
+
+			long now = System.currentTimeMillis();
+			if (now >= startDate.getTime() && endDate.getTime() >= now) {
+				data.put("activityRp_status", 1);
+				data.put("activityRp_borrow", midAutumn.activity_midAutumn_borrow_formula);
+				data.put("activityRp_award_formula", midAutumn.award_formula_midAutumn);
+				data.put("activityRp_start_time", startDate);
+				data.put("activityRp_end_time", endDate);
+			}
+		}
+		
+		return data;
+	}
+	
+	
+	
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = RedPacketProduceRuleCheck.class
+				.getResourceAsStream("红包产生规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll("\\s* ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(json);
+		Object jsonObj = JSON
+				.parseObject(json, RedPacketProduceRuleCheck.class);
+		RedPacketProduceRuleCheck test = (RedPacketProduceRuleCheck) jsonObj;
+
+		// System.out.println(test);
+
+		double r = Math.floor(8900 * 3 * (2 / 10000d) * 1.0d);
+		System.out.println(r);
+
+	}
+
+}

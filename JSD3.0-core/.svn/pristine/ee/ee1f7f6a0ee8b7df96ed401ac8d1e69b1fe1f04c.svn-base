@@ -1,0 +1,618 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.rongdu.common.util.BigDecimalUtil;
+
+/**
+ * @描述:JSD3.0提现规则类
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月23日
+ */
+public class WithdrawCashRuleCheck extends RuleCheck {
+
+	private static final int STATUS_OPEN = 1;
+	private static final int STATUS_CLOSE = 0;
+	private CashMaxlimit cash_max_limit;// 最大提现金额限制
+	private CashMinlimit cash_min_limit;
+	private CashFee cash_fee;// 提现费
+
+	private static class CashFee implements java.io.Serializable{
+		private Tender tender;
+		private Borrower borrower;
+
+		public Tender getTender() {
+			return tender;
+		}
+
+		public void setTender(Tender tender) {
+			this.tender = tender;
+		}
+
+		public Borrower getBorrower() {
+			return borrower;
+		}
+
+		public void setBorrower(Borrower borrower) {
+			this.borrower = borrower;
+		}
+
+	}
+
+	/* 投资人 */
+	private static class Tender implements java.io.Serializable{
+		private int status;
+		private RechargeCash recharge_cash;// 充值提现
+		private ReturnedMoney member_normal;// 普通会员回款本金提现
+		private MemberVIP member_vip;
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public RechargeCash getRecharge_cash() {
+			return recharge_cash;
+		}
+
+		public void setRecharge_cash(RechargeCash recharge_cash) {
+			this.recharge_cash = recharge_cash;
+		}
+
+		public ReturnedMoney getMember_normal() {
+			return member_normal;
+		}
+
+		public void setMember_normal(ReturnedMoney member_normal) {
+			this.member_normal = member_normal;
+		}
+
+		public MemberVIP getMember_vip() {
+			return member_vip;
+		}
+
+		public void setMember_vip(MemberVIP member_vip) {
+			this.member_vip = member_vip;
+		}
+
+	};
+
+	/* 借款人 */
+	private static class Borrower implements java.io.Serializable{
+		private int status;
+		private RechargeCash recharge_cash;// 充值提现
+		private ReturnedMoney enter_cash;// 入账提现
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public RechargeCash getRecharge_cash() {
+			return recharge_cash;
+		}
+
+		public void setRecharge_cash(RechargeCash recharge_cash) {
+			this.recharge_cash = recharge_cash;
+		}
+
+		public ReturnedMoney getEnter_cash() {
+			return enter_cash;
+		}
+
+		public void setEnter_cash(ReturnedMoney enter_cash) {
+			this.enter_cash = enter_cash;
+		}
+
+	};
+
+	/* 投资人会员VIP */
+	private static class MemberVIP implements java.io.Serializable{
+		private AllVIP all_vip;
+		private ReturnedMoney member_vip_normal;
+		private ReturnedMoney member_vip_silver;
+		private ReturnedMoney member_vip_gold;
+		private ReturnedMoney member_vip_diamond;
+
+		public AllVIP getAll_vip() {
+			return all_vip;
+		}
+
+		public void setAll_vip(AllVIP all_vip) {
+			this.all_vip = all_vip;
+		}
+
+		public ReturnedMoney getMember_vip_normal() {
+			return member_vip_normal;
+		}
+
+		public void setMember_vip_normal(ReturnedMoney member_vip_normal) {
+			this.member_vip_normal = member_vip_normal;
+		}
+
+		public ReturnedMoney getMember_vip_silver() {
+			return member_vip_silver;
+		}
+
+		public void setMember_vip_silver(ReturnedMoney member_vip_silver) {
+			this.member_vip_silver = member_vip_silver;
+		}
+
+		public ReturnedMoney getMember_vip_gold() {
+			return member_vip_gold;
+		}
+
+		public void setMember_vip_gold(ReturnedMoney member_vip_gold) {
+			this.member_vip_gold = member_vip_gold;
+		}
+
+		public ReturnedMoney getMember_vip_diamond() {
+			return member_vip_diamond;
+		}
+
+		public void setMember_vip_diamond(ReturnedMoney member_vip_diamond) {
+			this.member_vip_diamond = member_vip_diamond;
+		}
+	};
+
+	/* 最小提现金额限制 */
+	private static class CashMinlimit implements java.io.Serializable{
+		private CashLimit tender;
+		private CashLimit borrower;
+		private String remark;
+
+		public CashLimit getTender() {
+			return tender;
+		}
+
+		public void setTender(CashLimit tender) {
+			this.tender = tender;
+		}
+
+		public CashLimit getBorrower() {
+			return borrower;
+		}
+
+		public void setBorrower(CashLimit borrower) {
+			this.borrower = borrower;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+	};
+
+	/* 最大提现金额限制 */
+	private static class CashMaxlimit implements java.io.Serializable{
+		private CashLimit tender;
+		private CashLimit borrower;
+		private String remark;
+
+		public CashLimit getTender() {
+			return tender;
+		}
+
+		public void setTender(CashLimit tender) {
+			this.tender = tender;
+		}
+
+		public CashLimit getBorrower() {
+			return borrower;
+		}
+
+		public void setBorrower(CashLimit borrower) {
+			this.borrower = borrower;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+	};
+
+	/* 金额限制类 */
+	private static class CashLimit implements java.io.Serializable {
+
+		private int status;// 状态
+		private double amount;// 金额
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public double getAmount() {
+			return amount;
+		}
+
+		public void setAmount(double amount) {
+			this.amount = amount;
+		}
+
+	};
+
+	/* 充值提现规则属性 */
+	private static class RechargeCash implements java.io.Serializable{
+		private double fee_rate;
+		private String remark;
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+		public double getFee_rate() {
+			return fee_rate;
+		}
+
+		public void setFee_rate(double fee_rate) {
+			this.fee_rate = fee_rate;
+		}
+
+	};
+
+	/* 回款本金取现规则属性 */
+	private static class ReturnedMoney implements java.io.Serializable{
+
+		private double threshold_money;
+		private double fee_rate;
+		private double fix_fee;
+		private String remark;
+
+		public double getThreshold_money() {
+			return threshold_money;
+		}
+
+		public void setThreshold_money(double threshold_money) {
+			this.threshold_money = threshold_money;
+		}
+
+		public double getFee_rate() {
+			return fee_rate;
+		}
+
+		public void setFee_rate(double fee_rate) {
+			this.fee_rate = fee_rate;
+		}
+
+		public double getFix_fee() {
+			return fix_fee;
+		}
+
+		public void setFix_fee(double fix_fee) {
+			this.fix_fee = fix_fee;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+	};
+
+	/* allVIP 回款本金取现规则 */
+	private static class AllVIP implements java.io.Serializable{
+		private int status;
+		private double threshold_money;
+		private double fee_rate;
+		private double fix_fee;
+		private String remark;
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public double getThreshold_money() {
+			return threshold_money;
+		}
+
+		public void setThreshold_money(double threshold_money) {
+			this.threshold_money = threshold_money;
+		}
+
+		public double getFee_rate() {
+			return fee_rate;
+		}
+
+		public void setFee_rate(double fee_rate) {
+			this.fee_rate = fee_rate;
+		}
+
+		public double getFix_fee() {
+			return fix_fee;
+		}
+
+		public void setFix_fee(double fix_fee) {
+			this.fix_fee = fix_fee;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+	};
+
+	public static void main(String[] args) throws Exception {
+		// 测试使用
+		InputStream in = WithdrawCashRuleCheck.class
+				.getResourceAsStream("JSD3.0新提现规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<WithdrawCashRuleCheck> clazz = WithdrawCashRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		WithdrawCashRuleCheck test = (WithdrawCashRuleCheck) jsonObj;
+
+	//	System.out.println(test.toString());
+
+	}
+
+	@Override
+	public boolean checkRule() {
+		return false;
+	}
+
+
+	public CashMaxlimit getCash_max_limit() {
+		return cash_max_limit;
+	}
+
+	public void setCash_max_limit(CashMaxlimit cash_max_limit) {
+		this.cash_max_limit = cash_max_limit;
+	}
+
+	public CashMinlimit getCash_min_limit() {
+		return cash_min_limit;
+	}
+
+	public void setCash_min_limit(CashMinlimit cash_min_limit) {
+		this.cash_min_limit = cash_min_limit;
+	}
+
+	public CashFee getCash_fee() {
+		return cash_fee;
+	}
+
+	public void setCash_fee(CashFee cash_fee) {
+		this.cash_fee = cash_fee;
+	}
+
+	/* 入参数key常量 */
+	public static final String USER_TYPE_IN_KEY = "userType";
+	public static final String MEMBER_LEVEL_IN_KEY = "memberLevel";
+	public static final String RECHARGE_CASH_IN_KEY = "rechargeCash";
+	public static final String INCOM_CASH_IN_KEY = "incomeCash";
+	/* 返回结果Key常量 */
+	public static final String RECHARGE_CASH_OUT_KEY = "rechargeCash";
+	public static final String INCOM_CASH_OUT_KEY = "incomeCash";
+
+	public static final String REQUEST_MONEY_OUT_KEY = "requestMoney";
+	public static final String FEE_RATE_OUT_KEY = "feeRate";
+	public static final String CASH_FEE_OUT_KEY = "cashFee";
+	public static final String USABLE_MONEY_OUT_KEY = "usableMoney";
+
+	/**
+	 * 获取提现收费规则
+	 * 
+	 * @param Map
+	 *            <ul>
+	 *            <li>key:userType value:投资人或借款人区分常量</li>
+	 *            <li>key:memberLevel value:借款人为null，投资人为会员级别常量</li>
+	 *            <li>key: rechargeCash value:充值提现金额</li>
+	 *            <li>key: incomeCash value: 收入本金或入账取现金额</li>
+	 *            </ul>
+	 * @return Map
+	 *         <ul>
+	 *         key: rechargeCash value: map
+	 *         <li>key:requestMoney value :请求提现金额</li>
+	 *         <li>key:feeRate value:取现费率</li>
+	 *         <li>key:cashFee value:提现费</li>
+	 *         <li>key:usableMoney value:实际提取金额</li>
+	 *         </ul>
+	 *         <ul>
+	 *         key: incomeCash value :map
+	 *         <li>key:requestMoney value :请求提现金额</li>
+	 *         <li>key:cashFeeRate value:取现费率</li>
+	 *         <li>key:cashFee value:提现费</li>
+	 *         <li>key:usableMoney value:实际提取金额</li>
+	 *         </ul>
+	 * */
+	public Map<String, Map<String, Double>> calculateCashFee(
+			Map<String, Object> params) {
+		Map<String, Map<String, Double>> result = new HashMap<String, Map<String, Double>>();
+		String userType = (String) params.get(USER_TYPE_IN_KEY);// 用户类别
+		String memberLevel = (String) params.get(MEMBER_LEVEL_IN_KEY);// 会员级别
+		double rechargeCash = (Double) params.get(RECHARGE_CASH_IN_KEY);// 充值取现金额
+		double incomeCash = (Double) params.get(INCOM_CASH_OUT_KEY);// 入账取现金额
+		// 借款人取现费
+		if (UserConstant.USER_SORT_BORROW.equalsIgnoreCase(userType)) {
+			if (cash_fee.borrower.status == STATUS_OPEN) {
+				// 充值提现
+				if (rechargeCash > 0.0) {
+					double feeRate = cash_fee.borrower.recharge_cash.fee_rate;
+					double fee = 0;
+					result.put(RECHARGE_CASH_OUT_KEY,
+							this.cashDataMap(rechargeCash, feeRate, 0));
+				}
+				// 入账提现
+				if (incomeCash > 0.0) {
+					double threshold_money = cash_fee.borrower.enter_cash.threshold_money;
+					double fee = 0;
+					double feeRate = 0;
+					if (incomeCash <= threshold_money) {
+						fee = cash_fee.borrower.enter_cash.fix_fee;
+					} else {
+						feeRate = cash_fee.borrower.enter_cash.fee_rate;
+					}
+					result.put(INCOM_CASH_OUT_KEY,
+							this.cashDataMap(incomeCash, feeRate, fee));
+				}
+
+			}
+			// 投资人取现费
+		} else {
+
+			if (cash_fee.tender.status == STATUS_OPEN) {
+				// 充值提现
+				if (rechargeCash > 0.0) {
+					double feeRate = cash_fee.tender.recharge_cash.fee_rate;
+					double fee = 0;
+					result.put(RECHARGE_CASH_OUT_KEY,
+							this.cashDataMap(rechargeCash, feeRate, fee));
+				}
+				// 回款本金提现
+				if (incomeCash > 0.0) {
+					// 普通会员
+					if (UserConstant.MEMBER_LEVEL_NORMAL.equals(memberLevel)) {
+						double threshold_money = cash_fee.tender.member_normal.threshold_money;
+						double fee = 0.0;
+						double feeRate = 0.0;
+						if (incomeCash <= threshold_money) {
+							fee = cash_fee.tender.member_normal.fix_fee;
+						} else {
+							feeRate = cash_fee.tender.member_normal.fee_rate;
+						}
+						result.put(INCOM_CASH_OUT_KEY,
+								this.cashDataMap(incomeCash, feeRate, fee));
+					} else {
+						// vip会员
+						// 所有VIP默认设置开启
+						if (cash_fee.tender.member_vip.all_vip.status == STATUS_OPEN) {
+
+							double threshold_money = cash_fee.tender.member_vip.all_vip.threshold_money;
+							double fee = 0.0;
+							double feeRate = 0.0;
+							if (incomeCash <= threshold_money) {
+								fee = cash_fee.tender.member_vip.all_vip.fix_fee;
+							} else {
+								feeRate = cash_fee.tender.member_vip.all_vip.fee_rate;
+							}
+							result.put(INCOM_CASH_OUT_KEY,
+									this.cashDataMap(incomeCash, feeRate, fee));
+
+						} else {
+
+							// 普通
+							if (UserConstant.MEMBER_LEVEL_VIP_NORMAL
+									.equals(memberLevel)) {
+								double threshold_money = cash_fee.tender.member_vip.member_vip_normal.threshold_money;
+								double fee = 0.0;
+								double feeRate = 0.0;
+								if (incomeCash <= threshold_money) {
+									fee = cash_fee.tender.member_vip.member_vip_normal.fix_fee;
+								} else {
+									feeRate = cash_fee.tender.member_vip.member_vip_normal.fee_rate;
+								}
+								result.put(INCOM_CASH_OUT_KEY, this
+										.cashDataMap(incomeCash, feeRate, fee));
+
+								// 银牌
+							} else if (UserConstant.MEMBER_LEVEL_VIP_SILVER
+									.equals(memberLevel)) {
+								double threshold_money = cash_fee.tender.member_vip.member_vip_silver.threshold_money;
+								double fee = 0.0;
+								double feeRate = 0.0;
+								if (incomeCash <= threshold_money) {
+									fee = cash_fee.tender.member_vip.member_vip_silver.fix_fee;
+								} else {
+									feeRate = cash_fee.tender.member_vip.member_vip_silver.fee_rate;
+								}
+								result.put(INCOM_CASH_OUT_KEY, this
+										.cashDataMap(incomeCash, feeRate, fee));
+								// 金牌
+							} else if (UserConstant.MEMBER_LEVEL_VIP_GOLD
+									.equals(memberLevel)) {
+								double threshold_money = cash_fee.tender.member_vip.member_vip_gold.threshold_money;
+								double fee = 0.0;
+								double feeRate = 0.0;
+								if (incomeCash <= threshold_money) {
+									fee = cash_fee.tender.member_vip.member_vip_gold.fix_fee;
+								} else {
+									feeRate = cash_fee.tender.member_vip.member_vip_gold.fee_rate;
+								}
+								result.put(INCOM_CASH_OUT_KEY, this
+										.cashDataMap(incomeCash, feeRate, fee));
+								// 钻石
+							} else if (UserConstant.MEMBER_LEVEL_VIP_DIAMOND
+									.equals(memberLevel)) {
+								double threshold_money = cash_fee.tender.member_vip.member_vip_diamond.threshold_money;
+								double fee = 0.0;
+								double feeRate = 0.0;
+								if (incomeCash <= threshold_money) {
+									fee = cash_fee.tender.member_vip.member_vip_diamond.fix_fee;
+								} else {
+									feeRate = cash_fee.tender.member_vip.member_vip_diamond.fee_rate;
+								}
+								result.put(INCOM_CASH_OUT_KEY, this
+										.cashDataMap(incomeCash, feeRate, fee));
+							}
+						}
+					}
+
+				}
+
+			}
+
+		}
+
+		return result;
+	}
+    
+	private Map<String, Double> cashDataMap(double inCash, double feeRate,
+			double fee) {
+		Map<String, Double> data = new HashMap<String, Double>();
+		data.put(REQUEST_MONEY_OUT_KEY, inCash);
+		if (feeRate > 0) {
+			fee = BigDecimalUtil.round(BigDecimalUtil.mul(inCash, feeRate), 2);
+		}
+		double userableMoney = BigDecimalUtil.round(BigDecimalUtil.sub(inCash, fee),2);
+		data.put(FEE_RATE_OUT_KEY, feeRate);
+		data.put(CASH_FEE_OUT_KEY, fee);
+		data.put(USABLE_MONEY_OUT_KEY, userableMoney);
+		return data;
+	}
+}

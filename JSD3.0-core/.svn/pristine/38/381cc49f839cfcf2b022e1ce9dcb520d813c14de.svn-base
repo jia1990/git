@@ -1,0 +1,188 @@
+package com.rongdu.p2psys.core;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.core.domain.LogTemplate;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.model.SystemConfigModel;
+import com.rongdu.p2psys.core.protocol.AbstractProtocolBean;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+
+/**
+ * @描述:修正全局缓存变量
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月26日
+ */
+public class Global {
+
+	public static String VERSION = "v2.0.0.0";
+
+	public static final String DB_PREFIX = "rd_";
+
+
+	public static Map<String, RuleCheck> RULECHECKS = new HashMap<String, RuleCheck>();
+	public static Map<String, LogTemplate> LOG_TEMPLATE_MAP = new HashMap<String, LogTemplate>();
+	public static List<BorrowAutoTender> AUTO_TENDER_LIST;
+
+	/**
+	 * 系统executer初始化
+	 */
+	public static Map<String, AbstractExecuter> EXECUTOR_MAP = Collections
+			.synchronizedMap(new HashMap<String, AbstractExecuter>());
+	/**
+	 * 系统protocol初始化
+	 */
+	public static Map<String, AbstractProtocolBean> PROTOCOL_MAP = Collections
+			.synchronizedMap(new HashMap<String, AbstractProtocolBean>());
+
+	public static Set TRADE_NO_SET = Collections.synchronizedSet(new HashSet());
+	public static Set OPEN_ACCOUNT_SET = Collections.synchronizedSet(new HashSet());
+	public static Set TENDER_SET = Collections.synchronizedSet(new HashSet());
+	public static Map TENDER_MAP = Collections
+			.synchronizedMap(new HashMap<String, String>());
+	public static Map<String, Object> SESSION_MAP = Collections
+			.synchronizedMap(new HashMap<String, Object>());
+	// 接口回调处理结果
+	public static Map<String, Object> RESULT_MAP = Collections
+			.synchronizedMap(new HashMap<String, Object>());
+
+	public static String[] SYSTEMNAME = new String[] { "webname",
+			"meta_keywords", "meta_description", "beian", "copyright",
+			"fuwutel", "address", "weburl", "vip_fee", "most_cash",
+			"theme_dir", "version", "normal_rate", "overdue_rate", "bad_rate",
+			"enable_online_recharge", "api_code", "adminurl" ,"dc_sotime" };
+
+	public static ThreadLocal<String> IP_THREADLOCAL = new ThreadLocal<String>();
+
+	public static final ThreadLocal transferThreadLocal = new ThreadLocal();
+
+
+	public static BorrowConfig getBorrowConfig(int borrowType) {
+
+		return GlobalCache.getBorrowConfig(borrowType);
+	}
+	
+	public static String getValue(String key) {
+		SystemConfigModel sysConfigModel = GlobalCache.getSystemConfigModel();
+		if (sysConfigModel != null) {
+			return sysConfigModel.getValue(key);
+		}
+		return null;
+	}
+
+	public static String getString(String key) {
+		String s = StringUtil.isNull(getValue(key));
+		return s;
+	}
+
+	public static int getInt(String key) {
+		int i = StringUtil.toInt(getValue(key));
+		return i;
+	}
+
+	public static double getDouble(String key) {
+		double i = BigDecimalUtil.round(getValue(key));
+		return i;
+	}
+
+	public static String getIP() {
+		Object retObj = Global.IP_THREADLOCAL.get();
+		return retObj == null ? "" : retObj.toString();
+	}
+
+	public static String getVersion() {
+		return Global.getString("version");
+	}
+	//JSDP-211 xingjia 20150706 start
+	/**
+	 * 判断缓存中拿不到的话从数据库中拿
+	 * @param nid
+	 * @return
+	 */
+	public static RuleCheck getRuleCheck(String nid) {
+		
+		RuleCheck ruleCheck = null;
+		try {
+			ruleCheck = GlobalCache.getRuleCheck(nid); 
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if(null != ruleCheck){
+			return ruleCheck;
+		}else{
+			return DataGloble.getRuleCheck(nid);
+		}
+		
+	}
+	//JSDP-211 xingjia 20150706 end
+	public static String getLogTempValue(byte type, String nid) {
+		LogTemplate logTemplate = GlobalCache.getLogTemplate(nid, type);
+		if (logTemplate != null) {
+			return logTemplate.getValue();
+		}
+		return null;
+	}
+
+	public static String getLogType(byte type, String nid) {
+		LogTemplate logTemplate = GlobalCache.getLogTemplate(nid, type);
+		if (logTemplate != null) {
+			return logTemplate.getLogType();
+		}
+		return null;
+	}
+
+	/**
+	 * 全局缓存中获取NoticeType
+	 * 
+	 * @param noticeTypeNid
+	 * @param notice_type
+	 * */
+	public static NoticeType getNoticeType(String noticeTypeNid,
+			byte notice_type) {
+
+		return GlobalCache.getNoticeType(noticeTypeNid, notice_type);
+	}
+    /**
+     * 线程共享数据
+     * */
+	public static Map<String, Object> getTransfer() {
+		Map<String, Object> map = (Map<String, Object>) transferThreadLocal
+				.get();
+		if (map == null) {
+			map =Collections.synchronizedMap(new HashMap<String, Object>());
+			transferThreadLocal.set(map);
+		}
+		return map;
+	}
+
+	public static void setTransfer(String key, Object value) {
+		Map<String, Object> map = getTransfer();
+		map.put(key, value);
+	}
+
+	public static void removeTransfer(){
+		transferThreadLocal.remove();
+	}
+	
+	public static void main(String[] args) {
+		int a=1;
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("a", a);
+		transferThreadLocal.set(map);
+		map.remove("a");
+		Map<String, Object>  map1=(Map<String, Object>) transferThreadLocal.get();
+		Object aa= map1.get("a");
+		System.out.println(aa);
+	}
+}

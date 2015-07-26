@@ -1,0 +1,519 @@
+package com.ddtkj.p2psys.tpp.ymd.service.impl;
+
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowHelper;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.tpp.ymd.model.RechargeModel;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransferDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.tpp.ymd.model.record.recharge.AccountRechargeRecord;
+import com.ddtkj.p2psys.tpp.ymd.model.record.recharge.AccountRechargeReturnRecord;
+import com.ddtkj.p2psys.tpp.ymd.service.YmdService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowConfigDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.dao.BorrowRepaymentDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.tpp.TPPFactory;
+import com.rongdu.p2psys.tpp.TPPWay;
+import com.rongdu.p2psys.tpp.domain.TppIpsPay;
+import com.rongdu.p2psys.tpp.ips.dao.TppIpsPayDao;
+import com.rongdu.p2psys.tpp.ips.model.IpsRegisterGuarantor;
+import com.rongdu.p2psys.tpp.ips.tool.XmlTool;
+import com.rongdu.p2psys.user.dao.UserDao;
+@Service(value = "ymdService")
+@Transactional
+public class YmdServiceImpl implements YmdService {
+	@Autowired
+	private BorrowDao borrowDao;
+	@Autowired
+	private BorrowTenderDao borrowTenderDao;
+	@Autowired
+	private BorrowRepaymentDao borrowRepaymentDao; 
+	@Autowired
+	private UserDao userDao;
+	@Autowired
+    private BorrowConfigDao borrowConfigDao;
+	@Autowired
+	private TppIpsPayDao tppIpsPayDao;
+	@Autowired
+	private AccountDao accountDao;
+	@Autowired
+    private BorrowCollectionDao borrowCollectionDao;
+	
+	private Borrow data;
+	
+	/**
+	 * 日志
+	 */
+	private static Logger logger = Logger.getLogger(YmdServiceImpl.class);
+	
+//-----------------------------------向第三方发送请求业务逻辑start--------------------------------
+	@Override
+    public void transfer(Borrow borrow, List<BorrowTender> tender,
+            String transferType,String transferNo){
+		/*YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(transferNo);
+		ymdTransfer.setTradeType(transferType);
+        StringBuffer details = new StringBuffer();
+        // 满标复审通过，投资人转账给借款人
+        if(transferType.equals("1")){
+            //投资转账
+            for (int i = 0; i < tender.size(); i++) {
+                BorrowTender bt=tender.get(i);
+                YmdTransferDetails row=new YmdTransferDetails();
+        		row.setOutTradeNo(bt.getTenderBilNo());
+        		row.setOutName(bt.getUser().getUserName());
+        		row.setInName(bt.getBorrow().getUser().getUserName());
+        		row.setAmount(bt.getAccount()+"");
+        		row.setRemark(transferNo+"从用户"+bt.getUser().getUserName()+"给用户"+bt.getBorrow().getUser().getUserName()+"转账"+bt.getAccount()+"元");
+                details.append(row.getTranXml(row.getParamNames()));
+            }
+        }
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		try {
+			ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade?transData="+xml);
+			String res = ymdTransfer.submitReturnStatus(ymdTransfer.getWS_URL());
+			if(!"0000".equals(res)){
+                logger.error(ymdTransfer.getErrMsg(res, "一麻袋托管账户请求失败，请重新请求"));
+                throw new BussinessException("转账失败", 1);
+            }
+			BorrowModel model=new BorrowModel();
+			BeanUtils.copyProperties(borrow, model);
+			DisruptorUtils.autoVerifyFullSuccess(model);
+			ymdTransfer.setErrCode(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}*/
+	}
+	@Override
+    public void repayTransfer(Borrow borrow, List<BorrowCollection> collList,
+            String transferType,String transferNo){
+	   /* //double fee =BigDecimalUtil.round(BigDecimalUtil.mul(borrow.getAccount(), borrow.getBorrowManageFee()));
+		YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(transferNo);
+		ymdTransfer.setTradeType(transferType);
+        StringBuffer details = new StringBuffer();
+        // 还款，借款人转账给投资人
+        if(transferType.equals("1")){
+            //借款人还款转账
+            for (int i = 0; i < collList.size(); i++) {
+                BorrowCollection bc=collList.get(i);
+                YmdTransferDetails row=new YmdTransferDetails();
+        		row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_REPAY));
+        		row.setOutName(bc.getUser().getUserName());
+        		row.setInName(bc.getBorrow().getUser().getUserName());
+        		row.setAmount(bc.getRepaymentAccount()+"");
+        		row.setRemark(transferNo+"从用户"+bc.getUser().getUserName()+"给用户"+bc.getBorrow().getUser().getUserName()+"转账"+bc.getRepaymentAccount()+"元");
+                details.append(row.getTranXml(row.getParamNames()));
+            }
+        }
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		try {
+			ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade?transData="+xml);
+			String res = ymdTransfer.submitReturnStatus(ymdTransfer.getWS_URL());
+			if(!"0000".equals(res)){
+                logger.error(ymdTransfer.getErrMsg(res, "一麻袋托管账户请求失败，请重新请求"));
+                throw new BussinessException("转账失败", 1);
+            }
+			BorrowModel model=new BorrowModel();
+			BeanUtils.copyProperties(borrow, model);
+			DisruptorUtils.autoVerifyFullSuccess(model);
+			ymdTransfer.setErrCode(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}*/
+	}
+	@Override
+	public void transfer(Borrow borrow, BorrowTender tender, User u, User toU, String transferType,
+			String transferNo) {
+		YmdTransfer ymdTransfer = new  YmdTransfer();
+		ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+		ymdTransfer.setTradeNo(transferNo);
+		ymdTransfer.setTradeType(transferType);
+        StringBuffer details = new StringBuffer();
+        YmdTransferDetails row=new YmdTransferDetails();
+		row.setOutTradeNo(tender.getTenderBilNo());
+		row.setOutName(tender.getUser().getUserName());
+		row.setInName(tender.getBorrow().getUser().getUserName());
+		row.setAmount(tender.getAccount()+"");
+		row.setRemark(transferNo+"从用户"+u.getUserName()+"给用户"+toU.getUserName()+"转账"+tender.getAccount()+"元");
+        details.append(row.getTranXml(row.getParamNames()));
+        ymdTransfer.setTranlist(details.toString());
+        String xml=ymdTransfer.allXml();
+		try {
+			ymdTransfer.setWS_URL(ymdTransfer.getSubmitUrl()+"/hostingTrade?transData="+xml);
+			String res = ymdTransfer.submitReturnStatus(ymdTransfer.getWS_URL());
+			if(!"0000".equals(res)){
+                logger.error(XmlTool.getXmlNodeValue(res, "pErrMsg"));
+                //throw new BussinessException("转账失败", 1);
+                //JSDBET-812 gjh 2015-3-16 start
+    			throw new HandleException("转账失败原因：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "转账失败，请检查您输入的信息是否正确")+"】",
+    					"转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_BORROW,
+    					ErrorLogConstant.CODE_REPAYMENT_MANUAL_TPOS,u,ErrorLogConstant.MODULE_BORROW,
+    					borrow.getId(),1);
+    			//JSDBET-812 gjh 2015-3-16 end 
+            }
+			BorrowModel model=new BorrowModel();
+			BeanUtils.copyProperties(borrow, model);
+			ymdTransfer.setErrCode(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	
+	
+	@Override
+	public YmdRecharge doRecharge(AccountRechargeModel model,User u)throws Exception{
+		TPPWay way = TPPFactory.getTPPWay(null, u, model, null,null);
+        YmdRecharge recharge=new YmdRecharge();
+		try {
+			recharge = (YmdRecharge) way.doRecharge();
+			//JSDBET-812 gjh 2015-3-14 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-14 end
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		//JSDMOBILE-10 wcw 2015-3-20 start  充值來源优化
+		AbstractYmdEvent<AccountRecharge> rechargeRecord=new AccountRechargeRecord(recharge, u,Global.getIP(),model.getRechargeWay());
+		//JSDMOBILE-10 wcw 2015-3-20 end  充值來源优化
+		rechargeRecord.doEvent();
+        return recharge;
+	}
+	
+	public YmdRecharge doReturnRecharge(YmdRecharge ymdRecharge,User u,String resultFlag){
+		AbstractYmdEvent<AccountRecharge> abstractYmdEvent=new AccountRechargeReturnRecord(ymdRecharge, u, Global.getIP());
+		abstractYmdEvent.doEvent();
+		if (!"00".equals(ymdRecharge.getErrCode())) {
+			//logger.info("充值失败原因：【"+ymdRecharge.getErrMsg(ymdRecharge.getErrCode(), "充值失败，请检查您输入的信息是否正确")+"】");
+			//JSDBET-812 gjh 2015-3-14 start
+			throw new HandleException("充值失败原因：【"+ymdRecharge.getErrMsg(ymdRecharge.getErrCode(), "充值失败，请检查您输入的信息是否正确")+"】",
+					"充值失败-参数有误",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_RECHARGE,
+					ErrorLogConstant.CODE_RECHARGE_FAIL_TPOS_PARAM,u,ErrorLogConstant.MODULE_ACCOUNT_RECHARGE,
+					0,1);
+			//JSDBET-812 gjh 2015-3-14 end 
+		}
+		if ("00".equals(ymdRecharge.getErrCode())) {
+			RechargeModel reModel = new RechargeModel(); // 对通用javabean进行参数封装
+			reModel.setOrderAmount(ymdRecharge.getAmount());
+			reModel.setOrderId(ymdRecharge.getOutTradeNo());
+			reModel.setResultMsg(ymdRecharge.getErrMsg());
+			reModel.setResult(ymdRecharge.getErrCode());
+			reModel.setSerialNo(ymdRecharge.getOutTradeNo());
+			reModel.setFeeAmt(NumberUtil.getDouble2(ymdRecharge.getFee()));
+			// JSDP-161  wcw 20150525 start
+			//DisruptorUtils.doRechargeBackTask(reModel,resultFlag);
+			DisruptorUtils.rechargeBack(reModel, resultFlag);
+			// JSDP-161  wcw 20150525 end
+		}
+        return ymdRecharge;
+	}
+	
+	@Override
+	public void doDraw(YmdCash y,User u,String resultFlag){
+		/*AbstractYmdEvent<AccountDrawHistory> abstractYmdEvent=new AccountDrawHistoryRecord(y, u);
+		abstractYmdEvent.doEvent();
+		if("0000".equals(y.getErrCode())){
+	        CashModel cashModel = new CashModel();
+			cashModel.setOrderId(y.getOutTradeNo());
+			cashModel.setOrderAmount(y.getAmount());
+			cashModel.setResult(true);
+			try {
+				DisruptorUtils.doVerifyCashBackTask(cashModel,resultFlag);
+			} catch (Exception e) {
+				throw new BussinessException("并发框架异常信息==="+e.getMessage());
+			}
+        }else{
+        	throw new BussinessException("汇潮第三方提现处理失败");
+        }*/
+	}
+	
+	
+	
+	
+	//-----------------------------------向第三方发送请求业务逻辑end--------------------------------
+	
+	
+	
+	
+	
+	
+
+	@Override
+	public boolean doIpsTask(List<Object> taskList) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	@Override
+	public IpsRegisterGuarantor registerGuarantor(Borrow borrow) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	 @Override
+    public void doCompensate(BorrowRepayment repayment,String resultFlag) {
+        
+        BorrowRepayment repay = borrowRepaymentDao.find(repayment.getId());
+        if(repay == null || !(repay.getStatus() == BorrowRepayment.STATUS_MANAGE_REPAY ||
+                repay.getStatus() == BorrowRepayment.STATUS_WAIT_REPAY)){
+            return;
+        }
+        // 当前处理的标的信息
+         Borrow borrow = repayment.getBorrow();
+        
+        long borrowId = borrow.getId();
+        this.data = borrowDao.find(borrowId);
+        BorrowWorker worker = BorrowHelper.getWorker(data);
+        // 代偿前校验
+        worker.validBeforeCompensate(repayment);
+        //计算逾期利息
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        Date nowTime = null;
+        Date repaymentTime = null;
+        try {
+            nowTime = format.parse(DateUtil.dateStr2(new Date()));
+            repaymentTime = format.parse(DateUtil.dateStr2(repayment.getRepaymentTime()));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        long day = nowTime.getTime() - repaymentTime.getTime();
+        int days = (int) (day / (24 * 60 * 60 * 1000));
+        double lateInterest = 0;
+        if (days > 0 ){ 
+            String overdueFee = Global.getValue("overdue_fee");
+            double overdue = Double.parseDouble(overdueFee);
+            if(days <= 5) {
+                double captial = repayment.getCapital();
+                lateInterest = BigDecimalUtil.mul(BigDecimalUtil.mul(captial + repayment.getInterest(), days), overdue); // 计算出逾期利息
+                repayment.setLateDays(days);
+                repayment.setLateInterest(lateInterest);
+            }else if(days > 5){
+                double capital = borrowRepaymentDao.getRemainderCapital(borrowId);
+                double interest = borrowRepaymentDao.getRemainderInterest(borrowId);
+                lateInterest = BigDecimalUtil.mul(BigDecimalUtil.mul(capital + interest, days), overdue); // 计算出逾期利息
+                repayment.setLateInterest(lateInterest);
+            }
+            repayment.setLateDays(days);
+        }
+        repayment.setStatus(BorrowRepayment.STATUS_MANAGE_COMPENSATE);
+        // 还款信息更新
+        borrowRepaymentDao.update(repayment);
+       /* // 担保公司
+        User outUser = borrow.getVouchFirm();
+        logger.info("汇潮第三方交易担保公司代偿还款转账处理开始");
+		YmdTransfer ymdTransfer=new YmdTransfer();
+		List<YmdTransferDetails> yList=new ArrayList<YmdTransferDetails>();
+		List<BorrowCollection> collectionlist = borrowCollectionDao.list(repayment.getBorrow().getId(),
+				repayment.getPeriod(),1);
+		for(BorrowCollection c:collectionlist){
+			YmdTransferDetails y=new YmdTransferDetails();
+			y.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_REPAY));
+			y.setOutName(outUser.getUserName());
+			y.setInName(c.getUser().getUserName());
+			y.setAmount(c.getRepaymentAccount()+"");
+			y.setRemark("交易流水号"+y.getOutTradeNo()+"转账");
+			yList.add(y);
+		}
+		if (repayment.getLateInterest()  > 0) {
+		   for(BorrowCollection c:collectionlist){
+                double tenderLateInterest = 0;
+                boolean isOpenApi = BaseTPPWay.isOpenApi();
+                if(!isOpenApi){//如果不是线上，则预期利息50%给平台
+                    tenderLateInterest = BigDecimalUtil.mul(repayment.getLateInterest() / 2, (BigDecimalUtil.div(c.getInterest(), repayment.getInterest())));
+                }else{
+                    tenderLateInterest = BigDecimalUtil.mul(repayment.getLateInterest(), (BigDecimalUtil.div(c.getInterest(), repayment.getInterest())));
+                }
+                if (tenderLateInterest > 0) {
+                	YmdTransferDetails y=new YmdTransferDetails();
+     				y.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTER_INTEREST_MANAGE_FEE));
+     				y.setOutName(outUser.getUserName());
+     				y.setInName(c.getUser().getUserName());
+     				y.setAmount(tenderLateInterest+"");
+     				y.setRemark("交易流水号"+y.getOutTradeNo()+"转账");
+     				yList.add(y);
+                }
+            }
+		}
+		//汇潮第三方转账
+		ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE,repay.getRepayTradeNo(), yList);
+		logger.info("汇潮第三方交易担保公司代偿还款转账处理结束");
+		//转账交易记录添加
+		AbstractYmdEvent<AccountTransferTrade> abstractYmdEvent=new AccountTransferTradeRecord(ymdTransfer, yList, repayment.getRepaymentAccount()+repayment.getLateInterest(), 0, ymdTransfer.getErrCode(), AccountTradeConstant.TRADE_FREE_YES,Global.getIP());
+		abstractYmdEvent.doEvent();
+		//0000为汇潮交易成功状态，其他均为失败
+		if ("0000".equals(ymdTransfer.getErrCode())) {
+			logger.info("网站方处理担保公司代偿还款完成业务逻辑");
+			DisruptorUtils.doCompensateSuccess(repay,resultFlag);
+		}else{
+			logger.info("一麻袋转账交易失败，返回转账交易状态码==【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋交易请求失败")+"]");
+			throw new BussinessException("交易批次号："+ymdTransfer.getTradeNo()+","+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋交易请求失败")+"", 1);
+		}*/
+        com.rongdu.p2psys.core.disruptor.DisruptorUtils.doCompensateSuccess(repay,resultFlag);
+    }
+    @Override
+    public void doCompensateSuccess(BorrowRepayment repayment) {
+    	
+    }
+	@Override
+	public String repaySkip(BorrowRepayment repayment, byte repayType,String resultFlag) throws Exception {
+		BorrowRepayment repay = borrowRepaymentDao.find(repayment.getId());
+        this.data = borrowDao.find(repay.getBorrow().getId());
+        User user = data.getUser();
+		Account account = accountDao.findObjByProperty("user.userId", user.getUserId());
+        BorrowWorker worker = BorrowHelper.getWorker(data);
+        //还款校验
+        worker.validBeforeRepayment(repay, account);
+        
+        /*//计算逾期利息
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        Date nowTime = null;
+        Date repaymentTime = null;
+        try {
+            nowTime = format.parse(DateUtil.dateStr2(new Date()));
+            repaymentTime = format.parse(DateUtil.dateStr2(repayment.getRepaymentTime()));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        long day = nowTime.getTime() - repaymentTime.getTime();
+        int days = (int) (day / (24 * 60 * 60 * 1000));
+        double lateInterest = 0;
+        if (days > 0 ){ 
+            String overdueFee = Global.getValue("overdue_fee");
+            double overdue = Double.parseDouble(overdueFee);
+            if(days <= 5) {
+                double captial = repayment.getCapital();
+                lateInterest = BigDecimalUtil.mul(BigDecimalUtil.mul(BigDecimalUtil.add(captial,repayment.getInterest()), days), overdue); // 计算出逾期利息
+                repayment.setLateDays(days);
+                repayment.setLateInterest(lateInterest);
+            }else if(days > 5){
+                double capital = borrowRepaymentDao.getRemainderCapital(borrowId);
+                double interest = borrowRepaymentDao.getRemainderInterest(borrowId);
+                lateInterest = BigDecimalUtil.mul(BigDecimalUtil.mul(capital + interest, days), overdue); // 计算出逾期利息
+                repayment.setLateInterest(lateInterest);
+            }
+            repayment.setLateDays(days);
+        }
+        repayment=borrowRepaymentDao.update(repayment);*/
+     // JSDP-161  wcw 20150525 start
+       // DisruptorUtils.repaySuccess(repayment,resultFlag);
+        DisruptorUtils.repay(repayment, resultFlag);
+     // JSDP-161  wcw 20150525 end
+		return null;
+	}
+	@Override
+    public String instantLiveYmdBorrowRepay(BorrowCollection cl, byte repayType) throws Exception{
+    	//查询原投资金额与债权转出金额是否一致
+    	/*double caCapitalTotal=borrowCollectionDao.getCollectionRepayCapitalTotal(cl.getBorrow(), cl.getTender().getId(), 0,2);
+    	double capitalTotal=borrowCollectionDao.getCollectionRepayCapitalTotal(cl.getBorrow(), cl.getTender().getId(), 0,0);
+		double blance=BigDecimalUtil.sub(caCapitalTotal, capitalTotal);
+		if(blance>0.1){
+			//throw new BussinessException("还款金额不一致，请进行对账", 1);
+			//JSDBET-812 gjh 2015-3-16 start
+			throw new HandleException("还款金额不一致，请进行对账",
+					"转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_REPAYMENT,
+					ErrorLogConstant.CODE_REPAYMENT_MANUAL_SYS,cl.getUser(),ErrorLogConstant.MODULE_BORROW_COLLECTION,
+					cl.getId(),1); 
+			//JSDBET-812 gjh 2015-3-16 end 
+		}*/
+    	BorrowCollection collection = borrowCollectionDao.find(cl.getId());
+		collection.getTender().getId();
+        this.data = borrowDao.find(collection.getBorrow().getId());
+        User user = data.getUser();
+		Account account = accountDao.findObjByProperty("user.userId", user.getUserId());
+		if(collection.getRepaymentAccount()>account.getBorrowerUsableTotal()){
+        	throw new BussinessException("本期还款金额可用不足", 1);
+        }
+        if(collection.getStatus()==1){
+        	throw new BussinessException("本期已经还款成功，请勿重复还款", 1);
+        }
+       // BorrowWorker worker = BorrowHelper.getWorker(data);
+       // worker.validBeforeRepayment(repay, account);
+       /* logger.info("汇潮第三方交易还款转账处理开始");
+		YmdTransfer ymdTransfer=new YmdTransfer();
+		List<YmdTransferDetails> yList=new ArrayList<YmdTransferDetails>();
+		BorrowCollection c = borrowCollectionDao.getCollectionByTenderAndPeriod(collection.getTender().getId(), collection.getPeriod());
+		YmdTransferDetails y=new YmdTransferDetails();
+		y.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_REPAY));
+		y.setOutName(user.getUserName());
+		y.setInName(c.getUser().getUserName());
+		y.setAmount(c.getRepaymentAccount()+"");
+		y.setRemark("交易流水号"+y.getOutTradeNo()+"转账");
+		yList.add(y);
+		//扣除投资人利息管理费
+		double borrow_fee = Global.getDouble("borrow_fee");
+		double interestManageFee = BigDecimalUtil.mul(borrow_fee, c.getInterest());
+		if(interestManageFee>0){
+			y=new YmdTransferDetails();
+			y.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTER_INTEREST_MANAGE_FEE));
+			//付款人
+			y.setOutName(c.getUser().getUserName());
+			//收款人
+			y.setInName(y.getNumberId());
+			y.setAmount(interestManageFee+"");
+			y.setRemark("交易流水号"+y.getOutTradeNo()+"转账");
+			yList.add(y);
+		}
+		//汇潮第三方转账
+		ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE,collection.getRepayTradeNo(), yList);
+		logger.info("汇潮第三方交易还款转账处理结束");
+		//转账交易记录添加
+		AbstractYmdEvent<AccountTransferTrade> abstractYmdEvent=new AccountTransferTradeRecord(ymdTransfer, yList, collection.getRepaymentAccount(), 0, ymdTransfer.getErrCode(), AccountTradeConstant.TRADE_FREE_YES,Global.getIP());
+		abstractYmdEvent.doEvent();
+		//0000为汇潮交易成功状态，其他均为失败
+		if ("0000".equals(ymdTransfer.getErrCode())) {
+			logger.info("网站方处理还款完成业务逻辑");
+            String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+            collection.getTender().getId();
+			DisruptorUtils.doInstantLiveBorrowRepay(collection,resultFlag);
+		}else{
+	    	 logger.info("一麻袋转账交易失败，交易批次号："+ymdTransfer.getTradeNo()+",返回转账交易状态码==【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋交易请求失败")+"]");
+	    	 throw new BussinessException("交易批次号："+ymdTransfer.getTradeNo()+",交易失败原因：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋交易请求失败")+"】", 1);
+		}*/
+		return null;
+	}
+	
+	@Override
+	public BorrowRepayment updateRepay(TppIpsPay pay) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}

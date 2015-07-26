@@ -1,0 +1,275 @@
+<#setting number_format = "#"/>
+<#setting datetime_format = dateTimeFormat/>
+<#assign logged = logged?default(false)/>
+<#assign language = language?default("en_US")/>
+<#assign hasCodeBlock = hasCodeBlock?default(false)/>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=${encoding}" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<style type="text/css">
+@import url( ${contextPath}/themes/bbs/templates/${templateName}/styles/style.css?${startupTime} );
+</style>
+<link id="linkCSS" type="text/css" rel="stylesheet" href="${contextPath}/themes/bbs/templates/${templateName}/styles/narrowScreen.css" />
+<style type="text/css">
+@import url( ${contextPath}/themes/bbs/templates/${templateName}/styles/${language}.css?${startupTime} );
+</style>
+<style type="text/css">
+@import url( ${contextPath}/themes/soonmes_default/media/css/style.css);
+</style>
+<script src="${contextPath}/themes/bbs/templates/${templateName}/js/jquery-1.9.1.min.js"></script>
+<script src="${contextPath}/themes/bbs/templates/${templateName}/js/jquery.cookie.js"></script>
+<script src="${contextPath}/themes/bbs/templates/${templateName}/js/bbs.js"></script>
+<#if hasCodeBlock>
+<style type="text/css">
+@import url( ${contextPath}/themes/bbs/templates/${templateName}/styles/SyntaxHighlighter.css?${startupTime} );
+</style>
+</#if>
+<title>${pageTitle?default("JForum")?html}</title>
+</head><body class="${language}">
+<!-- 头部信息 -->
+<div class="headbg">
+  <div class="head clearfix">
+    <div class="float_left"> 欢迎开启好利贷财富之旅 </div>
+    <div class="float_right"> <a href="http://weibo.com/u/3888653204" target="_blank" class="weibo">新浪微博</a><a id="screen_width" onClick="changeCss()">宽屏</a>  
+    <#if logged>
+      <#if session?exists && session.isAdmin()>
+		<a id="adminpanel" href='${JForumContext.encodeURL("/admBase/login")}' target="_blank">${I18n.getMessage("ForumBase.admin")}</a>
+	 </#if>
+	 	${session.username}
+	 	<#else><a href="/user/login.html" class="denglu">登录</a> <a href="/user/register.html">免费注册</a>
+	</#if>
+    </div>
+  </div>
+  <div> </div>
+  <div class="logo clearfix">
+    <div class="logoimg"> <img src="/themes/soonmes_default/images/logo.png" alt="好利贷"> </div>
+    <div class="telimg"> <img src="/themes/soonmes_default/images/telimg.png"> </div>
+  </div>
+  <div class="navbg">
+    <div class="nav" id="nav">
+      <ul class="clearfix navul">
+        <li class="nobg  hover2 hover"> <a href="/index.html">网站首页 </a> </li>
+        <li class=""> <a href="/invest/index.html">我要投资</a> </li>
+        <li class=""> <a href="/borrow/index.html">我要贷款</a> </li>
+        <li class=""> <a href="/member/index.html">我的账户</a> </li>
+        <li class=""> <a href="/article/serve.html?code=serve">咨询服务</a> </li>
+        <li><a target="_blank" href="/forums/list.page">新手必看</a></li>
+      </ul>
+      <div class="navlist clearfix" style="display: block;"> <a href="/article/list.html?code=aboutus">公司简介</a> <a href="/article/list.html?code=companyIdentity">公司证件</a> <a href="/article/list.html?code=contect">联系我们</a> <a href="/article/list.html?code=web-notice">最新公告</a> <a href="/article/list.html?code=webCost">网站资费</a> <a href="/article/list.html?code=mediaReport">媒体报道</a> <a href="/tools/interest.html">网贷计算器</a> </div>
+      <div class="navlist hide clearfix" style="display: none;"> <a href="/article/list.html?code=howToInvest">如何投资</a> <a href="/invest/index.html?status=1">招标中的借款标</a> <a href="/invest/index.html?status=10">还款中的借款标</a> <a href="/invest/index.html?status=8">已还款的借款标</a> </div>
+      <div class="navlist hide clearfix" style="display: none;"> <a href="/borrow/index.html">选择贷款类型</a> <a href="/borrow/loan.html?type=miaobiao">发布秒还标</a> <a href="/borrow/loan.html?t=fast">发布抵押标</a> <a href="/borrow/loan.html?type=jin">发布净值标</a> <a href="/tools/interest.html">网贷计算器</a> </div>
+      <div class="navlist hide clearfix" style="display: none;"> <a href="/member/index.html">我的账户</a> 
+        <a href="/member/vip.html">vip申请</a> <a href="/member/account/newrecharge.html">账户充值</a> <a href="/member/account/newcash.html">账户提现</a> <a href="/member/borrow/repaying.html">我要还款</a> 
+      </div>
+      <div class="navlist hide clearfix" style="display: none;"> <a href="/article/list.html?code=xszn">新手指南</a> <a href="/article/list.html?code=webRule">网站规则</a> <a href="/article/list.html?code=questiontxt">常见问题</a> <a href="/article/list.html?code=safe">安全保障</a> <a href="/article/list.html?code=zcfg">政策法规</a> <a href="/article/serve.html?code=serve">在线客服</a> <a href="/article/list.html?code=fuwuxieyi">服务协议</a> </div>
+      <div class="navlist hide clearfix" style="display: none;"> <a target="_blank" href="/forums/list.page">论坛</a> </div>
+    </div>
+  </div>
+  <script>
+        
+    </script> 
+</div>
+<script> $("#nav").nav({isTab:true,childLi:".navul li",childContent:".navlist"});</script> 
+<!--//头部信息 -->
+
+<div id="form_wrap">
+<table width="100%" border="0">
+<tr>
+  <td><!--当前位置-->
+    
+    <table cellspacing="0" cellpadding="2" width="100%" align="center" border="0">
+      <tr>
+        <td valign="bottom" align="left"><ul class="web_site clearfix">
+            <li class="home_site"> <a href="${request.getContextPath()}/">网站首页</a> </li>
+            <li> <a  href="${JForumContext.encodeURL("/forums/list")}">${I18n.getMessage("ForumListing.forumIndex")}</a> </li>
+            <#if forum??>
+            <li>&gt;</li>
+            <li> <a  href="${JForumContext.encodeURL("/forums/show/${forum.id}")}">${forum.name?html}</a> </li>
+            </#if> 
+            <!-- 文章搜索 start --> 
+            <#if searchTopics??>
+            <li>&gt;</li>
+            <li> ${I18n.getMessage("Search.terms")}</li>
+            </#if> 
+            <!-- 文章搜索 end --> 
+            <!-- 搜索结果 start --> 
+            <#if searchResult??>
+            <li>&gt;</li>
+            <li>${I18n.getMessage("Search.searchResults")}</li>
+            </#if> 
+            <!-- 搜索结果  end --> 
+            <!-- 最新主题   start--> 
+            <#if recentTopics??>
+            <li>&gt;</li>
+            <li>${I18n.getMessage("ForumBase.recentTopics")}</li>
+            </#if> 
+            <!-- 最新主题   end--> 
+            <!-- 热门主题 start --> 
+            <#if hottestTopics??>
+            <li>&gt;</li>
+            <li>${I18n.getMessage("ForumBase.hottestTopics")}</li>
+            </#if> 
+            <!-- 热门主题 end --> 
+            <!-- 个人信息  start--> 
+            <#if userProfile??>
+            <li>&gt;</li>
+            <li>${I18n.getMessage("UserProfile.profileFor")}&nbsp;&nbsp;:&nbsp;&nbsp;${u.username}</li>
+            </#if> 
+            <!-- 个人信息 end --> 
+            <!-- 用户登录 start --> 
+            <#if userLogin??>
+            <li>&gt;</li>
+            <li>用户登录</li>
+            </#if> 
+            <!-- 用户登录 end --> 
+            <!-- 会员注册资料 start --> 
+            <#if userRegisterInfo??>
+            <li>&gt;</li>
+            <li>${I18n.getMessage("User.registerInformation")}</li>
+            </#if> 
+            <!-- 会员注册资料 end --> 
+            <!-- 收件夹 已发消息 start --> 
+            <#if inbox??||sentbox??>
+            <li>&gt;</li>
+            <li><#if !inbox?default(false)>${I18n.getMessage("PrivateMessage.sentbox")}</#if>
+              <#if !sentbox?default(false)>${I18n.getMessage("PrivateMessage.inbox")}</#if> </li>
+            </#if> 
+            <!-- 收件夹 已发消息 end--> 
+            <#if postlistByUser?? >
+            <li>&gt;</li>
+            <li><a class="nav" href="${JForumContext.encodeURL("/user/profile/${u.id}")}">${I18n.getMessage("UserProfile.profileFor")} ${u.username}</a> </li>
+            <li>&gt;</li>
+            <li> <a class="nav" href="${JForumContext.encodeURL("/posts/listByUser/${u.id}")}">${I18n.getMessage("PostShow.userPosts")} ${u.username}</a> </li>
+            </#if>
+            <#if showTopicsByUser??>
+            <li>&gt;</li>
+            <li><a class="nav" href="${JForumContext.encodeURL("/user/profile/${u.id}")}">${I18n.getMessage("UserProfile.profileFor")} ${u.username}</a></li>
+            <li>&gt;</li>
+            <li><a class="nav" href="${JForumContext.encodeURL("/recentTopics/showTopicsByUser/${u.id}")}">${I18n.getMessage("ForumListing.userTopics")} ${u.username?html}</a></li>
+            </#if>
+          </ul></td>
+      </tr>
+    </table>
+    
+    <!--//当前位置--> 
+    
+    <!--快捷链接-->
+    
+    <table  cellspacing="10" cellpadding="3" width="100%" border="0" class="quick_link_wrap">
+      <tr> 
+        
+        <!--左边td-->
+        <td><#if logged>                    
+          <#if postQuote?? || postReply?? || recentTopics?? || hottestTopics?? ||userProfile?? ||userRegisterInfo??>
+          <table>
+            <tr>
+              <td><a href="${JForumContext.encodeURL("/forums/list")}" class="reply_btn">返回首页</a></td>
+            </tr>
+          </table>
+          </#if> 
+          
+          <!-- 首页显示总人数  start--> 
+          <#if showTotalInfo??>
+          <table  cellspacing="0" cellpadding="3" width="100%" border="0" >
+            <tr>
+              <td class="row1" valign="middle" align="center" rowspan="2" ><img src="${contextPath}/themes/bbs/templates/${templateName}/images/data_stat.png" alt="[Who's Online]"/></td>
+              <td class="row1 gensmall" align="left" width="100%"><table>
+                  <tr>
+                    <td  class="row1 gensmall" align="left"> ${I18n.getMessage("ForumListing.totalMessagesInfo", [ totalMessages ])}&nbsp;&nbsp;|&nbsp;&nbsp;
+                      ${I18n.getMessage("ForumListing.registeredUsers", [ totalRegisteredUsers ])}&nbsp;&nbsp;|&nbsp;&nbsp;
+                      ${I18n.getMessage("ForumListing.newestUser")} <a href="${JForumContext.encodeURL("/user/profile/${lastUser.id}")}">${lastUser.username}</a></td>
+                  </tr>
+                  <tr>
+                    <td class="row1 gensmall" align="left"><#assign adminColor = "class='admin'"/>
+                      <#assign moderatorColor = "class='moderator'"/>
+                      <#assign color = ""/>
+                      ${I18n.getMessage("ForumListing.numberOfUsersOnline", [ totalOnlineUsers, totalRegisteredOnlineUsers, totalAnonymousUsers ])}&nbsp;&nbsp;|&nbsp;&nbsp;
+                      ${I18n.getMessage("ForumListing.mostUsersEverOnline", [ mostUsersEverOnline.getTotal(), mostUsersEverOnline.getDate()?string ])} </td>
+                  </tr>
+                </table></td>
+            </tr>
+          </table>
+          </#if> 
+          <!-- 首页显示总人数  end--> 
+          
+          <!-- 搜索和发帖    start--> 
+          <#if showTitle??&&logged>
+          <table cellspacing="2" cellpadding="2" width="100%" align="center">
+            <tr>
+              <td valign="middle" align="left" width="50"><#if logged>
+                
+                <#if !readonly && !replyOnly> <a href="${JForumContext.encodeURL("/jforum${extension}?module=posts&amp;action=insert&amp;forum_id=${forum.id}", "")}" rel="nofollow" > <img src="${contextPath}/themes/bbs/templates/${templateName}/images/published_topic.jpg" class="published_topic" alt="回复" /> </a></td>
+              </#if>
+              
+              </#if>
+              <td class="nav" valign="middle" align="left" colspan="${colspan?default("")}"><form accept-charset="${encoding}" action="${JForumContext.encodeURL("/jforum")}" method="get" id="formSearch" name="formSearch">
+                  <input type="hidden" name="module" value="search"/>
+                  <input type="hidden" name="action" value="search"/>
+                  <input type="hidden" name="forum" value="${forum.id}">
+                  <input type="hidden" name="match_type" value="all">
+                  <input type="text" onblur="if (this.value == '') this.value = '${I18n.getMessage("ForumIndex.searchThisForum")}...';" onclick="if (this.value == '${I18n.getMessage("ForumIndex.searchThisForum")}...') this.value = '';" value="${I18n.getMessage("ForumIndex.searchThisForum")}..." size="20" name="search_keywords" class="inputSearchForum"/>
+                  <input type="submit" value="${I18n.getMessage("ForumBase.search")}" class="search_btn">
+                </form>
+            </tr>
+          </table>
+          </#if> 
+          <!-- 搜索和发帖  end--> 
+          
+          <!-- 回复 start --> 
+          <#if postShow??&& logged>
+          <table cellspacing="10" cellpadding="3" width="100%" border="0" >
+            <tr>
+              <td width="8%" align="left" valign="middle" nowrap="nowrap"><#if !readonly>
+                </#if>
+                <#if topic.status == STATUS_LOCKED> <span class="icon_reply_locked"><img src="${contextPath}/themes/bbs/images/transp.gif" alt="" /></span> <#else>
+                <#if logged>
+                <#if !readonly> <a href="${JForumContext.encodeURL("/posts/reply/${start}/${topic.id}")}" rel="nofollow" class="icon_reply nav"> <img src="${contextPath}/themes/bbs/images/quick_reply.jpg" alt="${I18n.getMessage("post.reply")}" /> </a> <#else>
+                <#assign colspan = "2"/>
+                </#if>
+                </#if>	
+                </#if> </td>
+            </tr>
+          </table>
+          </#if> 
+          <!-- 回复 end --> 
+          
+          <!-- 发送信息   start --> 
+          <#if inbox??||sentbox??>
+          <table>
+            <tr>
+              <td><a href="${JForumContext.encodeURL("/pm/send")}" class="send_btn">发送信息</a></td>
+            </tr>
+          </table>
+          </#if> 
+          <!-- 发送信息   end --> 
+          
+          <#else>
+          <table>
+            <tr>
+              <td><a href="${JForumContext.encodeURL("/forums/list")}" class="reply_btn">返回首页</a></td>
+            </tr>
+          </table>
+          </#if> </td>
+        <!--//左边td--> 
+        
+        <!--右边td-->
+        <td width="30%"><!--搜索、最新主题、热门主题-->
+          
+          <table width="100%" cellpadding="3" cellspacing="20">
+            <tr>
+              <td valign="top" nowrap="nowrap" align="right"><a id="search"  href="${JForumContext.encodeURL("/search/filters")}"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/search.png" alt="${I18n.getMessage("ForumBase.search")}"/></a></td>
+              <td valign="top" nowrap="nowrap" align="right"><a id="latest"  href="${JForumContext.encodeURL("/recentTopics/list")}"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/new_topic.png" alt="${I18n.getMessage("ForumBase.recentTopics")}" /></a></td>
+              <td valign="top" nowrap="nowrap" align="right"><a id="hottest"  href="${JForumContext.encodeURL("/hottestTopics/list")}"><img src="${contextPath}/themes/bbs/templates/${templateName}/images/hot_topic.png" alt="${I18n.getMessage("ForumBase.hottestTopics")}" /></a></td>
+            </tr>
+          </table>
+          
+          <!--//搜索、最新主题、热门主题--></td>
+        
+        <!--//右边td--> 
+      </tr>
+    </table>
+    
+    <!--//快捷链接--></td>
+</tr>

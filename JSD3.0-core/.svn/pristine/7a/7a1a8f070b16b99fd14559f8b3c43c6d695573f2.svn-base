@@ -1,0 +1,127 @@
+
+package com.ddtkj.p2psys.cardaward.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.cardaward.dao.MemberCardAwardDao;
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.domain.MemberCardAward;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.ddtkj.p2psys.cardaward.model.MemberCardAwardModel;
+import com.ddtkj.p2psys.cardaward.service.MemberCardAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+@Service("memberCardAwardService")
+public class MemberCardAwardServiceImpl implements MemberCardAwardService {
+
+	private static Logger logger = Logger.getLogger(MemberCardAwardServiceImpl.class);
+	
+	@Resource
+	private MemberCardAwardDao memberCardAwardDao;
+	
+	
+	@Override
+	public double getCardTotalByStatusAndTime(String status, Date startTime, Date endTime) {
+		
+		return memberCardAwardDao.getCardTotalByStatusAndTime(status, startTime, endTime);
+	}
+
+	@Override
+	public PageDataList<MemberCardAwardModel> getCardAwardList(
+			MemberCardAwardModel model) {
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<MemberCardAward> list = memberCardAwardDao.findPageList(param);
+		logger.info("抽奖购物卡记录param:"+param.toMap().toString()+",list size:"+list.getList().size());
+		List<MemberCardAwardModel> modelList = new ArrayList<MemberCardAwardModel>();
+		PageDataList<MemberCardAwardModel> pageDataList = new PageDataList<MemberCardAwardModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				MemberCardAward cardAward = (MemberCardAward)list.getList().get(i);
+				MemberCardAwardModel cardAwardModel = MemberCardAwardModel.instance(cardAward);
+				User user = cardAward.getUser();
+				cardAwardModel.setUserName(user.getUserName());
+				cardAwardModel.setRealName(user.getRealName());
+				modelList.add(cardAwardModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;	
+	}
+	
+	private QueryParam searchParam(QueryParam param, MemberCardAwardModel model) {
+		if(model != null){
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				param.addParam("user.userId", model.getUser().getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getUserName())){
+				param.addParam("user.userName",  Operators.LIKE, model.getUserName());
+			}
+			if (StringUtil.isNotBlank(model.getRealName())){
+				param.addParam("user.realName",  Operators.EQ, model.getRealName());
+			}
+			if(StringUtil.isNotBlank(model.getIsConvert()) && !MemberCardAward.CONVERT_STATUS_ALL.equals(model.getIsConvert())){
+				param.addParam("isConvert", model.getIsConvert());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+
+	@Override
+	public List<MemberCardAward> getCardAwardListByStatusAndTime(String status, Date startTime, Date endTime) {
+		return memberCardAwardDao.getCardAwardListByStatusAndTime(status, startTime, endTime);
+	}
+
+	@Override
+	public void updateMemberCardAward(MemberCardAward cardAward) {
+		memberCardAwardDao.updateMemberCardAward(cardAward);
+	}
+
+	@Override
+	public void updateMemberCardAwardList(List<MemberCardAward> list) {
+		memberCardAwardDao.update(list);	
+	}
+	
+}

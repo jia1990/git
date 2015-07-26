@@ -1,0 +1,43 @@
+package com.rongdu.p2psys.borrow.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.borrow.service.ProtocolService;
+import com.rongdu.p2psys.core.dao.ProtocolDao;
+import com.rongdu.p2psys.core.domain.Protocol;
+@Repository("protocolService")
+public class ProtocolServiceImpl implements ProtocolService{
+	
+	@Resource
+	private ProtocolDao protocolDao;
+	@Override
+	public PageDataList<Protocol> procotolPageList(Protocol protocol,
+			int currentPage, int pageSize) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(currentPage, pageSize);
+		param.addOrder(OrderType.ASC, "id");
+		PageDataList<Protocol> protocolPageList = protocolDao.findPageList(param);
+		return protocolPageList;
+	}
+
+	@Override
+	public Protocol findProtocolById(long id) {
+		// TODO Auto-generated method stub
+		Protocol protocol = protocolDao.find(id);
+		return protocol;
+	}
+
+	@Override
+	public Protocol updateProtocol(Protocol protocol) {
+		// TODO Auto-generated method stub
+		Protocol protocolUp = protocolDao.update(protocol);
+		return protocolUp;
+	}
+	
+}

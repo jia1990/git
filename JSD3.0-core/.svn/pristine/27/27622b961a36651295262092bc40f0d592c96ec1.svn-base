@@ -1,0 +1,283 @@
+
+package com.ddtkj.p2psys.credit.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+
+/**
+ * @描述: 债权转让实体model类
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-21   
+ */
+public class CreditAssignmentModel extends CreditAssignment {
+
+	private static final long serialVersionUID = -3346741378150351747L;
+	
+	/** 当前页码 */
+	private int page = 1;
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	/** 转让期限开始时间 **/
+	private String buyEndBeginTime;
+	/** 转让期限结束时间 **/
+	private String buyEndFinishTime;
+	
+	private String sellUserName;  //债权转让人
+	private String verifyUserName;	//债权初审人
+	private String fullVerifyUserName;	//债权复审 人
+	private String caName;	//债权名
+	private String buyUserName;	//债权购买人
+	private int borrowType; //标种类型
+	
+	private double caScales; //债权进度
+	private String caLevel;	//债权等级，用于报表导出
+	private String caScalesExp;  //债权进度，用于报表导出
+	private String caBreachAccount; //是否违约，用于报表导出
+	private String caTypeExp; //债权类型，用于报表导出
+	
+	// 2015年5月5日 孙晓勇
+	private String timeType;	//时间类型
+	
+	public String getTimeType() {
+		return timeType;
+	}
+	public void setTimeType(String timeType) {
+		this.timeType = timeType;
+	}
+
+	/**
+	 * 于俊斐新加
+	 * @return
+	 */
+	private int timeSearch ;  		// 时间查询参数
+	private int aprSearch ;  		// 利率查询
+	private int style ;  // 标还款方式
+	
+	
+	
+	
+	public int validRegRule(String vCode) {
+		if (vCode.isEmpty()) {
+			throw new UserException(MessageUtil.getMessage("E30005"), 1);
+		}
+		if (!ValidateUtil.checkValidCode(vCode)) {
+			throw new UserException(MessageUtil.getMessage("E30006"), 1);
+		}
+		return -1;
+	}
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getSize() {
+		return size;
+	}
+	public void setSize(int size) {
+		this.size = size;
+	}
+	public String getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+	public String getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	public int getTime() {
+		return time;
+	}
+	public void setTime(int time) {
+		this.time = time;
+	}
+	public String getBuyEndBeginTime() {
+		return buyEndBeginTime;
+	}
+	public void setBuyEndBeginTime(String buyEndBeginTime) {
+		this.buyEndBeginTime = buyEndBeginTime;
+	}
+	public String getBuyEndFinishTime() {
+		return buyEndFinishTime;
+	}
+	public void setBuyEndFinishTime(String buyEndFinishTime) {
+		this.buyEndFinishTime = buyEndFinishTime;
+	}
+	public String getSellUserName() {
+		return sellUserName;
+	}
+	public void setSellUserName(String sellUserName) {
+		this.sellUserName = sellUserName;
+	}
+	public String getVerifyUserName() {
+		return verifyUserName;
+	}
+	public void setVerifyUserName(String verifyUserName) {
+		this.verifyUserName = verifyUserName;
+	}
+	public String getFullVerifyUserName() {
+		return fullVerifyUserName;
+	}
+	public void setFullVerifyUserName(String fullVerifyUserName) {
+		this.fullVerifyUserName = fullVerifyUserName;
+	}
+	public String getCaName() {
+		return caName;
+	}
+	public void setCaName(String caName) {
+		this.caName = caName;
+	}
+	public String getBuyUserName() {
+		return buyUserName;
+	}
+	public void setBuyUserName(String buyUserName) {
+		this.buyUserName = buyUserName;
+	}
+	public String getCaLevel() {
+		return caLevel;
+	}
+	public void setCaLevel(String caLevel) {
+		this.caLevel = caLevel;
+	}
+	public double getCaScales() {
+		return caScales;
+	}
+	public void setCaScales(double caScales) {
+		this.caScales = caScales;
+	}
+	public String getCaScalesExp() {
+		return caScalesExp;
+	}
+	public void setCaScalesExp(String caScalesExp) {
+		this.caScalesExp = caScalesExp;
+	}
+	public String getCaBreachAccount() {
+		return caBreachAccount;
+	}
+	public void setCaBreachAccount(String caBreachAccount) {
+		this.caBreachAccount = caBreachAccount;
+	}
+	public String getCaTypeExp() {
+		return caTypeExp;
+	}
+	public void setCaTypeExp(String caTypeExp) {
+		this.caTypeExp = caTypeExp;
+	}
+	public int getTimeSearch() {
+		return timeSearch;
+	}
+	public void setTimeSearch(int timeSearch) {
+		this.timeSearch = timeSearch;
+	}
+	public int getAprSearch() {
+		return aprSearch;
+	}
+	public void setAprSearch(int aprSearch) {
+		this.aprSearch = aprSearch;
+	}
+	public int getStyle() {
+		return style;
+	}
+	public void setStyle(int style) {
+		this.style = style;
+	}
+	
+	public int getBorrowType() {
+		return borrowType;
+	}
+	public void setBorrowType(int borrowType) {
+		this.borrowType = borrowType;
+	}
+	public CreditAssignmentModel() {
+		super();
+	}
+	
+	public static CreditAssignmentModel instance(CreditAssignment ca){
+		CreditAssignmentModel model = new CreditAssignmentModel();
+		BeanUtils.copyProperties(ca, model);
+		return model;
+	}
+	
+	public CreditAssignment prototype(){
+		CreditAssignment ca = new CreditAssignment();
+		BeanUtils.copyProperties(this, ca);
+		return ca;
+	}
+	
+	public static String convertCaLevel(int caLevel){
+		if(caLevel == CreditAssignment.CREDIT_LEVEL1){
+			return "普通";
+		}else if(caLevel == CreditAssignment.CREDIT_LEVEL2){
+			return "优质";
+		}else{
+			return "未指定的债权等级";
+		}
+	}
+	
+	public static String convertCaStatus(String caStatus){
+		if(CreditAssignment.CREDIT_PUBLISH.equals(caStatus)){
+			return "发布";
+		}else if(CreditAssignment.CREDIT_CHECK1_SUCCESS.equals(caStatus)){
+			return "初审通过";
+		}else if(CreditAssignment.CREDIT_CHECK1_FAIL.equals(caStatus)){
+			return "初审未通过";
+		}else if(CreditAssignment.CREDIT_CHECK2_SUCCESS.equals(caStatus)){
+			return "复审通过";
+		}else if(CreditAssignment.CREDIT_REPEAL.equals(caStatus)){
+			return "撤回";
+		}else if(CreditAssignment.CREDIT_CHECK2_HOLD.equals(caStatus)){
+			return "待复审";
+		}else if(CreditAssignment.CREDIT_FINISH.equals(caStatus)){
+			return "已完成";
+		}else if(CreditAssignment.CREDIT_RECALL_CHECK.equals(caStatus)){
+			return "撤销";
+		}else{
+			return "未指定的债权状态";
+		}
+	}
+	
+	public static String convertCaType(int caType){
+		if(caType == CreditAssignment.CREDIT_TYPE_BUY){
+			return "购买的债权转出";
+		}else if(caType == CreditAssignment.CREDIT_TYPE_TENDER){
+			return "投资转出";
+		}else{
+			return "未指定的类型";
+		}
+	}
+	
+	public static String convertCaBreachAccount(int isBreach, double breachAccount){
+		if(isBreach == CreditAssignment.CREDIT_HAS_BREACH){
+			return "是，违约金："+breachAccount;
+		}else {
+			return "否";
+		}		
+	}
+	
+	public static String convertCaScales(double caScales){
+		double scales = 0;
+		if(caScales > 0){
+			scales = BigDecimalUtil.round(BigDecimalUtil.mul(caScales, 100), 2);
+		}
+		return scales+"%";
+	}
+
+}

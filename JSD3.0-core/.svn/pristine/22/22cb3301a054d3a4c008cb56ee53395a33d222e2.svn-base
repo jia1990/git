@@ -1,0 +1,283 @@
+
+package com.ddtkj.p2psys.autotender.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoSetDao;
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoTenderDao;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoTenderModel;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoTenderService;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.model.BorrowAutoModel;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.disruptor.DisruptorUtils;
+import com.rongdu.p2psys.core.service.LogService;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+
+
+@Service("borrowAutoTenderService")
+public class BorrowAutoTenderServiceImpl implements BorrowAutoTenderService {
+	
+	private static Logger logger = Logger.getLogger(BorrowAutoTenderServiceImpl.class);
+
+	@Resource	
+	private BorrowAutoTenderDao borrowAutoTenderDao;
+	@Resource	
+	private BorrowAutoSetDao borrowAutoSetDao;
+	@Resource	
+	private BorrowTenderDao tenderDao;
+	@Resource	
+	private BorrowCollectionDao borrowCollectionDao;
+	@Resource	
+	private BorrowDao borrowDao;
+	@Resource	
+	private UserCacheDao userCacheDao;
+	@Resource	
+	private UserDao userDao;
+	@Resource	
+	private AccountDao accountDao;
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private BorrowTenderService tenderService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private LogService logService;
+	
+	@Override
+	public PageDataList<BorrowAutoTender> getAutoTenderList(BorrowAutoTender autoTender, int pageNumber,
+			int pageSize) {
+		return borrowAutoTenderDao.getAutoTenderList(autoTender, pageNumber, pageSize);
+	}
+
+	
+	@Override
+	public void addAutoTender(BorrowAutoTender autoTender) {
+		 borrowAutoTenderDao.save(autoTender);
+	}
+
+	
+	@Override
+	public List<BorrowAutoTender> getListByBorrowId(long borrowId) {
+		
+		return borrowAutoTenderDao.getListByBorrowId(borrowId);
+	}
+
+	
+	@Override
+	public PageDataList<BorrowAutoTender> getAutoTenderList(
+			Map<String, Object> map, int startPage) {
+		
+		PageDataList<BorrowAutoTender> plist = new PageDataList<BorrowAutoTender>();
+		int total = borrowAutoTenderDao.getCount(map);
+		Page p = new Page(total, startPage);
+		List<BorrowAutoTender> autoTenderList = borrowAutoTenderDao.getAutoTenderList(map,
+				p.getStart(), p.getPernum());
+		plist.setList(autoTenderList);
+		plist.setPage(p);
+		return plist;
+	}
+
+	@Override
+	public void addbatchAutoTender(List<BorrowAutoTender> list) {
+		borrowAutoTenderDao.save(list);
+	}
+
+	@Override
+	public BorrowAutoTender findByAutoId(long autoId) {
+		
+		return borrowAutoTenderDao.find(autoId);
+	}
+
+	@Override
+	public void autoDealTender(BorrowModel model) {	
+	    borrowDao.updateStatus(model.getId(), 19, model.getStatus());
+        borrowDao.updatefixedTime(model.getId(), model.getFixedTime());
+		long startTime = System.currentTimeMillis();
+		Borrow borrow = borrowDao.find(model.getId());
+		try {
+			List<BorrowAutoTender> tenderList = new ArrayList<BorrowAutoTender>();
+			if (borrow.getStatus() == BorrowAutoTender.AUTO_TENDER_STATUS_YES) {
+				BorrowAutoModel bam = new BorrowAutoModel();
+				if (bam.autoTenderEnable(borrow)) { // 是否启用自动投标
+					logger.info("标ID：" + borrow.getId() + "进入自动投标流程， status:" + borrow.getStatus());
+					List<BorrowAutoSet> autoList = borrowAutoSetDao.getBorrowAutoSetList(borrow);			 // 获取设置自动投标的用户队列		
+					tenderList = bam.autoTenderHelper(autoList, model, tenderList);
+				}else{
+					logger.info("标ID：" + borrow.getId() + "标不符合自动投标条件，定向密码："+borrow.getPwd());
+				}	
+			} else {
+				logger.info("标ID：" + borrow.getId() + "标不符合自动投标条件， status:" + borrow.getStatus());
+			}
+			
+			if (tenderList != null && tenderList.size() > 0) {
+				borrowAutoTenderDao.save(tenderList);
+				tenderList.removeAll(tenderList);
+			}
+			long endTime = System.currentTimeMillis();
+			logger.info("自动投标业务逻辑完成,总计用时"+ (endTime - startTime));
+			// 自动投标结束，还原标状态
+			borrowDao.updateStatus(borrow.getId(), 1, 19);
+		} catch (Exception e) {
+			//JSDBET-812 gjh 2015-3-17 start
+			throw new HandleException(e.getMessage()+",cause:"+e.getCause(),
+					"自动投标异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_BORROW,
+					ErrorLogConstant.CODE_TENDER_AUTO_FAIL_SYS, model.getUser(), 
+					ErrorLogConstant.MODULE_BORROW, model.getId(), 1);
+			//JSDBET-812 gjh 2015-3-17 end
+		}
+	}
+	
+	@Override
+	public PageDataList<BorrowAutoTenderModel> list(BorrowAutoTenderModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if (model != null) {
+			if (model.getUser() != null && model.getUser().getUserId() > 0) {
+				param.addParam("user.userId", model.getUser().getUserId());
+			}
+			if (StringUtil.isNotBlank(model.getUserName())) {
+				param.addParam("user.userName", Operators.LIKE, model.getUserName());
+			}
+			if (StringUtil.isNotBlank(model.getRealName())) {
+				param.addParam("user.realName", model.getRealName());
+			}
+			if (StringUtil.isNotBlank(model.getBorrowName()) && model.getBorrowName().length() > 0 && !"undefined".equals(model.getBorrowName())) {
+                param.addParam("borrow.name", Operators.LIKE, model.getBorrowName());
+            }
+			if (StringUtil.isNotBlank(model.getStatus()) && !BorrowAutoTender.AUTO_TENDER_RESULT_ALL.equals(model.getStatus())){
+				param.addParam("status", model.getStatus());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		param.addOrder(OrderType.DESC, "id");
+		param.addParam("user.isLocked", Operators.NOTEQ, UserConstant.USER_LOCK_LOGOUT);
+		PageDataList<BorrowAutoTender> pageDataList = borrowAutoTenderDao.findPageList(param);
+		logger.info("自动投标记录param:"+param.toMap().toString()+",list size:"+pageDataList.getList().size());
+		PageDataList<BorrowAutoTenderModel> pageDateList = new PageDataList<BorrowAutoTenderModel>();
+		List<BorrowAutoTenderModel> list = new ArrayList<BorrowAutoTenderModel>();
+		pageDateList.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				BorrowAutoTender autoTender = (BorrowAutoTender) pageDataList.getList().get(i);
+				BorrowAutoTenderModel autoModel = BorrowAutoTenderModel.instance(autoTender);
+				Borrow borrow = autoTender.getBorrow();
+				autoModel.setBorrowUserName(borrow.getUser().getUserName());
+				autoModel.setBorrowScales(borrow.getScales());
+				autoModel.setBorrowAddTime(borrow.getAddTime());
+				autoModel.setBorrowType(borrow.getType());
+				autoModel.setBorrow(borrow);
+				autoModel.setRealName(autoTender.getUser().getRealName());
+				list.add(autoModel);
+			}
+		}
+		pageDateList.setList(list);
+		return pageDateList;
+	}
+
+	@Override
+	public double getAutoTenderSum(BorrowAutoTenderModel model) {
+		return borrowAutoTenderDao.getAutoTenderSum(model);
+	}
+
+	public void doAutoTenderFixedProcess() {
+		List<Borrow> borrowList = borrowDao.getBorrowByFixedTime();
+		BorrowModel model = null;
+		BorrowAutoModel bam = new BorrowAutoModel();
+		if(borrowList != null && borrowList.size() > 0){
+			for (Borrow borrow : borrowList) {
+				if (bam.autoTenderEnable(borrow)) {
+		            borrowDao.updateStatus(borrow.getId(), 19, borrow.getStatus());
+		            model = BorrowModel.instance(borrowDao.find(borrow.getId()));
+		            try {
+						DisruptorUtils.autoTender(model);
+					} catch (Exception e) {
+						borrowDao.updateStatus(model.getId(), 1, 19);
+						logger.info("自动投标异常==="+e.getMessage());
+					}
+				}
+			}
+		}
+	}
+
+	@Override
+	public String doAutoTenderFixedByBorrowId(long borrowId) {
+		String result = "false";
+		BorrowModel model = null;
+		Borrow borrow = borrowDao.getBorrowByStatusAndId(borrowId);
+		if (borrow != null){
+			BorrowAutoModel bam=new BorrowAutoModel();
+			if (bam.autoTenderEnable(borrow)) {
+				 borrowDao.updateStatus(borrow.getId(), 19, borrow.getStatus());
+	             model = BorrowModel.instance(borrowDao.find(borrow.getId()));
+	             try {
+					 DisruptorUtils.autoTender(model);
+				 } catch (Exception e) {
+					 borrowDao.updateStatus(model.getId(), 1, 19);
+					 result = "false";
+					 logger.info("自动投标异常==="+e.getMessage());
+				 }
+	             result = "true";
+			}
+		}
+		return result;
+	}
+	
+	// JSDP-116 sxy 2015-06-18 start
+	@Override
+	public List<BorrowAutoTender> excelBorrowAutoTenderDatalist(BorrowAutoTenderModel model) {
+		return borrowAutoTenderDao.excelBorrowAutoTenderDatalist(model);
+	}
+	// JSDP-116 sxy 2015-06-18 start
+
+}

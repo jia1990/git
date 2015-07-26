@@ -1,0 +1,71 @@
+package com.rongdu.common.util.watermark;
+import java.awt.Font;
+import java.awt.GraphicsEnvironment;
+
+/**
+ * 字体设置
+ * 
+ * @author sunxiaoyong
+ * @version jsd v3.0 2014年12月18日
+ * 
+ */
+public class FontList {
+	// 获取并打印本机字体列表
+	public String[] getFontList() {
+
+		// 获取系统中的所有可用字体
+		GraphicsEnvironment e = GraphicsEnvironment
+				.getLocalGraphicsEnvironment();
+		String[] temps = e.getAvailableFontFamilyNames();
+		String[] fontFamily = new String[temps.length];
+		int i = temps.length - 1;
+		for (String temp : temps) {
+			fontFamily[i--] = temp;
+		}
+		return fontFamily;
+
+	}
+	
+	private String fontstyle[] = {"普通","粗体","斜体","粗体&斜体"};
+	private int fontstyles[] = {Font.PLAIN, Font.BOLD, Font.ITALIC, Font.BOLD | Font.ITALIC};
+	
+
+	/**
+	 * 获取各字体风格参数
+	 * @return String[]
+	 */
+	public String[] getFontStyle(){
+		
+		String fontstyleNew[] = fontstyle;
+		
+		return fontstyleNew;
+	}
+	
+	/**
+	 * 根据选择设置样式
+	 * @param fontstyle
+	 * @return Color
+	 */
+	public int selectFontStyle(String fontstyleName){
+		
+		int style = 0;
+		for(int i = 0;i < fontstyles.length;i ++){
+			
+			//得到样式值
+			if(fontstyle[i].equals(fontstyleName)){
+				style = fontstyles[i];
+			}
+			
+			//若得到样式为0，默认黑色
+			if(null == fontstyleName || "" == fontstyleName){
+				style = Font.PLAIN;
+			}
+			
+		}
+		
+		return style;
+		
+	}
+	
+
+}

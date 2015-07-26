@@ -1,0 +1,81 @@
+package com.ddtkj.p2psys.account.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * 资金记录Service
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月19日
+ */
+public interface AccountLogService {
+	/**
+	 * 新增
+	 * 
+	 * @param log
+	 */
+	void add(AccountLog log);
+
+	/**
+	 * 列表
+	 * 
+	 * @param accountModel
+	 * @return
+	 */
+	PageDataList<AccountLogModel> list(AccountLogModel model);
+
+	/**
+	 * 资金记录列表
+	 * 
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<AccountLogModel> accountLogList(AccountLogModel model, int pageNumber, int pageSize);
+
+    /**
+     * 首页交易记录
+     * @param user
+     * @return
+     */
+    public List<AccountLogModel> accountTransactionLog(User user);
+    /**
+     * 分页查询后台资金日志
+     * @author xingjia
+     * @param model
+     * @param pageNumber
+     * @param pageSize
+     * @return
+     */
+    public PageDataList<AccountLogModel> accountLogPageList(AccountLogModel model, int pageNumber, int pageSize);
+    /**
+     * 本地与第三方交易对账view
+     * @param outTradeNo
+     * @param tradeNo
+     * @return
+     * @throws Exception
+     */
+    Map<String, Object> compairAccountLog(String outTradeNo,String tradeNo)throws Exception;
+    /**
+     * 根据id查询资金日志
+     * @param id
+     * @return
+     */
+    public AccountLogModel findAccountLogModelById(int id);
+    /**
+     * 资金日志使用sql导出excel
+     * @param model
+     * @return
+     */
+    //JSDP-116 xingjia 2015-05-15 start
+    public List excelLogList(AccountLogModel model);
+    //JSDP-116 xingjia 2015-05-15 start
+}

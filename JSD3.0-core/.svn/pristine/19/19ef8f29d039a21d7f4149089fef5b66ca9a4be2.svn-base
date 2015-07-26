@@ -1,0 +1,123 @@
+package com.ddtkj.p2psys.account.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * @描述：借款人提现复审成功
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间: 2014年12月17日
+ */
+public class DrawNotifyBankFailBorrowerExecuter extends BaseExecuter {
+	private String accountLogType = Constant.CASH_BANK_FAIL;
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId",
+				this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(
+				Constant.ADMIN_ID));
+		// 操作金额
+		log.setBorrowerEnterMoney(borrowerEnterMoney);
+		log.setBorrowerRechargeMoney(borrowerRechargeMoney);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户各类可用
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		// 账户各类冻结
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		// 账户待还总额
+		log.setRepaymentTotal(account.getRepaymentTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte) 0);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		//JSDBET-795 wcw 2015-3-10 start
+		// accountDao.modify(0, -money, money, user.getUserId());
+		//第一种方式  提现请求汇潮成功后  不扣账户提现金额，等到银行转账成功后真正扣提现金额
+		/*Account account = accountDao.getAccountByUserId(user.getUserId());
+		//账户各类可用
+		account.setBorrowerEnterUsable(BigDecimalUtil.add(
+				account.getBorrowerEnterUsable(), borrowerEnterMoney));
+		account.setBorrowerRechargeUsable(BigDecimalUtil.add(
+				account.getBorrowerRechargeUsable(), borrowerRechargeMoney));
+		// 账户各类冻结金额
+		account.setBorrowerFreezeUseEnter(BigDecimalUtil.add(
+				account.getBorrowerFreezeUseEnter(), -borrowerEnterMoney));
+		account.setBorrowerFreezeUseRecharge(BigDecimalUtil.add(
+				account.getBorrowerFreezeUseRecharge(), -borrowerRechargeMoney));
+		if(account.getBorrowerFreezeUseEnter()<0){
+			throw new BussinessException("借款人冻结可用借款入账金额不足");
+		}
+		if(account.getBorrowerFreezeUseRecharge()<0){
+			throw new BussinessException("借款人冻结可用充值金额不足");
+		}
+		accountDao.update(account);*/
+		//第二种方式    提现请求汇潮成功后  扣账户提现金额，等到银行转账成功后只修改状态
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		//账户各类可用
+		account.setBorrowerEnterUsable(BigDecimalUtil.add(
+				account.getBorrowerEnterUsable(), borrowerEnterMoney));
+		account.setBorrowerRechargeUsable(BigDecimalUtil.add(
+				account.getBorrowerRechargeUsable(), borrowerRechargeMoney));
+		// 账户总额
+		account.setAccountTotal(BigDecimalUtil.add(
+				account.getAccountTotal(), BigDecimalUtil.add(borrowerEnterMoney,borrowerRechargeMoney)));
+		account.setBorrowerFreezeUseRecharge(BigDecimalUtil.add(
+				account.getBorrowerFreezeUseRecharge(), -borrowerRechargeMoney));
+		//JSDP-164 wcw 20150527 start
+		accountDao.modifyBorrowerAccount(account, user.getUserId());
+		//accountDao.update(account);
+		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+
+	}
+
+	@Override
+	public void handlePoints() {
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.DRAW_TRANSFER_FAIL);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+
+	}
+
+	@Override
+	public void handleInterface() {
+
+	}
+
+	@Override
+	public void extend() {
+
+	}
+}

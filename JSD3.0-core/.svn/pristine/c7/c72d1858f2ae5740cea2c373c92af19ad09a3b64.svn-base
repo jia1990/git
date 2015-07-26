@@ -1,0 +1,37 @@
+package com.ddtkj.p2psys.redpacket.dao;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.redpacket.domain.ActivityRP;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+
+public interface ActivityRPDao extends BaseDao<ActivityRP>{
+
+	/**
+	 * 查询说有符合  typecode的关系
+	 * @param typecode
+	 * @return
+	 */
+	public PageDataList<ActivityRP> findByRPTypecode(String typecode,int currentPage,int pagenum);
+	
+	/**
+	 * 当前时间 符合 typecode 的关系
+	 * @param date
+	 * @param typeCode
+	 * @return
+	 */
+	public ActivityRP getEntityByTimeAndRPTypeCode(Date date,String typeCode);
+	
+	/**
+	 * 分页(根据条件查询内容)
+	 * @param param
+	 * @param currentPage
+	 * @param pagenum
+	 * @return
+	 */
+	public PageDataList<ActivityRP> getPageDataList(QueryParam param);
+	
+	
+}

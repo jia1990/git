@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>投资人资金记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	var viewCompairAccountLogTitle = "对账";
+    var viewCompairAccountLogUrl = "/modules/account/accountlog/compairAccountLogPage.html"
+    var viewCompairAccountLogParmeters = "'{0}','" + viewCompairAccountLogTitle + "',800,500,'" + viewCompairAccountLogUrl + "'";
+
+
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'accountLogList.html?userType='+10,
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width:60},
+			{ field: 'userName', title: '用户名', width:80},
+			{ field: 'toUserName', title: '交易对方用户', width: 150},
+			{ field: 'typeName', title: '类型', width: 100},
+			{ field: 'optMoneyTotalLogz', title: '操作金额', width: 100,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'rpDynamicTotalLogz', title: '钱袋子总额', width: 100 ,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'usableMoneyTotalLogz', title: '可用总额', width: 100 ,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'freezeUseMoneyTotalLogz', title: '冻结金额', width: 100 ,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'collectionTotalStr', title: '待收总额', width: 100 ,formatter:function(value, row, index){
+				return value;
+			}},
+			
+			{ field: 'accountTotalStr', title: '账户总额', width: 100,formatter:function(value, row, index){
+				return value;
+			}},
+
+			{ field: 'paymentsType', title: '收支明细', width: 60,formatter:function(value,row,index){
+				if(value=="1"){
+					return "收入";
+				}
+				if(value=="2"){
+					return "支出";
+				}
+				if(value=="0"){
+					return "不变";
+				}
+				
+			}},
+			
+			{ field: 'addTime', title: '添加时间', width: 150,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			}, 
+			{ field: 'tradeNo', title: '交易批次号', width: 80},
+			{ field: 'outTradeNo', title: '交易订单号', width: 80},
+			{field:'addIp', title:'添加IP',width: 90},
+			{field : 'action',title : '操作',width :70,fixed:true,
+				formatter : function(value, row, index) {
+					var str = '';
+					str += '&nbsp;'; 
+					<@secAuthorizeUrl value='/accountLog/accountLogBtn.html'>
+					str += $.formatString('<img onclick="showDetailAccountLog('+row.userId+","+row.id+')" src="${theme_dir}/css/images/extjs_icons/book_open.png" title="查看资金详细日志"/>');
+					</@secAuthorizeUrl> 
+					str += '&nbsp;'; 
+					
+					 if(row.outTradeNo == null || row.outTradeNo == '' || row.typeName=='转账充值'){
+	                	
+	                }else{
+	                	<@secAuthorizeUrl value='/accountLog/accountLogCompairBtn.html'>
+						str += $.formatString('<img onclick="$.fn.formOptions.viewFunCompair(' + viewCompairAccountLogParmeters + ');" src="{1}" title="对账"/>', row.outTradeNo, '${theme_dir}/css/images/extjs_icons/zoom/zoom.png');
+						</@secAuthorizeUrl>
+		                str += '&nbsp;';
+	                }
+					return str;
+				}
+			} 
+			 ]],
+			 toolbar : '#toolbar',
+			 onLoadSuccess : function() {
+					$('#searchForm table').show();
+					parent.$.messager.progress('close');
+					$(this).datagrid('tooltip',['content']);
+			 }
+		});
+		
+	});
+	function exportExcel(){
+		var url = "/modules/account/accountlog/exportExcelAccountLog.html";
+		var userName = $("#userName").val();
+		var borrowName = $("#borrowName").val();
+		var type = $("#type").val();
+		
+		var tradeNo = $("#tradeNo").val();
+		var outTradeNo = $("#outTradeNo").val();
+		
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userType=10&userName=" + userName + "&borrowName=" + borrowName + "&type="+ type + "&tradeNo=" + tradeNo + "&outTradeNo=" + outTradeNo + "&startTime=" + startTime + "&endTime=" + endTime;
+		
+		window.location.href = url + sou;
+		/* if(userName!="" || tradeNo!="" || outTradeNo != "" || startTime!= "" || endTime != ""){
+			window.location.href = url + sou;
+		}else{
+			$.fn.treeGridOptions.tips();
+		}  */
+	}
+	
+
+	
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<!-- <li>时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		-->
+            		<li>交易批次号：<input type="text" name="tradeNo" id="tradeNo" autocomplete="off"/></li>
+            		<li>交易订单号：<input type="text" name="outTradeNo" id="outTradeNo" autocomplete="off"/></li>
+            		<li>资金类型：
+	            		<select name="type" class="type" id="type">
+	            			<!-- JSDP-100 gjh 2015-5-12 start -->
+				            <option value="11" selected="selected">全部</option>
+	            			<!-- JSDP-100 gjh 2015-5-12 end -->
+							<#list dictList as item>
+								<option value="${item.value}">
+								${item.name}
+								</option>
+							</#list>
+						</select>
+					</li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>		
+
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/accountLogListExcel.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

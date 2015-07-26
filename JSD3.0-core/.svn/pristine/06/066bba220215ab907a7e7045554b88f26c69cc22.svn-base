@@ -1,0 +1,26 @@
+package com.ddtkj.p2psys.redpacket.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.redpacket.domain.UserActivity;
+
+public class UserActivityModel extends UserActivity {
+	
+	private String isRef ;
+	
+	public static UserActivityModel getInstance(UserActivity ua){
+		UserActivityModel userActivityModel = new UserActivityModel();
+		BeanUtils.copyProperties(ua, userActivityModel);
+		return userActivityModel;
+	}
+
+	public String getIsRef() {
+		return isRef;
+	}
+
+	public void setIsRef(String isRef) {
+		this.isRef = isRef;
+	}
+	
+	
+}

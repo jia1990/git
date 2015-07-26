@@ -1,0 +1,244 @@
+package com.ddtkj.p2psys.member.service.impl;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoSetDao;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.member.dao.MemberVipAwardDao;
+import com.ddtkj.p2psys.member.dao.MemberVipDao;
+import com.ddtkj.p2psys.member.dao.MemberVipHistoryDao;
+import com.ddtkj.p2psys.member.domain.MemberVip;
+import com.ddtkj.p2psys.member.model.MemberVipSubModel;
+import com.ddtkj.p2psys.member.service.MemberVipService;
+import com.ddtkj.p2psys.redpacket.dao.RpUseLogDao;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpUseLogService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.YmdContant;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryBalance;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.score.dao.ScoreDao;
+import com.rongdu.p2psys.score.dao.ScoreLogDao;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * 
+ * @描述：会员service实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间: 2015年1月5日
+ */
+@Repository("memberVipService")
+public class MemberVipServiceImpl implements MemberVipService {
+
+	private static Logger logger = Logger.getLogger(MemberVipServiceImpl.class);
+	@Resource
+	private MemberVipDao memberVipDao;
+	@Resource
+	private MemberVipHistoryDao memberVipHistoryDao;
+	@Resource
+	private MemberVipAwardDao memberVipAwardDao;
+	@Resource
+	private AccountDao accountDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private ScoreLogDao scoreLogDao;
+	@Resource
+	private ScoreDao scoreDao;
+	@Resource
+	private RpProduceService rpProduceService;
+	@Resource
+	private RpUseLogService rpUseLogService;
+	@Resource
+	private RpUseLogDao rpUseLogDao;
+	@Resource
+	private BorrowAutoSetDao borrowAutoSetDao;
+	
+	
+	@Override
+	public double calculateBuyVipMoney(MemberVipSubModel model) throws Exception {
+		double transferVipFee = model.getTransferVipFee();
+		return transferVipFee;
+	}
+
+	@Override
+	public void buyVipTransfer(MemberVipSubModel model)throws Exception {
+		
+		Map<String, Object> map = new HashMap<String, Object>();
+
+		Account act = accountDao
+				.getAccountByUserId(model.getUser().getUserId());
+       //JSDP-198  wcw 2015-06-26 start
+		double transferVipFee= model.getTransferVipFee();
+		try {
+			map = calculateMoney(transferVipFee, act);
+		} catch (Exception e) {
+			// TODO: handle exception
+			// throw new UserException(e.getMessage(), 1);
+			// JSDBET-812 gjh 2015-3-16 start
+			throw new HandleException(e.getMessage(), "购买VIP出错",
+					ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_VIP,
+					ErrorLogConstant.CODE_VIP_BUY_SYS, model.getUser(),
+					ErrorLogConstant.MODULE_MEMBER_VIP, act.getUser()
+							.getUserId(), 1);
+			// JSDBET-812 gjh 2015-3-16 end
+		}
+		if (null != map) { // 查询一麻袋账户余额 YmdQueryBalance
+			AccountModel am=new AccountModel();
+			//本地与一麻袋账户比对
+			am.accountCompare(act.getUser().getUserId());
+			// 本地处理
+			model.selectMethodBuyVip();
+			AbstractExecuter buyMemberServiceExecuter = ExecuterHelper
+					.doExecuter("buyMemberServiceExecuter");
+			Global.setTransfer("addTime", new Date());
+			Global.setTransfer("user", model.getUser());
+			Global.setTransfer("vipLevel", model.getVipLevelName());
+			buyMemberServiceExecuter.execute(map, model.getUser());
+			// 一麻袋转账交易
+			if(transferVipFee>0){		
+				String merchantId = Global.getValue("ymd_merchant_id"); // 购买人转账给平台
+				YmdTransfer ymdTransfer = YmdTPPWay
+						.transfer(
+								AccountTradeConstant.TRADE_YMD_TRADE,
+								TradeIDGenerator
+										.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_VIP),
+								TradeIDGenerator
+										.createTradeSN(
+												AccountTradeConstant.TRADE_WAY_PC,
+												AccountTradeConstant.TRADE_LARGE_SORT_VIP),
+												transferVipFee + "", model.getUser()
+										.getUserName(), merchantId);
+				if (!YmdContant.YMD_TRADE_SUCCESS_STATUS.equals(ymdTransfer
+						.getErrCode())) {
+					throw new HandleException("一麻袋处理异常，请联系客服", "购买VIP出错",
+							ErrorLogConstant.LEVEL_SERIOUS,
+							ErrorLogConstant.TYPE_VIP,
+							ErrorLogConstant.CODE_VIP_BUY_SYS, model.getUser(),
+							ErrorLogConstant.MODULE_MEMBER_VIP, act.getUser()
+									.getUserId(), 1);
+				}
+			}
+			//JSDP-198  wcw 2015-06-26 end
+		}
+	}
+
+	@Override
+	public PageDataList<MemberVip> getPageDataList(MemberVip member,
+			int currentPage, int pageSize) {
+		// TODO Auto-generated method stub
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(currentPage, pageSize);
+		param.addOrder(OrderType.DESC, "endTime");
+		PageDataList<MemberVip> memberVipPageList = memberVipDao
+				.findPageList(param);
+		return memberVipPageList;
+	}
+
+	@Override
+	public MemberVip findMemberByUserId(long userId) {
+		// TODO Auto-generated method stub
+		return memberVipDao.findMemberVip(userId);
+	}
+
+	public Map<String, Object> calculateMoney(double vipFee, Account act) throws Exception{
+		Map<String, Object> map = new HashMap<String, Object>();
+		// --------wcw---------------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----start-------
+		double usableMoney = BigDecimalUtil.add(act.getRechargeUsable(),
+				act.getAwardUsable(), act.getInterestUsable(),
+				act.getReturnCapitalUsable());
+		if (vipFee > usableMoney) {
+			throw new BussinessException("可用余额不足无法购买", 1);
+		}
+		double currRecharge = 0;
+		double currAward = 0;
+		double currInterest = 0;
+		double currReturnCapital = 0;
+		// 充值可用
+		double rechargeUsable = act.getRechargeUsable();
+		// 奖励可用
+		double awardUsable = act.getAwardUsable();
+		// 回款本金可用
+		double returnCapitalUsable = act.getReturnCapitalUsable();
+
+		// 计算提现金额冻结归属（使用充值、使用奖励、使用利息、使用回款）
+		if (rechargeUsable >= vipFee) {
+			currRecharge = vipFee;
+		} else {
+			if ((BigDecimalUtil.add(rechargeUsable,awardUsable)) >= vipFee) {
+				currRecharge = rechargeUsable;
+				currAward = BigDecimalUtil.sub(vipFee, rechargeUsable);
+			} else {
+				double currMoney = BigDecimalUtil.add(rechargeUsable,
+						awardUsable, returnCapitalUsable);
+				if (currMoney >= vipFee) {
+					currRecharge = rechargeUsable;
+					currAward = awardUsable;
+					currReturnCapital = BigDecimalUtil.add(currMoney,
+							-rechargeUsable, -awardUsable);
+				} else {
+					currRecharge = rechargeUsable;
+					currAward = awardUsable;
+					currReturnCapital = returnCapitalUsable;
+					currInterest = BigDecimalUtil.sub(vipFee, currMoney);
+				}
+			}
+		}
+		map.put("rechargeMoney", currRecharge);
+		map.put("awardMoney", currAward);
+		map.put("interestMoney", currInterest);
+		map.put("returnCapitalMoney", currReturnCapital);
+		return map;
+	}
+	
+	@Override
+	public void doVIPExpireNotice() {
+		String noticeTimeStr = DateUtil.dateStr2(DateUtil.rollDay(new Date(), 7));
+        Date noticeTimeStart = DateUtil.valueOf(noticeTimeStr+" 00:00:00");
+        Date noticeTimeEnd = DateUtil.valueOf(noticeTimeStr+" 23:59:59");
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("vipEndTime", Operators.GTE, noticeTimeStart);
+        param.addParam("vipEndTime", Operators.LTE, noticeTimeEnd);
+        param.addParam("usable", MemberVip.MEMBER_USABLE);
+        List<MemberVip> vipExpireList = memberVipDao.findByCriteria(param);
+        if(vipExpireList != null && vipExpireList.size() > 0){
+        	for(MemberVip memberVip : vipExpireList){
+        		Map<String, Object> map = new HashMap<String, Object>();
+        		map.put("noticeTime", memberVip.getEndTime());
+        		Global.setTransfer("user", memberVip.getUser());
+        		Global.setTransfer("vip", map);
+      
+        	    AbstractExecuter vipExpireExecuter = ExecuterHelper.doExecuter("vipExpireNoticeExecuter");
+        	    vipExpireExecuter.execute(0, memberVip.getUser(), new User(Constant.ADMIN_ID));
+        	}
+        }
+	}
+
+}

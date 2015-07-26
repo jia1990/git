@@ -1,0 +1,119 @@
+
+package com.ddtkj.p2psys.autotender.dao.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoTenderDao;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoTenderModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.model.jpa.SearchParam;
+import com.rongdu.common.util.StringUtil;
+
+@Repository("borrowAutoTenderDao")
+public class BorrowAutoTenderDaoImpl extends BaseDaoImpl<BorrowAutoTender> implements BorrowAutoTenderDao{
+
+	
+	@Override
+	public PageDataList<BorrowAutoTender> getAutoTenderList(BorrowAutoTender autoTender, int PageNumber, 
+			int pageSize) {
+		QueryParam param = QueryParam.getInstance().addPage(PageNumber, pageSize);
+		if (!StringUtil.isBlank(autoTender.getUserName())) {
+			param.addParam("userName", Operators.LIKE, autoTender.getUserName());
+		}
+		if (!StringUtil.isBlank(autoTender.getBorrowName())) {
+			param.addParam("borrowName", autoTender.getBorrowName());
+		} 
+		if (StringUtil.isNotBlank(autoTender.getStatus()) && !"99".equals(autoTender.getStatus())) {
+			param.addParam("status", autoTender.getStatus());
+		}
+		param.addOrder(OrderType.ASC, "addTime");
+		return super.findPageList(param);
+	}
+
+	@Override
+	public List<BorrowAutoTender> getListByBorrowId(long borrowId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("borrow_id", borrowId);
+		return findByCriteria(param);
+	}
+
+	@Override
+	public void addBatchAutoTender(List<BorrowAutoTender> tenderList) {
+		
+	}
+
+	@Override
+	public List<BorrowAutoTender> getAutoTenderList(Map<String, Object> map,
+			int start, int end) {
+		return null;
+	}
+
+	@Override
+	public int getCount(Map<String, Object> map) {
+		return 0;
+	}
+	
+	@Override
+	public double getAutoTenderSum(BorrowAutoTenderModel model) {
+
+		return 0;
+	}
+	
+	@Override
+	public List<BorrowAutoTender> excelBorrowAutoTenderDatalist(
+			BorrowAutoTenderModel model) {
+		// JSDP-116 sxy 2015-06-18 start
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT ");
+		sql.append(" t1.id, ");
+		sql.append(" t2.user_name,  ");
+		sql.append(" t2.real_name,  ");
+		sql.append(" t1.borrow_name, ");
+		sql.append(" CASE  t1.style  WHEN 1 THEN '等额本息' WHEN 2 THEN '一次性还'  WHEN 3 THEN '每月付息' ELSE '其他'  END AS borrowStyle, ");
+		sql.append(" t1.apr, ");
+		sql.append(" t1.money, ");
+		sql.append(" CASE t1.status WHEN  '0' THEN '失败'  WHEN  '1' THEN '成功' ELSE '未知' END AS statusTender, ");
+		sql.append(" t1.remark, ");
+		sql.append(" t1.add_time ");
+		sql.append(" FROM t_jsd_borrow_auto_tender AS t1 LEFT JOIN t_jsd_user AS t2 ON t1.user_id = t2.user_id WHERE 1=1  ");
+
+		// 用户名
+		if (StringUtil.isNotBlank(model.getUserName())) {
+			sql.append(" AND t2.user_name LIKE  '%" + model.getUserName()+ "%' ");
+		}
+		// 真实姓名
+		if (StringUtil.isNotBlank(model.getRealName())) {
+			sql.append(" AND t2.real_name LIKE '%" + model.getRealName()+ "%' ");
+		}
+		// 状态
+		if (StringUtil.isNotBlank(model.getBorrowName())) {
+			sql.append(" AND t1.borrow_name = " + model.getBorrowName() + " ");
+		}
+		// 开始时间
+		if(!StringUtil.isBlank(model.getStartTime())){
+			sql.append("  AND t1.add_time >= '"+model.getStartTime()+"'  ");
+		}
+		// 结束时间
+		if(!StringUtil.isBlank(model.getEndTime())){
+			sql.append("  AND t1.add_time < '"+model.getEndTime()+"'  ");
+		}
+		Query query = em.createNativeQuery(sql.toString());
+
+		List dataList = query.getResultList();
+		// JSDP-116 sxy 2015-06-18 start
+		return dataList;
+	}
+	
+}

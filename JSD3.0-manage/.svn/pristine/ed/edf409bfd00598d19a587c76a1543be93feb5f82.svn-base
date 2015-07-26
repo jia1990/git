@@ -1,0 +1,686 @@
+package com.rongdu.manage.action.loan;
+
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.rule.RedPacketConsumeRuleCheck;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 借贷管理-投标信息管理
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年4月17日
+ */
+public class ManageTenderAction extends BaseAction implements ModelDriven<BorrowTenderModel> {
+
+	BorrowTenderModel model = new BorrowTenderModel();
+
+	public BorrowTenderModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	
+	@Resource
+	private AccountService accountService;
+	
+	@Resource
+	private OperatorService operatorService;
+
+	private Map<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * 投标信息展示
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/tender/tenderManager")
+	public String borrowManager() throws Exception {
+
+		return "tenderManager";
+	}
+
+	/**
+	 * 投标信息列表
+	 * 
+	 * @return
+	 */
+	@Action("/modules/loan/tender/tenderList")
+	public void borrowTenderList() throws Exception {
+		model.setSize(paramInt("rows"));
+		PageDataList<BorrowTenderModel> list = borrowTenderService.list(model);
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 投标信息展示
+	 * @author sxy 2015年4月15日 15:21:14
+	 * @return
+	 */
+	@Action("/modules/loan/tenderRecord/tenderManager")
+	public String borrowTenderManager() throws Exception {
+		
+		return "tenderRecordManager";
+	}
+	// JSDP-BUG106 20150504 sxy start
+	/**
+	 * 投标信息列表
+	 * @author sxy 2015年4月15日 15:21:14
+	 * @return
+	 */
+	@Action("/modules/loan/tenderRecord/tenderList")
+	public void borrowList() throws Exception {
+		model.setSize(paramInt("rows"));
+		
+		int size = model.getSize();
+		int page = model.getPage();
+		
+		String userName = paramString("userName");
+		String borrowType = paramString("type");
+		String status = paramString("status");
+		String tenderType = paramString("tenderType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		String customerUserId = paramString("customerUserId");
+		int borrowId=paramInt("borrowId");
+	    String compareResult=paramString("compareResult");
+		// 投资人
+		if(StringUtil.isNotBlank(userName)){
+			model.setUserName(userName);
+		}
+		//标ID
+		if(borrowId!=0){
+			model.setId(borrowId);
+		}
+		// 借款标类型
+		if(StringUtil.isNotBlank(borrowType)){
+			model.setType(borrowType);
+		}
+		// 投标状态
+		if(StringUtil.isNotBlank(status)){
+			if(status.equals("0")){
+				model.setStatus(100);
+			}else if(status.equals("1")){
+				model.setStatus(200);
+			}else if(status.equals("2")){
+				model.setStatus(300);
+			}
+			//model.setStatus(Integer.valueOf(status));
+		}
+		//对账类型
+		if(StringUtil.isNotBlank(compareResult)){
+			model.setCompareResult(compareResult);
+		}
+		// 客服编号
+		if(StringUtil.isNotBlank(customerUserId)){
+			model.setCustomerUserId(customerUserId);
+		}
+		// 投标类型
+		if(StringUtil.isNotBlank(tenderType)){
+			
+			if("10".equals(tenderType)){
+				model.setTenderType((byte)10);
+			}else if("11".equals(tenderType)){
+				model.setTenderType((byte)11);
+			}else if("12".equals(tenderType)){
+				model.setTenderType((byte)12);
+			}else{
+				model.setTenderType((byte)0);
+			}
+			
+		}
+		// 投标时间
+		if(StringUtil.isNotBlank(startTime)){
+			model.setStartTime(startTime);
+		}
+		if(StringUtil.isNotBlank(endTime)){
+			model.setEndTime(endTime);
+		}
+		
+		PageDataList<BorrowTenderModel> list = borrowTenderService.tenderlist(model);
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		
+		// 获取汇总数据
+		List<BorrowTenderModel> tenderTotal = borrowTenderService.tenderMoneyDataTotal(model);
+		//model.setStatus(1);
+		//double SuccessTenderTotal = borrowTenderService.tenderMoneyDataTotalOfStatus(model);
+		//model.setStatus(2);
+		//double FailTenderTotal = borrowTenderService.tenderMoneyDataTotalOfStatus(model);
+		
+		List<Map<String, String>> footerList = new ArrayList<Map<String, String>>();
+		DecimalFormat df = new DecimalFormat("#0.00");
+		if (null != tenderTotal && tenderTotal.size() != 0) {
+			Map<String, String> footerMap = new HashMap<String, String>();
+			/*System.out.println(tenderTotal.size());
+			for (int i = 0; i < tenderTotal.size(); i++) {*/
+				//System.out.println("i==="+i);
+				/*footerMap.put("userName","投资总金额:");
+				footerMap.put("registerTime",df.format(tenderTotal.get(i).getMoneySum()));
+				footerMap.put("realName","有效投资金额:");
+				footerMap.put("customerUserId",df.format(tenderTotal.get(i).getAccountSum()));
+				
+				footerMap.put("tenderUserAccountStr","利息总金额:");
+				footerMap.put("money",df.format(tenderTotal.get(i).getInterestSum()));
+				footerMap.put("account","回收本息金额:");
+				footerMap.put("interest",df.format(tenderTotal.get(i).getRepaymentAccountSum()));*/
+				
+				/*footerMap.put("userName","投资总金额:");
+				footerMap.put("registerTime",df.format(tenderTotal.get(0).getMoneySum()));
+				footerMap.put("realName","成功投资金额:");
+				footerMap.put("customerUserId",df.format(SuccessTenderTotal));
+				
+				footerMap.put("tenderUserAccountStr","投资失败金额:");
+				footerMap.put("money",df.format(FailTenderTotal));
+				*/
+				
+				
+				
+				
+				/*footerMap.put("realName","有效投资金额:");
+				footerMap.put("customerUserId",df.format(tenderTotal.get(0).getAccountSum()));
+				
+				footerMap.put("tenderUserAccountStr","利息总金额:");
+				footerMap.put("money",df.format(tenderTotal.get(0).getInterestSum()));
+				footerMap.put("account","回收本息金额:");
+				footerMap.put("interest",df.format(tenderTotal.get(0).getRepaymentAccountSum()));
+				*/
+				/*footerMap.put("repaymentAccount","成功投资金额:");
+				footerMap.put("borrowApr",df.format(SuccessTenderTotal));
+				footerMap.put("tenderType","投资失败金额:");
+				footerMap.put("addTime",df.format(FailTenderTotal));
+				*/
+			//}
+
+				for (int i = 0; i < tenderTotal.size(); i++) {
+					// 20150701  sxy
+					footerMap.put("userName","投资金额:");
+					footerMap.put("registerTime",df.format(tenderTotal.get(i).getMoneySum()));
+					footerMap.put("realName","有效投资金额:");
+					footerMap.put("customerUserId",df.format(tenderTotal.get(i).getAccountSum()));
+				}
+				
+				
+			footerList.add(footerMap);
+		}
+
+		data.put("footer", footerList);
+		
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	// JSDP-BUG106 20150504 sxy start
+
+	/**
+	 * 投标记录导出excel
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/tenderRecord/tenderRecordExcel")
+	public void tenderDetailExcel() throws Exception{
+		response.setContentType("application/msexcel;charset=UTF-8");
+		// JSDP-BUG109 sxy
+		/*String userName = paramString("userName");
+		String borrowType = paramString("type");
+		String tenderType = paramString("tenderType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		int borrowId=paramInt("borrowId");
+	    String compareResult=paramString("compareResult");
+		// 投资人
+		if(StringUtil.isNotBlank(userName)){
+			model.setUserName(userName);
+		}
+		//标ID
+		if(borrowId!=0){
+			model.setId(borrowId);
+		}
+		// 借款标类型
+		if(StringUtil.isNotBlank(borrowType)){
+			model.setType(borrowType);
+		}
+		//对账类型
+		if(StringUtil.isNotBlank(compareResult)){
+			model.setCompareResult(compareResult);
+		}
+		// 投标类型
+		if(StringUtil.isNotBlank(tenderType)){
+			
+			if("10".equals(tenderType)){
+				model.setTenderType((byte)10);
+			}else if("11".equals(tenderType)){
+				model.setTenderType((byte)11);
+			}else if("12".equals(tenderType)){
+				model.setTenderType((byte)12);
+			}else{
+				model.setTenderType((byte)0);
+			}
+			
+		}
+		// 投标时间
+		if(StringUtil.isNotBlank(startTime)){
+			model.setStartTime(startTime);
+		}
+		if(StringUtil.isNotBlank(endTime)){
+			model.setEndTime(endTime);
+		}
+		
+		
+		//
+		model.setSize(99999999);
+		model.setPage(1);
+		// 投标记录
+		PageDataList<BorrowTenderModel> pageDataList = borrowTenderService.tenderlist(model);
+		List<BorrowTenderModel> list = pageDataList.getList();
+		
+		for (int i = 0; i < pageDataList.getList().size(); i++) {
+
+			BorrowTenderModel bt = list.get(i);
+
+			if (bt.getTenderType() == 0) {
+				bt.setType("网站投标");
+			} else if (bt.getTenderType() == 1) {
+				bt.setType("自动投标");
+			} else if (bt.getTenderType() == 2) {
+				bt.setType("手机投标");
+			}
+			
+			// 借款类型
+			// 0：月标 1：天标
+			if (bt.getBorrowTimeType() == 0) {
+				bt.setTimeLimitStr(bt.getTimeLimit() + "月");
+			} else if (bt.getBorrowTimeType() == 1) {
+				bt.setTimeLimitStr(bt.getTimeLimit() + "天");
+			}
+
+		}
+		
+		//String title = "标："+borrow.getName()+"("+borrow.getDealNo()+") 投标记录Excel表";
+		String title = "投标记录Excel表";
+
+		String[] hearders = new String[] {"编号","借款人","借款期限","投标人","注册时间","真实姓名","专属客服","账户总额","投标金额 ","有效投标金额 ","回收本息 ","投标类型","投标时间 ","投标IP "};// 表头数组
+		String[] fields = new String[] {"id","borrowUserName","timeLimitStr","userName","registerTime","realName","customerUserId","tenderUserAccountStr","money","account","repaymentAccount","type","addTime","addIp"};// 对象属性数组
+		int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = pageDataList.getList().size()/sheetRows;
+		if(pageDataList.getList().size()%sheetRows > 0){
+			sheetPage += 1;
+		}           
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<BorrowTenderModel> tdList = new ArrayList<BorrowTenderModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <pageDataList.getList().size(); j++ ){
+				BorrowTenderModel sm = pageDataList.getList().get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		*/
+		// 新导出
+				// ---------------------2015年5月18日   sxy--------------------------------------------
+
+		response.setContentType("application/msexcel;charset=UTF-8");
+
+		String userName = paramString("userName");
+		String borrowType = paramString("borrowType");
+		String tenderType = paramString("tenderType"); 
+		String status = paramString("status"); 
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		String customerUserId = paramString("customerUserId");
+		int borrowId = paramInt("borrowId");
+	    String compareResult=paramString("compareResult");
+		// 投资人
+		if(StringUtil.isNotBlank(userName)){
+			model.setUserName(userName);
+		}
+		//标ID
+		if(borrowId!=0){
+			model.setBorrowId(borrowId);
+		}
+		// 借款标类型
+		if(StringUtil.isNotBlank(borrowType)){
+			model.setType(borrowType);
+		}
+		//对账类型
+		if(StringUtil.isNotBlank(compareResult)){
+			model.setCompareResult(compareResult);
+		}
+		// JSDP-185 sxy 20150623
+		// 投标状态
+		if(StringUtil.isNotBlank(status)){
+			if(status.equals("0")){
+				model.setStatus(100);
+			}else if(status.equals("1")){
+				model.setStatus(200);
+			}else if(status.equals("2")){
+				model.setStatus(300);
+			}
+		}
+		// 客服编号
+		if(StringUtil.isNotBlank(customerUserId)){
+			Operator operator=operatorService.getOperatorByNo(customerUserId);
+			model.setOperatorId(operator.getId());
+		}
+		// 投标类型
+		if(StringUtil.isNotBlank(tenderType)){
+			
+			if("10".equals(tenderType)){
+				model.setTenderType((byte)10);
+			}else if("11".equals(tenderType)){
+				model.setTenderType((byte)11);
+			}else if("12".equals(tenderType)){
+				model.setTenderType((byte)12);
+			}else{
+				model.setTenderType((byte)0);
+			}
+			
+		}
+		// 投标时间
+		if(StringUtil.isNotBlank(startTime)){
+			model.setStartTime(startTime);
+		}
+		if(StringUtil.isNotBlank(endTime)){
+			model.setEndTime(endTime);
+		}
+		
+		
+		// 第一页开始
+		model.setPage(1);
+		// 最多一页出99999999条记录
+		model.setSize(99999999);
+		if (model.getStatus() == 99) {
+			model.setStatus(0);
+		}
+
+		// JSDP-116 sxy 2015-05-18 start
+		List<BorrowTender> newList = borrowTenderService.excelTenderDatalist(model);
+		String title = "投资记录的Excel表";
+		String[] hearders = new String[] { "编号","标ID","标类型","借款人","借款期限","投标人","注册时间","真实姓名","专属客服","账户总额","投标金额 ","有效投标金额 ","回收本息 ","投标类型","投标状态 ","投标时间 ","投标IP"};// 表头数组
+		String[] fields = new String[] { "object[0]", "object[1]", "object[2]",
+				"object[3]", "object[4]", "object[5]", "object[6]",
+				"object[7]", "object[8]", "object[9]", "object[10]",
+				"object[11]","object[12]","object[13]","object[14]","object[15]","object[16]","object[17]" };// 对象属性数组
+
+		String contextPath = ServletActionContext.getServletContext()
+				.getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		// JSDP-116 sxy 2015-05-18 start
+		
+	}
+	
+	/**
+	 * 交易金额的统计(标的)的页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/loan/tender/tenderedStaticsPage")
+	public String tenderedStaticsPage() throws Exception{
+		
+		return "tenderedStatisticsPage";
+	}
+	/**
+	 * 交易金额的统计(标的)
+	 */
+	/*@Action("/modules/loan/tender/tenderedStatics")
+	public void tenderedStatics() throws Exception{
+		List<Double> accounts = new ArrayList<Double>();
+		List<String> dates = new ArrayList<String>();
+		Calendar c = Calendar.getInstance();
+		String time = paramString("time");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		if (!"".equals(startTime)) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			Date startDate = sdf.parse(startTime);
+			Date endDate = sdf.parse(endTime);
+			Calendar c1 = Calendar.getInstance();
+			c.setTime(startDate);
+			c1.setTime(endDate);
+			while (!c.after(c1)) {
+				String date = DateUtil.dateStr2(c1.getTime());
+				double acount = borrowTenderService.tenderedAccountsByDate(date);
+				c1.add(Calendar.DATE, -1);
+				dates.add(date.substring(5, date.length()));
+				accounts.add(acount);
+			}
+		} else {
+			if ("year".equals(time)) {
+				for (int i=0; i<12;i++) {
+					String date = DateUtil.dateStr(c.getTime(),"yyyy-MM");
+					double acount = borrowTenderService.tenderedAccountsByDate(date);
+					c.add(Calendar.MONTH, -1);
+					dates.add(date);
+					accounts.add(acount);
+				}
+			} else if ("month".equals(time)) {
+				String firstDate = DateUtil.dateStr2(c.getTime());
+				dates.add(firstDate.substring(5, firstDate.length()));
+				accounts.add(borrowTenderService.tenderedAccountsByDate(firstDate));
+				for (int i=0; i<30;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					double acount = borrowTenderService.tenderedAccountsByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					accounts.add(acount);
+				}
+			} else {
+				for (int i=0; i<7;i++) {
+					String date = DateUtil.dateStr2(c.getTime());
+					double acount = borrowTenderService.tenderedAccountsByDate(date);
+					c.add(Calendar.DATE, -1);
+					dates.add(date.substring(5, date.length()));
+					accounts.add(acount);
+				}
+			}
+		}
+		Collections.reverse(dates);
+		Collections.reverse(accounts);
+		data.put("dates", dates.toArray());
+		data.put("accounts", accounts.toArray());
+		printJson(getStringOfJpaObj(data));
+	}*/
+	//JSDP-53 wcw 2015-4-20 start
+	@Action("/modules/loan/tenderRecord/compaireBorrowTender")
+	public String compaireBorrowTender()throws Exception{
+		//本地与第三方比对
+		int id=paramInt("id");
+		BorrowTender bt=borrowTenderService.getTenderById(id);
+		if(bt!=null){
+			String tenderBilNo=bt.getTenderBilNo();
+			request.setAttribute("bt", bt);
+			
+			if(StringUtil.isNotBlank(tenderBilNo)&&!"undefined".equals(tenderBilNo)){
+				//第三方数据
+				YmdQuery ymdQuery=new YmdQuery();
+				ymdQuery.setOutTradeNo(tenderBilNo);
+				ymdQuery.setMode("trade");
+				YmdQueryReturn ymdQueryReturn=YmdTPPWay.query(ymdQuery);
+				List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+				YmdQueryReturnDetails yrd=new YmdQueryReturnDetails();
+				if(list.size()>0){
+					yrd=list.get(0);
+				}
+				if(bt.getStatus()==0){
+					bt.setCompareResult(Account.COMPARE_ERROR);
+					borrowTenderService.update(bt);
+				}else{
+					if(list.size()>0){
+						yrd=list.get(0);
+						if(yrd!=null){
+							double ymdAmount=NumberUtil.getDouble(yrd.getAmount());
+							double balance=BigDecimalUtil.sub(bt.getAccount(), ymdAmount);
+							//一麻袋交易日志
+							if("00".equals(ymdQueryReturn.getResultCode())&&(balance>0.1||balance<0)){
+								bt.setCompareResult(Account.COMPARE_ERROR);
+								borrowTenderService.update(bt);
+							}else{
+								bt.setCompareResult(Account.COMPARE_OK);
+								borrowTenderService.update(bt);
+							}
+						}
+					}
+				}
+				//一麻袋交易日志
+			    request.setAttribute("ymdQueryReturnDetails", yrd);
+				request.setAttribute("ymdQueryReturn", ymdQueryReturn);
+			}else{
+				request.setAttribute("ymdQueryReturnDetails", null);
+				request.setAttribute("ymdQueryReturn", null);
+			}
+		}else{
+			request.setAttribute("ymdQueryReturnDetails", null);
+			request.setAttribute("ymdQueryReturn", null);
+		}
+		saveToken("repairBorrowTender");
+		return "compaireBorrowTender";
+	}
+	
+	@Action("/modules/loan/tenderRecord/repairBorrowTender")
+	public String repairBorrowTender()throws Exception{
+		//补单
+		int id=paramInt("id");
+		String tenderBilNo=paramString("tenderBilNo");
+		BorrowTender bt=borrowTenderService.getTenderById(id);
+		if(bt==null){
+			data.put("result", false);
+			data.put("msg", "该投标记录不存在");
+			printJson(getStringOfJpaObj(data));
+			return null;
+		}
+		if(StringUtil.isNotBlank(tenderBilNo)&&!"undefined".equals(tenderBilNo)){
+			//第三方数据
+			String ymdOutTradeNo=paramString("ymdOutTradeNo"); //一麻袋订单号
+			String resultCode=paramString("resultCode");  //一麻袋返回结果
+			int tradeStatus=paramInt("tradeStatus"); //本地投标处理状态
+			String ymdTradeStatus=paramString("ymdTradeStatus"); //一麻袋交易返回状态
+			double ymdAmount=paramDouble("ymdAmount"); //交易金额
+			checkToken("repairBorrowTender");
+		    if(tenderBilNo.equals(ymdOutTradeNo)&&tenderBilNo!=null&ymdOutTradeNo!=null){
+	    		//本地与第三方订单号一致
+				if("00".equals(resultCode)&&tradeStatus==0&&"00".equals(ymdTradeStatus)){
+					double balance=BigDecimalUtil.sub(bt.getAccount(),ymdAmount);
+					double balance_=BigDecimalUtil.sub(ymdAmount,bt.getAccount());
+					if(balance>0.1&balance_<0.1){
+						data.put("result", false);
+						data.put("msg", "该投标记录金额与第三方不匹配");
+						printJson(getStringOfJpaObj(data));
+						return null;
+					}
+					//返回状态为成功   一麻袋交易状态为成功  且本地还在处理中才符合补单要求
+					User user = bt.getUser();
+					// 处理使用红包 如果不用那么获取到的是 "" 否则 1
+					Account ac = this.accountService.findByUser(user.getUserId());
+					RedPacketConsumeRuleCheck rpcrc = (RedPacketConsumeRuleCheck) Global
+							.getRuleCheck("redPacketConsume");
+					Borrow borrow = bt.getBorrow();
+					BorrowModel bm=new BorrowModel();
+					bm.setMoney(bt.getMoney());
+					double mdAccount = rpcrc.investUseDynamicRP(ac.getUsableAccount(),
+							bm.getMoney(),borrow.getBorrowTimeType(),borrow.getTimeLimit());
+					if ("1".equals(paramString("mdAccountUse"))) {
+						/**晋商贷3.0_生产JSDP-8 start 20150413 xingjia*/
+						if (mdAccount >= ac.getRpDynamicTotal() && mdAccount >0) {
+							mdAccount = ac.getRpDynamicTotal();
+						}else if(mdAccount <=0){
+							mdAccount = 0;
+						}
+						/**晋商贷3.0_生产JSDP-8 end 20150413 xingjia*/
+						bm.setMdAccount(mdAccount);
+					}
+					// 投标前model值校验
+					bm.checkTenderModel(borrow, user);
+					//JSDBET-802 wcw 2015-3-12 start
+					//本地账户余额与一麻袋账户余额对账
+					//accountService.accountCompare(user.getUserId());
+					//JSDBET-802 wcw 2015-3-12 end
+					bt.setTenderType((byte)3); //补单投标
+					borrowTenderService.addTender(user, borrow, bt, bm);
+					data.put("result", true);
+					data.put("msg", "补单成功");
+				}else{
+					data.put("result", false);
+					data.put("msg", "该投标记录不符合补单要求");
+				}
+			}
+	    	
+		}else{
+			data.put("result", false);
+			data.put("msg", "该投标记录不符合补单要求");
+		}
+		if(data.size()<0){
+			data.put("result", false);
+			data.put("msg", "投标记录补单异常");
+		}
+		printJson(getStringOfJpaObj(data));
+		return null;
+	}
+	
+	@Action("/modules/loan/tenderRecord/compaireBorrowTenderList")
+	public void compaireBorrowTenderList()throws Exception{
+		//批量对账
+		Map<String, Object> map = new HashMap<String, Object>();
+		int id=paramInt("id");
+		if(id>0){
+			try {
+			   borrowTenderService.compaireBorrowTenderList(id);
+			} catch (Exception e) {
+				map.put("result", false);
+				map.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(map));
+				return ;
+			}
+		}else{
+			map.put("result", false);
+			map.put("msg", "只有搜索标ID才可以对账!");
+			printJson(getStringOfJpaObj(map));
+			return ;
+		}
+		map.put("result", true);
+		map.put("msg", "对账成功!");
+		printJson(getStringOfJpaObj(map));
+	}
+	//JSDP-53 wcw 2015-4-20 end
+}

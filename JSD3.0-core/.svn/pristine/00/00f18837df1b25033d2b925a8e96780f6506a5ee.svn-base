@@ -1,0 +1,99 @@
+package com.rongdu.p2psys.account.dao.jdbc;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.dao.AccountBankDao;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.account.model.AccountBankModel;
+
+@Repository("accountBankDao")
+public class AccountBankDaoImpl extends BaseDaoImpl<AccountBank> implements AccountBankDao {
+
+	@Override
+	public List<AccountBank> list(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addParam("status", 1);
+		return findByCriteria(param);
+	}
+
+	@Override
+	public List<AccountBank> listAll(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId).addOrder(OrderType.DESC, "status");
+		return findByCriteria(param);
+	}
+
+	@Override
+	public int count(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("status", 1);
+		param.addParam("user.userId", userId);
+		return countByCriteria(param);
+	}
+
+	@Override
+	public void disable(long userId, long id) {
+		Query query = em.createQuery("UPDATE AccountBank set status = 0 WHERE user.userId = :userId AND id = :id");
+		query.setParameter("userId", userId);
+		query.setParameter("id", id);
+		query.executeUpdate();
+	}
+
+	@Override
+	public AccountBank find(long userId, String account) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		param.addParam("bankNo", account);
+		param.addParam("status", 1);
+		return findByCriteriaForUnique(param);
+	}
+
+	@Override
+	public List excelListBankCard(AccountBankModel model) {
+		//JSDP-116 xingjia 2015-05-15 start
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT ab.id id,u.user_name userName,ab.bank_no bankNo,CASE ab.status WHEN 1 THEN '启用' ELSE '停用' END AS bankStatus,"
+				+ "ab.bank bankName,u.real_name realName,ab.branch branchName, drp.name provionceName,drc.name cityName,"
+				+ "u.mobile_phone telephone,u.add_time addTime"
+				+ " FROM rd_account_bank ab,t_jsd_user u ,t_jsd_dict_region drp,t_jsd_dict_region drc"
+				+ " WHERE u.user_id=ab.user_id  AND u.islocked <> 'FF' "
+				+ " AND  ab.province=drp.id AND ab.city=drc.id ");
+		
+		if (model != null && !StringUtil.isBlank(model.getUserName())) {
+			sql.append(" AND u.user_name LIKE '%"+model.getUserName()+"%'");
+		}
+		if(null != model && model.getStatus() != -1){
+			sql.append(" AND ab.status=:bankStatus ");
+		}
+		if (model != null && !StringUtil.isBlank(model.getBankNo())) {
+			//sql.append(" AND ab.bank_no=:bankNo ");
+			sql.append(" AND ab.bank_no like '%"+model.getBankNo()+"%' ");
+		}
+		sql.append(" order by ab.add_time desc ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		
+		if(null != model && model.getStatus() != -1){
+			query.setParameter("bankStatus", model.getStatus());
+		}
+		// JSDP-185 sxy 20150619 start
+		/*if (model != null && !StringUtil.isBlank(model.getBankNo())) {
+			query.setParameter("bankNo", model.getBankNo());
+		}*/
+		
+		List list = query.getResultList();
+		//JSDP-116 xingjia 2015-05-15 start
+		return list;
+	}
+
+}

@@ -1,0 +1,668 @@
+package com.ddtkj.p2psys.account.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * 资金记录Model
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月27日
+ */
+public class AccountLogModel extends AccountLog {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4734681002057379378L;
+
+
+
+	/**
+	 * @param user
+	 * @param type
+	 * @param toUser
+	 */
+	public AccountLogModel(User user, String type, User toUser) {
+		super(user, type, toUser);
+	}
+
+	
+	
+	public AccountLogModel() {
+		super();
+	}
+
+
+	/** 当前页面 */
+	private int page;
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	/** 资金记录类型名称 */
+	private String typeName;
+	/** 交易方 */
+	private String toUserName;
+	/** 开始日期 **/
+	private String startTime;
+	/** 结束日期 **/
+	private String endTime;
+	/**日期范围：0：全部，1：最近七天 2：最近一个月  3：最近两个月，4 最近三个月**/
+	private int time;
+	/** 用户名 */
+	private String userName;
+	/** 标名称 */
+	private String borrowName;
+	
+	private int id;//资金日志id
+	private long userId;//用户id
+	
+	private double money;
+	/**
+	 * 资金类型--取该名字为了前端统一
+	 */
+	private String status;
+	
+	private String userType;//资金日志用户类型
+	
+	private String accountTotalStr;//账户总额
+	
+	//借款人资金日志
+	private String borrowerRechargeMoneyStr;//借款人充值操作金额
+	private String borrowerEnterMoneyStr;//借款入账操作金额
+	
+	private String borrowerEnterUsableStr;//借款入账可用金额
+	private String borrowerFreezeUseRechargeStr;//借款人冻结充值金额
+	private String borrowerFreezeUseEnterStr;//借款人冻结借款入账金额
+	private String repaymentTotalStr;//待还金额
+	
+	//投资人资金日志
+	private String rechargeMoneyStr;//充值操作金额
+    private String interestMoneyStr;  //利息操作金额
+    private String returnCapitalMoneyStr; //回款本金操作金额
+	private String awardMoneyStr;//奖励操作金额
+	private String rpDynamicMoneyStr;//钱袋子操作金额
+	
+	private String rechargeUsableStr;//充值可用总额
+	private String interestUsableStr;//利息可用总额
+	private String returnCapitalUsableStr;//回款本金可用总额
+	private String awardUsableStr;//奖励可用总额
+	private String rpDynamicUsableStr;//钱袋子可用金额
+	
+	private String freezeUseInterestStr;//冻结使用利息金额
+	private String freezeUseRechargeStr;//冻结使用充值金额
+	private String freezeUseReturnCapitalStr;//冻结使用回款本金金额
+	private String freezeUseAwardStr;//冻结使用奖励金额
+	private String freezeRpDynamicStr;//冻结钱袋子金额
+	private String collectionTotalStr;//待收总额
+	private String payMentDetails;//收支明细
+	
+	private String optMoneyTotalLogz;//操作金额
+	private String optBorrowMoneyTotalLogz;//借款人操作金额
+	private String freezeUseMoneyTotalLogz;//冻结金额
+	private String freezeBorrowerMoneyTotalLogz;//借款人冻结金额
+	private String usableMoneyTotalLogz;//可用金额
+	private String borrowerUsableMoneyLogz;//借款人可用金额
+	private String rpDynamicTotalLogz;//钱袋子总额
+	
+	private String remark;//备注
+	
+	
+
+	public String getFreezeUseMoneyTotalLogz() {
+		return freezeUseMoneyTotalLogz;
+	}
+
+
+
+	public void setFreezeUseMoneyTotalLogz(String freezeUseMoneyTotalLogz) {
+		this.freezeUseMoneyTotalLogz = freezeUseMoneyTotalLogz;
+	}
+
+
+
+	public String getFreezeBorrowerMoneyTotalLogz() {
+		return freezeBorrowerMoneyTotalLogz;
+	}
+
+
+
+	public void setFreezeBorrowerMoneyTotalLogz(String freezeBorrowerMoneyTotalLogz) {
+		this.freezeBorrowerMoneyTotalLogz = freezeBorrowerMoneyTotalLogz;
+	}
+
+
+
+	public String getUsableMoneyTotalLogz() {
+		return usableMoneyTotalLogz;
+	}
+
+
+
+	public void setUsableMoneyTotalLogz(String usableMoneyTotalLogz) {
+		this.usableMoneyTotalLogz = usableMoneyTotalLogz;
+	}
+
+
+
+	public String getBorrowerUsableMoneyLogz() {
+		return borrowerUsableMoneyLogz;
+	}
+
+
+
+	public void setBorrowerUsableMoneyLogz(String borrowerUsableMoneyLogz) {
+		this.borrowerUsableMoneyLogz = borrowerUsableMoneyLogz;
+	}
+
+
+
+	public String getRpDynamicTotalLogz() {
+		return rpDynamicTotalLogz;
+	}
+
+
+
+	public void setRpDynamicTotalLogz(String rpDynamicTotalLogz) {
+		this.rpDynamicTotalLogz = rpDynamicTotalLogz;
+	}
+
+
+
+	public static AccountLogModel instance(AccountLog accountLog) {
+		AccountLogModel accountLogModel = new AccountLogModel();
+		BeanUtils.copyProperties(accountLog, accountLogModel);
+		return accountLogModel;
+	}
+
+	public AccountLog prototype() {
+		AccountLog accountLog = new AccountLog();
+		BeanUtils.copyProperties(this, accountLog);
+		return accountLog;
+	}
+
+	/**
+	 * 获取（隐藏一定位数的）交易对方
+	 * 
+	 * @return
+	 */
+	public String getHideToUserName() {
+	    
+		return StringUtil.hideStr(toUserName, 1, toUserName.length()-1);
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+	
+	public int getSize() {
+		return size > 0 ? size : Page.ROWS;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getTypeName() {
+		return typeName;
+	}
+
+	public void setTypeName(String typeName) {
+		this.typeName = typeName;
+	}
+
+	public String getToUserName() {
+		return toUserName;
+	}
+
+	public void setToUserName(String toUserName) {
+		this.toUserName = toUserName;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getBorrowName() {
+		return borrowName;
+	}
+
+	public void setBorrowName(String borrowName) {
+		this.borrowName = borrowName;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	
+
+	public String getUserType() {
+		return userType;
+	}
+
+
+
+	public void setUserType(String userType) {
+		this.userType = userType;
+	}
+
+
+
+	public double getMoney() {
+		return money;
+	}
+	/*public void setMoney(double money) {
+		if(UserConstant.USER_SORT_BORROW.equals(this.getUser().getUserCache().getUserType())){
+		   this.money=this.getBorrowOptMoney();
+		}else{
+		   this.money=this.getInvestOptMoney();
+		}
+	}*/
+	//   jsd3.0—beta01-770 fgq 2015-03-06 15.06 start  jsd3.0—beta01-294 770 fgq 2015-03-06 15.16 end
+	public void setMoney(double money) {
+		if(UserConstant.USER_SORT_INVESTOR.equals(this.getUser().getUserCache().getUserType())){
+			this.money=this.getInvestOptMoney();
+		 
+		}else{
+			  this.money=this.getBorrowOptMoney();
+		}
+	}
+
+
+
+	public String getAccountTotalStr() {
+		return accountTotalStr;
+	}
+
+
+
+	public void setAccountTotalStr(String accountTotalStr) {
+		this.accountTotalStr = accountTotalStr;
+	}
+
+
+
+	public String getRechargeMoneyStr() {
+		return rechargeMoneyStr;
+	}
+
+
+
+	public void setRechargeMoneyStr(String rechargeMoneyStr) {
+		this.rechargeMoneyStr = rechargeMoneyStr;
+	}
+
+
+
+	public String getRechargeUsableStr() {
+		return rechargeUsableStr;
+	}
+
+
+
+	public void setRechargeUsableStr(String rechargeUsableStr) {
+		this.rechargeUsableStr = rechargeUsableStr;
+	}
+
+
+
+	public String getBorrowerRechargeMoneyStr() {
+		return borrowerRechargeMoneyStr;
+	}
+
+
+
+	public void setBorrowerRechargeMoneyStr(String borrowerRechargeMoneyStr) {
+		this.borrowerRechargeMoneyStr = borrowerRechargeMoneyStr;
+	}
+
+
+
+	public String getBorrowerEnterMoneyStr() {
+		return borrowerEnterMoneyStr;
+	}
+
+
+
+	public void setBorrowerEnterMoneyStr(String borrowerEnterMoneyStr) {
+		this.borrowerEnterMoneyStr = borrowerEnterMoneyStr;
+	}
+
+
+
+	public String getBorrowerEnterUsableStr() {
+		return borrowerEnterUsableStr;
+	}
+
+
+
+	public void setBorrowerEnterUsableStr(String borrowerEnterUsableStr) {
+		this.borrowerEnterUsableStr = borrowerEnterUsableStr;
+	}
+
+
+
+	public String getBorrowerFreezeUseRechargeStr() {
+		return borrowerFreezeUseRechargeStr;
+	}
+
+
+
+	public void setBorrowerFreezeUseRechargeStr(String borrowerFreezeUseRechargeStr) {
+		this.borrowerFreezeUseRechargeStr = borrowerFreezeUseRechargeStr;
+	}
+
+
+
+	public String getBorrowerFreezeUseEnterStr() {
+		return borrowerFreezeUseEnterStr;
+	}
+
+
+
+	public void setBorrowerFreezeUseEnterStr(String borrowerFreezeUseEnterStr) {
+		this.borrowerFreezeUseEnterStr = borrowerFreezeUseEnterStr;
+	}
+
+
+
+	public String getRepaymentTotalStr() {
+		return repaymentTotalStr;
+	}
+
+
+
+	public void setRepaymentTotalStr(String repaymentTotalStr) {
+		this.repaymentTotalStr = repaymentTotalStr;
+	}
+
+
+
+	public String getAwardMoneyStr() {
+		return awardMoneyStr;
+	}
+
+
+
+	public void setAwardMoneyStr(String awardMoneyStr) {
+		this.awardMoneyStr = awardMoneyStr;
+	}
+
+
+
+	public String getRpDynamicMoneyStr() {
+		return rpDynamicMoneyStr;
+	}
+
+
+
+	public void setRpDynamicMoneyStr(String rpDynamicMoneyStr) {
+		this.rpDynamicMoneyStr = rpDynamicMoneyStr;
+	}
+
+
+
+	public String getInterestUsableStr() {
+		return interestUsableStr;
+	}
+
+
+
+	public void setInterestUsableStr(String interestUsableStr) {
+		this.interestUsableStr = interestUsableStr;
+	}
+
+
+
+	public String getAwardUsableStr() {
+		return awardUsableStr;
+	}
+
+
+
+	public void setAwardUsableStr(String awardUsableStr) {
+		this.awardUsableStr = awardUsableStr;
+	}
+
+
+
+	public String getRpDynamicUsableStr() {
+		return rpDynamicUsableStr;
+	}
+
+
+
+	public void setRpDynamicUsableStr(String rpDynamicUsableStr) {
+		this.rpDynamicUsableStr = rpDynamicUsableStr;
+	}
+
+
+
+	public String getFreezeUseInterestStr() {
+		return freezeUseInterestStr;
+	}
+
+
+
+	public void setFreezeUseInterestStr(String freezeUseInterestStr) {
+		this.freezeUseInterestStr = freezeUseInterestStr;
+	}
+
+
+
+	public String getFreezeUseRechargeStr() {
+		return freezeUseRechargeStr;
+	}
+
+
+
+	public void setFreezeUseRechargeStr(String freezeUseRechargeStr) {
+		this.freezeUseRechargeStr = freezeUseRechargeStr;
+	}
+
+
+
+	public String getFreezeUseReturnCapitalStr() {
+		return freezeUseReturnCapitalStr;
+	}
+
+
+
+	public void setFreezeUseReturnCapitalStr(String freezeUseReturnCapitalStr) {
+		this.freezeUseReturnCapitalStr = freezeUseReturnCapitalStr;
+	}
+
+
+
+	public String getFreezeUseAwardStr() {
+		return freezeUseAwardStr;
+	}
+
+
+
+	public void setFreezeUseAwardStr(String freezeUseAwardStr) {
+		this.freezeUseAwardStr = freezeUseAwardStr;
+	}
+
+
+
+	public String getCollectionTotalStr() {
+		return collectionTotalStr;
+	}
+
+
+
+	public void setCollectionTotalStr(String collectionTotalStr) {
+		this.collectionTotalStr = collectionTotalStr;
+	}
+
+
+
+	public String getReturnCapitalUsableStr() {
+		return returnCapitalUsableStr;
+	}
+
+
+
+	public void setReturnCapitalUsableStr(String returnCapitalUsableStr) {
+		this.returnCapitalUsableStr = returnCapitalUsableStr;
+	}
+
+
+
+	public String getPayMentDetails() {
+		return payMentDetails;
+	}
+
+
+
+	public void setPayMentDetails(String payMentDetails) {
+		this.payMentDetails = payMentDetails;
+	}
+
+
+
+	public String getOptMoneyTotalLogz() {
+		return optMoneyTotalLogz;
+	}
+
+
+
+	public void setOptMoneyTotalLogz(String optMoneyTotalLogz) {
+		this.optMoneyTotalLogz = optMoneyTotalLogz;
+	}
+
+
+
+	public String getOptBorrowMoneyTotalLogz() {
+		return optBorrowMoneyTotalLogz;
+	}
+
+
+
+	public void setOptBorrowMoneyTotalLogz(String optBorrowMoneyTotalLogz) {
+		this.optBorrowMoneyTotalLogz = optBorrowMoneyTotalLogz;
+	}
+
+
+
+	public int getId() {
+		return id;
+	}
+
+
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+
+
+	public long getUserId() {
+		return userId;
+	}
+
+
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+
+
+	public String getRemark() {
+		return remark;
+	}
+
+
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+
+
+	public String getInterestMoneyStr() {
+		return interestMoneyStr;
+	}
+
+
+
+	public void setInterestMoneyStr(String interestMoneyStr) {
+		this.interestMoneyStr = interestMoneyStr;
+	}
+
+
+
+	public String getReturnCapitalMoneyStr() {
+		return returnCapitalMoneyStr;
+	}
+
+
+
+	public void setReturnCapitalMoneyStr(String returnCapitalMoneyStr) {
+		this.returnCapitalMoneyStr = returnCapitalMoneyStr;
+	}
+
+
+
+	public String getFreezeRpDynamicStr() {
+		return freezeRpDynamicStr;
+	}
+
+
+
+	public void setFreezeRpDynamicStr(String freezeRpDynamicStr) {
+		this.freezeRpDynamicStr = freezeRpDynamicStr;
+	}
+	
+	
+
+	
+	
+	
+	
+
+}

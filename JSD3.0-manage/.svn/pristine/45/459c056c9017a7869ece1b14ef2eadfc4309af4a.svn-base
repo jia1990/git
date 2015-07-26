@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>线下扣款管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = true;
+</script>
+<script type="text/javascript">
+	$.canGrant = true;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  700;
+	var winHeight = 450;
+	var addTitle = "添加线下扣款";
+	var addUrl =  "/modules/account/accountBack/accountBackAddPage.html";
+	
+	var editTitle="扣款审核";
+	var editUrl="/modules/account/accountBack/accountBackEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',700,480,'"+editUrl+"','确定'";
+	
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'accountBackList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'desc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width: 50,fixed: true,sortable:true},
+			{ field: 'tradeNo', title: '流水号', width: 150},
+			{ field: 'userName', title: '用户名', width: 60},
+			{ field: 'realName', title: '真实姓名', width: 60},
+			{ field: 'type', title: '类型', width: 100,formatter:function(value,row,index){
+				if(value==2){
+					return "账户扣款";
+				}
+			}},
+			{ field: 'money', title: '扣款金额', width: 60,formatter:function(value,row,index){
+				return value+"元";
+			}},
+			{field:'remark',title:'备注',width:150},
+			{ field: 'addTime', title: '扣款时间', width: 150,formatter:function(value,row,index){
+				return getLocalTime(value,4);
+			}},
+			{ field: 'status', title: '状态', width: 100,formatter:function(value, row, index){
+				if(value==1){
+					return '扣款成功';
+				}else if(value==2){
+					return '扣款失败';
+				}else{
+					return '<font color="red">待审核</font>';
+				}
+			}},
+			{field:'verifyUserName', title: '审核人', width: 100},
+			{field:'action',title : '操作',width :70,fixed: true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if (row.status==0) {
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="扣款审核"/>', row.id, '${theme_dir}/css/images/extjs_icons/key.png');
+					}
+					str += '&nbsp;';
+					return str;
+				}
+			} 
+			]],
+			toolbar : '#toolbar',
+			onRowContextMenu : function(e, rowIndex, rowData) {
+				e.preventDefault();
+				$(this).datagrid('unselectAll').datagrid('uncheckAll');
+				$(this).datagrid('selectRow', rowIndex);
+				$('#menu').menu('show', {
+					left : e.pageX,
+					top : e.pageY
+				});
+			}
+// 			loadfilter: function(data){
+// 				$.each(data.rows,function(index, row){
+// 					if(row.username){
+// 						row.username = row.user.username;
+// 					}
+// 				}); 
+// 				return data;
+// 			}
+		});	
+	});
+		
+	function exportExcel(){
+		var url = '/modules/account/accountBack/exportExcelAccountBack.html?type=export';
+		var sou = "";
+        var userName = $("#userName").val();
+        if (userName != ""){
+            sou += "&userName=" + userName;
+        }
+        var realName = $("#realName").val();
+        if (realName != ""){
+            sou += "&realName=" + realName;
+        }
+        var status = $("#status").val();
+        if (status != ""){
+            sou += "&status=" + status;
+        }
+        sou += "&order=desc";
+        if (sou != ""){
+        	window.location.href = url + sou;
+        }else{
+        	window.location.href = url;
+        }
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		 <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+					<li>用户名：<input type="text" name="userName" autocomplete="off"/></li>
+					<li>真实姓名：<input type="text" name="realName" autocomplete="off"/></li>
+					<li>状态：
+						<select name="status" id="status" class="type">
+							<option value=0 selected="selected">待审核</option>
+							<option value=1>扣款成功</option>
+							<option value=2>扣款失败</option>
+						</select>
+					</li>
+					<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">		
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加线下扣款</a>
+			<a href="javascript:void(0);" onclick="exportExcel();" class="easyui-linkbutton">导出Excel</a>
+	</div>
+	<div id="menu" class="easyui-menu" style="width: 120px; display: none;">		
+		<div onclick="$.fn.dataGridOptions.addFun($('.datagrid-row-selected').find('.parameters').val(),addTitle,winWidth,winHeight,addUrl);" data-options="iconCls:'pencil_add'">添加线下扣款</div> 		
+	</div>
+</body>
+</html>

@@ -1,0 +1,303 @@
+package com.rongdu.p2psys.web.account;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.domain.AccountBank;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.account.model.AccountBankModel;
+import com.rongdu.p2psys.account.service.AccountBankService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述:用户银行卡绑定、解除
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月16日
+ */
+public class BankAction extends BaseAction implements ModelDriven<AccountBank> {
+	@Resource
+	private AccountBankService accountBankService;
+	@Resource
+	private DictService dictService;
+	private AccountBank model = new AccountBank();
+
+	public BankAction() {
+		// TODO Auto-generated constructor stub
+	}
+
+	@Override
+	public AccountBank getModel() {
+		return model;
+	}
+
+	/**
+	 * 投资人与担保公司
+	 * 李建云 我的银行卡
+	 */
+	@Action(value="/member/cash/bank",results = { 
+			@Result(name = "bank", type = "ftl", location = "/member/cash/bank.html"),
+			@Result(name = "assure_bank", type = "ftl", location = "/member_guarantee/cash/bank.html")
+			})
+	public String bank() throws Exception {
+		User user = getSessionUser();
+		
+		HttpServletRequest request = this.request;
+		String nid = "account_bank";
+		List<Dict> dictList = dictService.list(nid);
+		request.setAttribute("dictList", dictList);
+		
+		List<AccountBank> bankList = accountBankService.list(user.getUserId());
+		request.setAttribute("bankList", bankList);
+		
+		if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			
+		return "assure_bank";
+		}
+		return "bank";
+	}
+
+	/**
+	 * 李建云 跳转我的银行卡新增页面
+	 * 
+	 * @return
+	 */
+	@Action(value="/member/cash/addBankPage",results = { 
+			@Result(name = "addBank", type = "ftl", location = "/member/cash/addBank.html"),
+			@Result(name = "assure_addBank", type = "ftl", location = "/member_guarantee/cash/addBank.html"),
+			@Result(name = "member_merchant_addBank", type = "ftl", location = "/member_merchant/cash/addBank.html")
+			})
+	public String addBankPage() throws Exception {
+
+		HttpServletRequest request = this.request;
+		String nid = "account_bank";
+		List<Dict> dictList = dictService.list(nid);
+		request.setAttribute("dictList", dictList);
+		saveToken("addBankAddToken");
+		if(UserConstant.USER_SORT_ASSURE.equals(this.getSessionUser().getUserCache().getUserType())){
+			return "assure_addBank";
+		}else if(UserConstant.USER_SORT_MERCHANT.equals(this.getSessionUser().getUserCache().getUserType())){
+			return "member_merchant_addBank";
+		}
+		return "addBank";
+	}
+
+	/**
+	 * 添加银行卡 李建云
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	@Action("/member/cash/addBank")
+	public void addBank() throws Exception {
+		User user = getSessionUser();
+		AccountBank bank = (AccountBank) paramModel(AccountBank.class);
+		AccountBankModel abModel = (AccountBankModel)paramModel(AccountBankModel.class);
+		abModel.findAddBankValidMobile(NoticeConstant.GETCODE_ADDBANK,user);
+		
+		bank.setUser(user);
+		int countTotal = accountBankService.count(user.getUserId());
+		int defaultTotal = Global.getInt("bank_num");
+	    validAddBank(countTotal, defaultTotal, bank);
+	    checkToken("addBankAddToken");
+		accountBankService.save(bank);
+		Global.setTransfer("user", user);
+		BaseMsg msg = new BaseMsg(NoticeConstant.BANK_BOUND_SUC);
+		msg.doEvent();
+		printSuccess();
+	}
+	
+
+	/**
+	 * 删除银行卡
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	@Action("/member/cash/disableBank")
+	public void delBank() throws Exception {
+		User user = getSessionUser();
+		//JSDP-56  fgq 删除银行卡为了安全起见，只能删除该用户所有的银行卡
+		List<AccountBank> list = accountBankService.list(user.getUserId());
+		for(int i=0;i<list.size();i++){
+			if(list.get(i).getId()==paramLong("id")){
+				break;
+			}
+			while(i==list.size()-1){
+				throw  new UserException("删除银行卡有误，请稍后再试",1);
+			}
+		}
+		//JSDP-56  fgq end 
+		accountBankService.disable(user.getUserId(), paramLong("id"));
+		printSuccess();
+	}
+	/**
+	 * 添加银行卡校验
+	 * 
+	 * @param countTotal
+	 *            银行卡总数
+	 * @param defaultTotal
+	 *            系统设置的可添加银行卡最大数
+	 * @param bank
+	 *            个人银行账户实体类
+	 */
+	private void validAddBank(int countTotal, int defaultTotal, AccountBank bank) {
+		if (countTotal >= defaultTotal) {
+			throw new AccountException("添加银行不能超过设置的最大数" + defaultTotal + "个！",
+					1);
+		}
+		if (StringUtil.isBlank(bank.getBranch())) {
+			throw new AccountException("开户行名称不能为空！", 1);
+		}
+		if (StringUtil.isBlank(bank.getBankNo())) {
+			throw new AccountException("银行账号不能为空！", 1);
+		}
+		
+		if (StringUtil.isBlank(bank.getBank())) {
+			throw new AccountException("银行名称不能为空！", 1);
+		}
+
+	}
+	/**
+	 *@author 李建云
+	 *@createTime 20141226
+	 *银行卡绑定校验 
+	 * 
+	 * */
+	@Action("/member/cash/bankStatus")
+	public void bankStatus() throws Exception {
+	
+		List<AccountBank> bankList=	accountBankService.list(this.getSessionUserId());
+	
+		 Map<String, Object> data = new HashMap<String, Object>();
+		
+		if(bankList!= null && bankList.size()>0){ 
+			data.put("result", true);
+			data.put("msg", "已绑定银行卡");
+		}else{
+			data.put("result", false);
+			data.put("msg", "未绑定银行卡");
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+	
+/******************************************** 借款人银行卡绑定 ***************************************************/
+
+	/**
+	 * 
+	 * 李建云 我的银行卡
+	 */
+	@Action(value="/member_borrow/cash/bank",results = {
+			@Result(name = "bank", type = "ftl", location = "/member_borrow/cash/bank.html"),
+			@Result(name = "member_merchant_bank", type = "ftl",location ="/member_merchant/cash/bank.html")
+	})
+	public String borrowBank() throws Exception {
+		User user = getSessionUser();
+		
+		HttpServletRequest request = this.request;
+		String nid = "account_bank";
+		List<Dict> dictList = dictService.list(nid);
+		request.setAttribute("dictList", dictList);
+		
+		List<AccountBank> bankList = accountBankService.list(user.getUserId());
+		request.setAttribute("bankList", bankList);
+		if(UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())){
+			return "member_merchant_bank";
+		}
+		return "bank";
+	}
+
+	/**
+	 * 李建云 跳转我的银行卡新增页面
+	 * 
+	 * @return
+	 */
+	@Action("/member_borrow/cash/addBankPage")
+	public String borrowAddBankPage() throws Exception {
+
+		HttpServletRequest request = this.request;
+		String nid = "account_bank";
+		List<Dict> dictList = dictService.list(nid);
+		request.setAttribute("dictList", dictList);
+		saveToken("addBankAddToken");
+		return "addBank";
+	}
+
+	/**
+	 * 添加银行卡 李建云
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	@Action("/member_borrow/cash/addBank")
+	public void borrowAddBank() throws Exception {
+		User user = getSessionUser();
+		AccountBank bank = (AccountBank) paramModel(AccountBank.class);
+		AccountBankModel abModel = (AccountBankModel)paramModel(AccountBankModel.class);
+		abModel.findAddBankValidMobile(NoticeConstant.GETCODE_ADDBANK,user);
+		bank.setUser(user);
+		int countTotal = accountBankService.count(user.getUserId());
+		int defaultTotal = Global.getInt("bank_num");
+	    validAddBank(countTotal, defaultTotal, bank);
+	    checkToken("addBankAddToken");
+		accountBankService.save(bank);
+		printSuccess();
+	}
+
+	/**
+	 * 删除银行卡
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	@Action("/member_borrow/cash/disableBank")
+	public void BorrowDelBank() throws Exception {
+		User user = getSessionUser();
+		accountBankService.disable(user.getUserId(), paramLong("id"));
+		printSuccess();
+	}
+	/**
+	 *@author 李建云
+	 *@createTime 20141226
+	 *银行卡绑定校验 
+	 * 
+	 * */
+	@Action("/member_borrow/cash/bankStatus")
+	public void bankStatusBorrow() throws Exception {
+		List<AccountBank> bankList=	accountBankService.list(this.getSessionUserId());
+		Map<String, Object> data = new HashMap<String, Object>();
+		if(bankList!= null && bankList.size()>0){ 
+			data.put("result", true);
+			data.put("msg", "已绑定银行卡");
+		}else{
+			data.put("result", false);
+			data.put("msg", "未绑定银行卡");
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	
+}

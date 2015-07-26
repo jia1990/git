@@ -1,0 +1,151 @@
+package com.ddtkj.p2psys.account.dao;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述:用户提现信息数据库操作接口
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月17日
+ */
+public interface AccountDrawCashDao extends BaseDao<AccountDraw> {
+
+	/**
+	 * 保存取现申请信息
+	 * 
+	 * @param draw
+	 *            提现基本信息、
+	 * @return AccountDraw 返回操作成功的信息实体
+	 * */
+	public AccountDraw saveAccountDraw(AccountDraw draw);
+
+	/**
+	 * 更新提现审核信息
+	 * 
+	 * @param draw
+	 *            修改的提现信息实体
+	 * */
+	public void updAccountDrawCheckStatus(AccountDraw draw);
+
+	/**
+	 * 根据用户ID、交易流水号、审核状态查询指定的提现记录
+	 * 
+	 * @param userID
+	 *            用戶ID
+	 * @param tradeID
+	 *            交易订单ID
+	 * @return AccountDraw 根据条件一条提现记录
+	 * */
+	public AccountDraw queryOne(long userID, String tradeID);
+   /**
+	 * 依据记录标识获取提现记录
+	 * 
+	 * @param id
+	
+	 * @return AccountDraw 根据标识获取记录
+	 * */
+		public AccountDraw  queryOneByID();
+	/**
+	 * 查询用户的所有提现信息
+	 * 
+	 * @param userID
+	 *            用戶ID
+	 * @param checkStatus
+	 *            审核状态
+	 * @return List<AccountDraw> 根据条件返回多条提现记录
+	 * */
+	public List<AccountDraw> queryList(long userID, String checkStatus);
+	
+	/**
+	 * 分页查询用户的所有提现信息
+	 * */
+	
+	PageDataList<AccountDrawModel> queryListByPage(AccountDrawModel model, int pageNumber, int pageSize);
+	/**
+	 * 提现交易状态修改
+	 * @param id
+	 * @param status  修改后状态
+	 * @param preStatus 修改前状态
+	 */
+	public void updateStatus(int id, String status, String preStatus);
+	
+	
+	/**
+     * @author 李建云
+     * 投资人累计提现金额总和
+     * 
+     * @return
+     */
+    double allDrawCashMomeny(long userId);
+    
+    
+    /**
+     * @author 李建云
+     * 投资人截止某个日期累计提现金额总和
+     * 
+     * @return
+     */
+    double allDrawCashMomenyByUserIdAndEndTime(Date date ,long userId);
+    
+	
+	/**
+	 * @author 李建云
+	 * 今日提现
+	 * @param userId
+	 * @return
+	 */
+	public double drawCashMomenyToday(long userId);
+	
+	/**
+	 *@author 李建云 
+	 * 本月累计提现
+	 * */
+	public double drawCashMoneyMonth(long userId,Date startTime,Date endTime);
+	
+	/**
+	 * 后台查询提现总金额
+	 * @return
+	 * @author 孙晓勇
+	 */
+	public double accountDrawCashTotal();
+	
+	/**
+	 * 对提现汇总 
+	 * @param draw
+	 * @return
+	 */
+	public String drawCashTotal(AccountDrawModel draw);
+	
+	/**
+     * 个人提现金额汇总
+     * @param userId
+     * @param model
+     * @return
+     */
+    String drawStatusTotal(long userId, AccountDrawModel model);
+	
+    /**
+	 * 使用sql导出excel提现查询
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 xingjia 2015-05-15 start
+	List excelListDraw(AccountDrawModel model);
+	//JSDP-116 xingjia 2015-05-15 start	
+	// JSDP-BUG99 20150527 sxy start
+	/**
+	 * 统计明细——提现列表
+	 * 
+	 * @param borrowModel
+	 * @return
+	 */
+	PageDataList<AccountDraw> drawMoneyStatisticsListForSQL(AccountDrawModel model, int page, int size);
+	// JSDP-BUG99 20150527 sxy start
+
+}

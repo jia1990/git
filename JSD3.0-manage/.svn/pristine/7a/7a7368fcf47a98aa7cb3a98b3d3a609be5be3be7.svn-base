@@ -1,0 +1,912 @@
+
+package com.ddtkj.manage.action.credit;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.model.CreditAssignmentModel;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.disruptor.DisruptorUtils;
+import com.rongdu.p2psys.core.domain.OperationLog;
+import com.rongdu.p2psys.core.rule.CreditSwingOutRuleCheck;
+import com.rongdu.p2psys.core.service.OperationLogService;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 债权转让action
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-1-21   
+ */
+public class ManageCreditAssignmentAction extends BaseAction implements ModelDriven<CreditAssignmentModel> {
+	
+	@Resource
+	private CreditAssignmentService creditAssignmentService;
+	@Resource
+	private OperationLogService operationLogService;
+	@Resource
+	private BorrowCollectionService collectionService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	
+	private Map<String, Object> data;
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	private Map<String, Object> dataMsg = new HashMap<String, Object>();
+
+	private CreditAssignmentModel model = new CreditAssignmentModel();
+	
+	public CreditAssignmentModel getModel() {
+		return model;
+	}
+	
+	/**
+	 * 所有债权页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caManage")
+	public String caManage() throws Exception {
+			
+		return "creditManage";
+	}
+	
+	/**
+	 * 所有债权列表
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caList")
+	public void caList() throws Exception {
+		PageDataList<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model);
+		map.put("rows", list.getList());
+		map.put("total", list.getPage().getTotal());
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	
+	/**
+	 * 债权转让报表导出
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/exportCaList")
+	public void exportCaList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("status");
+//		// 第一页开始
+//		model.setPage(1);
+//		// 最多出99999999条记录
+//		model.setSize(99999999);
+//		// 记录取得
+//		List<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model).getList();
+//		List<CreditAssignmentModel> newList = new ArrayList<CreditAssignmentModel>();		
+//		for(int i=0; i<list.size(); i++){
+//			CreditAssignmentModel caModel = list.get(i);
+//			caModel.setStatus(CreditAssignmentModel.convertCaStatus(caModel.getStatus()));
+//			caModel.setCaLevel(CreditAssignmentModel.convertCaLevel(caModel.getLevel()));
+//			caModel.setCaBreachAccount(CreditAssignmentModel.convertCaBreachAccount(caModel.getIsBreach(), caModel.getBreachAccount()));
+//			caModel.setCaScalesExp(CreditAssignmentModel.convertCaScales(caModel.getCaScales()));
+//			newList.add(caModel);
+//		}
+		String title = "";
+		if (CreditAssignment.CREDIT_ALL.equals(status)) {
+			title = "所有债权Excel表";
+		}else if (CreditAssignment.CREDIT_PUBLISH.equals(status)) {
+			title = "发布的债权Excel表";
+		}else if (CreditAssignment.CREDIT_CHECK1_SUCCESS.equals(status)) {
+			title = "初审通过的债权Excel表";
+		}else if (CreditAssignment.CREDIT_CHECK2_SUCCESS.equals(status)){
+			title = "复审通过的债权Excel表";
+		}
+		String[] hearders = new String[] {"编号","出售债权用户","债权名","债权转让类型","债权等级","债权预期价值","债权发布价格","债权转让费率","债权转让份数","已售金额","已售份数","债权状态","进度","是否违约提前转出","债权转让截止时间","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","sellUserName","caName","caTypeExp","caLevel","creditValue","creditPrice","creditDis","creditCopies","soldAccount","sellCopies","status","caScalesExp","caBreachAccount","buyEndTime","addTime","addIp"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<CreditAssignmentModel> tdList = new ArrayList<CreditAssignmentModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				CreditAssignmentModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = creditAssignmentService.excelCreditList(model);	
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	}
+	
+	/**
+	 * 转让的待收信息页面
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/viewCollectionPage")
+	public String viewCollectionPage() throws Exception {
+		
+		return "caCollectionViewPage";
+	}
+	/**
+	 * 债权转让补单页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/ReOrder")
+	public String ReOrder() throws Exception {
+		return "reorderManage";
+	}
+	@Action("/modules/creditassignment/creditlog/goReOrder")
+	public void goReOrder() throws Exception {
+		if(this.creditAssignmentService.reOrder(paramInt("caid"),paramInt("clid"))){
+			map.put("status",true);
+			map.put("total","成功");
+			printJson(getStringOfJpaObj(map));
+		}else{
+			printJson(getStringOfJpaObj(map));
+		}
+	}
+	/**
+	 * 债权转让初审初始页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caVerifyManage")
+	public String caVerifyManage() throws Exception {
+			
+		return "caVerifyManage";
+	}
+	
+	/**
+	 * 债权转让初审列表
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caVerifyList")
+	public void caVerifyList() throws Exception {
+		model.setStatus(CreditAssignment.CREDIT_PUBLISH);
+		PageDataList<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model);
+		map.put("rows", list.getList());
+		map.put("total", list.getPage().getTotal());
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 债权转让初审显示页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caVerifyViewPage")
+	public String caVerifyViewPage() throws Exception {
+		long id = paramLong("id");
+		saveToken("caVerifyToken");
+		CreditAssignment ca = creditAssignmentService.getEntityById(id);
+		String userName = ca.getUser().getUserName();
+		String caName = ca.getBorrow().getName();
+		request.setAttribute("ca", ca);
+		request.setAttribute("sellUserName", userName);
+		request.setAttribute("caName", caName);
+		return "caVerifyViewPage";
+	}
+	
+	/**
+	 * 债权转让初审
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caVerify")
+	public void caVerify() throws Exception {
+		checkToken("caVerifyToken");
+		String actionType = paramString("actionType");
+		long caId = paramLong("id");
+		CreditAssignment credit = creditAssignmentService.getEntityById(caId);
+		try {
+			credit = initCredit(actionType, credit);
+			dataMsg = checkVerifyCa(credit);
+			creditAssignmentService.update(credit);
+			//债权初审消息通知和初审逻辑处理
+			sendCreditVerifyMsg(credit);
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		} catch (Exception e) {
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("债权初审失败，异常信息："+e.getMessage()+e.getCause(), "债权初审失败异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CREDIT, ErrorLogConstant.CODE_CREDIT_CHECKED_SYS, credit.getUser(), ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT, caId, 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+		OperationLog log = new OperationLog(null, getOperator(), "credit_verify");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对此债权进行初审(债权转让ID："+caId+",债权名："+credit.getBorrow().getName()+")");
+		operationLogService.save(log);
+		printJson(getStringOfJpaObj(dataMsg));
+	}
+	
+	/**
+	 * 债权转让初审数据校验
+	 * @param  caId
+	 * @return Map<String,Object> 
+	 */ 
+	private Map<String, Object> checkVerifyCa(CreditAssignment ca){
+		String message = "初审操作成功";													
+		if(null == ca){
+			message = "要初审的债权转让不存在";
+		}	
+		if(null != ca && CreditAssignment.CREDIT_PUBLISH.equals(ca.getStatus())){
+			message = "只能初审状态为初始状态的债权转让";
+		}
+		if(StringUtil.isBlank(ca.getVerifyRemark())){
+			message = "债权转让的审核备注不能为空";
+		}
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put("msg", message);
+		if(!"初审操作成功".equals(message)){
+			result.put("result", false);
+		}else{
+			result.put("result", true);
+		}
+		return result;
+	}
+	
+	/**
+	 * 初始化债权信息
+	 * @param  actionType
+	 * @return CreditAssignment 
+	 * @throws Exception   
+	 */ 
+	private CreditAssignment initCredit(String actionType, CreditAssignment ca) throws Exception {
+		String verifyRemark = paramString("verifyRemark");
+		String fullVerifyRemark = paramString("fullVerifyRemark");
+		String status = paramString("status");
+		int level = paramInt("level");
+		if(ca != null) {
+			if("caVerify".equals(actionType)){
+				ca.setStatus(status);
+				ca.setLevel(level);
+				ca.setVerifyTime(new Date());
+				ca.setOperator(getOperator());
+				ca.setVerifyRemark(verifyRemark);
+			}else{
+				ca.setStatus(status);
+				ca.setFullVerifyTime(new Date());
+				ca.setFullOperator(getOperator());
+				ca.setFullVerifyRemark(fullVerifyRemark);
+			}
+		}
+		return ca;
+	}
+	
+	
+	/**
+	 * 发送债权审核结果信息和初审逻辑处理
+	 * @param  status  
+	 * @param  CreditAssignment  
+	 * @throws Exception   
+	 */ 
+	private void sendCreditVerifyMsg(CreditAssignment ca){
+		BaseMsg msg = null;
+		if(CreditAssignment.CREDIT_CHECK1_SUCCESS.equals(ca.getStatus())){
+			msg = new BaseMsg(NoticeConstant.CREDIT_VERIFY_SUCCESS);
+		}else if(CreditAssignment.CREDIT_CHECK1_FAIL.equals(ca.getStatus())){
+			BorrowTender tender = ca.getTender();
+			tender.setIscredit(BorrowTender.CREDIT_OUT_NO);
+			borrowTenderService.update(tender);
+			msg = new BaseMsg(NoticeConstant.CREDIT_VERIFY_FAIL);
+		}
+		Global.setTransfer("user", ca.getUser());
+		Global.setTransfer("addTime", ca.getAddTime());
+		Global.setTransfer("caName", ca.getBorrow().getName());
+		msg.doEvent();
+	}
+	
+	/**
+	 * 债权转让初审报表导出
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/exportCaVerifyList")
+	public void exportCaVerifyList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		// 第一页开始
+//		model.setPage(1);
+		// 最多出99999999条记录
+//		model.setSize(99999999);
+		// 记录取得
+		model.setStatus(CreditAssignment.CREDIT_PUBLISH);
+//		List<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model).getList();
+//		List<CreditAssignmentModel> newList = new ArrayList<CreditAssignmentModel>();		
+//		for(int i=0; i<list.size(); i++){
+//			CreditAssignmentModel caModel = list.get(i);
+//			caModel.setStatus(CreditAssignmentModel.convertCaStatus(caModel.getStatus()));
+//			caModel.setCaTypeExp(CreditAssignmentModel.convertCaType(caModel.getCaType()));
+//			caModel.setCaBreachAccount(CreditAssignmentModel.convertCaBreachAccount(caModel.getIsBreach(), caModel.getBreachAccount()));
+//			newList.add(caModel);
+//		}
+		String title = "债权初审Excel表";
+		String[] hearders = new String[] {"编号","出售债权用户","债权名","债权转让类型","债权等级","债权预期价值","债权发布价格","债权转让费率","债权转让份数","已售金额","已售份数","债权状态","进度","是否违约提前转出","债权转让截止时间","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","sellUserName","caName","caTypeExp","caLevel","creditValue","creditPrice","creditDis","creditCopies","soldAccount","sellCopies","status","caScalesExp","caBreachAccount","buyEndTime","addTime","addIp"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<CreditAssignmentModel> tdList = new ArrayList<CreditAssignmentModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				CreditAssignmentModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = creditAssignmentService.excelCreditList(model);	
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+		
+	}
+	//JSDP-35 gjh 2015-4-30 start
+	/**
+	 * 债权转让撤销申请初始页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caReCallVerifyManage")
+	public String caReCallVerifyManage() throws Exception {
+		
+		return "caReCallVerifyManage";
+	}
+	
+	/**
+	 * 债权转让撤销申请列表
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caReCallVerifyList")
+	public void caReCallVerifyList() throws Exception {
+		model.setStatus(CreditAssignment.CREDIT_RECALL_CHECK);
+		//model.setCaScales(100);
+		model.setBorrowType(Borrow.TYPE_MORTGAGE);
+		PageDataList<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model);
+		map.put("rows", list.getList());
+		map.put("total", list.getPage().getTotal());
+		map.put("result", true);
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 债权转让撤销显示页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caReCallVerifyViewPage")
+	public String caReCallVerifyViewPage() throws Exception {	
+		long id = paramLong("id");
+		saveToken("caReCallVerifyToken");
+		CreditAssignment ca = creditAssignmentService.getEntityById(id);
+		String userName = ca.getUser().getUserName();
+		String caName = ca.getBorrow().getName();
+		request.setAttribute("ca", ca);
+		request.setAttribute("sellUserName", userName);
+		request.setAttribute("caName", caName);
+		request.setAttribute("verifyUserName", getOperatorUserName());
+		return "caReCallVerifyViewPage";
+	}
+	
+	
+	/**
+	 * 债权转让撤销
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caReCallVerify")
+	public void caReCallVerify() throws Exception {	
+		String actionType = paramString("actionType");
+		long caId = paramLong("id");
+		CreditAssignment credit = creditAssignmentService.getEntityById(caId);
+		credit = initCredit(actionType, credit);
+		dataMsg = checkFullVerifyCa(credit);
+		checkToken("caReCallVerifyToken");											
+		if(credit.getStatus().equals(CreditAssignment.CREDIT_CHECK2_SUCCESS)){//撤销审核通过操作
+			//撤销复审逻辑
+			String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+			DisruptorUtils.creditReCall(credit, resultFlag);
+		}else{//撤销审核不通过操作    修改状态为初审成功
+			credit.setStatus(CreditAssignment.CREDIT_CHECK1_SUCCESS);
+			creditAssignmentService.update(credit);
+		}
+		OperationLog log = new OperationLog(null, getOperator(), "credit_verify");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对此债权进行撤销申请(债权转让ID："+caId+",债权名："+credit.getBorrow().getName()+")");
+		operationLogService.save(log);
+		printJson(getStringOfJpaObj(dataMsg));
+	}
+	
+	/**
+	 * 债权转让撤销导出
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/exportCaReCallVerifyList")
+	public void exportCaReCallVerifyList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		// 第一页开始
+//		model.setPage(1);
+		// 最多出99999999条记录
+//		model.setSize(99999999);
+		// 记录取得
+		model.setStatus(CreditAssignment.CREDIT_RECALL_CHECK);
+		model.setCaScales(100);
+		model.setBorrowType(Borrow.TYPE_MORTGAGE);
+//		List<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model).getList();
+//		List<CreditAssignmentModel> newList = new ArrayList<CreditAssignmentModel>();		
+//		for(int i=0; i<list.size(); i++){
+//			CreditAssignmentModel caModel = list.get(i);
+//			caModel.setStatus(CreditAssignmentModel.convertCaStatus(caModel.getStatus()));
+//			caModel.setCaLevel(CreditAssignmentModel.convertCaLevel(caModel.getLevel()));
+//			caModel.setCaTypeExp(CreditAssignmentModel.convertCaType(caModel.getCaType()));
+//			caModel.setCaBreachAccount(CreditAssignmentModel.convertCaBreachAccount(caModel.getIsBreach(), caModel.getBreachAccount()));
+//			newList.add(caModel);
+//		}
+		String title = "债权撤销申请Excel表";
+		String[] hearders = new String[] {"编号","出售债权用户","债权名","债权转让类型","债权等级","债权预期价值","债权发布价格","债权转让费率","债权转让份数","已售金额","已售份数","债权状态","进度","是否违约提前转出","债权转让截止时间","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","sellUserName","caName","caTypeExp","caLevel","creditValue","creditPrice","creditDis","creditCopies","soldAccount","sellCopies","status","caScalesExp","caBreachAccount","buyEndTime","addTime","addIp"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<CreditAssignmentModel> tdList = new ArrayList<CreditAssignmentModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				CreditAssignmentModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = creditAssignmentService.excelCreditList(model);	
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	}
+	//JSDP-35 gjh 2015-4-30 end
+	/**
+	 * 债权转让复审初始页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caFullVerifyManage")
+	public String caFullVerifyManage() throws Exception {
+
+		return "caFullVerifyManage";
+	}
+	
+	/**
+	 * 债权转让复审列表
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caFullVerifyList")
+	public void caFullVerifyList() throws Exception {
+		if (!isFullVerifyAuto()){
+			model.setStatus(CreditAssignment.CREDIT_CHECK1_SUCCESS);
+			model.setCaScales(100);
+			model.setBorrowType(Borrow.TYPE_MORTGAGE);
+			PageDataList<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model);
+			map.put("rows", list.getList());
+			map.put("total", list.getPage().getTotal());
+			map.put("result", true);
+		}else {
+			map.put("result", false);
+			map.put("msg", "现有债权规则配置是不需要手动复审的！");
+		}
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 债权转让复审显示页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caFullVerifyViewPage")
+	public String caFullVerifyViewPage() throws Exception {	
+		long id = paramLong("id");
+		saveToken("caFullVerifyToken");
+		CreditAssignment ca = creditAssignmentService.getEntityById(id);
+		String userName = ca.getUser().getUserName();
+		String caName = ca.getBorrow().getName();
+		request.setAttribute("ca", ca);
+		request.setAttribute("sellUserName", userName);
+		request.setAttribute("caName", caName);
+		request.setAttribute("verifyUserName", getOperatorUserName());
+		return "caFullVerifyViewPage";
+	}
+	
+	
+	/**
+	 * 债权是否自动复审
+	 * @throws Exception   
+	 */ 
+	private boolean isFullVerifyAuto(){
+		boolean isFullVerifyAuto = false;
+		CreditSwingOutRuleCheck ruleCheck = (CreditSwingOutRuleCheck) Global.getRuleCheck("creditSwingOut");
+		if (ruleCheck.getIs_verify_full_auto() != CreditAssignment.CREDIT_FULLVERIFY_YES) {
+			isFullVerifyAuto = true;
+		}
+		return isFullVerifyAuto;
+	}
+	
+	/**
+	 * 债权转让复审
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/caFullVerify")
+	public void caFullVerify() throws Exception {	
+		checkToken("caFullVerifyToken");											
+		String actionType = paramString("actionType");
+		long caId = paramLong("id");
+		CreditAssignment credit = creditAssignmentService.getEntityById(caId);
+		credit = initCredit(actionType, credit);
+		dataMsg = checkFullVerifyCa(credit);
+		//JSDBET-838 wcw 2015-3-20 start 使用disruptor并发框架，不能在框架外进行update业务逻辑处理，否则一旦并发框架内程序抛异常，那么事务将不会回滚
+		//creditAssignmentService.update(credit);
+		//JSDBET-838 wcw 2015-3-20 end
+		//满标复审逻辑
+		handleCreditFullVerify(credit);
+		OperationLog log = new OperationLog(null, getOperator(), "credit_verify");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员对此债权进行复审(债权转让ID："+caId+",债权名："+credit.getBorrow().getName()+")");
+		operationLogService.save(log);
+		printJson(getStringOfJpaObj(dataMsg));
+	}
+	
+	/**
+	 * 债权转让复审数据校验
+	 * @param  caId
+	 * @return Map<String,Object> 
+	 */ 
+	private Map<String, Object> checkFullVerifyCa(CreditAssignment ca){
+		String message = "复审操作成功";													
+		if(null != ca && CreditAssignment.CREDIT_CHECK1_SUCCESS.equals(ca.getStatus())){
+			message = "只能复审状态为初审成功的债权转让";
+		}
+		if(StringUtil.isBlank(ca.getFullVerifyRemark())){
+			message = "债权转让的审核备注不能为空";
+		}
+		if(Borrow.TYPE_MORTGAGE != ca.getBorrow().getType()){
+			message = "非车贷宝的债权不需要复审";
+		}
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put("msg", message);
+		if(!"复审操作成功".equals(message)){
+			result.put("result", false);
+		}else{
+			result.put("result", true);
+		}
+		return result;
+	}
+	
+	/**
+	 * 债权复审逻辑
+	 * @param  CreditAssignment
+	 * @throws Exception   
+	 */ 
+	private void handleCreditFullVerify(CreditAssignment ca){
+		CreditSwingOutRuleCheck ruleCheck = (CreditSwingOutRuleCheck) Global.getRuleCheck("creditSwingOut");
+		if(ruleCheck.getIs_verify_full_auto() == CreditAssignment.CREDIT_FULLVERIFY_YES){
+			String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+			if(CreditAssignment.CREDIT_CHECK2_SUCCESS.equals(ca.getStatus())){
+		        DisruptorUtils.creditVerifyFullSuccess(ca, resultFlag);
+			}else if(CreditAssignment.CREDIT_CHECK2_FAIL.equals(ca.getStatus())){
+		        DisruptorUtils.creditVerifyFullFail(ca, resultFlag);
+			}
+        }
+	}
+	
+	
+	/**
+	 * 债权转让复审报表导出
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/exportCaFullVerifyList")
+	public void exportCaFullVerifyList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		// 第一页开始
+//		model.setPage(1);
+		// 最多出99999999条记录
+//		model.setSize(99999999);
+		// 记录取得
+		model.setStatus(CreditAssignment.CREDIT_CHECK1_SUCCESS);
+		model.setCaScales(100);
+		model.setBorrowType(Borrow.TYPE_MORTGAGE);
+//		List<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model).getList();
+//		List<CreditAssignmentModel> newList = new ArrayList<CreditAssignmentModel>();		
+//		for(int i=0; i<list.size(); i++){
+//			CreditAssignmentModel caModel = list.get(i);
+//			caModel.setStatus(CreditAssignmentModel.convertCaStatus(caModel.getStatus()));
+//			caModel.setCaLevel(CreditAssignmentModel.convertCaLevel(caModel.getLevel()));
+//			caModel.setCaTypeExp(CreditAssignmentModel.convertCaType(caModel.getCaType()));
+//			caModel.setCaBreachAccount(CreditAssignmentModel.convertCaBreachAccount(caModel.getIsBreach(), caModel.getBreachAccount()));
+//			newList.add(caModel);
+//		}
+		String title = "债权复审Excel表";
+		String[] hearders = new String[] {"编号","出售债权用户","债权名","债权转让类型","债权等级","债权预期价值","债权发布价格","债权转让费率","债权转让份数","已售金额","已售份数","债权状态","进度","是否违约提前转出","债权转让截止时间","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","sellUserName","caName","caTypeExp","caLevel","creditValue","creditPrice","creditDis","creditCopies","soldAccount","sellCopies","status","caScalesExp","caBreachAccount","buyEndTime","addTime","addIp"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<CreditAssignmentModel> tdList = new ArrayList<CreditAssignmentModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				CreditAssignmentModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = creditAssignmentService.excelCreditList(model);	
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	}
+	
+	
+	/**
+	 * 明细——债权(售出)金额列表页面
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @author 孙晓勇
+	 * @time 2015年5月5日 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/dataStatistics/creaditOutMoneyStatisticsListPage")
+	public String creaditOutMoneyStatisticsListPage() throws Exception {
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			request.setAttribute("startTimeStr", startTime);
+			request.setAttribute("endTimeStr", endTime);
+		}
+		
+		request.setAttribute("timeType", timeType);
+		
+		return "creaditOutMoneyStatisticsListPage";
+	}
+	
+	
+	
+	/**
+	 * 明细——债权(售出)清单列表
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/dataStatistics/creaditOutMoneyStatisticsList")
+	public void creaditOutMoneyStatisticsList() throws Exception {
+		/*data = new HashMap<String, Object>();
+		
+		CreditAssignmentModel model = new CreditAssignmentModel();
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+		
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		
+		model.setPage(pageNumber);
+		model.setSize(pageSize);
+		
+		List<CreditAssignmentModel> pagaDataList = creditAssignmentService.getCreditAssignmentList(model).getList();
+		
+		*/
+		
+		/*
+		
+		
+		
+		
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+		
+		
+		if (!isFullVerifyAuto()){
+			model.setStatus(CreditAssignment.CREDIT_CHECK1_SUCCESS);
+			model.setCaScales(100);
+			model.setBorrowType(Borrow.TYPE_MORTGAGE);
+			PageDataList<CreditAssignmentModel> list = creditAssignmentService.getCreditAssignmentList(model);
+			map.put("rows", list.getList());
+			map.put("total", list.getPage().getTotal());
+			map.put("result", true);
+		}else {
+			map.put("result", false);
+			map.put("msg", "现有债权规则配置是不需要手动复审的！");
+		}
+		printJson(getStringOfJpaObj(map));*/
+		
+		String timeType = paramString("timeType");
+		String startTime = paramString("startTime");
+		String endTime = paramString("endTime");
+		
+		model.setTimeType(timeType);
+		
+		//DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		if(StringUtil.isNotBlank(startTime) && StringUtil.isNotBlank(endTime)){
+			model.setStartTime(startTime);
+			model.setEndTime(endTime);
+		}
+
+		int page = paramInt("page");// 当前页数
+		int size = paramInt("rows");// 每页总数
+		
+		
+		model.setStatus(CreditAssignment.CREDIT_PUBLISH);
+		// 原Model导出
+		//PageDataList<CreditAssignmentModel> list = creditAssignmentService.getCreditOutAssignmentList(model);
+		// 新SQL查询
+		PageDataList<CreditAssignment> list = creditAssignmentService.getCreditOutAssignmentListForSQL(model,page,size);
+		map.put("rows", list.getList());
+		map.put("total", list.getPage().getTotal());
+		printJson(getStringOfJpaObj(map));
+		
+		
+	}
+	
+	/**
+	 * 债权转让成功(售出)复审报表导出
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/creditassignment/credit/exportCreaditOutMoneyList")
+	public void exportCreaditOutMoneyList() throws Exception {
+		response.setContentType("application/msexcel;charset=UTF-8");
+		// 第一页开始
+//		model.setPage(1);
+		// 最多出99999999条记录
+//		model.setSize(99999999);
+		// 记录取得
+		model.setStatus(CreditAssignment.CREDIT_CHECK1_SUCCESS);
+		model.setCaScales(100);
+		model.setBorrowType(Borrow.TYPE_MORTGAGE);
+		//List<CreditAssignmentModel> list = creditAssignmentService.getCreditOutAssignmentList(model).getList();
+//		PageDataList<CreditAssignmentModel> list = creditAssignmentService.getCreditOutAssignmentList(model);
+//		List<CreditAssignmentModel> newList = new ArrayList<CreditAssignmentModel>();		
+//		for(int i=0; i<list.getList().size(); i++){
+//			CreditAssignmentModel caModel = list.getList().get(i);
+//			caModel.setStatus(CreditAssignmentModel.convertCaStatus(caModel.getStatus()));
+//			caModel.setCaLevel(CreditAssignmentModel.convertCaLevel(caModel.getLevel()));
+//			caModel.setCaTypeExp(CreditAssignmentModel.convertCaType(caModel.getCaType()));
+//			caModel.setCaBreachAccount(CreditAssignmentModel.convertCaBreachAccount(caModel.getIsBreach(), caModel.getBreachAccount()));
+//			newList.add(caModel);
+//		}
+		String title = "债权复审Excel表";
+		String[] hearders = new String[] {"编号","出售债权用户","债权名","债权转让类型","债权等级","债权预期价值","债权发布价格","债权转让费率","债权转让份数","已售金额","已售份数","债权状态","进度","是否违约提前转出","债权转让截止时间","添加时间","添加IP" };// 表头数组
+		String[] fields = new String[] { "id","sellUserName","caName","caTypeExp","caLevel","creditValue","creditPrice","creditDis","creditCopies","soldAccount","sellCopies","status","caScalesExp","caBreachAccount","buyEndTime","addTime","addIp"};// 对象属性数组
+//		int sheetRows = 50000;	//导出一页的条数
+// 		int sheetPage = newList.size()/sheetRows;
+//		if(newList.size()%sheetRows > 0){
+//			sheetPage += 1;
+//		}
+//		List<TableData> tableDatas = new ArrayList<TableData>();
+//		for(int i = 0; i < sheetPage; i++){
+//			List<CreditAssignmentModel> tdList = new ArrayList<CreditAssignmentModel>();
+//			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+//				CreditAssignmentModel sm = newList.get(j);
+//				tdList.add(sm);
+//			}
+//			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+//			td.setSheetTitle(title + "--第" + (i+1) + "页");
+//			tableDatas.add(td);
+//		}
+//		JsGridReportBase report = new JsGridReportBase(request, response);
+//		report.exportToExcel(title, getOperator().getUserName(), tableDatas);
+		//JSDP-116 xingjia 2015-05-18 start
+		List newList = creditAssignmentService.excelCreditList(model);	
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = title + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 xingjia 2015-05-18 start
+	}
+	// JSDPBUG-99 20150505  sxy
+	
+	
+	
+	
+	
+
+}

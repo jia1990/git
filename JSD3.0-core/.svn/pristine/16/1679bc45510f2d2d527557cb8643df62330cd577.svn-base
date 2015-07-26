@@ -1,0 +1,203 @@
+
+package com.ddtkj.p2psys.score.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述: 用户积分抽奖记录表
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+@Entity
+@Table(name = "t_jsd_user_score_award")
+public class UserScoreAward implements Serializable {
+		
+	private static final long serialVersionUID = 5433726731483663513L;
+	
+	/** 抽奖状态 : 成功 */
+	public static final String SCORE_AWARD_STATUS_SUCCESS = "11";
+	/** 抽奖状态 : 失败 */
+	public static final String SCORE_AWARD_STATUS_FAIL = "22";
+	/** 抽奖状态 : 所有状态 */
+	public static final String SCORE_AWARD_STATUS_ALL = "99";
+	
+	/** 抽奖奖励发放状态 : 成功 */
+	public static final String SCORE_AWARD_RECEIVESTATUS_SUCCESS = "11";
+	/** 抽奖奖励发放状态: 失败 */
+	public static final String SCORE_AWARD_RECEIVESTATUS_FAIL = "22";
+	/** 抽奖奖励发放状态 : 所有状态 */
+	public static final String SCORE_AWARD_RECEIVESTATUS_ALL = "99";
+	
+	/** 抽奖奖品类型: 所有类型 */
+	public static final String SCORE_AWARD_OBJECTTYPE_ALL = "99";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;							//主键
+	
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "user_id")
+	private User user;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "award_id")
+	private ScoreAward award;					//奖品ID
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "rule_id")
+	private ScoreRuleAward rule;				//规则ID
+	
+	private String userName;					//抽奖用户名
+	private int awardLevel;						//奖品级别
+	private long awardPoint;					//抽奖消耗点数
+	private String awardName;					//奖品名
+	private String status;						//状态是否中奖(22不中, 11中)
+	private String receiveStatus;				//奖励发放状态:(22未发放, 11已发放)	
+	private Date addTime;						//添加时间
+	private String addIp;						//添加IP
+	
+	private Date receiveTime;					//回调时间
+	private String transNo;						//订单号
+	private int awardValue;						//奖品属性值
+	private int awardType;						//奖品类型
+	
+	private String cardNo;						//云购体验卡卡号
+	
+	public UserScoreAward() {
+		super();
+	}
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public ScoreAward getAward() {
+		return award;
+	}
+	public void setAward(ScoreAward award) {
+		this.award = award;
+	}
+	public ScoreRuleAward getRule() {
+		return rule;
+	}
+	public void setRule(ScoreRuleAward rule) {
+		this.rule = rule;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	public int getAwardLevel() {
+		return awardLevel;
+	}
+	public void setAwardLevel(int awardLevel) {
+		this.awardLevel = awardLevel;
+	}
+	
+	public long getAwardPoint() {
+		return awardPoint;
+	}
+
+	public void setAwardPoint(long awardPoint) {
+		this.awardPoint = awardPoint;
+	}
+
+	public String getAwardName() {
+		return awardName;
+	}
+	public void setAwardName(String awardName) {
+		this.awardName = awardName;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getReceiveStatus() {
+		return receiveStatus;
+	}
+
+	public void setReceiveStatus(String receiveStatus) {
+		this.receiveStatus = receiveStatus;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	public Date getReceiveTime() {
+		return receiveTime;
+	}
+
+	public void setReceiveTime(Date receiveTime) {
+		this.receiveTime = receiveTime;
+	}
+
+	public String getTransNo() {
+		return transNo;
+	}
+
+	public void setTransNo(String transNo) {
+		this.transNo = transNo;
+	}
+
+	public int getAwardValue() {
+		return awardValue;
+	}
+
+	public void setAwardValue(int awardValue) {
+		this.awardValue = awardValue;
+	}
+
+	public int getAwardType() {
+		return awardType;
+	}
+
+	public void setAwardType(int awardType) {
+		this.awardType = awardType;
+	}
+
+	public String getCardNo() {
+		return cardNo;
+	}
+
+	public void setCardNo(String cardNo) {
+		this.cardNo = cardNo;
+	}
+	
+}

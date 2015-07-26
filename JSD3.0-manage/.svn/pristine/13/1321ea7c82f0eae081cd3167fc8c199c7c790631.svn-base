@@ -1,0 +1,291 @@
+package com.rongdu.manage.action.operatingStatistics;
+
+import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class OperatingInfoAction extends BaseAction {
+	
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	@Resource
+	private AccountService accountService;
+	
+	/**
+	 * 用户分析页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/operatingStatistics/userAnalysis")
+	public String userAnalysis() throws Exception {
+		return "userAnalysis";
+	}
+
+	/**
+	 * 用户分析信息(全部)
+	 * 
+	 * @throws Exception
+	 */
+	/*@Action("/modules/operatingStatistics/userAnalysisInfo")
+	public void userAnalysisInfo() throws Exception {
+		// 转换JSON字符串用map
+		Map<String, Object> data = new HashMap<String, Object>();
+		
+		// 成功注册用户总数
+		QueryParam param = QueryParam.getInstance();
+		int userCount = userService.count(param);
+		data.put("userCount", userCount);
+		
+		// 实名认证成功用户数
+		int userRealNamedCount = userIdentifyService.countByRealName("83");
+		data.put("userRealNamedCount", userRealNamedCount);
+		
+		// 成功充值一次（含）以上的用户数
+		int rechargedUserCount = accountRechargeService.rechargedUserCount(UserConstant.USER_LOCK_LOGOUT);
+		data.put("rechargedUserCount", rechargedUserCount);
+		
+		// 成功投资一次（含）以上的用户数
+		int investUserCount = borrowTenderService.getInvestUserCount();
+		data.put("investUserCount", investUserCount);
+		
+		// 已注册但未实名认证用户数
+		int userRealNamelessCount = userIdentifyService.countByRealName("82");
+		data.put("userRealNamelessCount", userRealNamelessCount);
+
+		printJson(getStringOfJpaObj(data));
+	}*/
+	
+	/**
+	 * 用户分析信息(投资人)
+	 * 
+	 * @throws Exception
+	 * @author 孙晓勇
+	 * 
+	 */
+	@Action("/modules/operatingStatistics/userAnalysisInfo")
+	public void userAnalysisInfo() throws Exception {
+		// 转换JSON字符串用map
+		Map<String, Object> data = new HashMap<String, Object>();
+		
+		// 投资人 —— 成功注册用户总数
+		int userCountTender = userService.countUserByType(10);
+		data.put("userCount", userCountTender);
+		
+		// 投资人 —— 实名认证成功用户数
+		int userRealNamedCount = userIdentifyService.countTenderByRealName("83");
+		data.put("userRealNamedCount", userRealNamedCount);
+		
+		// 投资人 —— 成功充值一次（含）以上的用户数
+		int rechargedUserCount = accountRechargeService.rechargedTenderUserCount();
+		data.put("rechargedUserCount", rechargedUserCount);
+		
+		// 投资人 —— 成功投资一次（含）以上的用户数
+		int investUserCount = borrowTenderService.getTenderInvestUserCount();
+		data.put("investUserCount", investUserCount);
+		
+		// 投资人 —— 已注册但未实名认证用户数
+		int userRealNamelessCount = userIdentifyService.countTenderByRealName("82");
+		data.put("userRealNamelessCount", userRealNamelessCount);
+
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 金额分析页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/operatingStatistics/momenyAnalysis")
+	public String momenyAnalysis() throws Exception {
+		return "momenyAnalysis";
+	}
+
+	/**
+	 * 金额分析信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/operatingStatistics/momenyAnalysisInfo")
+	public void momenyAnalysisInfo() throws Exception {
+		// 转换JSON字符串用map
+		Map<String, Object> data = new HashMap<String, Object>();
+		DecimalFormat df = new DecimalFormat("#0.00");
+		// 投资人累计充值金额总和
+		double rechargedAllMomeny = accountRechargeService.rechargedAllMomeny();
+		data.put("rechargedAllMomeny", df.format(rechargedAllMomeny));
+		
+		// 投资人累计投资金额总和
+		double tenderAccount = borrowTenderService.tenderInvestAccount();
+		data.put("tenderAccount", df.format(tenderAccount));
+		
+		// 投资人累计收到利息总和（实际收到）
+		double tenderAllInterest = borrowTenderService.tenderAllInterest();
+		data.put("tenderAllInterest", df.format(tenderAllInterest));
+		
+		// 投资人累计提现金额总和
+		double allCashMomeny = accountDrawCashService.accountDrawCashTotal();
+		data.put("allCashMomeny", df.format(allCashMomeny));
+		
+		// 投资人账户可用余额总和
+		double allUseMoney = accountService.getAllUseMoney();
+		data.put("allUseMoney", df.format(allUseMoney));
+
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	/**
+	 * 项目数量分析页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/operatingStatistics/itemCountAnalysis")
+	public String itemCountAnalysis() throws Exception {
+		return "itemCountAnalysis";
+	}
+
+	/**
+	 * 项目数量分析信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/operatingStatistics/itemCountAnalysisInfo")
+	public void itemCountAnalysisInfo() throws Exception {
+		// 转换JSON字符串用map
+		Map<String, Object> data = new HashMap<String, Object>();
+		
+		// 项目总数
+		int allCount = borrowService.getAllCount();
+		data.put("allCount", allCount);
+		
+		// 逾期项目数
+		int allOverduedCount = borrowService.getAllOverduedCount();
+		data.put("allOverduedCount", allOverduedCount);
+		
+		// 正常项目数
+		int allNormalCount  = allCount - allOverduedCount;
+		data.put("allNormalCount", allNormalCount);
+		
+		// 待登记项目数(暂无使用)
+		int registerelessCount = borrowService.getCountByStatus(0);
+		data.put("registerelessCount", registerelessCount);
+		
+		
+		// 待初审项目数
+		int registeredCount = borrowService.getCountByStatus(0);
+		data.put("registeredCount", registeredCount);
+		
+		// 投资中项目数
+		int investingCount = borrowService.getCountByStatus(1);
+		data.put("investingCount", investingCount);
+		
+		// 待满标复审项目数
+		int verifyFullCount = borrowService.getVerifyFullCount();
+		data.put("verifyFullCount", verifyFullCount);
+		
+		// 还款中项目数
+		int repayingCount6 = borrowService.getCountByStatus(6);
+		int repayingCount7 = borrowService.getCountByStatus(7);
+		int repayingCount = repayingCount6 + repayingCount7;
+		data.put("repayingCount", repayingCount);
+		
+		// 逾期中项目数
+		int allOverdueingCount = borrowService.getAllOverdueingCount();
+		data.put("allOverdueingCount", allOverdueingCount);
+
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 项目金额分析页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/operatingStatistics/itemMomenyAnalysis")
+	public String itemMomenyAnalysis() throws Exception {
+		return "itemMomenyAnalysis";
+	}
+
+	/**
+	 * 项目金额分析信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/modules/operatingStatistics/itemMomenyAnalysisInfo")
+	public void itemMomenyAnalysisInfo() throws Exception {
+		// 转换JSON字符串用map
+		Map<String, Object> data = new HashMap<String, Object>();
+		DecimalFormat df = new DecimalFormat("#0.00");
+		// 项目总金额
+		double allMomeny = borrowService.getAllMomeny();
+		data.put("allMomeny", df.format(allMomeny));
+		
+		// 逾期项目金额
+		double allOverduedMomeny = borrowService.getAllOverduedMomeny();
+		data.put("allOverduedMomeny", df.format(allOverduedMomeny));
+		
+		// 正常项目金额
+		double allNormalMomeny  = BigDecimalUtil.sub(allMomeny, allOverduedMomeny);
+		data.put("allNormalMomeny", df.format(allNormalMomeny));
+		
+		// 待登记项目金额
+		//double registerelessMomeny = borrowService.getMomenyByStatus(0);
+		//data.put("registerelessMomeny", registerelessMomeny);
+		
+		// 待初审项目金额
+		double registeredMomeny = borrowService.getMomenyByStatus(0);
+		data.put("registeredMomeny", df.format(registeredMomeny));
+		
+		// 投资中项目金额
+		double investingMomeny = borrowService.getMomenyByStatus(1);
+		data.put("investingMomeny", df.format(investingMomeny));
+		
+		// 待满标复审项目金额
+		double verifyFullMomeny = borrowService.getVerifyFullMomeny();
+		data.put("verifyFullMomeny", df.format(verifyFullMomeny));
+		
+		// 还款中项目金额
+		double repayingMomeny6 = borrowService.getMomenyByStatus(6);
+		double repayingMomeny7 = borrowService.getMomenyByStatus(7);
+		double repayingMomeny = BigDecimalUtil.add(repayingMomeny6, repayingMomeny7);
+		data.put("repayingMomeny", df.format(repayingMomeny));
+		
+		// 逾期中项目金额
+		double allOverdueingMomeny = borrowService.getAllOverdueingMomeny();
+		data.put("allOverdueingMomeny", df.format(allOverdueingMomeny));
+
+		printJson(getStringOfJpaObj(data));
+		
+	}
+}

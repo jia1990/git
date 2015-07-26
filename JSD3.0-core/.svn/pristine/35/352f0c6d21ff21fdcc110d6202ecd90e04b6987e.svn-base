@@ -1,0 +1,53 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record;
+
+import com.rongdu.common.util.ReflectUtil;
+/**
+ * @描述：一麻袋记录抽象类
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月9日 
+ */
+public abstract class AbstractYmdEvent<T> implements YmdEvent<T>{
+
+	@SuppressWarnings("unchecked")
+	protected Class<T> entityClass = ReflectUtil.getSuperClassGenricType(getClass());
+	protected T t;
+	
+	public AbstractYmdEvent(Object... a) {
+
+	}
+
+	@Override
+	public void doEvent() {
+		addRecord();
+		modifyRecord();
+	}
+
+	@Override
+	public void addRecord() {
+
+	}
+
+	@Override
+	public void modifyRecord() {
+		
+	}
+
+	public T getT() {
+		try {
+			t = entityClass.newInstance();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		return t;
+	}
+
+	public void setT(T t) {
+		this.t = t;
+	}
+
+	@Override
+	public void init() {
+		
+	}
+
+}

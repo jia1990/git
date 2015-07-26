@@ -1,0 +1,253 @@
+package com.ddtkj.p2psys.award.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+
+/**
+ * 活动配置实体类
+ * @author xingjia@ddtkj.com
+ * @date 20141211
+ */
+@Entity
+@Table(name = "t_jsd_activity_config")
+public class ActivityConfig implements Serializable {
+
+	private static final long serialVersionUID = 7370673757451797946L;
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int actId;				//活动ID
+	private String actName;			//活动名称
+	private int actLimitTime;		//活动是否受限(平时1或是节日0)
+	private String actUserScope;	//活动适用用户
+	private Date actStartTime;		//活动开始时间
+	private Date actEndTime;		//活动结束时间
+	@OneToOne(cascade = CascadeType.ALL,mappedBy="act")
+	private ActivityAward activityAward;//活动所对应的奖励
+	//@OneToOne(cascade = CascadeType.ALL,mappedBy="act")
+	//private ActivityRule activityRule;//活动所对应的规则
+	private Date actCrateTime;		//创建时间
+	
+	private long actCreator;		//活动创建人id
+	private String actCreateName;	//创建人用户名
+	
+	private long actVerifyPerson;	//活动审核人
+	private Date actVerifyTime;		//活动审核时间
+	private int actVerifyStatus;	//活动审核结果审核中:2未审核:0审核通过:1
+	private String actTakeWay;		//活动参与方式
+	private int actOpen;			//活动是否开启
+	
+	
+	
+	
+	
+	
+	/**
+	 * 类的空构造方法
+	 */
+	public ActivityConfig() {
+		super();
+	}
+	/**
+	 * @return actId 活动ID
+	 */
+	public int getActId() {
+		return actId;
+	}
+	/**
+	 * @param actId 活动ID
+	 */
+	public void setActId(int actId) {
+		this.actId = actId;
+	}
+	/**
+	 * @return actName 活动名称
+	 */
+	public String getActName() {
+		return actName;
+	}
+	/**
+	 * @param actName 活动名称
+	 */
+	public void setActName(String actName) {
+		this.actName = actName;
+	}
+	/**
+	 * @return actLimitTime 活动是否受限(平时1或是节日0)
+	 */
+	public int getActLimitTime() {
+		return actLimitTime;
+	}
+	/**
+	 * @param actLimitTime 活动是否受限(平时1或是节日0)
+	 */
+	public void setActLimitTime(int actLimitTime) {
+		this.actLimitTime = actLimitTime;
+	}
+	
+	
+	/**
+	 * @return the actUserScope 适用用户
+	 */
+	public String getActUserScope() {
+		return actUserScope;
+	}
+	/**
+	 * @param actUserScope 适用用户
+	 */
+	public void setActUserScope(String actUserScope) {
+		this.actUserScope = actUserScope;
+	}
+	/**
+	 * @return the actCrateTime 活动创建时间
+	 */
+	public Date getActCrateTime() {
+		return actCrateTime;
+	}
+	/**
+	 * @param actCrateTime 活动创建时间
+	 */
+	public void setActCrateTime(Date actCrateTime) {
+		this.actCrateTime = actCrateTime;
+	}
+	/**
+	 * @return actStartTime 活动开始时间
+	 */
+	public Date getActStartTime() {
+		return actStartTime;
+	}
+	/**
+	 * @param actStartTime 活动开始时间
+	 */
+	public void setActStartTime(Date actStartTime) {
+		this.actStartTime = actStartTime;
+	}
+	
+	
+	
+	/**
+	 * @return the activityAward 活动所对应的奖励
+	 */
+	public ActivityAward getActivityAward() {
+		return activityAward;
+	}
+	/**
+	 * @param activityAward 活动所对应的奖励
+	 */
+	public void setActivityAward(ActivityAward activityAward) {
+		this.activityAward = activityAward;
+	}
+	/**
+	 * @return actEndTime 活动结束时间
+	 */
+	public Date getActEndTime() {
+		return actEndTime;
+	}
+	/**
+	 * @param actEndTime 活动结束时间
+	 */
+	public void setActEndTime(Date actEndTime) {
+		this.actEndTime = actEndTime;
+	}
+	
+	
+	
+	/**
+	 * @return the actCreator 活动创建人id
+	 */
+	public long getActCreator() {
+		return actCreator;
+	}
+	/**
+	 * @param actCreator 活动创建人id
+	 */
+	public void setActCreator(long actCreator) {
+		this.actCreator = actCreator;
+	}
+	/**
+	 * @return the actCreateName 活动创建人用户名
+	 */
+	public String getActCreateName() {
+		return actCreateName;
+	}
+	/**
+	 * @param actCreateName 活动创建人用户名
+	 */
+	public void setActCreateName(String actCreateName) {
+		this.actCreateName = actCreateName;
+	}
+	/**
+	 * @return the actVerifyPerson 活动审核人
+	 */
+	public long getActVerifyPerson() {
+		return actVerifyPerson;
+	}
+	
+	/**
+	 * @param actVerifyPerson 活动审核人
+	 */
+	public void setActVerifyPerson(long actVerifyPerson) {
+		this.actVerifyPerson = actVerifyPerson;
+	}
+	/**
+	 * @return actVerifyTime 活动审核时间
+	 */
+	public Date getActVerifyTime() {
+		return actVerifyTime;
+	}
+	/**
+	 * @param actVerifyTime 活动审核时间
+	 */
+	public void setActVerifyTime(Date actVerifyTime) {
+		this.actVerifyTime = actVerifyTime;
+	}
+	/**
+	 * @return actVerifyStatus 活动审核状态
+	 */
+	public int getActVerifyStatus() {
+		return actVerifyStatus;
+	}
+	/**
+	 * @param actVerifyStatus 活动审核状态
+	 */
+	public void setActVerifyStatus(int actVerifyStatus) {
+		this.actVerifyStatus = actVerifyStatus;
+	}
+	
+	/**
+	 * @return the actTakeWay 活动参与方式
+	 */
+	public String getActTakeWay() {
+		return actTakeWay;
+	}
+	/**
+	 * @param actTakeWay 活动参与方式
+	 */
+	public void setActTakeWay(String actTakeWay) {
+		this.actTakeWay = actTakeWay;
+	}
+	/**
+	 * @return actOpen 活动是否开启
+	 */
+	public int getActOpen() {
+		return actOpen;
+	}
+	/**
+	 * @param actOpen 活动是否开启
+	 */
+	public void setActOpen(int actOpen) {
+		this.actOpen = actOpen;
+	}
+	
+	
+	
+}

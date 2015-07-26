@@ -1,0 +1,371 @@
+package com.ddtkj.p2psys.core.cache;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowConfigDao;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.core.DataGloble;
+import com.rongdu.p2psys.core.domain.LogTemplate;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.domain.SystemConfig;
+import com.rongdu.p2psys.core.model.SystemConfigModel;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+import com.rongdu.p2psys.core.service.SystemConfigService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述:全局缓存工具类
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月25日
+ */
+public class GlobalCache {
+
+	public static final String RULE_CONFIG = "jsd_rule_config";
+	public static final String SYS_CONFIG = "jsd_sys_config";
+	public static final String NOTICE_TYPE_CONFIG = "jsd_notice_type_config";
+	public static final String LOG_TEMPLATE_CONFIG = "jsd_log_template_config";
+	public static final String BORROW_CONFIG = "jsd_borrow_config";
+
+	
+
+	/**
+	 * 初始化通知全局缓存
+	 * 
+	 * */
+	public static void initNoticeTypeConfig2Cache(
+			Map<String, NoticeType> noticeTypeMap) {
+		
+		if (!MemCachedUtil.memCachedClient.keyExists(NOTICE_TYPE_CONFIG)) {
+			MemCachedUtil.memCachedClient
+					.set(NOTICE_TYPE_CONFIG, noticeTypeMap);
+		}else{
+			MemCachedUtil.memCachedClient
+			.replace(NOTICE_TYPE_CONFIG, noticeTypeMap);
+		}
+
+	}
+
+	/**
+	 * 初始化规则全局缓存
+	 * 
+	 * @param key
+	 *            规则的nid
+	 * */
+	public static void initRuleCheckConfig2Cache(Map<String, RuleCheck> ruleMap) {
+
+		if (!MemCachedUtil.memCachedClient.keyExists(RULE_CONFIG)) {
+			MemCachedUtil.memCachedClient.set(RULE_CONFIG, ruleMap);
+		}else{
+			MemCachedUtil.memCachedClient
+			.replace(RULE_CONFIG, ruleMap);
+		}
+
+	}
+
+	/**
+	 * 初始化系统配置全局缓存
+	 * */
+	public static void initSysConfig2Cache(SystemConfigModel sysConfigModel) {
+		if (!MemCachedUtil.memCachedClient.keyExists(SYS_CONFIG)) {
+			MemCachedUtil.memCachedClient.set(SYS_CONFIG, sysConfigModel);
+		}else{
+			MemCachedUtil.memCachedClient
+			.replace(SYS_CONFIG, sysConfigModel);
+		}
+
+	}
+
+	/**
+	 * 初始化日志模板全局缓存
+	 * */
+	public static void initLogTemplateConfig2Cache(
+			Map<String, LogTemplate> logTemplateMap) {
+		if (!MemCachedUtil.memCachedClient.keyExists(LOG_TEMPLATE_CONFIG)) {
+			MemCachedUtil.memCachedClient.set(LOG_TEMPLATE_CONFIG,
+					logTemplateMap);
+		}else{
+			MemCachedUtil.memCachedClient
+			.replace(LOG_TEMPLATE_CONFIG, logTemplateMap);
+		}
+
+	}
+
+	/**
+	 * 初始化标配置全局缓存
+	 * */
+	public static void initBorrowConfig2Cache(
+			Map<Long, BorrowConfig> borrowConfigMap) {
+		if (!MemCachedUtil.memCachedClient.keyExists(BORROW_CONFIG)) {
+			MemCachedUtil.memCachedClient.set(BORROW_CONFIG, borrowConfigMap);
+		}else{
+			MemCachedUtil.memCachedClient
+			.replace(BORROW_CONFIG, borrowConfigMap);
+		}
+
+	}
+
+	/**
+	 * 从全局缓存中返回标的配置列表
+	 * 
+	 * @return borrowConfigList 始终返回集合实例
+	 * */
+	public static List<BorrowConfig> borrowConfigList() {
+		@SuppressWarnings("unchecked")
+		Map<Long, BorrowConfig> borrowConfigMap = (Map<Long, BorrowConfig>) MemCachedUtil.memCachedClient
+				.get(BORROW_CONFIG);
+		List<BorrowConfig> list = new ArrayList<BorrowConfig>();
+		//JSDP-211 xingjia 20150706 start
+		if (borrowConfigMap != null) {
+			Collection<BorrowConfig> c = borrowConfigMap.values();
+			for (BorrowConfig config : c) {
+				list.add(config);
+			}
+		}else{
+			return DataGloble.getBorrowConfig();
+		}
+		//JSDP-211 xingjia 20150706 end
+		return list;
+	}
+
+	/**
+	 * 从全局缓存中加载返回指定标配置
+	 * 
+	 * @param id
+	 * @return BorrowConfig
+	 * */
+	public static BorrowConfig getBorrowConfig(long id) {
+
+		@SuppressWarnings("unchecked")
+		Map<Long, BorrowConfig> borrowConfigMap = (Map<Long, BorrowConfig>) MemCachedUtil.memCachedClient
+				.get(BORROW_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if (null == borrowConfigMap) {
+			return DataGloble.getBorrowConfig(id);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return borrowConfigMap.get(id);
+	}
+
+	/**
+	 * 修改指定标配置同步更新到全局缓存
+	 * 
+	 * @param borrowConfig
+	 *            表设置实体信息
+	 * @return boolean 成功或失败
+	 * */
+	public static boolean modifyBorrowConfig(BorrowConfig borrowConfig) {
+
+		@SuppressWarnings("unchecked")
+		Map<Long, BorrowConfig> borrowConfigMap = (Map<Long, BorrowConfig>) MemCachedUtil.memCachedClient
+				.get(BORROW_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if(null == borrowConfigMap){
+			return true;
+		}else{
+			borrowConfigMap.put(borrowConfig.getId(), borrowConfig);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return MemCachedUtil.memCachedClient.replace(BORROW_CONFIG,
+				borrowConfigMap);
+	}
+
+	/**
+	 * 从全局缓存中加载返回指定日志模板
+	 * 
+	 * @param nid
+	 * @param log_type
+	 * @return LogTemplate
+	 * */
+	public static LogTemplate getLogTemplate(String nid, byte log_type) {
+
+		@SuppressWarnings("unchecked")
+		Map<String, LogTemplate> logTemplateMap = (Map<String, LogTemplate>) MemCachedUtil.memCachedClient
+				.get(LOG_TEMPLATE_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if (logTemplateMap == null) {
+			return DataGloble.getLogTemplate(nid, log_type);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return logTemplateMap.get(log_type + "_" + nid);
+	}
+
+	/**
+	 * 修改指定模板同步更新到全局缓存
+	 * 
+	 * @param logTemplate
+	 *            日志模板实体类型
+	 * @reutn boolean 成功或失败
+	 * */
+	public static boolean modifyLogTemplate(LogTemplate logTemplate) {
+		@SuppressWarnings("unchecked")
+		Map<String, LogTemplate> logTemplateMap = (Map<String, LogTemplate>) MemCachedUtil.memCachedClient
+				.get(LOG_TEMPLATE_CONFIG);
+		String key = logTemplate.getType() + "_" + logTemplate.getNid();
+		//JSDP-211 xingjia 20150706 start
+		if(null == logTemplateMap){
+			return true;
+		}else{
+			logTemplateMap.put(key, logTemplate);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return MemCachedUtil.memCachedClient.replace(LOG_TEMPLATE_CONFIG,
+				logTemplateMap);
+	}
+
+	/**
+	 * 从全局缓存中加载返回指定通知
+	 * 
+	 * @param noticeTypeNid
+	 * @param notice_type
+	 * @return NoticeType
+	 * */
+	public static NoticeType getNoticeType(String noticeTypeNid,
+			byte notice_type) {
+
+		@SuppressWarnings("unchecked")
+		Map<String, NoticeType> noticeTypeMap = (Map<String, NoticeType>) MemCachedUtil.memCachedClient
+				.get(NOTICE_TYPE_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if (noticeTypeMap == null) {
+			return DataGloble.getNoticeType(noticeTypeNid, notice_type);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return noticeTypeMap.get(noticeTypeNid + "_" + notice_type);
+	}
+
+	/**
+	 * 修改指定通知同步更新到全局缓存
+	 * 
+	 * @param noticeType
+	 *            通知实体类型
+	 * @reutn boolean 成功或失败
+	 * */
+	public static boolean modifyNoticeType(NoticeType noticeType) {
+		@SuppressWarnings("unchecked")
+		Map<String, NoticeType> noticeTypeMap = (Map<String, NoticeType>) MemCachedUtil.memCachedClient
+				.get(NOTICE_TYPE_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if(null == noticeTypeMap){
+			return true;
+		}else{
+			noticeTypeMap.put(
+					noticeType.getNid() + "_" + noticeType.getNoticeType(),
+					noticeType);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return MemCachedUtil.memCachedClient.replace(NOTICE_TYPE_CONFIG,
+				noticeTypeMap);
+
+	}
+
+	/**
+	 * 从全局缓存中加载返回系统设置
+	 * 缓存中拿不到的话从数据库中获取
+	 * @param key
+	 * @return SystemConfigModel
+	 * */
+	public static SystemConfigModel getSystemConfigModel() {
+
+		@SuppressWarnings("unchecked")
+		SystemConfigModel sysConfig = (SystemConfigModel) MemCachedUtil.memCachedClient
+				.get(SYS_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if(null == sysConfig){
+			return DataGloble.getSystemConfigModel();
+		}
+		//JSDP-211 xingjia 20150706 end
+		return sysConfig;
+	}
+
+	/**
+	 * 修改指定系统配置同步更新到全局缓存
+	 * 
+	 * @param sysConfig
+	 *            系统配置实体信息
+	 * @return boolean 成功或失败
+	 * */
+	public static boolean modifySysConfig(SystemConfig sysConfig) {
+		SystemConfigModel sys = (SystemConfigModel) MemCachedUtil.memCachedClient
+				.get(SYS_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if(null == sys){
+			return true;
+		}else{
+			sys.addConfig(sysConfig);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return MemCachedUtil.memCachedClient.replace(SYS_CONFIG, sys);
+	}
+
+	/**
+	 * 从全局缓存中系统配置实例
+	 * 
+	 * @param key
+	 *            规则的nid
+	 * @return RuleCheck
+	 * */
+	public static RuleCheck getRuleCheck(String key) {
+
+		@SuppressWarnings("unchecked")
+		Map<String, RuleCheck> ruleMap = (Map<String, RuleCheck>) MemCachedUtil.memCachedClient
+				.get(RULE_CONFIG);
+		//JSDP-211 xingjia 20150706 start
+		if (ruleMap == null) {
+			return DataGloble.getRuleCheck(key);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return ruleMap.get(key);
+	}
+
+	/**
+	 * 修改指定规则同步更新到全局缓存
+	 * 
+	 * @param key
+	 *            规则的nid
+	 * @param rule
+	 *            规则实体信息
+	 * @return boolean 成功或失败
+	 * */
+	public static boolean modifyRuleCheck(String key, Rule rule) {
+		
+		@SuppressWarnings("unchecked")
+		Map<String, RuleCheck> ruleMap = (Map<String, RuleCheck>) MemCachedUtil.memCachedClient
+				.get(RULE_CONFIG);
+		RuleCheck ruleCheck = setRuleCheck(rule);
+		//JSDP-211 xingjia 20150706 start
+		if(null == ruleMap){
+			return true;
+		}else{
+			ruleMap.put(key, ruleCheck);
+		}
+		//JSDP-211 xingjia 20150706 end
+		return MemCachedUtil.memCachedClient.replace(RULE_CONFIG, ruleMap);
+	}
+
+	private static RuleCheck setRuleCheck(Rule r) {
+		final String rulePackageName = "com.rongdu.p2psys.core.rule";
+		Object jsonObj = null;
+		try {
+			Class<?> clazz = null;
+			clazz = Class.forName(rulePackageName + "."
+					+ StringUtil.firstCharUpperCase(r.getNid()) + "RuleCheck");
+			jsonObj = JSON.parseObject(r.getRuleCheck(), clazz);
+			if (jsonObj == null) {
+				jsonObj = clazz.newInstance();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return (RuleCheck) jsonObj;
+	}
+
+	
+}

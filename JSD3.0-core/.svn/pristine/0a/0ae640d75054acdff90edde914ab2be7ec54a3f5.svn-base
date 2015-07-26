@@ -1,0 +1,64 @@
+package com.ddtkj.p2psys.analysis.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.analysis.dao.UserSourceDao;
+import com.ddtkj.p2psys.analysis.domain.UserSource;
+import com.ddtkj.p2psys.analysis.model.UserSourceModel;
+import com.ddtkj.p2psys.analysis.service.UserSourceService;
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+/**
+ * @描述：用户来源收集service实现层
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年5月4日
+ */
+@Service("userSourceService")
+public class UserSourceServiceImpl implements UserSourceService{
+	
+	@Resource
+	UserSourceDao userSourceDao;
+	@Override
+	public UserSource saveUserSource(UserSource userSource) {
+		UserSource userSourcen = userSourceDao.save(userSource);
+		return userSourcen;
+	}
+	@Override
+	public UserSource findByUserId(long userId) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", userId);
+		UserSource userSource = userSourceDao.findByCriteriaForUnique(param);
+		return userSource;
+	}
+	@Override
+	public PageDataList<UserSourceModel> findPageDataList(
+			UserSourceModel userSourceModel) {
+		return userSourceDao.pageListUserSource(userSourceModel);
+	}
+	@Override
+	public PageDataList<UserSourceModel> findUserBySource(
+			UserSourceModel userSourceModel) {
+		
+		return userSourceDao.pageListUserBySource(userSourceModel);
+	}
+	@Override
+	public PageDataList<UserSourceModel> findSourceAndInvest(
+			UserSourceModel userSourceModel) {
+		
+		return userSourceDao.pageListSourceAndInvest(userSourceModel);
+	}
+	@Override
+	public PageDataList<UserSourceModel> findSourceInvestDetail(
+			UserSourceModel userSourceModel) {
+		
+		return userSourceDao.pageListSourceInvestDetail(userSourceModel);
+	}
+
+	
+
+}

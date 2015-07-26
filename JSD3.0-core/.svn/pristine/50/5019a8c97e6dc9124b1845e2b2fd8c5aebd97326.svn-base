@@ -1,0 +1,54 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.member.service;
+
+import com.ddtkj.p2psys.member.domain.MemberVipAward;
+import com.ddtkj.p2psys.member.model.MemberVipAwardModel;
+import com.ddtkj.p2psys.member.model.MemberVipAwardSubModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述：会员奖励来源Service
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月22日 
+ */
+public interface MemberVipAwardService {
+	
+	/**
+	 * @author 李建云
+	 * 会员奖励记录分页查询
+	 * @param currentPage
+	 * @param pageSize
+	 * @return
+	 */
+	public PageDataList<MemberVipAwardModel> memberVipAwardPageList(MemberVipAwardModel model);
+		
+	/**
+	 * @author 李建云
+	 * 
+	 * @param userId 用户ID
+	 * @param phone 手机号码
+	 */
+	void modifyIsConvert(int id);
+	
+	
+	/**
+	 * @author 李建云
+	 * 查询邀请vip奖励
+	 * */
+	public MemberVipAward findMemberVipAward(int id);
+	
+	
+	/**
+	 * vip会员包兑换VIP
+	 *@author 李建云
+	 * @throws Exception 
+	 * 
+	 * */
+	public void convertVipForVipAward(MemberVipAwardSubModel model) throws Exception;
+	
+
+	
+	
+}

@@ -1,0 +1,123 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+/**
+ * @描述：用户实名认证申请
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月29日 
+ */
+@Entity
+@Table(name = "t_jsd_user_realname_application")
+public class UserRealnameApplication implements Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3488045150895387115L;
+	
+	@Id
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private User user;
+	private String positivePhoto;//正面照片   
+	private String reversePhoto;//反面照片   
+	private int status;//审核状态      0：申请中,1：审核成功,2：审核失败
+	private long  operateUser;//审核人     
+	private Date operateTime;//审核时间  
+	private Date addTime; //添加时间
+	private String remark;//备注       
+	private String certificateType;//证件类型     00 ：身份证,01：军官证
+	
+	public UserRealnameApplication(){
+		
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public String getPositivePhoto() {
+		return positivePhoto;
+	}
+
+	public void setPositivePhoto(String positivePhoto) {
+		this.positivePhoto = positivePhoto;
+	}
+
+	public String getReversePhoto() {
+		return reversePhoto;
+	}
+
+	public void setReversePhoto(String reversePhoto) {
+		this.reversePhoto = reversePhoto;
+	}
+
+
+
+
+	public Date getOperateTime() {
+		return operateTime;
+	}
+
+	public void setOperateTime(Date operateTime) {
+		this.operateTime = operateTime;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public String getCertificateType() {
+		return certificateType;
+	}
+
+	public void setCertificateType(String certificateType) {
+		this.certificateType = certificateType;
+	}
+
+	public int getStatus() {
+		return status;
+	}
+
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	public long getOperateUser() {
+		return operateUser;
+	}
+
+	public void setOperateUser(long operateUser) {
+		this.operateUser = operateUser;
+	}
+
+}

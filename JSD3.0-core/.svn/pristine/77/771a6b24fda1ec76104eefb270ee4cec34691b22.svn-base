@@ -1,0 +1,600 @@
+package com.rongdu.p2psys.borrow.model;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.autotender.dao.BorrowAutoSetDao;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoTender;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.borrow.model.BorrowHelper;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowAuto;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.model.interest.InterestCalculator;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.enums.EnumRuleNid;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.AutoTenderConfRuleCheck;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+
+/**
+ * 自动投标Model
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月21日
+ */
+public class BorrowAutoModel extends BorrowAuto {
+	private final static Logger logger = Logger.getLogger(BorrowAutoModel.class);
+
+	private static final long serialVersionUID = 1L;
+
+	public static BorrowAutoModel instance(BorrowAuto auto) {
+		BorrowAutoModel borrowAutoModel = new BorrowAutoModel();
+		BeanUtils.copyProperties(auto, borrowAutoModel);
+		return borrowAutoModel;
+	}
+
+	public BorrowAuto prototype() {
+		BorrowAuto auto = new BorrowAuto();
+		BeanUtils.copyProperties(this, auto);
+		return auto;
+	}
+	
+	/**
+	 * 是否开启自动投标
+	 * @param  borrow
+	 * @throws Exception   
+	 */ 
+	public boolean autoTenderEnable(Borrow borrow){
+		AutoTenderConfRuleCheck check = (AutoTenderConfRuleCheck) Global
+				.getRuleCheck(EnumRuleNid.AUTO_TENDER_CONF.getValue());	
+    	boolean isAutoTender = false;
+    	int enableAutoTender = 0;
+		List<Integer> list = null;
+		if(check != null){
+			if(check.getAuto_tender() != null){
+    			enableAutoTender = check.getAuto_tender().getStatus();
+			}
+			if(check.getTender_type() != null){
+				list = check.getTender_type();
+			}
+		}
+		if(enableAutoTender == BorrowAutoTender.AUTO_TENDER_ENABLE && list.contains(borrow.getType()) &&
+				borrow.getFixedTime() == null){
+			isAutoTender = true;
+		}
+		if(borrow.getFixedTime() != null){ 
+			if(borrow.getFixedTime().getTime() > new Date().getTime()){
+				isAutoTender = false;
+			}else{
+				isAutoTender = true;
+			}
+		}
+		return isAutoTender;
+	}
+	
+	/**
+	 * 填充自动投标记录信息
+	 * @param  borrowmodel, user实体, 设置的自动投标金额, 自动投标设置实体
+	 * @return BorrowAutoTender 
+	 * @throws Exception   
+	 */ 
+	private BorrowAutoTender addAutoTender(BorrowModel borrow, User user, double tenderNum, BorrowAutoSet auto) {
+		BorrowAutoTender autoTender = new BorrowAutoTender();
+		autoTender.setAuto(auto);
+		autoTender.setUser(user);
+		autoTender.setUserName(user.getUserName());
+		autoTender.setBorrow(borrow);
+		autoTender.setBorrowName(borrow.getName());
+		autoTender.setStyle(Integer.valueOf(borrow.getStyle()));
+		autoTender.setApr(borrow.getApr());
+		autoTender.setBorrowTimeType(borrow.getBorrowTimeType());
+		autoTender.setTimeLimit(borrow.getTimeLimit());
+		autoTender.setMoney(tenderNum);
+		autoTender.setAddTime(new Date());
+		autoTender.setAddIp(Global.getIP());
+		autoTender.setTenderBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_INVEST));
+		return autoTender;
+	}
+	
+	/**
+	 * 填充投标记录信息
+	 * @param  model
+	 * @param  user
+	 * @throws Exception   
+	 */ 
+	private BorrowTender fillBorrowTender(BorrowModel model, User user){
+		BorrowTender tender = new BorrowTender();
+		tender.setBorrow(model);
+		tender.setUser(user);
+		//tender.setAutoRepurchase(1);
+		tender.setAddTime(new Date());
+		tender.setAddIp(Global.getIP());
+		tender.setTenderBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_INVEST));
+		tender.setBorrowManageFeeBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_FEE));
+		if(model.getAward()!=0){
+		    tender.setTenderAwardBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_AWARD));
+		}
+		if(model.getType()==113||model.getType()==115){
+			tender.setTenderTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));
+		}
+		//JSDBET-872 wcw 2015-3-28 start
+		if(model.getVouchFirm()!=null&&StringUtil.isNotBlank(model.getVouchFirm().getUserName())){
+			tender.setGuaranteeTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_GUARANTEE_FEE));
+		}
+		if(tender.getUseRpDynamic()>0){
+			tender.setRpBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+		}
+		return tender;
+	}
+	
+	/**
+	 * 自动投标业务处理
+	 * @param BorrowAutoSet
+	 * @param borrowModel
+	 * @param BorrowAutoTender
+	 * @throws Exception 
+	 */
+	public List<BorrowAutoTender> autoTenderHelper(List<BorrowAutoSet> autoList, BorrowModel borrow, List<BorrowAutoTender> tenderList) throws Exception {		
+		UserDao userDao = (UserDao) BeanUtil.getBean("userDao");
+		UserIdentifyDao userIdentifyDao = (UserIdentifyDao) BeanUtil.getBean("userIdentifyDao");
+		BorrowTenderDao tenderDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		AccountDao accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+		BorrowCollectionDao borrowCollectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		long borrow_id = borrow.getId();	
+		double total_account_yes = 0;
+		if (autoList.size() > 0) {
+			for (BorrowAutoSet borrowAutoSet : autoList) {
+				try {
+					long user_id = borrowAutoSet.getUser().getUserId();
+					User user = userDao.getUserById(user_id);
+					UserIdentify attestation = userIdentifyDao.findByUserId(user_id);
+					AutoTenderConfRuleCheck check = (AutoTenderConfRuleCheck) Global
+							.getRuleCheck(EnumRuleNid.AUTO_TENDER_CONF.getValue());
+					double auto_tender_max_apr = 0;
+					double auto_tender_origin_account = 0;
+					double auto_tender_fqorigin_account = 0;
+					if(check != null && check.getAuto_tender() != null){
+						auto_tender_max_apr  = check.getAuto_tender().getMax_apr();
+						auto_tender_origin_account  = check.getAuto_tender().getOrigin_account();
+						auto_tender_fqorigin_account = check.getAuto_tender().getFqorigin_account();
+					}
+					//自动投标可投标的最大金额
+					double auto_tender_max_account = borrow.getAccount() * auto_tender_max_apr;			
+					if (borrow.getType() == Borrow.TYPE_FLOW) {
+						int flow_auto_tender_max_account = (int) (borrow.getAccount() * auto_tender_max_apr);
+						auto_tender_max_account = (flow_auto_tender_max_account / borrow.getFlowMoney()) * borrow.getFlowMoney();
+					}
+					//标设置了定向密码
+					String pwd = StringUtil.isNull(borrow.getPwd());
+					if (!StringUtil.isBlank(pwd)) {
+						logger.error("该标【id为" + borrow.getId() + "】设置了定向标密码，不能自动投标！");
+						break;
+					}
+					// 此标已满!
+					if (total_account_yes >= borrow.getAccount()) {
+						logger.error("此标【id为" + borrow.getId() + "】已满！");
+						break;
+					}
+					// 不能超过做大自动投标额度
+					if (total_account_yes >= auto_tender_max_account) {
+						logger.error("该标【" + borrow_id + "】已投标金额不能超过最大自动投标额度");
+						break;
+					}
+					
+					logger.info("Begin autoTender! uid=" + user_id + ",bid=" + borrow_id);
+					// 设置的自动投标金额
+					double tenderNum = borrowAutoSet.getTenderAccount();
+					BorrowAutoTender autoTender = addAutoTender(borrow, user, tenderNum, borrowAutoSet);		
+					
+					//实名、邮箱、手机认证校验
+					if (check != null && check.getTender_valid() != null) {
+						if (check.getTender_valid().getStatus() == AutoTenderConfRuleCheck.STATUS_VALID_ENABLE) {
+							if (check.getTender_valid().getReal_enable() == AutoTenderConfRuleCheck.STATUS_REAL_ENABLE
+									&& !"83".equals(attestation.getRealNameStatus())) {
+								autoTender.setRemark("你还未通过实名认证,不能进行自动投标,标ID=" + borrow_id);
+								autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+								tenderList.add(autoTender);
+								logger.error("该标【" + borrow_id + "】该用户:"+ user.getUserName() +",未通过实名认证");
+								continue;
+							}
+							if (check.getTender_valid().getEmail_enable() == AutoTenderConfRuleCheck.STATUS_EMAIL_ENABLE
+									&& !"81".equals(attestation.getEmailStatus())) {
+								autoTender.setRemark("你还未通过邮箱认证,不能进行自动投标,标ID=" + borrow_id);
+								autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+								tenderList.add(autoTender);
+								logger.error("该标【" + borrow_id + "】该用户:"+ user.getUserName() +",未通过邮箱认证");
+								continue;
+							}
+							if (check.getTender_valid().getPhone_enable() == AutoTenderConfRuleCheck.STATUS_PHONE_ENABLE
+									&& !"86".equals(attestation.getMobilePhoneStatus())) {
+								autoTender.setRemark("你还未通过手机认证,不能进行自动投标,标ID=" + borrow_id);
+								autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+								tenderList.add(autoTender);
+								logger.error("该标【" + borrow_id + "】该用户:"+ user.getUserName() +",未通过手机认证");
+								continue;
+							}
+						}
+					}
+					
+					// 一个标一个人只能投一次
+					int auto_times = tenderDao.getAutoTenderByUserId(user_id, Byte.parseByte("1"), borrow.getId(), BorrowAutoTender.AUTO_TENDER_STATUS_YES);
+					if (auto_times > 0) {
+						autoTender.setRemark("你已经投过此标不能再进行自动投标,标ID=" + borrow_id);
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						logger.error("该标【id为" + borrow.getId() + "】你已经投过一次，不能再进行自动投标！");
+						continue;
+					}
+					// 账号已经被锁定
+					if (!"NN".equals(user.getIsLocked())) {
+						autoTender.setRemark("你的账号已经被锁定");
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						logger.error("该用户【" + user.getUserName() + "】已经被锁定！");
+						continue;
+					}
+					// 自动投标状态
+					if (BorrowAutoSet.AUTO_TENDER_SET_DISABLE.equals(borrowAutoSet.getStatus())) {
+						autoTender.setRemark("你未开启自动投标");
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						logger.error("【标id为" + borrow_id + "】该用户【" + user.getUserName() + "】未设置自动投标！");
+						continue;
+					}
+					if (borrowAutoSet.getTenderAccount() == 0) {
+						autoTender.setRemark("你设置的自动投标投标金额为0");
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						logger.error("【标id为" + borrow_id + "】该用户【" + user.getUserName() + "】设置的自动投标投标额度为0！");
+						continue;
+					}	
+					// 还款方式
+					if (borrowAutoSet.isBorrowStyleEnable()) {
+						if (borrowAutoSet.getBorrowStyle() != borrow.getStyle()) {
+							autoTender.setRemark("此标还款方式不在自动投标设置范围之内,标ID=" + borrow_id+",还款方式="+borrow.getStyle());
+							autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+							tenderList.add(autoTender);
+							logger.error("该标【" + borrow_id + "】设置还款方式不在该用户【" + user.getUserName() + "】设置的自动投标投标还款方式的范围之内");
+							continue;
+						}
+					}
+					// 自动投标借款期限校验
+					if (borrowAutoSet.isTimelimitMonthEnable()) {
+						if (borrow.getBorrowTimeType() != 1) { // 月标
+							if (borrowAutoSet.getTimelimitMonthUp() < borrow.getTimeLimit()
+									|| borrowAutoSet.getTimelimitMonthDown() > borrow.getTimeLimit()) {
+								autoTender.setRemark("此标(月标)借款期限不在自动投标设置范围之内,标ID=" + + borrow_id+",月标借款期限="+borrow.getTimeLimit());
+								autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+								tenderList.add(autoTender);
+								logger.error("该标【" + borrow_id + "】设置（月标）借款期限不在该用户【" + user.getUserName() + "】设置的自动投标投标借款期限的范围之内");
+								continue;
+							}
+						}
+					}
+					if (borrowAutoSet.isTimelimitDayEnable()) {
+						if (borrow.getBorrowTimeType() == 1) { // 天标
+							if (borrowAutoSet.getTimelimitDayUp() < borrow.getTimeLimit()
+									|| borrowAutoSet.getTimelimitDayDown() > borrow.getTimeLimit()) {
+								autoTender.setRemark("此标(天标)借款期限不在自动投标设置范围之内,标ID=" + + borrow_id+",天标借款期限="+borrow.getTimeLimit());
+								autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+								tenderList.add(autoTender);
+								logger.error("该标【" + borrow_id + "】设置（天标）借款期限不在该用户【" + user.getUserName() + "】设置的自动投标投标借款期限的范围之内");
+								continue;
+							}
+						}
+					}
+					// 年利率
+					if (borrowAutoSet.isAprEnable()) {
+						if (borrowAutoSet.getAprUp() < borrow.getApr() || borrowAutoSet.getAprDown() > borrow.getApr()) {
+							autoTender.setRemark("此标年利率不在自动投标设置范围之内,标ID=" + + borrow_id+",年利率="+borrow.getApr());
+							autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+							tenderList.add(autoTender);
+							logger.error("该标【" + borrow_id + "】设置年利率不在该用户【" + user.getUserName() + "】设置的自动投标投标年利率的范围之内");
+							continue;
+						}
+					}
+					// 投标奖励
+					if (borrowAutoSet.isAwardEnable()) {
+						double part_account = 0;
+						if (borrow.getAward() == 1) {
+							part_account = borrow.getPartAccount();
+							if (borrowAutoSet.getAwardUp() < part_account || borrowAutoSet.getAwardDown() > part_account) {
+								autoTender.setRemark("此标奖励不在自动投标设置的范围之内,标ID=" + + borrow_id+",投标奖励="+borrow.getApr());
+								autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+								tenderList.add(autoTender);
+								logger.error("该标【" + borrow_id + "】设置投标奖励不在该用户【" + user.getUserName() + "】设置的自动投标投标奖励的范围之内");
+								continue;
+							}
+						}
+					}
+					if (borrow.getUser().getUserId() == user_id) {
+						autoTender.setRemark("自己不能投自己发布的标,标ID=" + borrow_id);
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						logger.error("自己不能投自己发布的标！ ");
+						continue;
+					}	
+					
+					//标种类型
+					if(borrowAutoSet.isEnergyEnable() && borrow.getType() == Borrow.TYPE_MORTGAGE_ENERGY){
+						
+					}else if(borrowAutoSet.isCarEnable() && borrow.getType() == Borrow.TYPE_MORTGAGE){
+						
+					}else if(borrowAutoSet.isNetworkEnable() && borrow.getType() == Borrow.TYPE_NETWORK){
+						
+					}else if(borrowAutoSet.isAmortizeEnable() && borrow.getType() == Borrow.TYPE_AMORTIZE){
+						
+					}else{
+						autoTender.setRemark("此标设置的标的种类不在自动投标设置的范围之内,标ID=" + + borrow_id+",标种类型="+borrow.getType());
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						logger.error("该标【" + borrow_id + "】设置的标的种类不包含在该用户【" + user.getUserName() + "】自动投标设置的标种类的范围之内");
+						continue;
+					}
+					
+					BorrowTender tender = fillBorrowTender(borrow, user);
+					
+					// 账户余额处理
+					Account account = accountDao.getAccountByUserId(tender.getUser().getUserId());
+					double useMoney = account.getUsableAccount();
+					if (tenderNum > useMoney) {
+						tenderNum = useMoney;
+					}
+					// 最大投标额度
+					double most_account_num = borrow.getMostAccount();
+					if (most_account_num > 0 && tenderNum > most_account_num) {
+						tenderNum = most_account_num;
+					}
+					// 最小投标额度
+					if(borrow.getType() != Borrow.TYPE_AMORTIZE){
+						// 最小额度
+						double lowest_account_num = borrow.getLowestAccount() < auto_tender_origin_account ? auto_tender_origin_account : borrow.getLowestAccount();
+						if (tenderNum < lowest_account_num) {
+							autoTender.setRemark("自动投标金额小于该标最小限制额度或可用金额不足" + lowest_account_num+",标ID=" + + borrow_id);
+							autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+							tenderList.add(autoTender);
+							logger.error("该标【" + borrow_id + "】自动投标金额不能小于该标最小限制额度或可用金额不足");
+							continue;
+						}
+					}else if(borrow.getType() == Borrow.TYPE_AMORTIZE){
+						// 最小额度
+						double lowest_account_num = borrow.getLowestAccount() < auto_tender_fqorigin_account ? auto_tender_fqorigin_account : borrow.getLowestAccount();
+						if (tenderNum < lowest_account_num) {
+							autoTender.setRemark("自动投标金额小于该标最小限制额度或可用金额不足" + lowest_account_num+",标ID=" + + borrow_id);
+							autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+							tenderList.add(autoTender);
+							logger.error("该标【" + borrow_id + "】自动投标金额不能小于该标最小限制额度或可用金额不足");
+							continue;
+						}
+					}
+					
+					//最后一个投资用户
+					borrow = BorrowModel.instance(borrowDao.find(borrow_id));
+					if (borrow.getAccountYes() + tenderNum >= auto_tender_max_account) {
+						tenderNum = auto_tender_max_account - borrow.getAccountYes();
+						if (tenderNum < auto_tender_fqorigin_account) {
+							autoTender.setRemark("此标剩余自动投标金额小于"+auto_tender_fqorigin_account+",标ID=" + + borrow_id);
+							autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+							tenderList.add(autoTender);
+							logger.error("该标【" + borrow_id + "】剩余自动投标金额不能小于"+auto_tender_fqorigin_account);
+							continue;
+						}	
+					}		
+					
+					//投标金额校验
+					if (tenderNum <= 0 ) {
+						autoTender.setRemark("投标金额必须大于0,标ID=" + borrow_id);
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						logger.error("投标金额必须大于0！ ");
+						continue;
+					}
+					if (borrow.getType() != Borrow.TYPE_AMORTIZE) {
+						if (tenderNum%100 != 0 ) {
+							autoTender.setRemark("投标金额必须是100的整数,标ID=" + borrow_id);
+							autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+							tenderList.add(autoTender);
+							logger.error("投标金额必须是100的整数！ ");
+							continue;
+						}
+					}
+					
+					//处理投标时用户资金使用分配
+					tender = dealAccountUseMoney(tender, tenderNum);
+					
+					// 分期宝，自动投标金额不能小于1，规则配置
+					if(tenderNum < auto_tender_fqorigin_account && borrow.getType() == Borrow.TYPE_AMORTIZE){
+						autoTender.setRemark("你的可用余额不足"+auto_tender_fqorigin_account);
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						// 余额不足更新auto的updatetime时间
+						updateAutoTime(borrowAutoSet);
+						logger.error("你的可用余额不足"+auto_tender_fqorigin_account+",该标【" + borrow_id + "】自动投标金额不能小于"+auto_tender_fqorigin_account);
+						continue;
+					}
+					
+					// 自动投标金额不能小于500，规则配置
+					if (tenderNum < auto_tender_origin_account && borrow.getType() != Borrow.TYPE_AMORTIZE) {
+						autoTender.setRemark("你的可用余额不足"+auto_tender_origin_account);
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+						tenderList.add(autoTender);
+						// 余额不足更新auto的updatetime时间
+						updateAutoTime(borrowAutoSet);
+						logger.error("你的可用余额不足"+auto_tender_origin_account+",该标【" + borrow_id + "】自动投标金额不能小于"+auto_tender_origin_account);
+						continue;
+					} else {
+						if (borrow.getType() == Borrow.TYPE_FLOW) {
+							// 如果用户的投标金额不是流转标单份金额的整数倍，向下取整份对应的金额
+							// 不能买到一份，直接退出
+							if (Math.floor(tenderNum / borrow.getFlowMoney()) < 1) {
+								logger.error("该标【" + borrow_id + "】流转标自动投标份数不能小于1");
+								autoTender.setRemark("流转标自动投标金额不足一份");
+								autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_FAIL);
+								tenderList.add(autoTender);
+								updateAutoTime(borrowAutoSet);
+								logger.error("该标【" + borrow_id + "】流转标自动投标份数不能小于1");
+								continue;
+							}
+							tender.setMoney(Math.floor(tenderNum / borrow.getFlowMoney()) * borrow.getFlowMoney());
+							tender.setStatus(1);
+							autoTender.setMoney(Math.floor(tenderNum / borrow.getFlowMoney()) * borrow.getFlowMoney());
+						} else {
+							tender.setMoney(tenderNum);
+							tender.setStatus(0);
+							autoTender.setMoney(tenderNum);
+						}	
+						
+						if (borrow.getAccountYes() + tenderNum > auto_tender_max_account) {
+							autoTender.setRemark("自动投标成功,您属于部分投标！"+"标ID=" + + borrow_id);
+							tenderList.add(autoTender);
+						}else{
+							autoTender.setRemark("自动投标成功！"+"标ID=" + + borrow_id);
+							tenderList.add(autoTender);
+						}
+						
+						autoTender.setStatus(BorrowAutoTender.AUTO_TENDER_RESULT_SUCCESS);
+						total_account_yes += tenderNum;
+						borrow = BorrowModel.instance(borrowDao.find(borrow_id));
+						// 冻结投资人本金
+						Global.setTransfer("borrow", borrow);
+						Global.setTransfer("money", tenderNum);
+						Global.setTransfer("tender", tender);
+						Global.setTransfer("user", borrowAutoSet.getUser());
+						Map<String, Object> map = new HashMap<String, Object>();
+						map.put("rechargeMoney", tender.getUseRecharge());
+						map.put("awardMoney", tender.getUseAward());
+						map.put("interestMoney", tender.getUseInterest());
+						map.put("returnCapitalMoney", tender.getUseReturnedMoney());
+						AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("borrowTenderExecuter");
+						borrowTenderExecuter.execute(map, user, borrow.getUser());
+						
+						logger.info("auto tender info:"+tenderNum+","+total_account_yes+","+borrow.getAccountYes());
+						borrowDao.update(tenderNum, total_account_yes / borrow.getAccount() * 100, 19, borrow_id);
+						tender.setTenderType(Byte.parseByte("1"));
+						tender.setMoney(tenderNum);
+						tender.setAccount(tenderNum);
+						tender = tenderDao.addBorrowTender(tender);	
+						
+						BorrowWorker worker = BorrowHelper.getWorker(borrow);
+						double validAccount = tender.getAccount();
+						InterestCalculator ic = worker.interestCalculator(validAccount);
+						List<BorrowCollection> collectList = worker.createCollectionList(tender, ic);
+						borrowCollectionDao.save(collectList);
+						worker.tenderSuccess(tender, ic);
+						
+						// 自动投标成功，更新auto的updatetime时间
+						updateAutoTime(borrowAutoSet);
+						
+						//即投即生息标种处理
+						if(borrow.getType() == Borrow.TYPE_NETWORK || borrow.getType() == Borrow.TYPE_MORTGAGE_ENERGY){
+							worker.immediateInterestAfterTender(tender);
+						}					
+						
+						logger.info("End autoTender! user_id=" + borrowAutoSet.getUser().getUserId() + ",borrow_id=" + borrow_id 
+								+ ",tender_account=" + tender.getAccount());
+					}
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					continue;
+				}	
+			}
+		}
+		return tenderList;
+	}	
+	
+	/**
+	 * 处理投标时用户的可用资金使用分配
+	 * @param  tender
+	 * @param  model
+	 * @return BorrowTender 
+	 * @throws Exception   
+	 */ 
+	private BorrowTender dealAccountUseMoney(BorrowTender tender, double tenderNum){
+		AccountDao accountDao = (AccountDao) BeanUtil.getBean("accountDao");
+		Account act = accountDao.getAccountByUserId(tender.getUser().getUserId());
+		// 账户可用
+		double useMoney = act.getUsableAccount();
+		if (tenderNum > useMoney) {
+			tenderNum = useMoney;
+		}
+		double currRecharge = 0;
+		double currAward = 0;
+		double currInterest = 0;
+		double currReturnCapital = 0;
+		//充值可用
+		double rechargeUsable = act.getRechargeUsable();
+		//奖励可用
+		double awardUsable = act.getAwardUsable();
+		//回款本金可用
+		double returnCapitalUsable = act.getReturnCapitalUsable();
+		
+		//计算提现金额冻结归属（使用充值、使用奖励、使用利息、使用回款）
+		if(rechargeUsable >= tenderNum){
+			currRecharge = tenderNum;
+		}else{
+			if((rechargeUsable + awardUsable) >= tenderNum){
+				currRecharge = rechargeUsable;
+				currAward = BigDecimalUtil.sub(tenderNum, rechargeUsable);
+			}else{
+				double currMoney = BigDecimalUtil.add(rechargeUsable, awardUsable, returnCapitalUsable);
+				if(currMoney > tenderNum){
+					currRecharge = rechargeUsable;
+					currAward = awardUsable;
+					currReturnCapital=BigDecimalUtil.add(tenderNum,-rechargeUsable,-awardUsable);
+				}else{
+					currRecharge = rechargeUsable;
+					currAward = awardUsable;
+					currReturnCapital = returnCapitalUsable;
+					currInterest = BigDecimalUtil.sub(tenderNum, currMoney);
+				}
+			}
+		}
+		tender.setUseAward(currAward);
+		tender.setUseInterest(currInterest);
+		tender.setUseRecharge(currRecharge);
+		tender.setUseReturnedMoney(currReturnCapital);
+		tender.setTenderBilNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_INVEST));
+		return tender;
+	}
+	
+	/**
+	 * 更新自动投标的更新时间,添加时间不做处理
+	 * @param  borrowAutoSet 
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	private void updateAutoTime(BorrowAutoSet borrowAutoSet){
+		BorrowAutoSetDao borrowAutoSetDao = (BorrowAutoSetDao) BeanUtil.getBean("borrowAutoSetDao");
+		borrowAutoSet.setUpdateTime(new Date());
+		borrowAutoSet.setAddTime(borrowAutoSet.getAddTime());
+		borrowAutoSet.setAddIp(borrowAutoSet.getAddIp());
+		borrowAutoSetDao.updateAutoTime(borrowAutoSet);
+		borrowAutoSetDao.callProcedure(borrowAutoSet);
+	}
+
+}

@@ -1,0 +1,58 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.dao.impl;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.user.dao.UserInvitedSummaryDao;
+import com.ddtkj.p2psys.user.domain.UserInvitedSummary;
+import com.ddtkj.p2psys.user.exception.UserException;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+/**
+ * @描述：好友邀请统计
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月22日 
+ */
+@Repository("userInvitedSummaryDao")
+public class UserInvitedSummaryDaoImpl extends BaseDaoImpl<UserInvitedSummary> implements UserInvitedSummaryDao{
+
+	@Override
+	public UserInvitedSummary findUserInvitedSummaryByUserId(long userId) {
+		String sql = " FROM UserInvitedSummary where user.userId = :userId ";
+		Query query = em.createQuery(sql).setParameter("userId", userId);
+		List<UserInvitedSummary> list = query.getResultList();
+		if (list.size() > 0) {
+			return list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	@Override
+	public void modifyInviteUsedTotal(long userId, int inviteUsedTotal) {	
+		UserInvitedSummary userInvitedSummary = this.findUserInvitedSummaryByUserId(userId);
+		userInvitedSummary.setInviteUsedTotal(userInvitedSummary.getInviteUsedTotal()+inviteUsedTotal);
+		 // 更新
+		update(userInvitedSummary);
+	}
+
+	@Override
+	public void modifyInviteTotal(long userId) {
+		UserInvitedSummary userInvitedSummary = this.findUserInvitedSummaryByUserId(userId);
+		
+		if(userInvitedSummary != null){
+			userInvitedSummary.setInviteTotal(userInvitedSummary.getInviteTotal()+1);
+			 // 更新
+			update(userInvitedSummary);
+		}else{
+			throw new UserException("更新邀请人数量失败！");
+		}
+	}
+
+}

@@ -1,0 +1,50 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RpActivitySumDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivitySum;
+import com.ddtkj.p2psys.redpacket.service.RpActivitySumService;
+
+/**
+ * @描述：活动红包汇总service实现类  JSDP-203
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:2015年7月20日 
+ * @JIRA JSDP-203
+ */
+@Repository("rpActivitySumService")
+public class RpActivitySumServiceImpl implements RpActivitySumService {
+	
+	@Resource
+	private RpActivitySumDao rpActivitySumDao;
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.service.RpActivitySumService#findRpActivitySumByUserId(long)
+	 */
+	@Override
+	public RpActivitySum findRpActivitySumByUserId(long userId) {
+		
+		return rpActivitySumDao.findObjByProperty("user.userId", userId);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.service.RpActivitySumService#updateRpActivitySum(com.ddtkj.p2psys.redpacket.domain.RpActivitySum)
+	 */
+	@Override
+	public RpActivitySum updateRpActivitySum(RpActivitySum rpActivitySum) {
+		return rpActivitySumDao.update(rpActivitySum);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.service.RpActivitySumService#saveRpActivitySum(com.ddtkj.p2psys.redpacket.domain.RpActivitySum)
+	 */
+	@Override
+	public RpActivitySum saveRpActivitySum(RpActivitySum rpActivitySum) {
+		
+		return rpActivitySumDao.save(rpActivitySum);
+	}
+
+	
+}

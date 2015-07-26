@@ -1,0 +1,39 @@
+
+package com.ddtkj.p2psys.cardaward.dao;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.cardaward.domain.MemberCardAward;
+import com.rongdu.common.dao.BaseDao;
+
+/**
+ * @描述: 购物卡记录Dao
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+public interface MemberCardAwardDao extends BaseDao<MemberCardAward> {
+	
+	/**
+	 * 根据状态获取购物卡列表
+	 * @param  status 状态
+	 * @throws Exception   
+	 */ 
+	List<MemberCardAward> getCardAwardListByStatusAndTime(String status, Date startTime, Date endTime);
+	
+	/**
+	 * 根据状态获取购物卡本次兑换总额
+	 * @param  status
+	 * @throws Exception   
+	 */ 
+	double getCardTotalByStatusAndTime(String status, Date startTime, Date endTime);
+	
+	/**
+	 * 更新抽奖购物卡记录
+	 * @param  cardAward 
+	 * @throws Exception   
+	 */ 
+	void updateMemberCardAward(MemberCardAward cardAward);
+	
+	
+}

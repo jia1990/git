@@ -1,0 +1,281 @@
+package com.ddtkj.manage.action.publish;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.activity.domain.ActivityPublish;
+import com.ddtkj.p2psys.activity.model.ActivityPublishModel;
+import com.ddtkj.p2psys.activity.service.ActivityPublishService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 活动发布管理
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 3.0
+ * @since 2015年1月10日
+ */
+public class ManageActivityAction extends BaseAction<ActivityPublishModel> implements ModelDriven<ActivityPublishModel> {
+
+	@Resource
+	private ActivityPublishService activityPublishService;
+
+    private Map<String, Object> data;
+    
+   
+	/**
+	 * 活动列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/market/activity/activityManager")
+	public String activityManager() throws Exception {
+		request.setAttribute("weburl", Global.getString("weburl"));
+		
+		return "activityManager";
+	}
+
+	/**
+	 * 活动列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/market/activity/activityList")
+	public void activityList() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null) {
+		    model.setStatus((byte)-1);
+		}
+		
+		// 标题
+		if(null != paramString("title") && "" != paramString("title")){
+			model.setTitle(paramString("title"));
+		}
+		
+		// 类型
+		if(null != paramString("type") && "" != paramString("type")){
+			model.setType(paramString("type"));
+		}
+		
+		// 活动状态
+		if(null != paramString("activityStatus") && "" != paramString("activityStatus")){
+			model.setActivityStatus(paramString("activityStatus"));
+		}
+		
+		PageDataList<ActivityPublishModel> activityList = activityPublishService.activityList(model, pageNumber, pageSize);
+		
+		data.put("total", activityList.getPage().getTotal()); // 总行数
+		data.put("rows", activityList.getList()); // 集合对象
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 活动列表（方法同上）
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/market/activity/activityParamList")
+	public void activityParamList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null) {
+		    model.setStatus((byte)-1);
+		}
+		PageDataList<ActivityPublishModel> activityList = activityPublishService.activityList(model, pageNumber, pageSize);
+		data.put("total", activityList.getPage().getTotal()); // 总行数
+		data.put("rows", activityList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 添加活动页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/market/activity/activityAddPage")
+	public String activityAddPage() throws Exception {
+		//initRSAME();
+		saveToken("activityAddToken");
+		return "activityAddPage";
+	}
+
+	/**
+	 * 添加活动
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/market/activity/activityAdd")
+	public void activityAdd() throws Exception {
+		
+		
+		data = new HashMap<String, Object>();
+		ActivityPublish activityNew = model.prototype();
+		
+		String content = paramString("content");
+		
+		String type = paramString("type");
+		
+		if(null != type && "" != type){
+			activityNew.setType(type);
+		}else{
+			activityNew.setType("0");
+		}
+		
+		activityNew.setContent(content);
+		activityNew.setAddTime(new Date());
+		activityNew.setAddIp(Global.getIP());
+		activityNew.setClicks(0);
+		activityNew.setUpdateTime(Calendar.getInstance().getTime());
+		activityNew.setUpdateUser(getOperatorId());
+		activityNew.setUpdateUserName(getOperatorUserName());
+		
+		String picPath = imgUpload();
+		if (picPath != null) {
+			activityNew.setPicPath(picPath);
+		}
+		checkToken("activityAddToken");
+		activityPublishService.activityAdd(activityNew);
+		data.put("result", true);
+		data.put("msg", "保存成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 修改活动页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/market/activity/activityEditPage")
+	public String activityEditPage() throws Exception {
+		//initRSAME();
+		saveToken("activityEditToken");
+		long id = paramLong("id");
+		ActivityPublish activityNew = activityPublishService.find(id);
+		request.setAttribute("activityNew", activityNew);
+		return "activityEditPage";
+	}
+
+	/**
+	 * 修改活动
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/market/activity/activityEdit")
+	public void activityEdit() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		ActivityPublish activityNew = model.prototype();
+		
+		String content = paramString("content");
+		String addTime = paramString("addTime");
+		
+		String type = paramString("type");
+		
+		if(null != type && "" != type){
+			activityNew.setType(type);
+		}else{
+			activityNew.setType("0");
+		}
+		
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+		
+		Date addTimeDate = sdf.parse(addTime);
+		activityNew.setAddTime(addTimeDate);
+		activityNew.setContent(content);
+		activityNew.setId(id);
+		activityNew.setUpdateTime(Calendar.getInstance().getTime());
+		activityNew.setUpdateUser(getOperatorId());
+		activityNew.setUpdateUserName(getOperatorUserName());
+		String picPath = imgUpload();
+		
+        if (picPath != null) {
+        	activityNew.setPicPath(picPath);
+        }
+        checkToken("activityEditToken");
+        activityPublishService.update(activityNew);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 删除活动
+	 * @throws Exception
+	 */
+	@Action(value="/modules/market/activity/activityDel")
+	public void activityDel() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		ActivityPublish activityNew = activityPublishService.find(id);
+		activityNew.setIsDelete(true);
+		activityPublishService.update(activityNew);
+		data.put("result", true);
+		data.put("msg", "删除成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 修改显示状态（显示/隐藏，是否置顶，是否推荐）
+	 * @throws Exception
+	 */
+	@Action(value="/modules/market/activity/activityUpdate")
+	public void activityUpdate() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		String type = paramString("type");
+		int value = paramInt("value");
+		ActivityPublish activityNew = activityPublishService.find(id);
+		//状态，0：隐藏，1：显示(显示状态：2：隐藏，1：显示)
+		if("status".equals(type)){
+			if(value==1){
+				activityNew.setStatus((byte) 2);
+			}else{
+				activityNew.setStatus((byte) 1);
+			}
+		}else if("isTop".equals(type)){
+			if(value==1){
+				activityNew.setIsTop((byte) 0);
+			}else{
+				activityNew.setIsTop((byte) 1);
+			}
+		}else if("isRecommend".equals(type)){
+			if(value==1){
+				activityNew.setIsRecommend((byte) 0);
+			}else{
+				activityNew.setIsRecommend((byte) 1);
+			}
+		}
+		activityNew.setUpdateUser(getOperatorId());
+		activityNew.setUpdateUserName(getOperatorUserName());
+		activityNew.setUpdateTime(Calendar.getInstance().getTime());
+		activityPublishService.update(activityNew);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+
+}

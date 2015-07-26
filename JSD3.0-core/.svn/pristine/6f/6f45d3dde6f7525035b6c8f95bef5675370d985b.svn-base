@@ -1,0 +1,157 @@
+package com.rongdu.p2psys.user.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.region.domain.Region;
+
+/**
+ * t_jsd_memeber_logistics_address 用户收货地址类
+ * 
+ * @author 李建云
+ * @version 3.0
+ * @since 20141206
+ */
+@Entity
+@Table(name = "t_jsd_memeber_logistics_address")
+public class UserLogisticsAddress implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;
+
+	/**
+	 * 用户ID
+	 */
+	@ManyToOne
+	@JoinColumn(name = "user_id")
+	private User user;
+
+	private String name;// 收货人姓名
+
+	@OneToOne
+	@JoinColumn(name = "province")
+	private Region regionProvince;// 省
+	
+	@OneToOne
+	@JoinColumn(name = "city")
+	private Region regionCity;// 市
+	
+	@OneToOne
+	@JoinColumn(name = "county")
+	private Region regionCounty;// 市
+
+	private String detailAddress;// 详细地址
+
+	private String phone;// 联系电话
+
+	private String zipCode;// 邮政编码
+
+	/**
+	 * 默认选定状态
+	 *
+	 * 1选定 0:不选定
+	 * */
+	private int isDefault;
+
+	public User getUser() {
+		return user;
+	}
+
+	/**
+	 * 设置用户ID
+	 * 
+	 * @param user
+	 *            要设置的用户ID
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public Region getRegionProvince() {
+		return regionProvince;
+	}
+
+	public void setRegionProvince(Region regionProvince) {
+		this.regionProvince = regionProvince;
+	}
+
+	public Region getRegionCity() {
+		return regionCity;
+	}
+
+	public void setRegionCity(Region regionCity) {
+		this.regionCity = regionCity;
+	}
+
+	public String getDetailAddress() {
+		return detailAddress;
+	}
+
+	public void setDetailAddress(String detailAddress) {
+		this.detailAddress = detailAddress;
+	}
+
+	public String getPhone() {
+		return phone;
+	}
+
+	public void setPhone(String phone) {
+		this.phone = phone;
+	}
+
+	public String getZipCode() {
+		return zipCode;
+	}
+
+	public void setZipCode(String zipCode) {
+		this.zipCode = zipCode;
+	}
+
+	public int getIsDefault() {
+		return isDefault;
+	}
+
+	public void setIsDefault(int isDefault) {
+		this.isDefault = isDefault;
+	}
+
+	public Region getRegionCounty() {
+		return regionCounty;
+	}
+
+	public void setRegionCounty(Region regionCounty) {
+		this.regionCounty = regionCounty;
+	}
+
+}

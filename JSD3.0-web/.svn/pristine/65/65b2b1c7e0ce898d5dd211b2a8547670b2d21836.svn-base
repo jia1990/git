@@ -1,0 +1,165 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+<#include "../include/resource1.html"> 
+<#include "../include/header.html">
+<title>晋商贷-找回密码</title>
+<style>
+input:focus{border:1px solid #FA9494;}
+.c_send_success{font-size:14px;color:#555;}
+.c_send_success input{margin-right:10px;width:212px;height:40px;border:1px solid #C8C8C8;padding:0 4px;}
+.c_go_look input{margin-left: 286px;_margin-left:143px;margin-top:30px;}
+
+.c_foget_pwd{height:52px;border-bottom:1px solid #E4E4E4;line-height:52px;text-align:center;color:#12adff;font-size:18px;background:#F1F0F0;}
+.c_pwd_content{width:890px;margin:0 55px;padding-left: 40px;}
+.c_pwd_content li{width:270px;}
+.c_pwd_content .c_mobile_step b{width: 210px;}
+.c_pwd_code{margin-top:20px;padding-left: 50px;}
+.c_pwd_code input{width:100px;}
+.c_find_pwd .c_mobile_step li{width:270px;}
+.c_find_pwd .c_mobile_step .c_step_last{width:80px;}
+#img{margin-right:6px;}
+.c_error{background:#fff;border:none;}
+.c_send_success input{color:#ababab;}
+</style>
+</head>
+ <body>
+	<!--  -->
+	<div class="c_deal" style="min-height: 650px;">
+		<div class="c_foget_pwd">找回密码</div>
+		
+		<div class="c_deal_content">
+			<div class="c_find_pwd" id="find_pwd1">
+				<div class="c_pwd_content" style="min-height: 391px;">
+					<ul class="c_mobile_step">
+						<li class="c_step_this" style="width:240px;"><span>1</span>填写手机号/邮箱<b style="width: 210px;left: 48px;"></b></li>
+						<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;">验证身份</i><b></b></li>
+						<li class="c_step_three"><span>3</span><i style="font-style:normal;">重置密码</i><b style="left: 50px;width:224px;"></b></li>
+						<li class="c_step_last"><span>4</span>找回成功</li>
+						<div class="c_clear"></div>
+					</ul>
+					<form action="${webroot}/user/dofindpwd.html" method="post" name="findStepfrom1" id="findStepfrom1">
+						<input type="hidden" name="step" value="1">
+						<div class="c_send_success" style="padding-left: 50px;">
+							<div id="showCookie" style="display:none;margin-bottom:12px;margin-top:-5px;color:#ea5154">
+								cookie未开启,请开启cookie<a id="noCookie" href="javascript:void(0);" style="color:#ABABAB;"><i style="font-style:italic;">如何开启</i></a>
+							</div>
+						</div>
+						<div class="c_send_success" style="padding-left: 50px;">
+							<span></span>
+							<label>登录名：</label><input type="text" name="userName" id="userName" class="c_email_input" value="请输入手机号或邮箱号">
+							<i class="c_error" style="font-style:normal;"></i>
+						</div>
+						<div class="c_send_success c_pwd_code">
+							<label style="float: left;margin-top: 10px;">验证码：</label>
+							<input name="validCode" id="validCode" type="text"  maxlength="4" class="border" value="验证码" style="float: left;width:110px;">
+							<span style="float: left;" onClick="document.getElementById('img').src='${webroot}/validimg.html?t=' + Math.random();">
+							<img src="${webroot}/validimg.html" id="img" onClick="this.src='${webroot}/validimg.html?t=' + Math.random();" style="height: 36px;border: 1px solid rgb(204, 204, 204);position: relative;top: 1px;border-radius: 4px;">
+							</span>
+							<i class="c_error" style="font-style:normal;line-height: 38px;"></i>
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_go_look"><input type="submit" id="find_pwd_step1" class="c_mobile_confirm" value="下一步"style="margin-left:306px;margin-bottom:80px;"></div>
+					</form>
+				</div>
+			</div>
+			<div class="c_find_pwd" id="find_pwd2" style="display:none;">
+				<div class="c_pwd_content">
+					<ul class="c_mobile_step">
+						<li class="" style="width:240px;"><span>1</span>填写手机号/邮箱<b style="width: 210px;left: 48px;"></b></li>
+						<li class="c_step_two c_step_this"><span>2</span><i style="font-style:normal;margin-left: 12px;">验证身份</i><b></b></li>
+						<li class="c_step_three"><span>3</span><i style="font-style:normal;">重置密码</i><b style="left: 50px;width:224px;"></b></li>
+						<li class="c_step_last"><span>4</span>找回成功</li>
+						<div class="c_clear"></div>
+					</ul>
+					<form action="${webroot}/user/dofindpwd.html" method="post" name="findStepfrom2" id="findStepfrom2">
+						<input type="hidden" name="step" value="2">
+						<div class="c_send_success" style="padding-left: 50px;">
+							<label>手机号：</label><i class="c_telphone" id="showMobile"></i>
+							<input type="hidden" id="mobile" name="userName" value=""/>
+						</div>
+						<div class="c_send_success c_pwd_code">
+							<label style="float:left;margin-top: 10px;">验证码：</label>
+							<input type="text" class="c_email_input" name="validCode" id="mobileValidCode" style="float:left;width:140px;">
+							<span id="mobileCode" class="c_get_code c_msg" style=" height: 37px; line-height: 37px;">获取短信验证码</span>
+							<i class="c_error" style="font-style:normal;"></i>
+							<div class="c_clear"></div>
+						</div>
+						<div class="c_go_look"><input type="submit" class="c_mobile_confirm" value="下一步"style="margin-left:306px;"></div>
+					</form>
+				</div>
+			</div>
+		
+			<div class="c_find_pwd" id="find_pwd2_email" style="display:none;">
+				<div class="c_pwd_content">
+					<ul class="c_mobile_step">
+						<li class="" style="width:240px;"><span>1</span>填写手机号/邮箱<b style="width: 210px;left: 48px;"></b></li>
+						<li class="c_step_two c_step_this"><span>2</span><i style="font-style:normal;margin-left: 12px;">验证身份</i><b></b></li>
+						<li class="c_step_three"><span>3</span><i style="font-style:normal;">重置密码</i><b style="left: 50px;width:224px;"></b></li>
+						<li class="c_step_last"><span>4</span>找回成功</li>
+						<div class="c_clear"></div>
+					</ul>
+					<div class="c_mobile_info" style="width:690px;margin-left:20px;">我们给你的邮箱<a id="showEmail" style="color:#0697da;display:inline;"></a>发送了一封验证邮件
+	请按照邮箱里的提示，完成邮箱验证。<!--<a href="" class="goEmail" target="_black" style="color:#0697da;display:inline;">去邮箱查看</a>-->
+					</div>
+					<form action="${webroot}/user/dofindpwd.html" method="post" name="findStepfromEmail2" id="findStepfromEmail2">
+						<input type="hidden" name="step" value="2">
+						<div class="c_send_success">
+							<label>邮箱验证码：</label><input type="text" name="validCode" id="meailValidCode" class="c_email_input"><span id="emailCode" class="c_get_code" style="color:#ababab;margin-right:10px;">再次发送</span>
+							<i class="c_error" style="font-style:normal;"></i>
+							<input type="hidden" name="userName" id="email"/>
+						</div>
+						<div class="c_go_look"><input type="submit" class="c_mobile_confirm" value="下一步" style="margin-bottom: 60px;"></div>
+					</form>
+				</div>
+			</div>
+	
+			<div class="c_find_pwd" id="find_pwd3" style="display:none;">
+				<div class="c_pwd_content">
+					<ul class="c_mobile_step">
+						<li class="" style="width:240px;"><span>1</span>填写手机号/邮箱<b style="width: 210px;left: 48px;"></b></li>
+						<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;">验证身份</i><b></b></li>
+						<li class="c_step_three c_step_this"><span>3</span><i style="font-style:normal;">重置密码</i><b style="left: 50px;width:224px;"></b></li>
+						<li class="c_step_last"><span>4</span>找回成功</li>
+						<div class="c_clear"></div>
+					</ul>
+					<div class="c_send_success" style="margin:0px;margin-bottom:126px;">
+						<dl class="c_tel_info c_set_pwd">
+							<form action="${webroot}/user/dofindpwd.html" method="post" name="findStepfrom3" id="findStepfrom3">
+								<input type="hidden" name="step" value="3">
+								<dd style="height: 40px;"><label >账户</label><span class="c_telphone" id="showUserName" style="margin:0;"></span></dd>
+								<input type="hidden" name="userName" id="accounter"/>
+								<dd class="c_valid_hide"><label>新密码</label><input type="password" name="password" id="newPwd" class="c_mobile_pwd"><span class="c_pwd_error">请输入密码</span>
+								<i class="c_error" style="font-style:normal;"></i>
+								</dd>
+								<dd class="c_valid_hide"><label>确认密码</label><input type="password" name="confirmNewPwd" class="c_mobile_repwd"><span class="c_pwd_error">请再次输入密码</span>
+								<i class="c_error" style="font-style:normal;"></i>
+								</dd>
+								<div class="c_go_look"><input type="submit" class="c_mobile_confirm" value="确认" style="border:none;margin-left: 106px;width:142px;height:34px;color: #fff;"></div>
+							</form>
+						</dl>
+					</div>
+				</div>
+			</div>
+		
+			<div class="c_find_pwd" id="find_pwd4" style="display:none;">
+				<div class="c_pwd_content">
+					<ul class="c_mobile_step">
+						<li class="" style="width:240px;"><span>1</span>填写手机号/邮箱<b style="width: 210px;left: 48px;"></b></li>
+						<li class="c_step_two"><span>2</span><i style="font-style:normal;margin-left: 12px;">验证身份</i><b></b></li>
+						<li class="c_step_three"><span>3</span><i style="font-style:normal;">重置密码</i><b style="left: 50px;width:224px;"></b></li>
+						<li class="c_step_last c_step_this"><span>4</span>找回成功</li>
+						<div class="c_clear"></div>
+					</ul>
+					<div class="c_pwd_success" style="margin-bottom:260px;">密码找回成功<a href="login.html" style="color:#0697DA;">立即登录</a></div>
+				</div>
+			</div>
+		</div>
+		<!-- JSDP-223 gjh 2015-7-15 start -->
+		 <#include "../include/imgValid.html">
+		 <!-- JSDP-223 gjh 2015-7-15 end -->
+		</div>
+	<#include "../include/footer.html"> 
+	<script type="text/javascript">seajs.use('user/findpwd');</script>
+ </body>
+</html>

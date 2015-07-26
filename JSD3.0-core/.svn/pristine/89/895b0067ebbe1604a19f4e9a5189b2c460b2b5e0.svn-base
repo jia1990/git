@@ -1,0 +1,494 @@
+package com.rongdu.p2psys.borrow.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * 自动投标
+ * 
+ * @author lhm
+ * @version 2.0
+ * @since 2014-04-03
+ */
+@Entity
+@Table(name = "rd_borrow_auto")
+public class BorrowAuto implements Serializable {
+	/**
+	 * 序列号
+	 */
+	private static final long serialVersionUID = 1L;
+	/**
+	 * 主键
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	/**
+	 * 用户ID
+	 */
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;
+
+	/**
+	 * 是否启用，0不启用，1启用
+	 */
+	private boolean enable;
+	/**
+	 * 投标金额
+	 */
+	private double money;
+	/**
+	 * 标种
+	 */
+	private String borrowTypes;
+	/**
+	 * 年利率限制是否启用，0不启用，1启用
+	 */
+	private boolean aprEnable;
+	/**
+	 * 年利率上限
+	 */
+	private double aprUp;
+	/**
+	 * 年利率下限
+	 */
+	private double aprDown;
+	/**
+	 * 奖励限制是否启用，0不启用，1启用
+	 */
+	private boolean awardEnable;
+	/**
+	 * 奖励比率下限
+	 */
+	private double awardDown;
+	/**
+	 * 奖励比率上限
+	 */
+	private double awardUp;
+	/**
+	 * 月标借款期限限制是否启用，0不启用，1启用
+	 */
+	private boolean timelimitMonthEnable;
+	/**
+	 * 月标借款期限上限
+	 */
+	private int timelimitMonthUp;
+	/**
+	 * 月标借款期限下限
+	 */
+	private int timelimitMonthDown;
+	/**
+	 * 天标借款期限限制是否启用，0不启用，1启用
+	 */
+	private boolean timelimitDayEnable;
+	/**
+	 * 天标借款期限上限
+	 */
+	private int timelimitDayUp;
+	/**
+	 * 天标借款期限下限
+	 */
+	private int timelimitDayDown;
+	/**
+	 * 还款方式限制是否启用
+	 */
+	private boolean styleEnable;
+	/**
+	 * 还款方式
+	 */
+	private int style;
+	/**
+	 * 更新时间
+	 */
+	private Date updateTime;
+	/**
+	 * 添加时间
+	 */
+	private Date addTime;
+	/**
+	 * 添加ip
+	 */
+	private String addIp;
+
+	public BorrowAuto() {
+		super();
+	}
+
+	public BorrowAuto(User user) {
+		super();
+		this.user = user;
+	}
+
+	/**
+	 * 获取主键
+	 * 
+	 * @return 主键
+	 */
+	public long getId() {
+		return id;
+	}
+
+	/**
+	 * 设置主键
+	 * 
+	 * @param id 要设置的主键
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	/**
+	 * 获取是否启用，0不启用，1启用
+	 * 
+	 * @return 是否启用，0不启用，1启用
+	 */
+	public boolean getEnable() {
+		return enable;
+	}
+
+	/**
+	 * 设置是否启用，0不启用，1启用
+	 * 
+	 * @param enable 要设置的是否启用，0不启用，1启用
+	 */
+	public void setEnable(boolean enable) {
+		this.enable = enable;
+	}
+
+	/**
+	 * 获取投标金额
+	 * 
+	 * @return 投标金额
+	 */
+	public double getMoney() {
+		return money;
+	}
+
+	/**
+	 * 设置投标金额
+	 * 
+	 * @param money 要设置的投标金额
+	 */
+	public void setMoney(double money) {
+		this.money = money;
+	}
+
+	/**
+	 * 获取标种
+	 * 
+	 * @return 标种
+	 */
+	public String getBorrowTypes() {
+		return borrowTypes;
+	}
+
+	/**
+	 * 设置标种
+	 * 
+	 * @param borrowTypes 要设置的标种
+	 */
+	public void setBorrowTypes(String borrowTypes) {
+		this.borrowTypes = borrowTypes;
+	}
+
+	/**
+	 * 获取年利率限制是否启用，0不启用，1启用
+	 * 
+	 * @return 年利率限制是否启用，0不启用，1启用
+	 */
+	public boolean getAprEnable() {
+		return aprEnable;
+	}
+
+	/**
+	 * 设置年利率限制是否启用，0不启用，1启用
+	 * 
+	 * @param aprEnable 要设置的年利率限制是否启用，0不启用，1启用
+	 */
+	public void setAprEnable(boolean aprEnable) {
+		this.aprEnable = aprEnable;
+	}
+
+	/**
+	 * 获取年利率上限
+	 * 
+	 * @return 年利率上限
+	 */
+	public double getAprUp() {
+		return aprUp;
+	}
+
+	/**
+	 * 设置年利率上限
+	 * 
+	 * @param aprUp 要设置的年利率上限
+	 */
+	public void setAprUp(double aprUp) {
+		this.aprUp = aprUp;
+	}
+
+	/**
+	 * 获取年利率下限
+	 * 
+	 * @return 年利率下限
+	 */
+	public double getAprDown() {
+		return aprDown;
+	}
+
+	/**
+	 * 设置年利率下限
+	 * 
+	 * @param aprDown 要设置的年利率下限
+	 */
+	public void setAprDown(double aprDown) {
+		this.aprDown = aprDown;
+	}
+
+	/**
+	 * 获取奖励限制是否启用，0不启用，1启用
+	 * 
+	 * @return 奖励限制是否启用，0不启用，1启用
+	 */
+	public boolean getAwardEnable() {
+		return awardEnable;
+	}
+
+	/**
+	 * 设置奖励限制是否启用，0不启用，1启用
+	 * 
+	 * @param awardEnable 要设置的奖励限制是否启用，0不启用，1启用
+	 */
+	public void setAwardEnable(boolean awardEnable) {
+		this.awardEnable = awardEnable;
+	}
+
+	/**
+	 * 获取奖励比率下限
+	 * 
+	 * @return 奖励比率下限
+	 */
+	public double getAwardDown() {
+		return awardDown;
+	}
+
+	/**
+	 * 设置奖励比率下限
+	 * 
+	 * @param awardDown 要设置的奖励比率下限
+	 */
+	public void setAwardDown(double awardDown) {
+		this.awardDown = awardDown;
+	}
+
+	/**
+	 * 设置奖励比率上限
+	 * 
+	 * @param awardDown 要设置的奖励比率上限
+	 */
+	public double getAwardUp() {
+		return awardUp;
+	}
+
+	public void setAwardUp(double awardUp) {
+		this.awardUp = awardUp;
+	}
+
+	/**
+	 * 获取月标借款期限限制是否启用，0不启用，1启用
+	 * 
+	 * @return 月标借款期限限制是否启用，0不启用，1启用
+	 */
+	public boolean getTimelimitMonthEnable() {
+		return timelimitMonthEnable;
+	}
+
+	/**
+	 * 设置月标借款期限限制是否启用，0不启用，1启用
+	 * 
+	 * @param timelimitEnable 要设置的月标借款期限限制是否启用，0不启用，1启用
+	 */
+	public void setTimelimitMonthEnable(boolean timelimitMonthEnable) {
+		this.timelimitMonthEnable = timelimitMonthEnable;
+	}
+
+	/**
+	 * 获取月标借款期限上限
+	 * 
+	 * @return 月标借款期限上限
+	 */
+	public int getTimelimitMonthUp() {
+		return timelimitMonthUp;
+	}
+
+	/**
+	 * 设置月标借款期限上限
+	 * 
+	 * @param timelimitUp 要设置的月标借款期限上限
+	 */
+	public void setTimelimitMonthUp(int timelimitMonthUp) {
+		this.timelimitMonthUp = timelimitMonthUp;
+	}
+
+	/**
+	 * 获取月标借款期限下限
+	 * 
+	 * @return 月标借款期限下限
+	 */
+	public int getTimelimitMonthDown() {
+		return timelimitMonthDown;
+	}
+
+	/**
+	 * 设置月标借款期限下限
+	 * 
+	 * @param timelimitDown 要设置的月标借款期限下限
+	 */
+	public void setTimelimitMonthDown(int timelimitMonthDown) {
+		this.timelimitMonthDown = timelimitMonthDown;
+	}
+
+	/**
+	 * 获取天标借款期限限制是否启用，0不启用，1启用
+	 * 
+	 * @return 天标借款期限限制是否启用，0不启用，1启用
+	 */
+	public boolean getTimelimitDayEnable() {
+		return timelimitDayEnable;
+	}
+
+	/**
+	 * 设置天标借款期限限制是否启用，0不启用，1启用
+	 * 
+	 * @param timelimitDayEnable 要设置的天标借款期限限制是否启用，0不启用，1启用
+	 */
+	public void setTimelimitDayEnable(boolean timelimitDayEnable) {
+		this.timelimitDayEnable = timelimitDayEnable;
+	}
+
+	/**
+	 * 获取天标借款期限上限
+	 * 
+	 * @return 天标借款期限上限
+	 */
+	public int getTimelimitDayUp() {
+		return timelimitDayUp;
+	}
+
+	/**
+	 * 设置天标借款期限上限
+	 * 
+	 * @param timelimitDayUp 要设置的天标借款期限上限
+	 */
+	public void setTimelimitDayUp(int timelimitDayUp) {
+		this.timelimitDayUp = timelimitDayUp;
+	}
+
+	/**
+	 * 获取天标借款期限下限
+	 * 
+	 * @return 天标借款期限下限
+	 */
+	public int getTimelimitDayDown() {
+		return timelimitDayDown;
+	}
+
+	/**
+	 * 设置天标借款期限下限
+	 * 
+	 * @param timelimitDayDown 要设置的天标借款期限下限
+	 */
+	public void setTimelimitDayDown(int timelimitDayDown) {
+		this.timelimitDayDown = timelimitDayDown;
+	}
+
+	/**
+	 * 获取还款方式限制是否启用
+	 * 
+	 * @return 还款方式限制是否启用
+	 */
+	public boolean getStyleEnable() {
+		return styleEnable;
+	}
+
+	/**
+	 * 设置还款方式限制是否启用
+	 * 
+	 * @param styleEnable 要设置的还款方式限制是否启用
+	 */
+	public void setStyleEnable(boolean styleEnable) {
+		this.styleEnable = styleEnable;
+	}
+
+	/**
+	 * 获取还款方式
+	 * 
+	 * @return 还款方式
+	 */
+	public int getStyle() {
+		return style;
+	}
+
+	/**
+	 * 设置还款方式
+	 * 
+	 * @param style 要设置的还款方式
+	 */
+	public void setStyle(int style) {
+		this.style = style;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	/**
+	 * 获取添加ip
+	 * 
+	 * @return 添加ip
+	 */
+	public String getAddIp() {
+		return addIp;
+	}
+
+	/**
+	 * 设置添加ip
+	 * 
+	 * @param addIp 要设置的添加ip
+	 */
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+}

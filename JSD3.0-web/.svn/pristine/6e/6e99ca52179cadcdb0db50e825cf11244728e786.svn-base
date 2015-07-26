@@ -1,0 +1,79 @@
+<script type="text/javascript">
+$(function(){
+	
+	
+	//置顶按钮显示/隐藏实现
+	$(window).scroll(function(){
+		var w_height = $(window).height();//浏览器高度
+		var scroll_top = $(document).scrollTop();//滚动条到顶部的垂直高度
+		if(scroll_top > w_height){
+				$(".c_to_top").fadeIn(500);
+			}else{
+				$(".c_to_top").fadeOut(500);
+		}
+	});
+//置顶
+$(".c_to_top").click(function(e){
+		e.preventDefault();
+		$(document.documentElement).animate({
+			scrollTop: 0
+			},200);
+		//支持chrome
+		$(document.body).animate({
+			scrollTop: 0
+			},200);
+	});
+$(".c_kik_cf").hover(function(){
+	$(".c_kik_icon").show();
+},function(){
+	$(".c_kik_icon").hide();
+})
+//于俊斐加
+$(window).resize(function() {
+	$(".calculatorCpmBox").css({left:($(window).width()-852)/2+"px",top:($(window).height()-444)/2+"px"});
+	$(".calculatorCpmBottom").css({height:$(window).height()+"px"});
+});
+$(window).resize();
+$(".calculatorCpmBox h1 img").click(function(){
+	$(".calculatorCpmBox").hide();
+	$(".calculatorCpmBottom").hide();
+})
+$(".c_counter_cf").click(function(){
+	$(".calculatorCpmBox").show();
+	$(".calculatorCpmBottom").show();
+}) ;
+})
+</script>
+<style>
+.c_top_qq{position: fixed;right: 0;top: 58%;}
+.c_top_qq li{margin-bottom:2px;width:72px;height:72px;}
+.c_top_qq .c_inline_cf:hover{background:#0696DA;}
+.c_top_qq .c_kik_cf:hover{background:#69B132;}
+.c_top_qq .c_counter_cf:hover{background:#E5900B;}
+.c_top_qq .c_to_top:hover{background:#E64646;}
+.c_top_qq span{margin-left:20px;display:block;width:36px;height:40px;background:url(${webroot}${theme_dir}/images/top_contact.png) no-repeat 0 14px;}
+.c_top_qq i{font-style:normal;color:#fff;display:block;width:72px;text-align:center;}
+.c_inline_cf{background:#319EEA;}
+.c_kik_cf{background:#78C340;}
+.c_counter_cf{background:#F5AD00;}
+.c_to_top{background:#FA5D5D;display:none;}
+.c_kik_cf span{background-position:0 -60px;}
+.c_counter_cf span{background-position:0 -138px;}
+.c_to_top span{background-position:0 -211px;}
+.c_kik_icon{position:absolute;box-shadow: 2px 2px 3px #aaaaaa;width:120px;height:120px;padding:10px;background:#fff;top:40px;right:72px;display:none;}
+.c_kik_icon img{width:120px;height:120px;}
+</style>
+<!-- 置顶开始 -->
+<div class="c_top_qq">
+	<ul>
+		<li class="c_inline_cf"><a href="http://wpa.b.qq.com/cgi/wpa.php?ln=2&uin=938029566" target="_blank" title="点击访问晋商贷企业QQ"><span></span><i>在线客服</i></a></li>
+		<li class="c_kik_cf"><a href="javascript:void(0);"><span></span><i>官方微信</i></a></li>
+		<li class="c_counter_cf"><a href="javascript:;"><span></span><i>计算器</i></a></li>
+		<li class="c_to_top"><a href="javascript:void(0);"><span></span><i>返回顶部</i></a></li>
+		<div class="c_kik_icon"><img src="${webroot}${theme_dir}/images/header_footer/code.jpg" border="0" alt=""></div>
+	</ul>
+</div>
+<!-- 置顶结束 -->
+<!-- JS加载文章数据 -->
+	<#include "../include/calculator.html"> 
+			

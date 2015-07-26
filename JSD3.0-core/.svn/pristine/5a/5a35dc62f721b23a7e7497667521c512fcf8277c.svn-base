@@ -1,0 +1,101 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.p2psys.core.exception.RuleConfigException;
+
+/**
+ * @描述:积分消费规则
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月30日
+ */
+public class ScoreConsumeRuleCheck extends RuleCheck {
+	public static final int STATUS_OPEN = 1;
+	public static final int STATUS_CLOSE = 0;
+
+	public LuckyDraw lucky_draw;// 抽奖配置
+
+	// 积分抽奖
+	private static class LuckyDraw implements java.io.Serializable {
+		private int score_base;
+		private int lucky_times;
+		private String remark;
+
+		public int getScore_base() {
+			return score_base;
+		}
+
+		public void setScore_base(int score_base) {
+			this.score_base = score_base;
+		}
+
+		public int getLucky_times() {
+			return lucky_times;
+		}
+
+		public void setLucky_times(int lucky_times) {
+			this.lucky_times = lucky_times;
+		}
+
+		public String getRemark() {
+			return remark;
+		}
+
+		public void setRemark(String remark) {
+			this.remark = remark;
+		}
+
+	}
+
+	/**
+	 * 每次抽奖消费积分
+	 * 
+	 * @return 消费的积分
+	 * **/
+	public long luckyDrawConsumeScore() {
+       
+		 if(lucky_draw.score_base<0){
+            //积分配置异常
+			 throw new RuleConfigException("系统异常:消费积分配置【"+lucky_draw.score_base+"】");
+		 }
+		return lucky_draw.score_base;
+	}
+
+	@Override
+	public boolean checkRule() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = ScoreConsumeRuleCheck.class
+				.getResourceAsStream("积分消费规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<ScoreConsumeRuleCheck> clazz = ScoreConsumeRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		ScoreConsumeRuleCheck test = (ScoreConsumeRuleCheck) jsonObj;
+
+	}
+
+	public LuckyDraw getLucky_draw() {
+		return lucky_draw;
+	}
+
+	public void setLucky_draw(LuckyDraw lucky_draw) {
+		this.lucky_draw = lucky_draw;
+	}
+
+}

@@ -1,0 +1,292 @@
+<script type="text/javascript">
+	var dataGrid;
+	$(function() {
+		//手续费
+		var fee = $("drawFeeShow").val();
+		
+		
+		
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/account/draw/accountDraw/firstTrailDraw.html');
+	    $("#isDS").click(function(){
+	    	if($('#isDS').attr("checked"))
+			{	
+		        $('#fixedTime').attr("disabled",false);
+		    }else{
+		        $('#fixedTime').attr("disabled",true);
+		        $('#fixedTime').val("");
+		    }
+	    });
+	    
+	    
+	    
+	    	dataGrid = $('#dataGrid').datagrid({
+            url : '/modules/account/draw/accountDraw/drawCashHistory.html?userId=${userId!}',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            showFooter: true,
+            columns : [ [
+             			{ field: 'userName', title: '用户名', width: 60},
+            			{ field: 'realName', title: '真实姓名', width: 60},
+            			
+            			{ field: 'bankNo', title: '银行卡账号', width: 100},
+            			{ field: 'bankBranchName', title: '支行', width: 60},
+            			{ field: 'bankProvinceName', title: '开户省', width: 40},
+            			{ field: 'bankCityName', title: '开户市', width: 40},
+            			{ field: 'bankName', title: '所属银行', width: 60},
+            			{ field: 'drawAmountStr', title: '提现总额', width: 60,formatter:function(value, row, index){
+            				return value;
+            			}},
+            			{ field: 'drawInAccountAmountStr', title: '到账金额', width: 60,formatter:function(value, row, index){
+            				return value;
+            			}},
+            			{ field: 'drawFeeStr', title: '手续费', width: 60,formatter:function(value, row, index){
+            				return value;
+            			}},
+            			/* { field: 'cashFeeBear', title: '手续费承担方', width: 100,formatter:function(value, row, index){
+            				if(value==1){
+            					return '平台垫付';
+            				}else if(value==2){
+            					return '个人承担';
+            				}else{
+            					return '';
+            				}
+            			}}, */
+            			{ field: 'addTime', title: '提现提交时间', width: 110,
+            				formatter: function(value,row,index){
+            					if (value){
+            						return getLocalTime(value,4);
+            					} else {
+            						return "";
+            					}
+            				}
+            			},
+            			{ field: 'drawHandleStatus', title: '状态', width: 80,formatter:function(value, row, index){
+            				switch(value){
+        					case "00":return "申请提现";
+        					case "11":return "初审成功";
+        					case "10":return "初审失败";
+        					case "21":return "复审成功";
+        					case "20":return "复审失败";
+        					case "99":return "取消提现";
+        					case "30" :return "提现成功";
+        					case "42" :return "等待银行转账";
+        					case "41" :return "汇潮请求失败";
+        					case "88" :return "银行处理失败";
+        					}
+            				}
+            			}]],
+            			toolbar : '#toolbar',
+            			onLoadSuccess : function() {
+            				$('#searchForm table').show();
+            				parent.$.messager.progress('close');
+            				$(this).datagrid('tooltip');
+            			}
+        }); 
+	});
+	function exportExcel(){
+		var url = "/modules/account/draw/accountDraw/personCashExcel.html?userId="+${userId!};
+		var status = $("#status").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "&status=" + status + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+	
+
+    // 手续费
+    $("#extra").change(function() {
+    	
+    	// 借款金额
+    	var amount = $("#amount").val();
+    	// 文本框展示手续费
+    	var e = $("#drawFeeShow").val();
+    	// 原手续费
+    	var drawFee = $("#drawFee").val();
+    	// 管理员操作手续费（可加可减）
+    	var extra = $("#extra").val();
+    	
+    	$("#extra").val(Number(extra).toFixed(2));
+    	
+    	// 将原手续费与操作手续费相加，手续费不能小于
+    	var addFee = Number(drawFee) + Number(extra);
+    	
+    	//alert(addFee.toFixed(2));
+    	//alert(addFee);
+    	
+    	
+    	// 如果为空,保持原手续费不变
+    	if("" == extra || " " == Number(extra)){
+    		//默认0
+    		$("#extra").val(0.00);
+    		$("#drawFeeShow").val(drawFee);
+    		
+    	}
+    	
+    	if(Number(addFee) < 0){
+    		parent.$.messager.alert("手续费不能小于0！");
+    		$("#extra").val(0.00);
+    		$("#drawFeeShow").val(drawFee);
+    		$("#extra").focus();
+    		
+    	}else if (Number(addFee) > Number(amount)){
+    		parent.$.messager.alert("手续费不能大于提现金额！");
+    		$("#extra").val(0.00);
+    		$("#drawFeeShow").val(drawFee);
+    		$("#extra").focus();
+    	}else {
+    		if(isNaN(addFee) || isNaN(extra)){
+        		//默认0
+        		$("#extra").val(0.00);
+        		$("#drawFeeShow").val(drawFee);
+        		
+        	}else{
+        		$("#drawFeeShow").val(Number(addFee).toFixed(2));
+        		$("#drawFeeShow2").val(Number(addFee).toFixed(2));
+        		
+        	}
+    		
+    		
+    	}
+    	
+    	
+	});
+    
+</script>
+
+<div class="popForm" style="padding-top:0;">
+<form id="form" method="post" >
+	<div>&nbsp;</div>
+	<div class="formitm">
+		<label class="lab">提现订单号：</label>
+		<div class="ipt">
+		    ${draw.drawTradeNo!}
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">提现金额：</label>
+		<div class="ipt">
+		    <input type="text" class="easyui-validatebox" style="background-color: #fff" value="${draw.drawAmount!}" id="amount" disabled="disabled"/>&nbsp;元 &nbsp;= &nbsp;
+		    <#if type?? && type == "10">
+		    <span style="color:#FF8B53">( 充值：<input type="button" id="tenderC" style="background-color: #fff;border:0px;" title="${draw.useRecharge!}" value="${draw.useRecharge!}" /> 元 + 回款：<input type="button" id="tenderH" style="background-color: #fff;border:0px;" title="${draw.useInterest+draw.useReturnMoney}" value="${draw.useInterest+draw.useReturnMoney}" /> 元 + 奖励：<input type="button" id="tenderJ" style="background-color: #fff;border:0px;" title="${draw.useAward}" value="${draw.useAward}" /> 元 )</span>
+			<#else>
+		   	<span style="color:#FF8B53">
+		   	( 充值： <input type="button" id="boorowC" style="background-color: #fff;border:0px;" title="${draw.borrowerUseRecharge!}" value = "${draw.borrowerUseRecharge!}" /> 元 + 借款入账：<input type="button"  id="boorowR" style="background-color: #fff;border:0px;" title="${draw.borrowerUseEnter}" value = "${draw.borrowerUseEnter}" /> 元  )
+		   	</#if>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">手续费用：</label>
+		<div class="ipt">
+		   	<label>
+		   	<input type="text" class="easyui-validatebox" id="drawFeeShow" style="background-color: #fff;" name="drawFeeShow1" value="${draw.drawFee}" disabled="disabled"/>&nbsp;元&nbsp; = &nbsp;
+		   	<input type="hidden" class="easyui-validatebox" id="drawFeeShow2" name="drawFeeShow" value="${draw.drawFee}" />
+		   	<#if type?? && type == "10">
+		   	<span style="color:#FF8B53">
+		   	( 充值：<input type="button" id="feeTenderC" style="background-color: #fff;border:0px;" title="${feeRechargeTender}" value="${feeRechargeTender}"/> 元 + 回款：<input type="button" id="feeTenderH" onkeydown="this.onkeyup();" onkeyup="this.size=(this.value.length>0);" style="background-color: #fff;border:1px;" value="0" title="0" /> 元 + 奖励：<input type="button" id="feeTenderJ"  style="background-color: #fff;border:0px;" value="0" title="0"/> 元 ) + 
+		   	<#else>
+		   	<span style="color:#FF8B53">
+		   	( 充值：<input type="button" id="feeBorrowC" style="background-color: #fff;border:0px;" title="${feeRechargeBorrow}" value="${feeRechargeBorrow}"/> 元 + 借款入账：<input type="button" id="feeBorrowR" onkeydown="this.onkeyup();" onkeyup="this.size=(this.value.length>0);" style="background-color: #fff;border:0px;" value="0" title="0"/> 元  ) + 
+		   	</#if>
+		   	<input type="text" class="easyui-validatebox" style="width:60px;margin-bottom:0px;" id="extra"  value="" maxlength="11"/>
+		   	</span> </label>&nbsp;(保留两位计算)
+			<input type="hidden" id="drawFee" value="${draw.drawFee}" value="0"/>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">提现状态：</label>
+		<div class="ipt">
+		
+		    <#if draw.drawHandleStatus=="00">
+				用户提现申请中
+			<#elseif draw.drawHandleStatus=="11">
+				初审通过
+			<#elseif draw.drawHandleStatus=="10">
+				初审未通过
+			<#elseif draw.drawHandleStatus=="21">
+				复审通过
+			<#elseif draw.drawHandleStatus=="20">
+				复审未通过
+			<#elseif draw.drawHandleStatus=="99">
+				取消体现
+			<#elseif draw.drawHandleStatus=="88">
+				银行处理失败
+			<#elseif draw.drawHandleStatus=="30">
+				提现成功
+			<#elseif draw.drawHandleStatus=="41">
+				提现第三方请求失败
+			<#elseif draw.drawHandleStatus=="42">
+				提现第三方请求成功
+			<#elseif draw.drawHandleStatus=="31">
+				提现补单成功
+			<#else>
+				无
+			</#if>
+		</div>
+	</div>
+	<div class="formitm">
+		<label class="lab">审核状态：</label>
+		<div class="ipt">
+		   	<label><input type="radio" name="drawHandleStatus" class="easyui-validatebox" value="11" data-options="required: true"  />初审通过</label>&nbsp;
+		    <label><input type="radio" name="drawHandleStatus" class="easyui-validatebox" value="10" data-options="required: true" checked="checked" />初审未通过</label>
+		</div>
+	</div>
+	
+	<div class="formitm">
+		<label class="lab">备注信息：</label>
+		<div class="ipt">
+		   <textarea name="firstTrialFailRemark" class="w400 easyui-validatebox" data-options="required: true"></textarea>
+		</div>
+	</div>
+	<input name="id" value="${draw.id!}" type="hidden"/>
+	<input name="firstTrailDrawToken" value="${firstTrailDrawToken!}" type="hidden"/>
+	
+</form>
+</div>
+<div class="easyui-layout" data-options="fit : true,border : false">
+	<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+       	<h2 class="searchTitle">查询条件</h2>
+		<form id="searchForm">
+			<ul>
+				<li>提现状态：
+					<select name="drawHandleStatus" id="status" class="type">
+						<option value="">请选择</option>
+						<option value="00">申请提现</option>
+						<option value="30">提现成功</option>
+						<option value="88">银行处理失败</option>
+						<option value="11">初审成功</option>
+						<option value="10">初审失败</option>
+						<option value="21">复审成功</option>
+						<option value="20">复审失败</option>
+						<option value="99">取消提现</option>
+						<option value="42">等待银行转账</option>
+						<option value="41">汇潮请求失败</option>
+						
+					</select>
+				
+				</li>
+				
+           		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+           		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a>
+           		<a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+           	</ul>
+		</form>
+	</div>
+	<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px; width:80%">
+		<table id="dataGrid"></table>
+	</div>
+	<div id="toolbar" style="display: none;">
+		
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		
+	</div>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</div>

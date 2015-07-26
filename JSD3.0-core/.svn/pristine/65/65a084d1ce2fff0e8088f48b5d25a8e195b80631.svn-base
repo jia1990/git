@@ -1,0 +1,79 @@
+
+package com.ddtkj.p2psys.score.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.score.domain.AwardResult;
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.ddtkj.p2psys.score.model.ScoreAwardObjectModel;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述: 积分抽奖奖品service
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+public interface ScoreAwardService {
+	
+	/**
+	 * 抽奖
+	 * @param ruleId 抽奖规则ID
+	 * @param user 用户信息
+	 * @param money 倍率抽奖时用（其他抽奖时值为0）
+	 * @return 抽奖结果
+	 */
+	AwardResult award(long ruleId, User user, double money);
+	
+	/**
+	 * 根据规则ID取得奖品规则信息
+	 * @param ruleId 规则ID
+	 * @return 奖品规则信息
+	 */
+	List<ScoreAward> getAwardObjectListByRuleId(long ruleId);
+
+	/**
+	 * 新增奖品规则信息
+	 * @param data 中奖规则信息
+	 */
+	void addAwardObject(ScoreAward data);
+
+	/**
+	 * 更新奖品规则表
+	 * @param data 中奖规则信息
+	 */
+	void updateAwardObject(ScoreAward data);
+
+	/**
+	 * 根据奖品ID取得奖品信息
+	 * @param awardId 奖品ID
+	 * @return 奖品信息
+	 */
+	ScoreAward getAwardObjectById(long awardId);
+	
+	/**
+	 * 获取奖品规则列表，分页
+	 * @param ScoreAwardObjectModel 
+	 * @return PageDataList<ScoreAwardObjectModel> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<ScoreAwardObjectModel> getAwardObjectList(ScoreAwardObjectModel model);
+	
+	/**
+	 * 根据规则ID和奖品ID取得奖品规则信息
+	 * @param ruleId 规则ID
+	 * @param objectId 奖品ID
+	 * @return 奖品规则信息
+	 */
+	ScoreAward getAwardObjectByRuleIdAndObjectId(long ruleId, long objectId);
+	
+	/**
+	 * 删除奖品信息根据规则ID和奖品ID
+	 * @param  ruleId 规则ID
+	 * @param  objectId 奖品ID
+	 * @return int 删除计数
+	 * @throws Exception   
+	 */ 
+	int delAwardObject(long ruleId, long objectId); 
+	
+}

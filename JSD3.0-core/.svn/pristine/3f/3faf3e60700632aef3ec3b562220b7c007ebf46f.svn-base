@@ -1,0 +1,96 @@
+
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * @描述: 微信奖励产生和使用
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-5-22   
+ */
+@Entity
+@Table(name = "t_jsd_rp_wx_log")
+public class RpWeixinLog implements Serializable {
+
+	private static final long serialVersionUID = 4149476220212560980L;
+	
+	public static final String STATUS_USED = "11";
+	public static final String STATUS_NOUSE = "22";
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	
+	private String phone;		//手机号
+	private double money;		//红包金额
+	private String openId;		//拆红包好友的openId
+	private String friend;		//好友姓名
+	private String type;		//类型  1系统赠送的红包  0好友拆出的红包
+	private String status;    	//状态 22未使用  11已使用
+	private String sn;			//数据包的序列号（日期戳）
+	private Date addTime;		//添加时间
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getPhone() {
+		return phone;
+	}
+	public void setPhone(String phone) {
+		this.phone = phone;
+	}
+	public double getMoney() {
+		return money;
+	}
+	public void setMoney(double money) {
+		this.money = money;
+	}
+	public String getOpenId() {
+		return openId;
+	}
+	public void setOpenId(String openId) {
+		this.openId = openId;
+	}
+	public String getFriend() {
+		return friend;
+	}
+	public void setFriend(String friend) {
+		this.friend = friend;
+	}
+	public String getType() {
+		return type;
+	}
+	public void setType(String type) {
+		this.type = type;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public String getSn() {
+		return sn;
+	}
+	public void setSn(String sn) {
+		this.sn = sn;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	
+	
+}

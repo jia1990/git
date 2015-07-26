@@ -1,0 +1,326 @@
+package com.rongdu.manage.action.user;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.domain.KefuRecord;
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.rongdu.p2psys.user.model.KefuModel;
+import com.rongdu.p2psys.user.model.UserFreezeModel;
+import com.rongdu.p2psys.user.service.KefuChangeService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserService;
+
+public class ManageKefuVerifyAction extends BaseAction<KefuModel> implements ModelDriven<KefuModel>{
+
+	@Resource
+	private KefuChangeService kefuChangeService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserCacheService userCacheService;
+	
+	@Resource
+	private OperatorService operatorService;
+	
+	private Map<String, Object> data;
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	/**
+	 * 投资人申请更换客服
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/kefuChange/kefuManager")
+	public String kefuChangeManage() throws Exception{
+		
+		return "kefuManager";
+	}
+	
+	
+	
+	/**
+	 * 查询全部客服审核记录
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/kefuChange/kefuVerifyList")
+	public void kefuVerifyList() throws Exception{
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page");// 当前页数
+		int pageSize = paramInt("rows");// 每页总数
+		
+		String userName = paramString("userName");
+		String optName = paramString("optName");
+		if(null != model && model.getEventType()==99){
+			model.setEventType(0);
+		}
+		if(null != model && model.getVerifyResult()==99){
+			model.setVerifyResult(0);
+		}
+		
+		map.put("userName", userName);
+		map.put("optName", optName);
+		map.put("model", model);
+		
+		PageDataList<KefuModel> pagaDataList = kefuChangeService.kefuRecordListByMap(pageNumber, pageSize, map);
+		List<KefuModel> kefuModelList = pagaDataList.getList();
+		List<KefuModel> kefuList = new ArrayList<KefuModel>();
+		for(int i=0;i<kefuModelList.size();i++){
+			KefuModel kefuModel = kefuModelList.get(i);
+			User user = userService.find(kefuModel.getUserId());
+			kefuModel.setUserName(user.getUserName());
+			Operator operator = operatorService.getUserById(kefuModel.getNewKefuId());
+			if(null != operator){
+				kefuModel.setKefuName(operator.getUserName());
+				kefuModel.setKefuRealName(operator.getName());
+			}
+			if(0 != kefuModel.getVerifyId()){
+				Operator optVerifyName = operatorService.getUserById(kefuModel.getVerifyId());
+				if(null != optVerifyName){
+					kefuModel.setVerifyName(optVerifyName.getUserName());
+				}
+			}
+			kefuList.add(kefuModel);
+		}
+		int totalPage = pagaDataList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", pagaDataList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 专属客服查询管理导出
+	 * @throws Exception
+	 */
+	@Action("/modules/user/kefuChange/kefuVerifyExcel")
+	public void kefuVerifyExcel() throws Exception {
+		//JSDP-116 fengguoqin 2015-05-19 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+	/*	int pageNumber = 1;// 当前页数
+		int pageSize = 99999999;// 每页总数
+		
+		String userName = paramString("userName");
+		String optName = paramString("optName");
+		if(null != model && model.getEventType()==99){
+			model.setEventType(0);
+		}
+		if(null != model && model.getVerifyResult()==99){
+			model.setVerifyResult(0);
+		}
+		
+		map.put("userName", userName);
+		map.put("optName", optName);
+		map.put("model", model);*/
+		
+		
+		/*PageDataList<KefuModel> pagaDataList = kefuChangeService.kefuRecordListByMap(pageNumber, pageSize, map);
+		List<KefuModel> list = pagaDataList.getList();
+		List<KefuModel> newList = new ArrayList<KefuModel>();		
+		for(int i=0;i<list.size();i++){
+			KefuModel kefuModel = list.get(i);
+			User user = userService.find(kefuModel.getUserId());
+			kefuModel.setUserName(user.getUserName());
+			Operator operator = operatorService.getUserById(kefuModel.getNewKefuId());
+			if(null != operator){
+				kefuModel.setKefuName(operator.getUserName());
+				kefuModel.setKefuRealName(operator.getName());
+			}
+			if(0 != kefuModel.getVerifyId()){
+				Operator optVerifyName = operatorService.getUserById(kefuModel.getVerifyId());
+				if(null != optVerifyName){
+					kefuModel.setVerifyName(optVerifyName.getUserName());
+				}
+			}
+			if(kefuModel.getEventType() == 1){
+				kefuModel.setEventTypeNew("更换");
+			}else if(kefuModel.getEventType() == 2){
+				kefuModel.setEventTypeNew("投诉");
+			}
+			if(kefuModel.getVerifyResult() == 5){
+				kefuModel.setVerifyResultNew("待审核");
+			}else if(kefuModel.getVerifyResult() == 1){
+				kefuModel.setVerifyResultNew("审核通过");
+			}else if(kefuModel.getVerifyResult() == 2){
+				kefuModel.setVerifyResultNew("审核通过");
+			}else if(kefuModel.getVerifyResult() == 3){
+				kefuModel.setVerifyResultNew("审核通过");
+			}else if(kefuModel.getVerifyResult() == 4){
+				kefuModel.setVerifyResultNew("失效");
+			}else{
+				kefuModel.setVerifyResultNew("无状态");
+			}
+			newList.add(kefuModel);
+		}*/
+		
+		List<KefuModel> list = kefuChangeService.excelListChangeKF(model);
+		String title = "专属客服查询管理Excel表";
+		
+		String[] hearders = new String[] {"编号","用户名","专属客服工号","专属客服真实姓名","更换/投诉","审核进度","审核人","审核时间","提出时间","所属ip","备注"};// 表头数组
+		/*String[] fields = new String[] { "id","userName","kefuName","kefuRealName","eventTypeNew","verifyResultNew","verifyName","verifyTime","addTime","addIp","remark"};// 对象属性数组*/
+		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]"};// 对象属性数组
+		
+	/*	int sheetRows = 50000;
+		int sheetPage = newList.size() / sheetRows;
+		if (newList.size() % sheetRows > 0) {
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<KefuModel> tdList = new ArrayList<KefuModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				KefuModel sm = newList.get(j);
+				tdList.add(sm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 fengguoqin 2015-05-19 end
+		
+	}
+	
+	/**
+	 * 根据id查询用户名称
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/kefuChange/getUserNameById")
+	public void getUserNameById() throws Exception{
+		Long userId = Long.parseLong(request.getParameter("id"));
+		User user = userService.find(userId);
+		if(null != user){
+			String userName = user.getUserName();
+			map.put("userName", userName);
+		}
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 根据id查询客服名称或是审核人名称
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/kefuChange/getKefuOrOptNameById")
+	public void getKefuOrOptNameById() throws Exception{
+		Long optId = Long.parseLong(request.getParameter("id"));
+		Operator operator = operatorService.getUserById(optId);
+		if(null != operator){
+			String optName = operator.getUserName();
+			map.put("optName", optName);
+		}
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 根据id查询客服或审核人真实姓名
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/kefuChange/getRealNameById")
+	public void getRealNameById() throws Exception{
+		Long userId = Long.parseLong(request.getParameter("id"));
+		Operator operator = operatorService.getUserById(userId);
+		if(null != operator){
+			String realName = operator.getName();
+			map.put("realName", realName);
+		}
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 根据id查询客服名称或是审核人名称
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/user/kefuChange/kefuVerifyEditPage")
+	public String kefuVerifyEditPage() throws Exception{
+		initRSAME();
+		saveToken("kefuVerifyEditToken");
+		Long kefuChangeId = paramLong("id");
+		KefuRecord kefuRecord = kefuChangeService.getKefuRecordById(kefuChangeId);
+		
+		Operator operator = operatorService.getUserById(kefuRecord.getNewKefuId());
+		
+		request.setAttribute("kefuRecord", kefuRecord);
+		request.setAttribute("path", operator.getPath());
+		request.setAttribute("userName", operator.getName());
+		return "kefuVerifyEditPage";
+	}
+	
+	
+	/**
+	 * 审核用户的更换客服申请
+	 * @return
+	 * @throws Exception
+	 * @author sunxiaoyong 2014年12月23日
+	 */
+	@Action(value = "/modules/user/kefuChange/kefuVerifyEdit")
+	public void  kefuVerifyEdit() throws Exception{
+		
+		Long id = paramLong("id");
+		String remark = paramString("remark");
+		KefuRecord kefuRecord = kefuChangeService.getKefuRecordById(id);
+		kefuRecord.setVerifyId(getOperatorId());
+		kefuRecord.setVerifyTime(new Date());
+		kefuRecord.setRemark(remark);	// 设置备注
+		//审核结果(5待审核 1审核通过2审核不通过4关系取消 3正常)
+		if(null != model){
+			if(2 == model.getVerifyResult()){
+				kefuRecord.setVerifyResult(2);
+				
+			}else{
+				kefuRecord.setVerifyResult(1);
+			}
+			
+		}
+		checkToken("kefuVerifyEditToken");
+		kefuChangeService.updateKefuRecord(kefuRecord);
+		// JSDP-188 sxy 20150618  start
+		// 若审核通过，则清空客服信息
+		if(1 == kefuRecord.getVerifyResult()){
+			UserCache userCache = userCacheService.findByUserId(kefuRecord.getUserId());
+			userCache.setCustomerUserId(0);			// 客服ID为0
+			userCache.setCustomerUserName(null);	// 客服用户名为null
+			userCacheService.update(userCache);		// 保存
+		}
+		
+		printResult(MessageUtil.getMessage("I10002"), true);
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+}

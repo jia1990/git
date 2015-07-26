@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>通知配置</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = false;
+</script>
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  700;
+	var winHeight = 500;
+	var addTitle = "添加";
+	var addUrl =  "/modules/system/notice/noticeAddPage.html";
+	var addWinParmeters = "'{0}','"+addTitle+"',"+winWidth+","+winHeight+",'"+addUrl+"'";
+	var editTitle = "编辑";
+	var editUrl =  "/modules/system/notice/noticeEditPage.html";
+	var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	var deleteUrl = "/modules/system/notice/noticeDelete.html?send=0";	
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"','是否停用发送？'";
+	var openUrl = "/modules/system/notice/noticeDelete.html?send=1";	
+	var openWinParmeters = "'{0}','"+openUrl+"','是否启用发送？'";
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'noticeList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 50,sortable:true,hidden:true},
+			{ field: 'nid', title: '类型编码', width: 150,fixed:true},
+			{ field: 'noticeType', title: '类型', width: 50,fixed:true,formatter:function(value,row,index){
+				if(value==1){
+					return "短信";
+				}else if(value==2){
+					return "邮件";
+				}else{
+					return "站内信";
+				}
+			}},
+			{ field: 'name', title: '名称', width: 120,fixed:true},
+			{ field: 'type', title: '通知类别', width: 80, fixed:true,sortable:true,formatter:function(value,row,index){
+				if(value==1){
+					return "系统通知";
+				}else if(value==2){
+					return "用户通知";
+				}else{
+					return "其它类型";
+				}
+			}},
+			
+			{ field: 'titleTemplet', title: '标题模板', sortable:true},
+			{ field: 'templet', title: '内容模板', sortable:true},
+			{ field: 'send', title: '是否启用', width: 60,fixed:true,formatter:function(value,row,index){
+				if(value==1){
+					return "启用";
+				}else{
+					return "不启用";
+				}
+			}},
+			{field : 'action',title : '操作',width :80,fixed:true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if ($.canEdit) {
+						str += "<@secAuthorizeUrl value='/notice/noticeEditBtn.html' >";
+						str = $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editWinParmeters+');" src="{1}" title="编辑"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					if(row.type != 2){
+						str += '&nbsp;';
+						if(row.send==1){
+							str += "<@secAuthorizeUrl value='/notice/noticeEnableBtn.html' >";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="不启用"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+							str += "</@secAuthorizeUrl>";
+						}else{
+							str += "<@secAuthorizeUrl value='/notice/noticeDisableBtn.html' >";
+							str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+openWinParmeters+');" src="{1}" title="启用"/>', row.id, '${theme_dir}/css/images/extjs_icons/tick.png');
+							str += "</@secAuthorizeUrl>";
+						}
+					}
+					str += '&nbsp;';
+					return str;
+				}
+			} 
+			 ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			}
+		});
+	});
+
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>标识：
+						<input name="nid" id="nid" type="text" autocomplete="off" />
+					</li>
+            		<li>名称：
+						<input name="name" id="name" type="text" autocomplete="off"/>
+					</li>
+					<li>发送类型：
+						<select name="noticeType" class="type">
+							<option value="0">全部</option>
+							<option value="1">短信</option>
+							<option value="2">邮件</option>
+							<option value="3">站内信</option>
+						</select>
+					</li>
+            		<li>是否启用：
+						<select name="send"  class="status">
+							<option value="0">全部</option>
+							<option value="1">启用</option>
+							<option value="2">不启用</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">		
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>				
+	</div>
+</body>
+</html>

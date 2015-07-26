@@ -1,0 +1,162 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * @描述：红包来源消费日志实体类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月8日
+ */
+@Entity
+@Table(name="t_jsd_rp_log")
+public class RedPacketLog {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ;
+	@ManyToOne
+	@JoinColumn(name="user_id")
+	private User user ; // 用户ID
+	
+	private int type ; //	生产类型 1静态红包 2动态红包
+	@ManyToOne
+	@JoinColumn(name="actrp_id")
+	private ActivityRP activityRP ; // 静态红包 来源 活动ID
+	@ManyToOne
+	@JoinColumn(name="borrow_id") 
+	private Borrow borrow ; //  动态红包:标ID 
+	
+	private Date createtime ;  // 记录创建时间  
+	
+	private double rpAccount ;  //    红包金额
+	
+	private int logType ;  	  // 日志类型 1、生产 2、消费
+	
+	private String description ;  // 日志描述
+	
+	private String optChannel ;  //   P: pc端、A: android端、I: IOS端   
+	
+	private String sessionId ; //  操作sessionid 
+	
+	private String optIp ;  // 操作人Ip 
+	
+	private String domain  ;  //访问的域
+
+	
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public int getType() {
+		return type;
+	}
+
+	public void setType(int type) {
+		this.type = type;
+	}
+
+	public Borrow getBorrow() {
+		return borrow;
+	}
+
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+
+	public Date getCreatetime() {
+		return createtime;
+	}
+
+	public void setCreatetime(Date createtime) {
+		this.createtime = createtime;
+	}
+
+	public double getRpAccount() {
+		return rpAccount;
+	}
+
+	public void setRpAccount(double rpAccount) {
+		this.rpAccount = rpAccount;
+	}
+
+	public int getLogType() {
+		return logType;
+	}
+
+	public void setLogType(int logType) {
+		this.logType = logType;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public String getOptChannel() {
+		return optChannel;
+	}
+
+	public void setOptChannel(String optChannel) {
+		this.optChannel = optChannel;
+	}
+
+	public String getSessionId() {
+		return sessionId;
+	}
+
+	public void setSessionId(String sessionId) {
+		this.sessionId = sessionId;
+	}
+
+	public String getOptIp() {
+		return optIp;
+	}
+
+	public void setOptIp(String optIp) {
+		this.optIp = optIp;
+	}
+
+	public String getDomain() {
+		return domain;
+	}
+
+	public void setDomain(String domain) {
+		this.domain = domain;
+	}
+
+	public ActivityRP getActivityRP() {
+		return activityRP;
+	}
+
+	public void setActivityRP(ActivityRP activityRP) {
+		this.activityRP = activityRP;
+	}
+	
+
+}

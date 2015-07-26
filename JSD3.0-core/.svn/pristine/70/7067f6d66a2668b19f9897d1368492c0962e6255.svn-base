@@ -1,0 +1,250 @@
+package com.rongdu.p2psys.core.protocol;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+
+import com.ddtkj.p2psys.borrow.model.BorrowTenderModel;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.FreemarkerUtil;
+import com.rongdu.common.util.MoneyUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.borrow.service.BorrowProtocolService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.Protocol;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.core.util.itext.PdfHelper;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 创建协议抽象类
+ * 
+ * @author qj
+ * @version 2.0
+ * @since 2014-05-22
+ */
+public abstract class AbstractProtocolBean implements ProtocolBean {
+	private static Logger logger = Logger.getLogger(AbstractProtocolBean.class);
+
+	protected BorrowService borrowService;
+	protected BorrowTenderService borrowTenderService;
+	protected BorrowCollectionService borrowCollectionService;
+	protected VerifyLogService verifyLogService;
+	protected UserService userService;
+	protected BorrowProtocolService borrowProtocolService;
+	protected BorrowRepaymentService borrowRepaymentService;
+	protected OperatorService operatorService;
+	
+	// 生成pdf路径名
+	protected String inPdfName;
+	// 下载pdf名
+	protected String downloadFileName;
+	// 标id
+	protected long borrowId;
+	// 标model
+	protected BorrowModel borrow;
+	// 投标记录
+	protected List<BorrowTenderModel> tenderList;
+	// 标id
+	protected long tenderId;
+	// 投标记录
+	protected BorrowTenderModel tender;
+	// 投标用户
+	protected User tenderUser;
+	// 发标用户
+	protected User borrowUser;
+	// 还款计划
+	private List<BorrowRepayment> repaymentList;
+	// 代收计划
+	private List<BorrowCollection> collectionList;
+	// 协议模板
+	protected Protocol protocol;
+	// 操纵用户Id
+	protected long userId;
+	
+    /**
+     * 审核通过时间 
+     */
+	protected String vetifyTime;
+	
+	protected PdfHelper pdf;
+	// 引入数据map
+	protected Map<String, Object> data = new HashMap<String, Object>();
+
+	/**
+	 * 业务核心处理方法
+	 */
+	@Override
+	public void executer(long borrowId, Protocol protocol, long userId) {
+		this.executer(borrowId, 0, protocol, userId);
+	}
+
+	/**
+	 * 业务核心处理方法
+	 */
+	public void executer(long borrowId, long tenderId, Protocol protocol, long userId) {
+		// 初始化基础参数
+		logger.info("初始化ProtocolBean");
+		this.borrowService = (BorrowService) BeanUtil.getBean("borrowService");
+		this.borrowTenderService = (BorrowTenderService) BeanUtil.getBean("borrowTenderService");
+		this.borrowCollectionService = (BorrowCollectionService) BeanUtil.getBean("borrowCollectionService");
+		this.verifyLogService = (VerifyLogService) BeanUtil.getBean("verifyLogService");
+		this.userService = (UserService) BeanUtil.getBean("userService");
+		this.borrowProtocolService = (BorrowProtocolService) BeanUtil.getBean("borrowProtocolService");
+		this.borrowRepaymentService = (BorrowRepaymentService) BeanUtil.getBean("borrowRepaymentService");
+		this.operatorService = (OperatorService) BeanUtil.getBean("managerService");
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		this.downloadFileName = borrowId + ".pdf";
+		this.inPdfName = contextPath + "/data/protocol/" + borrowId + "_" + System.currentTimeMillis() + ".pdf";
+		this.pdf = PdfHelper.instance(inPdfName);
+		this.borrowId = borrowId;
+		this.borrow = BorrowModel.instance(borrowService.getBorrowById(borrowId));
+		this.borrowUser = borrow.getUser();
+		this.protocol = protocol;
+		this.tenderList = borrowTenderService.getTenderList(borrowId);
+		this.repaymentList = borrowRepaymentService.getRepaymentByBorrowId(borrowId);
+		this.userId = userId;
+		if (tenderId != 0) {
+			this.tenderId = tenderId;
+			this.tender = BorrowTenderModel.instance(borrowTenderService.getTenderById(tenderId));
+			this.tenderUser = this.tender.getUser();
+			//添加代收列表  用于投资人协议下载
+			this.collectionList = borrowCollectionService.getListByUserAndBorrow(tender);
+		}
+		if(borrow.getType() == Borrow.TYPE_MORTGAGE_ENERGY || borrow.getType() == Borrow.TYPE_NETWORK){
+			this.vetifyTime = DateUtil.dateStr2(verifyLogService.findByType(borrowId, "borrow", 1).getTime());
+		}else{
+			this.vetifyTime = DateUtil.dateStr2(verifyLogService.findByType(borrowId, "borrow", 2).getTime());
+		}
+		// 业务预处理
+		prepare();
+		// 下载协议校验
+		validDownload();
+		// 初始化参数
+		initData();
+		// 创建pdf逻辑
+		createPdf();
+	}
+
+	
+	@Override
+	public abstract void prepare();
+
+	@Override
+	public void validDownload() {
+		// 判断是否有模板
+		if (this.protocol == null || StringUtil.isBlank(this.protocol.getContent())) {
+			throw new BorrowException("读取协议模板出错！");
+		}
+		// 判断标是否存在
+		if (this.borrow != null) {
+			int status = this.borrow.getStatus();
+			boolean isDown = status == 0 || status == 1 || status == 3 || status == 6 || status == 7 || status == 8;
+			// 判断标是否状态异常
+			if (!isDown) {
+				throw new BorrowException("借款标状态异常！");
+			}
+		} else {
+			throw new BorrowException("借款标不存在！");
+		}
+		// 判断用户是否存在
+		if (userId == 0) {
+			throw new BorrowException("用户信息异常！");
+		}
+	}
+
+	@Override
+	public void initData() {
+		data.put("vetifyTime", vetifyTime); //添加审核时间
+		data.put("borrowId", borrowId);
+		data.put("borrow", this.borrow);
+		data.put("borrowAccount", MoneyUtil.convert(this.borrow.getAccount()+""));
+		if(this.borrow.getVouchFirm() != null){
+			data.put("vouchFirmCache", this.borrow.getVouchFirm().getUserCache());
+		}
+		data.put("borrowUser", this.borrowUser);
+		data.put("borrowUserCache", this.borrowUser.getUserCache());
+		data.put("tenderList", tenderList);
+		data.put("userId", userId);
+		data.put("repaymentList", repaymentList);
+		if (this.tenderId != 0) {
+			data.put("tenderId", this.tenderId);
+			data.put("tender", this.tender);
+			data.put("tenderUser", this.tenderUser);
+			data.put("collectionList", this.collectionList);
+		}
+		//JSDP-118协议添加电子章 gjh 2015-5-15 start
+		data.put("img", Global.getString("weburl") + "/themes/theme_default/images/index/zhang.png");
+		//JSDP-118协议添加电子章 gjh 2015-5-15 end
+	}
+
+	@Override
+	public void createPdf() {
+		boolean checkFile = false;
+		File pdfFile = new File(inPdfName);
+		try {
+			if (!pdfFile.exists()) {
+				pdfFile.mkdir();
+			}
+			String out = FreemarkerUtil.renderTemplate(protocol.getContent(), this.data);
+			ProtocolHelper.templateHtml(out, pdf);
+			checkFile = true;
+		} catch (Exception e) {
+			logger.info("生成pdf出错");
+			e.printStackTrace();
+			HandleException he = null;
+			if(tenderId != 0){
+				he = new HandleException("投标人借款协议下载失败，失败原因：" + e.getMessage(),
+						"投标人借款协议下载失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_TENDER,
+						ErrorLogConstant.CODE_BORROW_PUBLISH_SYS,tender.getUser(),ErrorLogConstant.MODULE_BORROW_TENDER,
+						tender.getId(),0);
+			}else{
+				he = new HandleException("借款人借款协议下载失败，失败原因：" + e.getMessage(),
+						"借款人借款协议下载失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_BORROW,
+						ErrorLogConstant.CODE_BORROW_PUBLISH_SYS,borrow.getUser(),ErrorLogConstant.MODULE_BORROW,
+						borrow.getId(),0);
+			}
+			he.saveExceptionLog(he);
+			throw he;
+		}
+		if (!checkFile) {
+			throw new BorrowException("pdf生成的路径不存在...");
+		}
+		pdf.exportPdf();
+	}
+
+	public String getInPdfName() {
+		return inPdfName;
+	}
+
+	public void setInPdfName(String inPdfName) {
+		this.inPdfName = inPdfName;
+	}
+
+	public String getDownloadFileName() {
+		return downloadFileName;
+	}
+
+	public void setDownloadFileName(String downloadFileName) {
+		this.downloadFileName = downloadFileName;
+	}
+
+}

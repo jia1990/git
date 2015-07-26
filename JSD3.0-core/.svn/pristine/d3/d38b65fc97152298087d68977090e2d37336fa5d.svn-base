@@ -1,0 +1,69 @@
+package com.ddtkj.p2psys.reset.global.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+import org.tuckey.web.filters.urlrewrite.utils.StringUtils;
+
+import com.ddtkj.p2psys.reset.global.dao.GlobalResetDao;
+import com.ddtkj.p2psys.reset.global.service.GlobalResetService;
+import com.ddtkj.p2psys.reset.global.util.JSON2RuleChek;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.MD5Util;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.dao.OperatorDao;
+import com.rongdu.p2psys.core.domain.NoticeType;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+
+/**
+ * @描述:全局变量后台重置服务
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月23日
+ */
+@Service("globalResetService")
+public class GlobalResetServiceImpl extends BaseDaoImpl implements
+		GlobalResetService {
+	@Resource
+	private GlobalResetDao globalResetDao;
+	@Resource
+	private OperatorDao operatorDao;
+
+	@Override
+	public Rule resetRuleCheck(long id) {
+		Rule rule = globalResetDao.queryRuleCheckById(id);
+		RuleCheck ruleCheck = JSON2RuleChek.getRuleCheck(rule);
+		// 全局重置
+		Global.RULECHECKS.put(rule.getNid(), ruleCheck);
+        return rule;
+	}
+
+	@Override
+	public void resetNoticType(long id) {
+		
+	}
+
+	@Override
+	public boolean isAuthority(String token) {
+		if (token == null || "".equals(token.trim())) {
+
+			return false;
+		}
+		List<Operator> list = operatorDao.userList();
+
+		for (Operator operator : list) {
+
+			String temp = String.valueOf(operator.getId()) + operator.getName()
+					+ operator.getPwd();
+			if (MD5Util.MD5Encode(temp, "UTF-8").equals(token)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+}

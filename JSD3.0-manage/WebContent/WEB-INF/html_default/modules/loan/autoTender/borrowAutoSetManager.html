@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户自动投标设置信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+  
+    
+    $(function() {
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'borrowAutoSetList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'totalRank',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 60,fixed:true, sortable:false },
+			  { field: 'status', title: '状态', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == "22"){
+             		 return "未启用"; 
+             	  }else if(value == "11"){
+             	 	 return "已启用";
+             	  }else if(value == "33"){
+             		 return "已删除";
+             	  }
+              }},
+              { field: 'userName', title: '用户名', width: 120,fixed:true, sortable:false },
+              { field: 'realName', title: '真实姓名', width: 80,fixed:true, sortable:false },
+              { field: 'totalRank', title: '排名', width: 60, fixed:true,sortable:false },   
+          
+              { field: 'vipLevel', title: '会员等级', width: 80,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  return convertVipLevel(value);
+              }},
+              { field: 'tenderAccount', title: '投标金额', width: 100, fixed:true,sortable:false,formatter: function(value,row,index){
+            	  if (value == 0){
+            		  return "";
+            	  }
+            	  return value + "元";
+              }}, 
+              
+              { field: 'borrowStyleEnable', title: '还款方式', width:100,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  if(row.borrowStyleEnable){
+            		  return borrowStyle(row.borrowStyle);
+            	  }else{
+            		  return "无限制";
+            	  }
+              }},
+              { field: 'timelimitMonthEnable', title: '借款期限(月)', width: 100,fixed:true, sortable:false,formatter: function(value,row,index){      		 
+            	  if(row.timelimitMonthEnable){
+            		  return row.timelimitMonthDown+"个月"+"-"+row.timelimitMonthUp+"个月";
+            	  }else{
+            		  return "无限制";
+            	  } 
+              }},
+              { field: 'timelimitDayEnable', title: '借款期限(天)', width: 100,fixed:true, sortable:false,formatter: function(value,row,index){ 
+            	  if(row.timelimitDayEnable){
+            		  return row.timelimitDayDown+"天"+"-"+row.timelimitDayUp+"天";
+            	  }else{
+            		  return "无限制";
+            	  }
+              }},
+              { field: 'aprEnable', title: '年利率', width: 85,fixed:true, sortable:false,formatter: function(value,row,index){	 
+            	  if(row.aprEnable){
+            		  return row.aprDown+"%"+"-"+row.aprUp+"%";
+            	  }else{
+            		  return "无限制";
+            	  }  
+              }},
+              { field: 'energyEnable', title: '能源宝', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == false){
+             		 return "未开启"; 
+             	  }else if(value == true){
+             	 	 return "开启";
+             	  }
+              }},
+              { field: 'carEnable', title: '车贷宝', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == false){
+             		 return "未开启"; 
+             	  }else if(value == true){
+             	 	 return "开启";
+             	  }
+              }},
+              { field: 'amortizeEnable', title: '分期宝', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == false){
+             		 return "未开启"; 
+             	  }else if(value == true){
+             	 	 return "开启";
+             	  }
+              }},
+              { field: 'networkEnable', title: '微商贷', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == false){
+             		 return "未开启"; 
+             	  }else if(value == true){
+             	 	 return "开启";
+             	  }
+              }},
+              { field: 'updateTime', title: '更新时间', width: 120,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              }, 
+              { field: 'addTime', title: '添加时间', width: 110,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              }, 
+              { field: 'addIp', title: '添加IP', width: 150,fixed:true,fixed:true, sortable:false },
+              { field: 'updateTime', title: '更新时间', width: 150,fixed:true,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+				  }  
+              }
+             ] ],
+             toolbar : '#toolbar'
+        });
+    });
+  //自动投标设置中的excel导出
+	function exportExcel(){
+		var url = "/modules/loan/borrow/borrowAutoSetExcel.html";
+		var userName = $("#userName").val();
+		var realName = $("#realName").val();
+		var type = $("#type").val();
+		var status = $("#status").val();
+		var sou = "?status=" + status + "&type=" + type + "&userName=" + userName + "&realName=" + realName;
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询信息）</font></h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>真实姓名：<input type="text" name="realName" id="realName" autocomplete="off"/></li>
+            		<li> 状态：
+		                <select name="status" id="status" class="type">
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="11">已启用</option>
+		                  <option value="22">未启用</option>
+		                  <option value="33">已删除</option>
+		                </select>
+		            </li>
+		            <li> 类型：
+		                <select name="type" id="type" class="type">
+               			  <option value="all" selected="selected">全部</option>
+		                  <option value="energyEnable">能源宝</option>
+		                  <option value="carEnable">车贷宝</option>
+		                  <option value="networkEnable">微商贷</option>
+		                  <option value="amortizeEnable">分期宝</option>
+		                </select>
+		            </li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+    <@secAuthorizeUrl value='/borrowAutoSetExcel.html'>
+    <div id="toolbar" style="display: none;">		
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>	
+	</div>
+	</@secAuthorizeUrl>
+</body>
+</html>

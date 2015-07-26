@@ -1,0 +1,82 @@
+
+package com.ddtkj.p2psys.errorlog.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.errorlog.domain.ErrorLog;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述: 错误异常日志model
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-12   
+ */
+public class ErrorLogModel extends ErrorLog {
+
+	private static final long serialVersionUID = -8678608568812647971L;
+
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	private String addUserName; //添加人用户名
+	
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getSize() {
+		return size;
+	}
+	public void setSize(int size) {
+		this.size = size;
+	}
+	public String getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+	public String getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	public int getTime() {
+		return time;
+	}
+	public void setTime(int time) {
+		this.time = time;
+	}
+	public String getAddUserName() {
+		return addUserName;
+	}
+	public void setAddUserName(String addUserName) {
+		this.addUserName = addUserName;
+	}
+	
+	public ErrorLog prototype(){
+		ErrorLog errorLog = new ErrorLog();
+		BeanUtils.copyProperties(this, errorLog);
+		return errorLog;
+	}
+	
+	public static ErrorLogModel instance(ErrorLog errorLog){
+		ErrorLogModel model = new ErrorLogModel();
+		BeanUtils.copyProperties(errorLog, model);
+		return model;
+	}
+	
+}

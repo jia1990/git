@@ -1,0 +1,92 @@
+package com.ddtkj.p2psys.redpacket.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.redpacket.domain.UserActivity;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * 用户与活动的关系Service 
+ * 
+ * @author YJF
+ *
+ */
+
+public interface UserActivityService {
+	/**
+	 * 生成一个红包
+	 * @param user  红包归属人
+	 * @param typecode 红包类型
+	 * @return
+	 */
+	public UserActivity addRedpacket(User user,String typecode) ;
+	/**
+	 * 生成一个红包
+	 * @param user 红包归属人
+	 * @param ref  推荐人
+	 * @param typecode  当前用户红包来源类型
+	 * @param refTypecode 推荐人用户红包来源类型
+	 * @return
+	 */
+	public UserActivity addRedpacket(User user,User ref,String typecode,String refTypecode);
+	
+	/**
+	 * 获取某个用户的所有非推荐来的红包
+	 * @param userid  用户ID
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUserid(long userid,int currentPage,int pagenum);
+	/**
+	 * 获取某个用户多有通过推荐来的红包
+	 * @param userid  用户ID
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUseridRef(long userid,int currentPage,int pagenum);
+	/**
+	 * 获取某个用户的使用或未使用的红包
+	 * @param userid  用户id
+	 * @param isuse  0 未使用  1 已使用
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,int isuse,int currentPage,int pagenum);
+	/**
+	 * 获取某个用户  通过某种 typecode 来的  使用或未使用的红包
+	 * @param userid  用户id
+	 * @param isuse  0 未使用  1 已使用
+	 * @param typecode 红包编码code
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUseridAndStatus(long userid,int isuse,String typecode,int currentPage,int pagenum);
+	/**
+	 * 获取某个用户  通过某种 推荐 来的  使用或未使用的红包
+	 * @param userid  用户id
+	 * @param isuse  0 未使用  1 已使用
+	 * @return
+	 */
+	public PageDataList<UserActivity> getModleByUseridAndTJ(long userid,int isuse,int currentPage,int pagenum);
+	/**
+	 * 保存 活动
+	 * @param rp
+	 * @return
+	 */
+	public UserActivity save(UserActivity rp) ;
+	/**
+	 * 修改 活动
+	 * @param rp
+	 * @return
+	 */
+	public UserActivity update(UserActivity rp) ;
+	/**
+	 * 删除 活动
+	 * @param rp
+	 */
+	public void delete(UserActivity rp) ;
+	
+	/**
+	 * 返回所有的活动 
+	 * @return
+	 */
+	public List<UserActivity> getAll();
+	
+	
+}

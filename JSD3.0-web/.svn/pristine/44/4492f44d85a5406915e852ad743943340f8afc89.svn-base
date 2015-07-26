@@ -1,0 +1,61 @@
+package com.ddtkj.mobile.cn.jpush.newapi;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.mobile.Constants;
+
+
+/**
+ * The global entrance of JPush API library.
+ */
+public class JPushClient {
+	private String authorization;
+    private HttpPostClient httpPostClient = new HttpPostClient();
+
+    private final String _masterSecret;
+
+    private final String _appKey;
+	public JPushClient(String masterSecret, String appKey, int maxRetryTimes) {
+		 this._masterSecret = masterSecret;
+	        this._appKey = appKey;
+		authorization = ServiceHelper.getAuthorizationBase64(_appKey, _masterSecret);
+   
+	}
+	
+    public String getAuthorization() {
+		return authorization;
+	}
+
+	public void setAuthorization(String authorization) {
+		this.authorization = authorization;
+	}
+
+	/**
+     * Send a push with PushPayload object.
+     * 
+     * @param pushPayload payload object of a push. 
+     * @return PushResult The result object of a Push. Can be printed to a JSON.
+     * @throws APIConnectionException
+     * @throws APIRequestException
+     */
+	public PushResult sendPush(RequestWarper rw ) {
+		Notification notification = new Notification();
+		notification.setAlert(rw.getTitle());
+		ParameterJPush pjp = new ParameterJPush();
+		pjp.setNotification(notification);
+		Options options = new Options();
+		options.setSendno(ServiceHelper.generateSendno());
+		pjp.setOptions(options);
+		String content = JSON.toJSONString(pjp);
+		
+		rw.setAuthCode(authorization);
+		rw.setMethod(RequestMethod.POST.name());
+		rw.setContent(content);
+		String json = httpPostClient.sendPost(Constants.JPUSH_URL, rw);
+		
+		PushResult pr=(PushResult) JSON.parseObject(json, PushResult.class);
+	    return pr;
+	}
+	
+
+}
+

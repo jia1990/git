@@ -1,0 +1,136 @@
+package com.ddt.p2psys.redpacket.service;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import junit.framework.TestCase;
+
+import com.ddt.test.util.BeanUtil;
+import com.ddtkj.p2psys.redpacket.domain.Activity;
+import com.ddtkj.p2psys.redpacket.domain.RedPacket;
+import com.ddtkj.p2psys.redpacket.domain.RedPacketLog;
+import com.ddtkj.p2psys.redpacket.domain.UserActivity;
+import com.ddtkj.p2psys.redpacket.model.RedPacketModel;
+import com.ddtkj.p2psys.redpacket.service.ActivityService;
+import com.ddtkj.p2psys.redpacket.service.RedPacketLogService;
+import com.ddtkj.p2psys.redpacket.service.RedPacketService;
+import com.ddtkj.p2psys.redpacket.service.UserActivityService;
+
+/**
+ * 测试 各种查询
+ * @author YJF
+ *
+ */
+public class RedPacketAllTest extends TestCase {
+
+	/**
+    *  红包类型各种查询
+    * */
+	public void testRedPacketAll(){
+		RedPacketService rpservice = BeanUtil.getBean("redPacketService",RedPacketService.class);
+//		// id 
+//		RedPacket rp_getid = rpservice.getEntityById(2) ;
+//		System.out.println(rp_getid.getName());
+//		// typecode
+//		RedPacket rp_typecode = rpservice.getEntityByTypeCode("register") ;
+//		System.out.println(rp_typecode.getName());
+//		// isopen
+		List<RedPacket> rp_isopen = rpservice.getEntityByIsOpen("Y",1,1).getList() ;
+		System.out.println(rp_isopen.size());
+		// 复杂查询
+//		QueryParam qp = QueryParam.getInstance().addPage(1,1);
+//		PageDataList<RedPacket> rpPD = rpservice.getEntityList(qp);
+//		System.out.println(rpPD.getList().size());
+//		System.out.println(rpPD.getPage().getTotal());
+//		
+	}
+	/**
+    *  活动各种查询
+    * */
+	public void testActivityAll(){
+		ActivityService activityService = BeanUtil.getBean("activityService",ActivityService.class);
+		// id 
+		Activity ac_getid = activityService.getEntityById(1) ;
+		System.out.println(ac_getid.getActName());
+		// 名字模糊
+		List<Activity> ac_getName = activityService.getEntityByName("国庆",1,10).getList() ;
+		for (Activity activity : ac_getName) {
+			System.out.println(activity.getActName());
+		}
+		// 查询 根据红包的TypeCode
+		List<Activity> ac_typecode = activityService.getEntityByTypeCode("register",1,10).getList();
+		for (Activity activity : ac_typecode) {
+			System.out.println(activity.getActName());
+		}
+		// 查询 根据红包的TypeCode
+		List<RedPacketModel> rm_typecoe = activityService.getModelByTypeCode("register",1,10).getList();
+		for (RedPacketModel activity : rm_typecoe) {
+			System.out.println("活动"+activity.getActivity().getActName()+"送"+activity.getAccount()+"元红包，类型："+activity.getRp().getName());
+		}
+		
+		// 查询 当前某个时间符合typecode的活动
+		Activity ac_getBYDateAndtypecode = activityService.getEntityByTimeAndRPTypeCode(new Date(), "register") ;
+		System.out.println(ac_getBYDateAndtypecode.getActName());
+		
+		RedPacketModel rpm_getBYDateAndtypecode = activityService.getModelByTimeAndRPTypeCode(new Date(), "register") ;
+		System.out.println("当前时间符合注册的活动为："+rpm_getBYDateAndtypecode.getActivity().getActName()+"，赠送红包金额:"+rpm_getBYDateAndtypecode.getAccount()+",类型："+rpm_getBYDateAndtypecode.getRp().getName());
+		
+		// 查询其他时间 符合 typecode的活动
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") ;
+		try {
+			Activity ac_getBYDateAndtypecode2 = activityService.getEntityByTimeAndRPTypeCode(sdf.parse("2015-01-01 00:00:00"), "register") ;
+			System.out.println(ac_getBYDateAndtypecode2==null?"没有":ac_getBYDateAndtypecode.getActName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	
+	}
+
+	/**
+	 * 用户关系的各种查询
+	 */
+	public void testUserActivityAll(){
+		UserActivityService activityService = BeanUtil.getBean("userActivityService",UserActivityService.class);
+		//  生成一个注册的红包
+		// -------  activityService.addRedpacket(new User(16698), "register");
+		//  有推荐人的注册送红包  同时返还推荐人一个红包
+		// activityService.addRedpacket(new User(16697),new User(16696),"register","popularize");
+		
+		//	查询某个人的 所有非推荐来的红包
+		List<UserActivity> list = activityService.getModleByUserid(16696,1,10).getList() ;
+		for (UserActivity ua : list) {
+				System.out.println(ua.getActivityRP().getRp().getName()+"来的："+ua.getActivityRP().getAccount()+"元红包，活动名称为："+ua.getActivityRP().getActivity().getActName());
+		}
+		// 查询某个人所有通过推荐得来的红包
+		List<UserActivity> list2 = activityService.getModleByUseridRef(16696,1,10).getList() ;
+		for (UserActivity ua : list2) {
+				System.out.println(ua.getRefActivityRP().getRp().getName()+"来的："+ua.getRefActivityRP().getAccount()+"元红包，活动名称为："+ua.getRefActivityRP().getActivity().getActName());
+		}
+		
+		//获取某个用户的使用或未使用的红包
+		List<UserActivity> list3 = activityService.getModleByUseridAndStatus(16696,0, 1, 10).getList();
+		for (UserActivity ua : list3) {
+			 System.out.println(ua.getActivityRP().getRp().getName()+"来的："+ua.getActivityRP().getAccount()+"元红包，活动名称为："+ua.getActivityRP().getActivity().getActName());
+		}
+		// 获取某个用户通过推荐来的  使用或未使用的红包
+		List<UserActivity> list4 = activityService.getModleByUseridAndTJ(16696,0, 1, 10).getList() ;
+		for (UserActivity ua : list4) {
+			 System.out.println(ua.getRefActivityRP().getRp().getName()+"来的："+ua.getRefActivityRP().getAccount()+"元红包，活动名称为："+ua.getRefActivityRP().getActivity().getActName());
+		}
+		// 获取某个用户  通过某种 typecode 来的  使用或未使用的红包
+		List<UserActivity> list5 = activityService.getModleByUseridAndStatus(16696,0,"register",1,10).getList() ;
+		for (UserActivity ua : list5) {
+			System.out.println(ua.getActivityRP().getRp().getName()+"来的："+ua.getActivityRP().getAccount()+"元红包，活动名称为："+ua.getActivityRP().getActivity().getActName());
+		}
+	}
+	public void testRedPacketLogAll(){
+		RedPacketLogService rplServcie = BeanUtil.getBean("redPacketLogService",RedPacketLogService.class);
+		
+		// 分页查询所有
+		List<RedPacketLog> loglist = rplServcie.getAll(1,3).getList();
+		System.out.println(loglist.size());
+		
+	}
+	
+}

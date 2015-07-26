@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>发标待审标信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+         <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+             <h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul><!-- //JSDP-116 sxy 2015-05-15 start  此处借款人邮箱改为借款人用户名 -->
+            		<li>类型：<select name="type" class="type" id="borrowType"><option value="">全部</option><#list borrowConfigList as item><option value="${item.id}">${item.name}</option></#list></select></li>
+            		<li>借款人：<input type="text" name="userName" autocomplete="off" id="userName"/></li>
+            		<li>标名：<input type="text" name="name" autocomplete="off" id="borrowName"/></li>
+            		<!-- <li>时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		-->
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime"  class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+    <div id="toolbar" >	
+		&nbsp;
+		<@secAuthorizeUrl value='/loan/confirmedBorrowExcel.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+    var winWidth =  800;
+    var winHeight = 500;
+    var addTitle = "添加";
+	var addUrl =  "/modules/loan/borrow/borrowAddPage.html";
+    var verifyTitle = "初审";
+    var verifyUrl =  "/modules/loan/borrow/borrowVerifyPage.html";
+    var confirmUrl = "/modules/loan/borrow/registerBorrowResult.html";
+    var openUrl= "/modules/loan/borrow/registerBorrow.html";
+   
+    var confirmGuaranteeUrl = "/modules/loan/borrow/registerGuaranteeResult.html";
+    var openGuaranteeUrl= "/modules/loan/borrow/registerGuarantee.html";
+    var registerGuaranteeParmeters = "'{0}','"+confirmGuaranteeUrl+"','" + openGuaranteeUrl+"'";
+    
+    var verifyWinParmeters = "'{0}','"+verifyTitle+"',700,530,'"+verifyUrl+"'";
+    var registerBorrowParmeters = "'{0}','"+confirmUrl+"','" + openUrl+"'";
+    var detailTitle = "查看借款信息";
+    var detailUrl = "/modules/loan/borrow/borrowViewPage.html"
+    var detailWinParmeters = "'{0}','" + detailTitle + "',800,500,'" + detailUrl + "'";
+    $(function() {
+    	/* $("#type").change(function(){
+    		$("#a").attr("onclick","$.fn.dataGridOptions.addFun("+$(this).val()+",addTitle,winWidth,winHeight,addUrl);");
+    	}); */
+        dataGrid = $('#dataGrid').datagrid({
+            url : 'confirmedBorrowList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 50,fixed:true, sortable:false },              
+              { field: 'userName', title: '借款人邮箱', width: 150,fixed:true, sortable:false },
+              { field: 'name', title: '标名', width: 150, sortable:false },
+              { field: 'dealParent', title: '合同号', width: 80, sortable:false },
+              { field: 'dealNo', title: '子合同号', width: 80, sortable:false },
+              { field: 'typeName', title: '类型', width: 60, sortable:false/*  , 
+					formatter: function(value,row,index){
+						return borrowType(value);  
+    				}  
+               */},
+              { field: 'accountStr', title: "<a title='元'>借款金额</a>", width: 100, sortable:false,formatter: function(value,row,index){
+            	  //return value+"元";
+            	  return value;
+              } },
+              { field: 'apr', title: '利率', width: 50, sortable:false,formatter: function(value,row,index){
+            	  return value+"%";
+              } }, 
+              { field: 'timeLimit', title: '期限', width: 50, sortable:false,
+            	  formatter: function(value,row,index){
+            		  	if(row.type == 101){
+            		  		return "满标即还";
+            		  	}else if (row.borrowTimeType == 1){
+	  						return row.timeLimit + "天";
+	  					} else {
+	  						return value + "个月";
+	  					}
+				  	}   
+              },
+              { field: 'addTime', title: '添加时间', width: 180, fixed:true,sortable:false, 
+            	  	formatter: function(value,row,index){
+            	  		return getLocalTime(value,4);
+  				  	}  
+              }, 
+              { field : 'action',
+                title : '操作',
+                width :75,
+                fixed:true,
+                formatter : function(value, row, index) {
+                    var str = '';
+                    str += "<@secAuthorizeUrl value='/verifyBorrowViewBtn.html'>";
+                    str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + detailWinParmeters + ');" src="{1}" title="查看借款信息"/>', row.id, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                    str += "</@secAuthorizeUrl>";
+                    str += '&nbsp;'; 
+                    str += "<@secAuthorizeUrl value='/verifyBorrowBtn.html'>";
+                    str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+verifyWinParmeters+');" src="{1}" title="初审"/>', row.id, '${theme_dir}/css/images/extjs_icons/key.png');
+                    str += "</@secAuthorizeUrl>";
+                    str += '&nbsp;'; 
+                    return str;
+                }
+            } ] ],
+            toolbar : '#toolbar'
+        });
+    });
+   
+	  //初审通过中的excel导出
+	  function exportExcel(){
+	  	var url = "/modules/loan/borrow/confimedBorrowExcel.html";
+	  	var type = $("#borrowType").val();
+	  	var userName = $("#userName").val();
+	  	var name = $("#borrowName").val();
+	  	var startTime = $("#startTime").val();
+	  	var endTime = $("#endTime").val();
+	  	var sou = "?userName=" + userName + "&name=" + name + "&startTime=" + startTime + "&endTime=" + endTime + "&type=" + type;
+	  	window.location.href = url + sou;
+	  }
+	 
+</script>

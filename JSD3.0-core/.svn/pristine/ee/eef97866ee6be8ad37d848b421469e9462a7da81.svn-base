@@ -1,0 +1,107 @@
+package com.ddtkj.p2psys.redpacket.domain;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * @描述：用户与红包活动关系实体类
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2014年12月8日
+ */
+@Entity
+@Table(name="t_jsd_user_activity")
+public class UserActivity {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long  id ;
+	
+	@ManyToOne
+	@JoinColumn(name="user_id")
+	private User user ;   //  用户
+	
+	@ManyToOne
+	@JoinColumn(name="actrp_id")
+	private ActivityRP activityRP ;  // 用户参与的活动ID
+	
+	@ManyToOne
+	@JoinColumn(name="referrer_id")
+	private User referrer ;	 // 推荐人 
+	
+	private int userRpIsuse ;	 //  用户的该红包是否使用
+	
+	@ManyToOne
+	@JoinColumn(name="referrer_actrp_id")
+	private ActivityRP refActivityRP ;  // 推荐人参与的活动
+	
+	@Column(name="referrer_rp_isuse")
+	private int refRpIsUse ;   // 推荐人的该红包是否使用
+	
+
+	
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	
+	public User getReferrer() {
+		return referrer;
+	}
+
+	public void setReferrer(User referrer) {
+		this.referrer = referrer;
+	}
+
+	public int getUserRpIsuse() {
+		return userRpIsuse;
+	}
+
+	public void setUserRpIsuse(int userRpIsuse) {
+		this.userRpIsuse = userRpIsuse;
+	}
+	
+
+	public int getRefRpIsUse() {
+		return refRpIsUse;
+	}
+
+	public void setRefRpIsUse(int refRpIsUse) {
+		this.refRpIsUse = refRpIsUse;
+	}
+	
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public ActivityRP getActivityRP() {
+		return activityRP;
+	}
+
+	public void setActivityRP(ActivityRP activityRP) {
+		this.activityRP = activityRP;
+	}
+
+	public ActivityRP getRefActivityRP() {
+		return refActivityRP;
+	}
+
+	public void setRefActivityRP(ActivityRP refActivityRP) {
+		this.refActivityRP = refActivityRP;
+	}
+	
+}

@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet"  href="${webroot}${theme_dir}/media/css/stages.css"></link>
+<style>
+.y_alertsBoxCon{color: #555555;font-size: 16px;line-height: 30px;}
+.y_alertsBoxCon span{color: #12adff;font-size: 16px;}
+.y_alertsBoxCon a{font-size: 14px;margin-left:180px;display:block;background:#12adff;width:140px;height:36px;color:#fff;text-align:center;line-height:36px;margin-top:10px;}
+.c_deal_content .y_account_nav dd span.c_member_icon{background:url(${webroot}${theme_dir}/images/contact/vip.png) no-repeat 0 2px;}
+.c_deal_content .y_account_nav .c_invest_this span.c_member_icon{background-position:0 -20px;}
+.is_del{border-bottom: 1px solid #ddd;color: #0697da;display: block;font-size: 16px;height: 40px;line-height: 40px;padding-left: 15px;}
+.fileconfirm{width:400px;height:200px;}
+.address_close{background: url("${webroot}${theme_dir}/images/authentications.png") repeat scroll 0 0 rgba(0, 0, 0, 0);cursor: pointer;display: block;height: 38px;position: absolute; right: -15px; top: -15px;width: 34px;}
+.del_bank{height:80px;line-height:80px;text-align:center;font-size:18px;}
+.fileconfirmbtn a{display:inline-block;height:30px;line-height:30px;margin-top:10px;text-align:center;background:#12adff;color:#fff;border-radius:2px;}
+
+select{display:none;}
+.select_showbox{float:left;border: 1px solid #DCDCDC;width:86px;height: 36px;padding-left: 5px;background: url(${webroot}${theme_dir}/images/sel.png) no-repeat 51px 0;line-height: 36px;}
+.select_option{border: 1px solid #ccc;border-top: none;display: none;height:200px;overflow:hidden;overflow-y:auto;}
+.left-extra .select_option li{padding-left: 5px;margin: 0;heihgt:26px;line-height:26px;}
+.select_option li.hover{background: #0697DA; color: #fff;}
+.select_box ul{margin:0;position:absolute;top:38px;width:90px;left:290px;background:#fff;z-index: 101;}
+.select_box ul li{clear:both;width:86px;}
+.select_box{position:relative;}
+.left-extra ul li{min-heihgt:26px;line-height:26px;}
+</style>
+<script src="${webroot}${theme_dir}/media/js/jquery-1.8.2.min.js"></script>
+<title>晋商贷-诚信、安全、方便、快捷、高效的投资理财平台！</title>
+<#include "../include/resource1.html"> 
+<style>
+	body{font-family: "微软雅黑";}
+</style>
+</head>
+ <body>
+   	<p class="pss" style="display:none;">尊敬的用户，由于银行卡绑定与监管账户有关联，请确保<span>监管账户开通</span>，否则会导致银行卡绑定失败，请先开通监管账户。
+		<br/>
+		<a href="${webroot}/member/security/realNameIdentify.html">马上去开通</a>
+	</p>
+<#include "../include/b_header.html"> 
+<input type="hidden" id="adminurl" value="${adminurl}"></input>
+	<div class="stages-detail-box">
+		<div class="right-extra">
+			<div>
+    			<div id="preview" class="spec-preview"> <span class="jqzoom"><img height=350px width=350px jqimg="${adminurl}${goodsPicList[0].picUrl}" src="${adminurl}${goodsPicList[0].picUrl}" alt=""></span> </div>
+		    	<!--缩图开始-->
+			    <div class="spec-scroll"> 
+			    	<a class="prev"></a> <a class="next"></a>
+			      	<div class="items">
+				        <ul style="left: 0px;">
+				        <#list goodsPicList as goodsPic>
+				          <li><img alt="${goods.name}" bimg="${adminurl}${goodsPic.picUrl}" src="${adminurl}${goodsPic.picUrl}" <#if goodsPic.id == goodsPicList[0].id> class="img-hover"</#if>></li>
+				         </#list>
+				        </ul>
+			     	</div>
+		    	</div>
+		    	<!--缩图结束-->
+  			</div>
+		</div>
+
+		<div class="left-extra">
+ 		<form>
+ 			<p class="left-extra-name">${goods.name}</p>
+ 			<input id="goodId" type="hidden" value="${goods.id}"/>
+ 			<a class="left-extra-small" href="http://www.yungouworld.com/" target="_blank">关注www.yungouquanqiu.com</a>
+	 		<ul>
+	 			<li>
+	 				<span>选择颜色：</span>
+	 				<div class="left-extrainl">
+	 					<#list colorList as color>
+			 					<em <#if color == goods.color> class="yListrclickem"</#if> data-val="${color}"><b>${color}</b><i></i></em>
+		 				</#list>
+	 				</div>
+	 			</li>
+	 			<li>
+	 				<span>选择版本：</span>
+	 				<div class="left-extrainl">
+	 					<#list vesionList as vesion>
+	 						<#if vesion.status>
+		 						<em <#if vesion.vesion == goods.vesion> class="yListrclickem"</#if> data-val="${vesion.vesion}"><b>${vesion.vesion}</b><i></i></em>
+		 					<#else>
+		 						<a><b>${vesion.vesion}</b><i></i></a>
+		 					</#if>
+		 				</#list>
+	 				</div>
+	 			</li>
+	 			<li>
+	 				<span>尺寸大小：</span>
+	 				<div class="left-extrainl">
+	 					<#list sizeList as size>
+	 						<#if size.status>
+	 							<em <#if size.name == goods.size> class="yListrclickem" data-val="${size.name}"</#if>><b>${size.name}</b><i></i></em>
+	 						<#else>
+	 							<a><b>${size.name}</b><i></i></a>
+	 						</#if>
+		 				</#list>
+	 				</div>
+	 			</li>
+	 			<li>
+	 				<span>付款方式：</span>
+	 				<div class="left-extrainl">
+		 				<em class="yListrclickem Ypayments1">分期付款<i></i></em>
+		 				<em class="Ypayments2">全额付款<i></i></em>
+	 				</div>
+	 			</li>
+	 			<li>
+	 				<span>商品库存：</span>
+	 				<div class="left-extrainl">
+	 					<span>${goods.stock} 件</span>
+	 				</div>
+	 			</li>
+	 		</ul>
+	 		<p class="colorp00">云购全球价：￥<i class='i-account'>${goods.cost}</i>
+	 		<div class="y-show-hidden-divs">
+		 		<p class="colorp00">年化利率：<i class="i-stages">${goods.goodsApr}%</i>
+	 			</p>
+	 			<label style="float:left;display:block;line-height:36px;">首付金额：</label>
+	 			<input type="text" id="oneRepay" style="float:left;"/>
+	 			<label class="label-money" style="float:left;display:block;line-height:36px;"> 元</label>
+		 		<label style="margin-left:40px;float:left;display:block;line-height:36px;">分期月数：</label>
+		 		<select id="periodSelect">
+	 				<option value="1" selected="selected">1</option>
+	 				<option value="2">2</option>
+	 				<option value="3">3</option>
+	 				<option value="4">4</option>
+	 				<option value="5">5</option>
+	 				<option value="6">6</option>
+	 				<option value="7">7</option>
+	 				<option value="8">8</option>
+	 				<option value="9">9</option>
+	 				<option value="10">10</option>
+	 				<option value="11">11</option>
+	 				<option value="12">12</option>
+	 				<option value="13">13</option>
+	 				<option value="14">14</option>
+	 				<option value="15">15</option>
+	 				<option value="16">16</option>
+	 				<option value="17">17</option>
+	 				<option value="18">18</option>
+	 				<option value="19">19</option>
+	 			</select>
+	 			<div style="clear:both;"></div>
+	 			<p class="colorp00" style="margin:4px 0 16px;"><span>月供：<em id="monthTotal">${repayCount+fee}</em>元（本息：<em id="monthRepay">${repayCount}</em>元 x <em id="periodVal">1个月</em>）+ 服务费：<em id="feeVal">${fee}</em>元</span></p>
+	 		</div>
+ 			<a href="javascript:;" class="YImmediatelyininstallment Yininstallment1" data-val="1">立即分期</a>
+ 			<a href="javascript:;" class="YImmediatelyininstallment Yininstallment2" data-val="2" style="display:none;">立即购买</a>
+ 			<a href="" class="YImmediatelyininstallment2">查看更多</a>
+ 		</form>
+ 	</div>
+ 	<div style="clear:both;"></div>
+	</div>
+	<div class="stages-detail-bottom">
+		<h2>商品详情</h2>
+		${goods.detail!}
+	</div>
+ </body>
+ <script>
+	seajs.use("${webroot}${theme_dir}/media/js/jquery.selectdefalult");
+	seajs.use('${webroot}${theme_dir}/media/js/member_borrow/stagesDetail');
+</script>
+<#include "../include/b_foot.html">
+</html>

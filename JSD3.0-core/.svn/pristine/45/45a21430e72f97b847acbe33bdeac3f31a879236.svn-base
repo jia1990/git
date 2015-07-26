@@ -1,0 +1,1070 @@
+package com.ddtkj.p2psys.borrow.model.worker;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityConsumeDao;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityDao;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.dao.RpActivitySumDao;
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpActivitySum;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.worker.RpActivityHelper;
+import com.ddtkj.p2psys.redpacket.worker.RpActivityWorker;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountTransferTrade;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransferDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.tpp.ymd.model.record.trade.AccountTransferTradeRecord;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardLogDao;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardSumDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardLog;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardSum;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.dao.BorrowRepaymentDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowCollection;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.RedPacketProduceRuleCheck;
+import com.rongdu.p2psys.core.rule.RpActivityProduceAndConsumeRuleCheck;
+import com.rongdu.p2psys.core.rule.ScoreProduceRuleCheck;
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.rongdu.p2psys.score.constant.ScoreTypeConstant;
+import com.rongdu.p2psys.score.dao.ScoreDao;
+import com.rongdu.p2psys.score.dao.ScoreLogDao;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * 适合即投即生息标种
+ * 
+ * @author fuxingxing
+ * @date 2012-9-5 下午5:18:32
+ * @version <b>Copyright (c)</b> 2012-融都rongdu-版权所有<br/>
+ */
+public class InstantLiveBorrowWorker extends BaseBorrowWorker {
+
+	@SuppressWarnings("unused")
+	private static final long serialVersionUID = -965497211520156565L;
+	private final static Logger logger = Logger.getLogger(InstantLiveBorrowWorker.class);
+	
+	private BorrowTender tender;
+	public InstantLiveBorrowWorker(Borrow data, BorrowConfig config, boolean flag) {
+		super(data, config, flag);
+	}
+	public InstantLiveBorrowWorker(BorrowModel data, BorrowConfig config, boolean flag) {
+		super(data, config, flag);
+	}
+	public InstantLiveBorrowWorker(Borrow data, boolean flag) {
+		super(data,null,flag);
+	}
+
+	@Override
+	public void immediateInterestAfterTender(BorrowTender tender)throws Exception {
+		this.tender=tender;
+		BorrowModel model=new BorrowModel();
+		BeanUtils.copyProperties(data, model);
+		if (model != null && model.getId() > 0) {
+		    BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+		    model = BorrowModel.instance(borrowDao.find(model.getId()));
+		}		
+		Global.setTransfer("borrow", model);
+		//即投即生息投资人业务处理
+		handleInvesterInstantLive(tender);
+		//即投即生息借款人业务处理
+		handleBorrowerInstantLive(tender);
+		// 借款手续费
+		deductFee(model,tender);
+		
+		 //第三方转账
+		//体验卡第三方转账
+		
+		if(tender.getTenderType()!=3){
+			//JSDP-171 wcw 20150724 start
+			List<YmdTransferDetails> list=new ArrayList<YmdTransferDetails>();
+			//体验卡第三方转账方法体封装
+			list=handleYmdPetCard(tender,list);
+			//转账核心方法
+			handleYmdInstantLive(tender,list);
+			//JSDP-171 wcw 20150724 end
+		}else{
+			//修改投标类型为补单投标
+			BorrowTenderDao borrowTenderDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+			borrowTenderDao.update(tender);
+		}
+		// 给借款人发送通知
+		User user = model.getUser();
+		Global.setTransfer("borrow", model);
+		Global.setTransfer("user", user);
+		Global.setTransfer("tender", tender);
+		AbstractExecuter borrowSuccExecuter = ExecuterHelper.doExecuter("borrowSuccessNoticeExecuter");
+		borrowSuccExecuter.execute(0, user);
+		// 给投资人发送通知
+		User btUser = tender.getUser();
+		btUser.getUserId();
+		Global.setTransfer("borrow", model);
+		Global.setTransfer("user", user);
+		Global.setTransfer("tender", tender);
+		AbstractExecuter tenderSuccExecuter = ExecuterHelper.doExecuter("borrowInvestNoticeExecuter");
+		tenderSuccExecuter.execute(0, btUser);
+	}
+	@Override
+	public void handleYmdInstantLive(BorrowTender tender,List<YmdTransferDetails> list)throws Exception {
+		try {
+			//List<YmdTransferDetails> list=new ArrayList<YmdTransferDetails>();
+			YmdTransfer ymdTransfer = new  YmdTransfer();
+			ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+			//ymdTransfer.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));
+			ymdTransfer.setTradeNo(tender.getTenderTradeNo());
+			ymdTransfer.setTradeType(AccountTradeConstant.TRADE_YMD_TRADE);
+			//JSDBET-872 wcw 2015-3-28 start
+			if(tender.getUseRpDynamic()>0){
+				//平台向投资人转账（红包金额）
+				YmdTransferDetails row=new YmdTransferDetails();
+				//row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+				row.setOutTradeNo(tender.getRpBilNo());
+				//平台用户
+				row.setOutName(ymdTransfer.getNumberId());
+				//投资人用户
+				row.setInName(tender.getUser().getUserName());
+				row.setAmount(tender.getUseRpDynamic()+"");
+				row.setRemark("即投即生息标投资成功,"+ymdTransfer.getTradeNo()+"从平台给用户"+tender.getUser().getUserName()+"转账红包奖励"+tender.getUseRpDynamic()+"元");
+				list.add(row);
+			}
+			//JSDBET-872 wcw 2015-3-28 end
+			//JSDP-228 fenggq 20150721   start  平台向投资人转账(静态红包)
+			if(tender.getUseRpStatic()>0){
+				//平台向借款人转账(静态红包)
+				YmdTransferDetails row=new YmdTransferDetails();
+				row.setOutTradeNo(tender.getStaticRedPacketBilNo());
+				//平台用户
+				row.setOutName(ymdTransfer.getNumberId());
+				//投资人用户
+				row.setInName(tender.getUser().getUserName());
+				row.setAmount(tender.getUseRpStatic()+"");
+				row.setRemark("即投即生息标投资成功,"+ymdTransfer.getTradeNo()+"从平台给投资人"+tender.getUser().getUserName()+"转账静态红包金额"+tender.getUseRpStatic()+"元");
+				list.add(row);
+			}
+			//JSDP-228 fenggq 20150721   end 平台向投资人转账(静态红包)
+			
+			if(tender.getAccount()>0){
+				//投资人向借款人转账
+				YmdTransferDetails row=new YmdTransferDetails();
+				row.setOutTradeNo(tender.getTenderBilNo());
+				//投资人用户
+				row.setOutName(tender.getUser().getUserName());
+				//借款人用户
+				row.setInName(tender.getBorrow().getUser().getUserName());
+				row.setAmount(tender.getAccount()+"");
+				row.setRemark("即投即生息标投资成功,"+ymdTransfer.getTradeNo()+"从投资人用户"+tender.getUser().getUserName()+"给用户"+tender.getBorrow().getUser().getUserName()+"转账"+tender.getAccount()+"元");
+				list.add(row);
+			}
+			if(data.getAward()!=0){
+				// 投标奖励 （借款人给投资人转账）
+				double awardValue = calculateAward(tender.getAccount());
+				YmdTransferDetails row=new YmdTransferDetails();
+				//row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_INVESTOR_AWARD));
+				row.setOutTradeNo(tender.getTenderAwardBilNo());
+				//借款人用户
+				row.setOutName(data.getUser().getUserName());
+				//投资人用户
+				row.setInName(tender.getUser().getUserName());
+				row.setAmount(awardValue+"");
+				row.setRemark("投标奖励,"+ymdTransfer.getTradeNo()+"从借款人用户"+tender.getUser().getUserName()+"给投资人用户"+tender.getBorrow().getUser().getUserName()+"转账"+tender.getAccount()+"元");
+				list.add(row);
+			}
+			// 平台收取的总手续费 （借款人给平台转账）
+			double manageFeeTotal = BigDecimalUtil.decimal(BigDecimalUtil.mul(tender.getAccount(), data.getBorrowManageRate()/100), 2);
+			if(manageFeeTotal>0){
+			    YmdTransferDetails row=new YmdTransferDetails();
+			    //借款人用户
+			    row.setOutName(data.getUser().getUserName());
+			    //平台 
+			    row.setInName(ymdTransfer.getNumberId());
+			    //row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_FEE));
+			    row.setOutTradeNo(tender.getBorrowManageFeeBilNo());
+			    row.setAmount(manageFeeTotal+"");
+			    row.setRemark(ymdTransfer.getTradeNo()+"从借款人用户"+data.getUser().getUserName()+"给平台转账"+manageFeeTotal+"元");
+			    list.add(row);
+			}
+     //JSDBET-872 wcw 2015-3-28 start
+			//借款人给担保公司转账（担保公司收取担保费）
+			if(data.getVouchFirm()!=null){
+				double guaranteeFee=data.getGuaranteeFee(tender.getAccount());
+				if(guaranteeFee>0){
+			    	YmdTransferDetails row=new YmdTransferDetails();
+			        //借款人用户
+			        row.setOutName(data.getUser().getUserName());
+			        //担保公司 
+			        row.setInName(data.getVouchFirm().getUserName());
+			        row.setOutTradeNo(tender.getGuaranteeTradeNo());
+			        row.setAmount(guaranteeFee+"");
+			        row.setRemark(ymdTransfer.getTradeNo()+"从借款人用户"+data.getUser().getUserName()+"给担保公司转账担保服务费"+guaranteeFee+"元");
+			        list.add(row);
+			    }
+			}
+     //JSDBET-872 wcw 2015-3-28 end
+			//即投即生息转账
+			ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, ymdTransfer.getTradeNo(), list);
+			//转账交易记录添加
+			AbstractYmdEvent<AccountTransferTrade> abstractYmdEvent=new AccountTransferTradeRecord(ymdTransfer, list, data.getAccount()+manageFeeTotal, 0, ymdTransfer.getErrCode(), AccountTradeConstant.TRADE_FREE_YES, Global.getIP());
+			abstractYmdEvent.doEvent();
+			if(!("0000").equals(ymdTransfer.getErrCode())){
+				//如果第三方处理成功，但没有返回处理成功状态
+				logger.info("交易批次号==="+ymdTransfer.getTradeNo()+"，返回状态码====【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋托管账户请求失败，请重新请求")+"】");
+			    //throw new BussinessException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋托管账户请求失败，请重新请求")+"】", 1);
+				//JSDBET-812 sgp 2015-3-14 start
+				throw new HandleException("交易批次号:"+ymdTransfer.getTradeNo()+"，返回状态："+ymdTransfer.getErrCode()+",返回状态码:【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋托管账户请求失败，请重新请求")+"】", "即投即生息投标异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_TENDER, ErrorLogConstant.CODE_TENDER_FAIL_IMMEDIATE_TPOS, tender.getUser(), ErrorLogConstant.MODULE_BORROW_TENDER, tender.getId(), 1);
+				//JSDBET-812 sgp 2015-3-14 end
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+    /**
+     * 即投即生息生成待收本地业务逻辑处理
+     * @param model
+     * @param tender
+     */
+	private void instantLive(BorrowModel model,BorrowTender tender)throws Exception{
+		if (model != null && model.getId() > 0) {
+            BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+            model = BorrowModel.instance(borrowDao.find(model.getId()));
+        }		
+
+		Global.setTransfer("borrow", model);
+		//即投即生息投资人业务处理
+		handleInvesterInstantLive(tender);
+		//即投即生息借款人业务处理
+		handleBorrowerInstantLive(tender);
+		// 借款手续费
+		deductFee(model,tender);
+		/*// 修改状态
+		borrowDao.updateStatus(model.getId(), 6, 3);*/
+		// 给借款人发送通知
+		User user = model.getUser();
+		Global.setTransfer("borrow", model);
+		Global.setTransfer("user", user);
+		AbstractExecuter succExecuter = ExecuterHelper.doExecuter("borrowFullVerifySuccExecuter");
+		succExecuter.execute(0, user);
+		// 给投资人发送通知
+        User btUser = tender.getUser();
+        btUser.getUserId();
+        Global.setTransfer("user", btUser);
+        succExecuter.execute(0, btUser);
+	}
+	/**
+	 * 即时生息计算借款手续费
+	 * @param model
+	 * @param worker
+	 */
+	private void deductFee(BorrowModel model,BorrowTender bt) {
+		if (model != null && model.getId() > 0) {
+			BorrowDao borrowDao = (BorrowDao) BeanUtil.getBean("borrowDao");
+			model = BorrowModel.instance(borrowDao.find(model.getId()));
+		}
+		// 扣除交易手续费
+	    double fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(bt.getAccount(), data.getBorrowManageRate()/100), 2);
+		User user = model.getUser();
+		if (fee > 0) {
+			Global.setTransfer("deduct", model);
+			Global.setTransfer("money", fee);
+			//---wcw----账户表拆分----start----
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("money", fee);
+			AbstractExecuter deductExecuter = ExecuterHelper.doExecuter("deductBorrowExecuter");
+			//deductExecuter.execute(fee, user);
+			deductExecuter.execute(map, user);
+			//---wcw----账户表拆分----end----
+		}
+		 //JSDBET-872 wcw 2015-3-28 start
+		/*fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(bt.getAccount(), Global.getDouble("transaction_fee")),2);
+		if (fee > 0) {
+			Global.setTransfer("deduct", model);
+			Global.setTransfer("money", fee);
+			//---wcw----账户表拆分----start----
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("money", fee);
+			AbstractExecuter tranExecuter = ExecuterHelper.doExecuter("deductTransactionFeeExecuter");
+			//tranExecuter.execute(fee, user);
+			tranExecuter.execute(map, user);
+			//---wcw----账户表拆分----end----
+		}*/
+		//担保服务费
+		if (model.getVouchFirm()!=null) {
+			fee = model.getGuaranteeFee(bt.getAccount());
+			if(fee>0){
+				
+				//借款人给担保公司担保手续费
+				Global.setTransfer("borrow", model);
+				Global.setTransfer("money", fee);
+				Map<String, Object> map=new HashMap<String, Object>();
+				map.put("money", fee);
+				map.put("tradeNo", bt.getTenderTradeNo());
+				map.put("outTradeNo", bt.getGuaranteeTradeNo());
+				AbstractExecuter tranExecuter = ExecuterHelper.doExecuter("deductGuaranteeFeeExecuter");
+				tranExecuter.execute(map, user,model.getVouchFirm());
+				
+				//担保公司担保手续费入账
+				AbstractExecuter guaranteeFeeEnterExecuter = ExecuterHelper.doExecuter("guaranteeFeeEnterExecuter");
+				guaranteeFeeEnterExecuter.execute(map, model.getVouchFirm(),user);
+			}
+		}
+		Global.removeTransfer();
+		//JSDBET-872 wcw 2015-3-28 end
+	}
+	@Override
+	public void handleInvesterInstantLive(BorrowTender tender)throws Exception {
+		BorrowTenderDao tenderDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		//JSDP-228 fengguoqin 2015.07.22  start
+		RpProduceDao rpProduceDao = (RpProduceDao) BeanUtil.getBean("rpProduceDao");
+		//JSDP-228 fengguoqin 2015.07.22  end
+		User user = data.getUser();
+		user.getUserName();
+		User tenderUser = tender.getUser();
+		double tenderAccount=tender.getAccount();
+		//即投即生息，扣除本次投资使用钱袋子红包金额【本地业务处理】
+		if(tender.getUseRpDynamic()>0){
+			Map<String, Object> map=new HashMap<String, Object>();
+			Global.setTransfer("useRpDynamic", tender.getUseRpDynamic());
+			map.put("awardMoney", tender.getUseRpDynamic());
+			map.put("tradeNo", tender.getTenderTradeNo());
+			map.put("outTradeNo", tender.getRpBilNo());
+			AbstractExecuter rpExecuter = ExecuterHelper.doExecuter("rpDynamicUseExecuter");
+			rpExecuter.execute(map, tenderUser, user);
+		}
+		Global.setTransfer("tender", tender);
+		double account = tender.getAccount();
+		double interest = tender.getInterest();
+		// 扣除冻结/生产待收本金
+		Global.setTransfer("money", account);
+		Global.setTransfer("borrow", data);
+		//--------wcw --账户表拆分--start----
+
+		//JSDP-228 fengguoqin 2015.07.23  start
+		if(tender.getUseRpStatic()>0){
+			addSrpUsedLog(tender);//静态红包消费记录的产生
+			//即投即生息静态红包产生资金记录
+			Global.setTransfer("borrow", tender.getBorrow());
+			Global.setTransfer("money", tender.getUseRpStatic());
+			map = new HashMap<String, Object>();
+			map.put("rpStaticMoney", tender.getUseRpStatic());
+			AbstractExecuter freeSrpExecuter = ExecuterHelper.doExecuter("rpStaticInvestExecuter");
+			freeSrpExecuter.execute(map,tenderUser);
+		}
+		//JSDP-228 fengguoqin 2015.07.23  end
+		Map<String, Object>  map=new HashMap<String, Object>();
+		map.put("rechargeMoney", tender.getUseRecharge());
+		map.put("awardMoney", tender.getUseAward());
+		map.put("interestMoney", tender.getUseInterest());
+		map.put("returnCapitalMoney", tender.getUseReturnedMoney());
+		map.put("tradeNo", tender.getTenderTradeNo());
+		map.put("outTradeNo", tender.getTenderBilNo());
+		AbstractExecuter freeExecuter = ExecuterHelper.doExecuter("borrowDecuctFreezeExecuter");
+		freeExecuter.execute(map, tenderUser, user);
+		//--------wcw --账户表拆分--end----
+		// 生产待收利息
+		Global.setTransfer("money", interest);
+		Global.setTransfer("borrow", data);
+		//--------wcw --账户表拆分--start----
+		map=new HashMap<String, Object>();
+		map.put("interestMoney", interest);
+		AbstractExecuter waitExecuter = ExecuterHelper.doExecuter("borrowWaitInterestExecuter");
+		waitExecuter.execute(map, tenderUser, user);
+		//--------wcw --账户表拆分--start---
+		// 投标奖励
+		double awardValue = calculateAward(account);
+		if (awardValue > 0) {
+			// 给予投资人奖励
+			Global.setTransfer("award", awardValue);
+			Global.setTransfer("borrow", data);
+			Global.setTransfer("user",tenderUser);
+			map=new HashMap<String, Object>();
+			map.put("awardMoney", awardValue);
+			AbstractExecuter awardExecuter = ExecuterHelper.doExecuter("awardTenderAwardExecuter");
+			awardExecuter.execute(awardValue, tenderUser, user);
+		}
+
+		// 修改Tender表中的待收利息
+		tender.setWaitAccount(tender.getRepaymentAccount());
+		tender.setWaitInterest(tender.getInterest());
+		tender.setStatus(1);
+		tenderDao.update(tender);
+
+		BorrowCollectionDao collectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		List<BorrowCollection> clist = collectionDao.findByProperty("tender.id", tender.getId());
+		for (BorrowCollection c : clist) {
+			c.setRepaymentTime(this.getRepayTime(c.getPeriod(),c.getTender().getAddTime()));
+		}
+		
+		//即投即生息 红包产生
+		RedPacketProduceRuleCheck ruleCheck=(RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+		Map<String, Object> rpmap=ruleCheck.dynamicRP();
+		int rp_rate_status=rpmap.get("rp_rate_status")==null?0:(Integer)rpmap.get("rp_rate_status");	
+		double rpValue=0;
+		String rp_activity_name="";
+		long min_investment_amount=0;
+		if(rp_rate_status==1){
+			//按照费率
+			double rpRate=rpmap.get("rp_rate_value")==null?0.0:((Double)rpmap.get("rp_rate_value"));	
+			//rpValue=BigDecimalUtil.decimal(BigDecimalUtil.mul(tender.getAccount(),rpRate), 2);
+			
+			//根据天标和月标来产生红包金额
+			if(data.getBorrowTimeType()==1 && data.getTimeLimit()!=0){//天标
+				rpValue=BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.mul(tender.getAccount(),rpRate),BigDecimalUtil.div(data.getTimeLimit(), 30)), 2);
+			}else if(data.getBorrowTimeType()==0 && data.getTimeLimit()!=0){//月标
+				rpValue=BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.mul(tender.getAccount(),rpRate),data.getTimeLimit()), 2);
+				
+			}
+		}else{
+			//固定金额
+			int  ordinaryStatus = 0;
+			int  activityStatus = 0;
+			if(null != rpmap.get("ordinary_day")){
+				ordinaryStatus = (Integer) rpmap.get("ordinary_day");
+			}
+			if(null != rpmap.get("activity_day")){
+				activityStatus = (Integer) rpmap.get("activity_day");
+			}
+			
+			if(ordinaryStatus==1 && activityStatus ==0){//平日开启，活动日不开启
+				
+				min_investment_amount=rpmap.get("min_investment_amount")==null?0:((Long)rpmap.get("min_investment_amount"));
+				if(min_investment_amount>0&&tenderAccount>=min_investment_amount){
+					//JSDP-50 wcw 2015-04-18 start
+					/*int rpValue_=(Integer) rpmap.get("rp_value");
+					rpValue=rpmap.get("rp_value")==null?0.0:rpValue_;*/
+					rpValue=NumberUtil.getDouble(rpmap.get("rp_value").toString());
+					//JSDP-50 wcw 2015-04-18 end
+				}
+			}else if(ordinaryStatus==0 && activityStatus ==1){//平日不开启，活动日开启
+				
+				min_investment_amount=rpmap.get("min_investment_amount_activity")==null?0:((Long)rpmap.get("min_investment_amount_activity"));
+				if(min_investment_amount>0&&tenderAccount>=min_investment_amount){
+					//JSDP-50 wcw 2015-04-18 start
+					/*int rpValue_=(Integer) rpmap.get("rp_value_activity");
+					rpValue=rpmap.get("rp_value_activity")==null?0.0:rpValue_;*/
+					rpValue=NumberUtil.getDouble(rpmap.get("rp_value_activity").toString());
+					//JSDP-50 wcw 2015-04-18 end
+				}
+			}else if(ordinaryStatus==1 && activityStatus ==1){//平日开启，活动日开启，以活动日为准
+				
+				min_investment_amount=rpmap.get("min_investment_amount_activity")==null?0:((Long)rpmap.get("min_investment_amount_activity"));
+				if(min_investment_amount>0&&tenderAccount>=min_investment_amount){
+					//JSDP-50 wcw 2015-04-18 start
+					/*int rpValue_=(Integer) rpmap.get("rp_value_activity");
+					rpValue=rpmap.get("rp_value_activity")==null?0.0:rpValue_;*/
+					rpValue=NumberUtil.getDouble(rpmap.get("rp_value_activity").toString());
+					//JSDP-50 wcw 2015-04-18 end
+				}
+			}else{
+				  
+			}
+			
+			
+		}
+		//更新本次投标记录表中动态红包产生值
+		if(rpValue>0){
+			tender.setProduceRpDynamic(rpValue);
+			tenderDao.update(tender);
+			//新增红包产生记录
+			RpProduce rp=new RpProduce();
+			rp.setRpDynamicMoney(rpValue);
+			rp.setRpDynamicRes(RpProduce.DYNAMIC_RP_RES_INVEST);
+			rp.setRpType(RpProduce.RP_DYNAMIC);
+			rp.setRpCreateTime(new Date());
+			rp.setUser(tenderUser);
+			rpProduceDao.save(rp);
+			//更新账户资金
+			map=new HashMap<String, Object>();
+			map.put("money", rpValue);
+			map.put("awardMoney", rpValue);
+			Global.setTransfer("rpDynamicProduce", rpValue);
+			AbstractExecuter rpProduceExecuter = ExecuterHelper.doExecuter("rpDynamicProduceExecuter");
+			rpProduceExecuter.execute(map, tenderUser, user);
+		}
+		
+		//好友邀请（首次投标达到一定额度给送推荐人静态红包）
+		// 判断是否有推荐人
+		UserCache uc = tenderUser.getUserCache();
+		if (uc.getInviteUserId() != 0) {
+			//总共投标次数
+			int tenderTimes=tenderDao.getBorrowTenderTimes(tenderUser.getUserId());
+			if(tenderTimes==1){
+				//首次投标
+				UserDao userDao = (UserDao) BeanUtil.getBean("userDao");
+				User ref = userDao.getUserById(uc.getInviteUserId());
+				double rp_value = ruleCheck.recFriendInvestRetRP(
+						data.getBorrowTimeType(), tender.getAccount(),
+						data.getTimeLimit());
+				if (rp_value != -1 && rp_value > 0) {
+					// 给推荐人红包
+					RpProduce refpr = new RpProduce();
+					//推荐人
+					refpr.setUser(ref);
+					refpr.setRpCreateTime(new Date());
+					refpr.setRpStaticMoney(rp_value);
+					refpr.setRpStaticRes(RpProduce.STATIC_RP_RES_INVEST);
+					refpr.setRpStaticStatus(2);
+					refpr.setRpType(1);
+					//被推荐人
+					refpr.setInvitedUser(tenderUser);
+					refpr.setRpStaticReferrerName(tenderUser.getUserName());
+					//fgq  4.10  静态红包有效时间  start
+					 int intYear = DateUtil.getTimeYear(new Date());
+					 Date yearEnddate = DateUtil.monthLastDay(intYear,12);
+					  long subDay = DateUtil.getSubDay(new Date(),yearEnddate);
+					  refpr.setRpStaticValidTime((int)subDay);
+					//fgq  4.10  静态红包有效时间  end
+					rpProduceDao.save(refpr);
+				}/*else{
+					throw new BussinessException("好友邀请首次投资送静态红包规则未开启或产生静态红包为0", 1);
+				}*/
+			}
+		}
+		
+		// 投资积分处理 
+		ScoreProduceRuleCheck spRuleCheck = (ScoreProduceRuleCheck) Global.getRuleCheck("scoreProduce");
+		Borrow b=tender.getBorrow();
+		  if(spRuleCheck!=null&&b!=null){
+			  int scoreCount = (int) spRuleCheck.investScore(tender.getMoney(),b.getBorrowTimeType(),b.getTimeLimit(),b.getType()) ;
+			  if(scoreCount>0){
+				  ScoreDao scoreDao = (ScoreDao) BeanUtil.getBean("scoreDao");
+				  ScoreLogDao scoreLogDao = (ScoreLogDao) BeanUtil.getBean("scoreLogDao");
+				  Score score = scoreDao.getScoreByUserId(tender.getUser().getUserId()) ;
+				  // 添加积分
+				  if(score==null){
+					  score = new Score(tenderUser) ;
+					  score.setAddTime(new Date());
+					  score = scoreDao.save(score) ;
+				  }
+				  score.setTotalScore(score.getTotalScore()+scoreCount);
+				  score.setValidScore(score.getValidScore()+scoreCount);
+				  scoreDao.update(score);
+				  // 添加积分日志记录
+				  ScoreLog sl = new ScoreLog(score) ;
+				  sl.setUser(tenderUser);
+				  sl.setAddTime(new Date());
+				  sl.setScore(scoreCount);
+				  sl.setScoreTypeName("用户投标");
+				  sl.setScoreTypeNid(ScoreTypeConstant.SCORE_INVEST);
+				  sl.setType(ScoreTypeConstant.SCORE_INVEST);
+				  sl.setRemark("用户成功投标，获得"+scoreCount+"个积分。");
+				  scoreLogDao.save(sl) ;
+			  }
+		 }
+		collectionDao.update(clist);
+	}
+
+	@Override
+	public Date getRepayTime(int period, Date tenderTime) {
+		return super.getRepayTime(period, tenderTime);
+	}
+	@Override
+	public void handleBorrowerInstantLive(BorrowTender tender)throws Exception {
+		// 借款人资金入账
+		Global.setTransfer("money", tender.getAccount());
+		Global.setTransfer("borrow", data);
+		User user = data.getUser();
+		
+		// 还款计划
+		BorrowRepaymentDao repaymentDao = (BorrowRepaymentDao) BeanUtil.getBean("borrowRepaymentDao");
+		BorrowCollectionDao collectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		List<BorrowCollection> list=collectionDao.findByProperty("tender.id", tender.getId());
+		repaymentDao.save(getRepayment(list));
+		//该投标记录生成待还利息
+		double repayInterest=repaymentDao.getRepayInterestByTenderId(tender.getId());
+		//------------wcw-----账户表拆分---start-------
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("money", tender.getAccount());
+		//待还金额
+		map.put("borrowerRepayInterest", repayInterest);
+		//即投即生息对账补单wcw 2015-05-24 start
+		map.put("outTradeNo", tender.getTenderBilNo());
+		map.put("tradeNo", tender.getTenderTradeNo());
+		//即投即生息对账补单wcw 2015-05-24 end
+		AbstractExecuter successExecuter = ExecuterHelper.doExecuter("borrowSuccessExecuter");
+		successExecuter.execute(map, user,tender.getUser());
+		//------------wcw-----账户表拆分---end-------
+		// 支付投标奖励
+		double totalAwardValue = calculateAward(tender.getAccount());
+		if (totalAwardValue > 0) {
+			Global.setTransfer("money", totalAwardValue);
+			Global.setTransfer("borrow", data);
+			Global.setTransfer("user", user);
+			//------------wcw-----账户表拆分---start-------
+			map=new HashMap<String, Object>();
+			map.put("money", totalAwardValue);
+			AbstractExecuter deductExecuter = ExecuterHelper.doExecuter("deductAwardExecuter");
+			//deductExecuter.execute(totalAwardValue, user, new User(Constant.ADMIN_ID));
+			deductExecuter.execute(map, user, new User(Constant.ADMIN_ID));
+			//------------wcw-----账户表拆分---end------
+		}
+	}
+	
+	@Override
+	public void borrowRepayHandleTender(BorrowCollection c) {
+		double capital = c.getCapital();
+		BorrowTenderDao tenderDao = (BorrowTenderDao) BeanUtil.getBean("borrowTenderDao");
+		BorrowCollectionDao collectionDao = (BorrowCollectionDao) BeanUtil.getBean("borrowCollectionDao");
+		Global.setTransfer("borrow", this.data);
+		double totalLateAwardValue = 0;
+		if(c.getTender()!=null){
+		    tender = tenderDao.find(c.getTender().getId());
+		}
+		User u=c.getUser();
+		double conllectionInterest = 0;
+		// 归还投资人本金
+		if (capital > 0) {
+			Global.setTransfer("money", capital);
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("returnCapitalMoney", capital);
+			map.put("tradeNo", c.getRepayCapitalOutTradeNo());
+			map.put("outTradeNo", c.getRepayCapitalOutTradeNo());
+			AbstractExecuter repayTenderExecuter = ExecuterHelper
+					.doExecuter("borrowRepayTenderCapitalExecuter");
+			repayTenderExecuter.execute(map, u, this.data.getUser());
+		}
+		// 归还投资人利息
+		if (!(this.data.getBorrowTimeType() == 1 && this.data.getStyle() == 4)) { // 天标（提前还息到期还本）
+			c = getInvestRepayInterest(c, u,null);
+			conllectionInterest = c.getInterest();
+		}
+		if(tender!=null){
+		   tenderDao.updateRepayTender(c.getRepaymentAccount(), conllectionInterest, tender.getId());
+		}
+		// 更新collection
+		c.setStatus(1);
+		c.setRepaymentYesTime(new Date());
+		c.setRepaymentYesAccount(c.getRepaymentAccount());
+		/*double awardValue = c.getRepayAward();
+		if (awardValue > 0 && c.getRepayAwardStatus() == Constant.REPAY_AWARD_STATUS_NORAML) {
+			Global.setTransfer("award", awardValue);
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("returnCapitalMoney", capital);
+			AbstractExecuter awardRepayExecuter = ExecuterHelper.doExecuter("awardRepayExecuter");
+			awardRepayExecuter.execute(awardValue, tender.getUser(), this.data.getUser());
+			c.setRepayAwardStatus(Constant.REPAY_AWARD_STATUS_PAYED);
+			totalLateAwardValue += awardValue;
+		}*/
+		collectionDao.update(c);
+
+		// 向投资人发送还款成功通知，不做任何资金处理
+		Global.setTransfer("collection", c);
+		Global.setTransfer("user", u);
+		Global.setTransfer("repay", c);
+		Global.setTransfer("borrow", this.data);
+		AbstractExecuter repaySuccessExecuter = ExecuterHelper.doExecuter("tenderRepaySuccessExecuter");
+		repaySuccessExecuter.execute(0, u, c.getUser());
+		// 扣除发标人需要支付的还款奖励
+		if (totalLateAwardValue > 0) {
+			/*Global.setTransfer("money", totalLateAwardValue);
+			AbstractExecuter lateAwardExecuter = ExecuterHelper.doExecuter("repayDeductAwardExecuter");
+			lateAwardExecuter.execute(totalLateAwardValue, data.getUser(), new User(Constant.ADMIN_ID));*/
+		}
+	}
+	@Override
+	public List<BorrowRepayment> getRepayment(List<BorrowCollection> clist) {
+		return super.getRepayment(clist);
+	}
+	
+	@Override
+	public void validBeforeRepayment(BorrowRepayment borrowRepayment, Account account) {
+		BorrowRepaymentDao borrowRepaymentDao = (BorrowRepaymentDao) BeanUtil.getBean("borrowRepaymentDao");
+		if(borrowRepayment == null || !(borrowRepayment.getStatus() == BorrowRepayment.STATUS_MANAGE_REPAY ||
+				borrowRepayment.getStatus() == BorrowRepayment.STATUS_WAIT_REPAY)){
+			throw new BorrowException("本次还款系统异常，请联系客服！", 1);
+        }
+		int currPeriod=borrowRepaymentDao.getCurrPeriod(borrowRepayment.getBorrow().getId());
+		if(currPeriod != borrowRepayment.getPeriod()){
+			throw new BorrowException("您本次还款的期数有误，请核查后进行还款！", 1);
+		}
+		if (borrowRepayment == null || borrowRepayment.getStatus() == 1) {
+			throw new BorrowException("该期借款已经还款,请不要重复操作！", 1);
+		}
+		// 还款+逾期+展期
+		double repayMoney = BigDecimalUtil.add(
+				BigDecimalUtil.add(borrowRepayment.getRepaymentAccount(), borrowRepayment.getLateInterest()),
+				borrowRepayment.getExtensionInterest());
+		if (repayMoney > account.getBorrowerUsableTotal()) {
+			throw new BorrowException("您的可用余额不足，还款失败，请充值后再进行还款！", 1);
+		}
+		boolean hasAhead = borrowRepaymentDao.hasRepaymentAhead(borrowRepayment.getPeriod(), borrowRepayment
+				.getBorrow().getId());
+		if (hasAhead) {
+			throw new BorrowException("还有尚未还款的借款！", 1);
+		}
+	}
+	
+	@Override
+	public void borrowRepayHandleBorrow(BorrowCollection c) {
+		User toUser = new User();
+		toUser.setUserId(1L);
+		double capital = c.getCapital();
+		double interest = c.getInterest();
+		Global.setTransfer("borrow", this.data);
+		// 从用户账户中扣除还款本金
+		if (capital > 0) {
+			Global.setTransfer("money", capital);
+			AbstractExecuter repayExecuter = ExecuterHelper.doExecuter("borrowRepayCapitalExecuter");
+			repayExecuter.execute(capital, data.getUser(), toUser);
+		}
+		// 扣除还款利息
+		if (interest > 0 && (!(this.data.getBorrowTimeType() == 1 && this.data.getStyle() == 4))) {
+			Global.setTransfer("money", interest);
+			AbstractExecuter interestExecuter = ExecuterHelper.doExecuter("borrowRepayInterestExecuter");
+			interestExecuter.execute(interest, data.getUser(), toUser);
+		}
+	}
+	
+	//JSDP-203 xingjia 20150702 start
+	@Override
+	public void activityRpAfterTender(BorrowTender tender) throws Exception {
+		//投标成功后生成红包，更改金额，增加记录，转账第三方
+		//JSDP-203 xingjia 20150714 start
+		RpActivityDao rpActivityDao = (RpActivityDao) BeanUtil.getBean("rpActivityDao");
+		try {
+			//查询在端午节活动是否开启
+			RpActivity rpActivity = rpActivityDao.getActivitingList(RpActivity.ACTIVITY_DRAGON);
+			if(null != rpActivity){
+				//端午节活动红包的产生
+				RpActivityWorker rpActivityWorker = RpActivityHelper.getWorker(rpActivity,tender);
+				rpActivityWorker.autoHandld();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			//查询夺宝骑兵活动是否开启
+			RpActivity rpActivityIndianaJones = rpActivityDao.getActivitingList(RpActivity.ACTIVITY_INDIANA_JONES);
+			if(null != rpActivityIndianaJones){
+				//夺宝骑兵活动红包的产生
+				RpActivityWorker rpActivityWorker = RpActivityHelper.getWorker(rpActivityIndianaJones,tender);
+				rpActivityWorker.autoHandld();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		//JSDP-203 xingjia 20150714 end
+	}
+	/*
+	 * (non-Javadoc)
+	 * @see com.ddtkj.p2psys.borrow.model.worker.BaseBorrowWorker#petCardConsumeTender(com.ddtkj.p2psys.borrow.domain.BorrowTender)
+	 */
+	@Override
+	public void petCardConsumeTender(BorrowTender tender) throws Exception {
+		PetCardLogDao petCardLogDao = (PetCardLogDao) BeanUtil.getBean("petCardLogDao");
+		PetCardSumDao petCardSumDao = (PetCardSumDao) BeanUtil.getBean("petCardSumDao");
+		//体验卡消费，本地转账
+		PetCardLog petCardLog = petCardLogDao.petCardConsumeMoneyByTender(tender.getUser().getUserId(), 
+				tender.getId(), PetCardLog.TRANSFER_RECHARGE_PET_CARD_FZEN);
+		if(null != petCardLog){
+			RpActivityWorker rpActivityWorker = RpActivityHelper.getWorker(tender,petCardLog.getConsumeMoney(),RpActivity.AWARD_TYPE_PET);
+			rpActivityWorker.autoHandld();
+			//修改体验卡的汇总信息
+			PetCardSum petCardSum = petCardSumDao.findObjByProperty("user.userId", tender.getUser().getUserId());
+			if(null != petCardSum){
+				petCardSum.setPtAccountUsed(BigDecimalUtil.add(petCardSum.getPtAccountUsed(),petCardLog.getConsumeMoney()));//已使用的增加
+				petCardSum.setPtAccountFzen(BigDecimalUtil.sub(petCardSum.getPtAccountFzen(),petCardLog.getConsumeMoney()));//冻结金额减少
+				petCardSumDao.update(petCardSum);
+			}
+		}
+	}
+	//JSDP-203 xingjia 20150714 start
+	@Override
+	public void activityRpConsumeTender(BorrowTender tender) throws Exception {
+		RpActivityConsumeDao rpActivityConsumeDao = (RpActivityConsumeDao) BeanUtil.getBean("rpActivityConsumeDao");
+		RpActivitySumDao rpActivitySumDao = (RpActivitySumDao) BeanUtil.getBean("rpActivitySumDao");
+		//JSDP-203 xingjia 20150724 start
+		//活动红包
+		List<RpActivityConsume> rpActivityConsumeList = rpActivityConsumeDao.getActivityRpConsumeByTender(tender.getUser().getUserId(),
+				tender.getId(), RpActivityConsume.RP_CONSUME_STATUS_FZEN);
+		if(null != rpActivityConsumeList){
+			for(RpActivityConsume rpActivityConsume:rpActivityConsumeList){
+				if(null != rpActivityConsume){
+					rpActivityConsume.setConsumeStatus(RpActivityConsume.RP_CONSUME_STATUS_SUC);
+					rpActivityConsumeDao.update(rpActivityConsume);
+					//JSDP-203 xingjia 20150723 start
+					RpActivitySum rpActivitySum = rpActivitySumDao.findObjByProperty("user.userId", tender.getUser().getUserId());
+					if(null != rpActivitySum){
+						rpActivitySum.setConsumeTotal(BigDecimalUtil.add(rpActivitySum.getConsumeTotal(),rpActivityConsume.getConsumeMoney()));
+						rpActivitySum.setFzenTotal(BigDecimalUtil.sub(rpActivitySum.getFzenTotal(), rpActivityConsume.getConsumeMoney()));
+						rpActivitySumDao.update(rpActivitySum);
+					}
+					//JSDP-203 xingjia 20150723 end
+				}
+			}
+		}
+		//JSDP-203 xingjia 20150724 end
+	}
+	//JSDP-203 xingjia 20150714 end
+	//JSDP-203 xingjia 20150702 end
+	
+	
+	@Override
+	public void activityRpTranfer(RpActivityProduce rp)throws Exception {
+		try {
+			List<YmdTransferDetails> list=new ArrayList<YmdTransferDetails>();
+			YmdTransfer ymdTransfer = new  YmdTransfer();
+			ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+			ymdTransfer.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RED_ENVELOP));
+			ymdTransfer.setTradeType(AccountTradeConstant.TRADE_YMD_TRADE);
+			//JSDBET-872 wcw 2015-3-28 start
+			if(rp.getActivityAward()>0){
+				//平台向投资人转账（端午节活动金额）
+				YmdTransferDetails row=new YmdTransferDetails();
+				//row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+				row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_RED_PACKET_TRADEFER));
+				//平台用户
+				row.setOutName(ymdTransfer.getNumberId());
+				//投资人用户
+				row.setInName(rp.getAwardUser().getUserName());
+				row.setAmount(rp.getActivityAward()+"");
+				row.setRemark("平台红包活动,"+ymdTransfer.getTradeNo()+"从平台给用户"+rp.getAwardUser().getUserName()+"转账红包奖励"+rp.getActivityAward()+"元");
+				list.add(row);
+			}
+     //JSDBET-872 wcw 2015-3-28 end
+			//即投即生息转账
+			ymdTransfer=YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, ymdTransfer.getTradeNo(), list);
+			//转账交易记录添加
+			AbstractYmdEvent<AccountTransferTrade> abstractYmdEvent=new AccountTransferTradeRecord(ymdTransfer, list,rp.getActivityAward(), 0, ymdTransfer.getErrCode(), AccountTradeConstant.TRADE_FREE_YES, Global.getIP());
+			abstractYmdEvent.doEvent();
+			if(!("0000").equals(ymdTransfer.getErrCode())){
+				//如果第三方处理成功，但没有返回处理成功状态
+				logger.info("交易批次号==="+ymdTransfer.getTradeNo()+"，返回状态码====【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋托管账户请求失败，请重新请求")+"】");
+			    //throw new BussinessException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋托管账户请求失败，请重新请求")+"】", 1);
+				//JSDBET-812 sgp 2015-3-14 start
+				throw new HandleException("交易批次号:"+ymdTransfer.getTradeNo()+"，返回状态："+ymdTransfer.getErrCode()+",返回状态码:【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋托管账户请求失败，请重新请求")+"】", "即投即生息投标异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_TENDER, ErrorLogConstant.CODE_TENDER_FAIL_IMMEDIATE_TPOS, rp.getAwardUser(), ErrorLogConstant.MODULE_BORROW_TENDER, 0, 1);
+				//JSDBET-812 sgp 2015-3-14 end
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	//JSDP-203 xingjia 20150714 start
+	/*
+	 * (non-Javadoc)
+	 * @see com.ddtkj.p2psys.borrow.model.worker.BaseBorrowWorker#rpActivityFreeze(com.ddtkj.p2psys.borrow.domain.BorrowTender, com.rongdu.p2psys.borrow.model.BorrowModel)
+	 */
+	public void rpActivityFreeze(BorrowTender tender,BorrowModel bmodel) throws Exception {
+		RpActivityDao rpActivityDao = (RpActivityDao) BeanUtil.getBean("rpActivityDao");
+		RpActivityProduceDao rpActivityProduceDao = (RpActivityProduceDao) BeanUtil.getBean("rpActivityProduceDao");
+		RpActivityConsumeDao rpActivityConsumeDao = (RpActivityConsumeDao) BeanUtil.getBean("rpActivityConsumeDao");
+		RpActivitySumDao rpActivitySumDao = (RpActivitySumDao) BeanUtil.getBean("rpActivitySumDao");
+		//JSDP-203 20150720 xingjia start
+		RpActivityProduceAndConsumeRuleCheck rpActivityRule = (RpActivityProduceAndConsumeRuleCheck) Global.getRuleCheck(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE);
+		int validTime = rpActivityRule.getIndianaJones().getValid_time();//活动红包的有效时间
+		//JSDP-203 20150720 xingjia end
+		//将活动消费的红包冻结
+		
+		//不区分活动
+		//判断过期的红包(将失效的红包放入消费表中（消费的资金和失效的资金与产生的资金比对着方）)
+		
+		double rpActivityIndianaJonesProduceMoney = rpActivityProduceDao.getSumProduceByType(RpActivity.ACTIVITY_INDIANA_JONES,
+				tender.getUser().getUserId(),validTime);
+		double rpActivityIndianaJonesConsumeMoney = rpActivityConsumeDao.getActivityRpConsume(RpActivity.ACTIVITY_INDIANA_JONES,
+				tender.getUser().getUserId());
+		double indianaJonesConsumeMoney = BigDecimalUtil.sub(rpActivityIndianaJonesProduceMoney, rpActivityIndianaJonesConsumeMoney);
+		
+		
+		
+		
+		
+		if(indianaJonesConsumeMoney>0 && tender.getUseRpDynamic()>0){
+			double validDynamic = 0.0;
+			if(indianaJonesConsumeMoney>=tender.getUseRpDynamic()){
+				validDynamic = tender.getUseRpDynamic();
+			}else{
+				validDynamic = indianaJonesConsumeMoney;
+			}
+			RpActivityConsume rpActivityConsume = new RpActivityConsume();
+			rpActivityConsume.setActivityType(RpActivity.ACTIVITY_INDIANA_JONES);
+			rpActivityConsume.setAddTime(Calendar.getInstance().getTime());
+			rpActivityConsume.setConsumeMoney(validDynamic);
+			rpActivityConsume.setConsumeStatus(RpActivityConsume.RP_CONSUME_STATUS_FZEN);
+			rpActivityConsume.setConsumeType(RpActivityConsume.RP_CONSUME_INVEST);
+			rpActivityConsume.setConsumeTid(tender);
+			rpActivityConsume.setConsumeUser(tender.getUser());
+			rpActivityConsume.setRemark("投标"+tender.getBorrow().getId()+"消费动态红包："+tender.getUseRpDynamic());
+			rpActivityConsumeDao.save(rpActivityConsume);
+			RpActivitySum rpActivitySum = rpActivitySumDao.findObjByProperty("user.userId", tender.getUser().getUserId());
+			if(null != rpActivitySum){
+				rpActivitySum.setFzenTotal(BigDecimalUtil.add(rpActivitySum.getFzenTotal(),validDynamic));
+				rpActivitySum.setUseableTotal(BigDecimalUtil.sub(rpActivitySum.getUseableTotal(), validDynamic));
+				rpActivitySumDao.update(rpActivitySum);
+			}
+			
+			
+		}
+	}
+	//JSDP-203 xingjia 20150714 end
+	//JSDP-171 xingjia 20150714 start
+	@Override
+	public void petCardFreeze(BorrowTender tender,BorrowModel bmodel) throws Exception {
+		//体验卡消费记录添加，冻结状态
+		PetCardLogDao petCardLogDao = (PetCardLogDao) BeanUtil.getBean("petCardLogDao");
+		PetCardSumDao petCardSumDao = (PetCardSumDao) BeanUtil.getBean("petCardSumDao");
+		//判断体验卡实际投标金额（100的整数，剩余全投）
+		double petCardFreeze = validPetCardMoney(tender,bmodel);
+		if(petCardFreeze > 0){
+			PetCardLog petCardLog = new PetCardLog();
+			petCardLog.setConsumeMoney(petCardFreeze);
+			petCardLog.setConsumeTime(Calendar.getInstance().getTime());
+			petCardLog.setConsumeUser(tender.getUser());
+			petCardLog.setRemark("投标"+tender.getBorrow().getId()+",使用体验卡"+petCardFreeze);
+			petCardLog.setStatus(PetCardLog.TRANSFER_RECHARGE_PET_CARD_FZEN);
+			petCardLog.setConsumeTid(tender);
+			petCardLog.setTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER));
+			petCardLog.setSupplyNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER));
+			petCardLogDao.save(petCardLog);
+			
+			//体验卡汇总信息
+			PetCardSum petCardSum = petCardSumDao.findObjByProperty("user.userId", tender.getUser().getUserId());
+			if(null != petCardSum){
+				petCardSum.setPtAccountFzen(BigDecimalUtil.add(petCardSum.getPtAccountFzen(),petCardFreeze));//冻结的金额
+				petCardSum.setPtAccountUnuse(BigDecimalUtil.sub(petCardSum.getPtAccountUnuse(), petCardFreeze));//剩余可用的金额
+				petCardSumDao.update(petCardSum);
+			}
+		}
+		
+	}
+	
+	@Override
+	public void handleYmdPetCard(BorrowTender tender) {
+		//查询此次投标要转账的体验卡金额
+		PetCardLogDao petCardLogDao = (PetCardLogDao) BeanUtil.getBean("petCardLogDao");
+		PetCardLog petCardLog = petCardLogDao.petCardConsumeMoneyByTender(tender.getUser().getUserId(), 
+				tender.getId(), PetCardLog.TRANSFER_RECHARGE_PET_CARD_SUC);
+		if(null != petCardLog){
+			String tradeNo = petCardLog.getTradeNo();
+			String transferNo = petCardLog.getSupplyNo();
+			YmdQuery ymdQueryt=new YmdQuery();
+			ymdQueryt.setOutTradeNo(tradeNo);
+			ymdQueryt.setMode("trade");
+			YmdQueryReturn ymdQueryReturnt = null;
+			try {
+				ymdQueryReturnt = YmdTPPWay.query(ymdQueryt);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+			List<YmdQueryReturnDetails> listt=ymdQueryReturnt.getList();
+			YmdQueryReturnDetails yrdt=new YmdQueryReturnDetails();
+			if(listt.size()>0){
+				yrdt=listt.get(0);
+			}
+			if(StringUtil.isNotBlank(yrdt.getTradeStatus())){
+				if(!yrdt.getTradeStatus().equals("00")){
+					//第三方转账
+					String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+					String oriMerBillNo= tradeNo;
+					double transferAmount=BigDecimalUtil.decimal(petCardLog.getConsumeMoney(),2);
+					String trdAmt=transferAmount+"";
+					String fromApiId=Global.getValue("ymd_merchant_id");
+					String toApiId=tender.getUser().getUserName();
+					if(transferAmount>0&&StringUtil.isNotBlank(tender.getUser().getUserName())){
+						YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+						if("0000".equals(ymdTransfer.getErrCode())){
+							
+						}else{
+							throw new BussinessException("本地账户信息和一麻袋不符",1);
+						}
+						
+					}
+				}
+			}else{
+				//第三方转账
+				String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+				String oriMerBillNo= tradeNo;
+				double transferAmount=BigDecimalUtil.decimal(petCardLog.getConsumeMoney(),2);
+				String trdAmt=transferAmount+"";
+				String fromApiId=Global.getValue("ymd_merchant_id");
+				String toApiId=tender.getUser().getUserName();
+				if(transferAmount>0&&StringUtil.isNotBlank(tender.getUser().getUserName())){
+					YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+					if("0000".equals(ymdTransfer.getErrCode())){
+						
+					}else{
+						throw new BussinessException("本地账户信息和一麻袋不符",1);
+					}
+					
+				}
+			}
+		}
+	}
+	//JSDP-171 xingjia 20150714 end
+	//JSDP-184 xingjia 20150618 end
+	
+	//JSDP-171 wcw 20150724 start
+	@Override
+	public List<YmdTransferDetails> handleYmdPetCard(BorrowTender tender,List<YmdTransferDetails> list) {
+		PetCardLogDao petCardLogDao = (PetCardLogDao) BeanUtil.getBean("petCardLogDao");
+		PetCardLog petCardLog = petCardLogDao.petCardConsumeMoneyByTender(tender.getUser().getUserId(), 
+				tender.getId(), PetCardLog.TRANSFER_RECHARGE_PET_CARD_SUC);
+		if(null != petCardLog){
+			double transferAmount=BigDecimalUtil.decimal(petCardLog.getConsumeMoney(),2);
+        	YmdTransferDetails row=new YmdTransferDetails();
+    		row.setOutTradeNo(petCardLog.getTradeNo());
+    		//投资人用户
+    		row.setOutName(row.getNumberId());
+    		//借款人用户
+    		row.setInName(tender.getUser().getUserName());
+    		row.setAmount(transferAmount+"");  // 转账首付
+    		//JSDBET-784 wcw 2015-3-7 start
+    		//row.setRemark("满标复审通过,"+ymdTransfer.getTradeNo()+"从商品购买者用户"+go.getUser().getUserName()+"给商城账户用户"+new User(2).getUserName()+"转账（首付金额）"+go.getOnePay()+"元");
+    		row.setRemark("即投即生息成功,流水号为"+row.getOutTradeNo()+"从平台"+row.getNumberId()+"给投资人用户"+tender.getUser().getUserName()+"转账体验卡金额"+row.getAmount()+"元");
+    		//JSDBET-784 wcw 2015-3-7 end
+    		list.add(row);
+    		return list;
+		}
+		return list;
+	}
+	//JSDP-171 wcw 20150724 end
+	
+	
+	public BorrowTender getTender() {
+		return tender;
+	}
+	public void setTender(BorrowTender tender) {
+		this.tender = tender;
+	}
+
+}

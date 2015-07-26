@@ -1,0 +1,63 @@
+package com.ddtkj.p2psys.core.quartz.repay;
+
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+/**
+ * 还款业务处理
+ * @author wcw
+ *
+ */
+public class RepayBean {
+
+	private String type;
+	
+	private BorrowRepayment borrowRepayment;
+	
+	private String resultFlag;
+	
+	public BorrowRepayment getBorrowRepayment() {
+		return borrowRepayment;
+	}
+
+	public void setBorrowRepayment(BorrowRepayment borrowRepayment) {
+		this.borrowRepayment = borrowRepayment;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getResultFlag() {
+		return resultFlag;
+	}
+
+	public void setResultFlag(String resultFlag) {
+		this.resultFlag = resultFlag;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if(obj != null){
+			RepayBean repayBean = (RepayBean)obj;
+			BorrowRepayment inRepay = repayBean.getBorrowRepayment();
+			if (borrowRepayment ==null ) {
+				return true;
+			}else{
+				return inRepay.getId() == borrowRepayment.getId(); 
+			}
+		}else{
+			return true;
+		}
+	}
+
+	
+	@Override
+	public int hashCode() {
+		 int result = 17;  
+		 result = 31*result +(int)borrowRepayment.getId(); 
+		 return result;
+	};
+}

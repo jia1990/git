@@ -1,0 +1,73 @@
+<script type="text/javascript">
+	/* $(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/return/auditReturn.html');
+	    $("#isDS").click(function(){
+	    	if($('#isDS').attr("checked"))
+			{	
+		        $('#fixedTime').attr("disabled",false);
+		    }else{
+		        $('#fixedTime').attr("disabled",true);
+		        $('#fixedTime').val("");
+		    }
+	    });
+	}); */
+</script>
+<div class="popShow" style="padding-bottom:0;">
+	<h1 class="borrowTitle"><span>用户名：</span>${r.user.userName!}</h1>
+	<div class="showItem">
+		<span>奖励费率：</span>
+		${r.continuedInvestRate!}%
+	</div>
+	<div class="showItem">
+		<span>回款续投金额：</span>
+		 ${r.continuedInvestMoney!}
+	</div>
+	<div class="showItem">
+		<span>添加时间：</span>
+		${r.addTime?string("yyyy-MM-dd HH:mm:ss")!}
+	</div>
+	<div class="showItem">
+		<span>回款续投奖励：</span>
+		${r.continuedInvestAward!}
+	</div>
+	
+	<div class="showItem">
+		<span>审核状态：</span>
+		<#if r.status==1>
+			回款续投奖励等待审核
+		<#elseif r.status==2>
+			回款续投奖励审核成功
+		<#elseif r.status==3>
+			回款续投奖励审核失败
+		<#else>
+			错误状态
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>审核人员：</span>
+		${operator.userName!}
+	</div>
+	<div class="showItem">
+		<span>审核时间：</span>
+		${r.auditTime!}
+	</div>
+</div>
+<div class="popForm" style="padding-top:0;">
+<form id="form" method="post">
+	<!-- <div class="formitm">
+		<label class="lab">是否通过：</label>
+		<div class="ipt">
+		   	<label><input type="radio" name="status" class="easyui-validatebox" value="2" data-options="required: true"/>通过</label>
+			<label><input type="radio" name="status" class="easyui-validatebox" value="3" data-options="required: true" checked="checked"/>不通过</label>
+		</div>
+	</div> -->
+	<div class="formitm">
+		<label class="lab">审核备注：</label>
+		<div class="ipt">
+		   <textarea name="remark" class="w400 easyui-validatebox" disabled="disabled">${r.remark!}</textarea>
+		</div>
+	</div>
+	<input name="auditReturnToken" value="${auditReturnToken!}" type="hidden">
+	<input name="id" value="${r.id}" type="hidden"/>
+</form>
+</div>

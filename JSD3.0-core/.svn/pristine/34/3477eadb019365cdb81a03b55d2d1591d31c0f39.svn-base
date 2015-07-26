@@ -1,0 +1,121 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQuery;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturn;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdQueryReturnDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.webpetcard.dao.PetCardLogDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardLog;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的消费（端午节）
+ * @作者：wangchangwei@ddtkj.com  JSDP-171
+ * @创建时间：2015年4月14日 
+ */
+public class PetCardConsumeWorker extends RpActivityBaseWorker{
+	
+	public PetCardConsumeWorker(BorrowTender tender,double consumeMoney){
+		super(tender, consumeMoney);
+	}
+
+	@Override
+	public void autoHandld() {
+		PetCardLogDao petCardLogDao = (PetCardLogDao) BeanUtil.getBean("petCardLogDao");
+		
+		double validAccount = tender.getAccount();
+		
+		double petCardFreeze = consumeMoney;
+		
+		double unFreeze = 0.0;
+		if(petCardFreeze >0){
+			//体验卡金额，更新账户表
+			if(petCardFreeze>=validAccount){
+				unFreeze = validAccount;
+			}else if(petCardFreeze < validAccount){
+				unFreeze = petCardFreeze;
+			}
+			//JSDP-171 xingjia 20150714 start
+			if(unFreeze > 0){
+				String tradeNo = TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER);
+				String transferNo=TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_RECHARGE_TRANSFER);
+				
+				//第三方转账
+				String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+				String oriMerBillNo= tradeNo;
+				double transferAmount=BigDecimalUtil.decimal(unFreeze,2);
+				String trdAmt=transferAmount+"";
+				String fromApiId=Global.getValue("ymd_merchant_id");
+				String toApiId=tender.getUser().getUserName();
+				if(StringUtil.isNotBlank(tender.getUser().getUserName())){
+					YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+				    if("0000".equals(ymdTransfer.getErrCode())){
+			    		
+				    }else{
+				    	throw new BussinessException("本地账户信息和一麻袋不符",1);
+				    }
+				    	
+				}
+				
+				//根据订单号查询第三方转账是否成功
+				YmdQuery ymdQuery=new YmdQuery();
+				ymdQuery.setOutTradeNo(oriMerBillNo);
+				ymdQuery.setMode("trade");
+				YmdQueryReturn ymdQueryReturn = null;
+				try {
+					ymdQueryReturn = YmdTPPWay.query(ymdQuery);
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				List<YmdQueryReturnDetails> list=ymdQueryReturn.getList();
+				YmdQueryReturnDetails yrd=new YmdQueryReturnDetails();
+				if(list.size()>0){
+					yrd=list.get(0);
+				}
+				if(yrd.getTradeStatus().equals("00")){
+					//加入体验卡的消费日志
+					PetCardLog petCardLog = petCardLogDao.petCardConsumeMoneyByTender(tender.getUser().getUserId(),tender.getBorrow().getId(),
+							PetCardLog.TRANSFER_RECHARGE_PET_CARD_FZEN);
+					petCardLog.setStatus(PetCardLog.TRANSFER_RECHARGE_PET_CARD_SUC);
+					petCardLog.setTradeNo(tradeNo);
+					petCardLogDao.update(petCardLog);
+					
+					//记录晋商贷体验卡的消费资金日志，将资金转给投资人
+					Global.setTransfer("user", tender.getUser());
+					Global.setTransfer("rpMoney", unFreeze);
+					
+					map.put("rechargeMoney", unFreeze);
+					map.put("tradeNo", tradeNo);//流水号
+					map.put("outTradeNo", transferNo);//批次号
+					try {
+						AbstractExecuter executer = ExecuterHelper.doExecuter("petCardConsumeInvesterExecuter");
+						executer.execute(map, tender.getUser());
+					} catch (Exception e) {
+						throw new BussinessException("本地资金处理失败");
+					}
+				}
+				//JSDP-171 xingjia 20150714 start
+			}
+			
+		}
+
+	}
+	
+
+}

@@ -1,0 +1,48 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.worker;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @描述：平台转账(转账云购)JSDP-156
+ * @作者：wangchangwei@ddtkj.com 
+ * @创建时间：2015年4月14日 
+ */
+public class YunGouTransferWorker extends BaseTransferWorker{
+
+	public YunGouTransferWorker(AccountTransferModel atm) {
+		super(atm);
+	}
+
+	@Override
+	public void transfer() {
+		String transferType=AccountTradeConstant.TRADE_YMD_TRADE;
+		String transferNo=TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_A_AND_B_TRANSFER);
+		String oriMerBillNo=atm.getTransferNo();
+		double transferAmount=BigDecimalUtil.decimal(atm.getTransferAmount(),2);
+		String trdAmt=transferAmount+"";
+		String fromApiId=atm.getUserName();
+		String toApiId=Global.getValue("ymd_merchant_id");
+		if(StringUtil.isNotBlank(atm.getUserName())){
+			YmdTransfer ymdTransfer=YmdTPPWay.transfer(transferType, transferNo, oriMerBillNo, trdAmt, fromApiId, toApiId);
+		    if("0000".equals(ymdTransfer.getErrCode())){
+	    		
+		    }else{
+		    	throw new BussinessException("本地账户信息和一麻袋不符",1);
+		    }
+		    	
+		}
+	
+	
+	}
+}

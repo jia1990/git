@@ -1,0 +1,43 @@
+package com.ddtkj.p2psys.article.dao.impl;
+
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.article.dao.ArticlePicDao;
+import com.ddtkj.p2psys.article.domain.ArticlePic;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.QueryParam;
+@Repository("articlePicDao")
+public class ArticlePicDaoImpl extends BaseDaoImpl<ArticlePic> implements ArticlePicDao {
+
+	/**
+	 * 根据文章ID查询文章图片
+	 * // JSDP-131 SXY start
+	 */
+    @Override
+    public List<ArticlePic> getArticlePic(long articleId) {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("articleId", articleId);
+        param.addOrder(OrderType.ASC, "id");
+        return this.findByCriteria(param);
+    }
+
+    /**
+     * 根据商品ID查询商品的第一张图片
+     * // JSDP-131 SXY start
+     */
+    @Override
+    public ArticlePic getArticleFirstPic(long articleId) {
+        QueryParam param = QueryParam.getInstance();
+        param.addParam("articleId", articleId);
+        param.addOrder(OrderType.ASC, "id");
+        List<ArticlePic> picList = this.findByCriteria(param, 0, 1);
+        if (picList != null) {
+            return picList.get(0);
+        }
+        return new ArticlePic();
+    }
+   
+}

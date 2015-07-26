@@ -1,0 +1,766 @@
+package com.rongdu.manage.action.system;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ActionContext;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.ImageUtil;
+import com.rongdu.common.util.RandomUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.OperatorRole;
+import com.rongdu.p2psys.core.domain.Role;
+import com.rongdu.p2psys.core.model.OperatorModel;
+import com.rongdu.p2psys.core.model.RoleModel;
+import com.rongdu.p2psys.core.rule.LoginRuleCheck;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+import com.rongdu.p2psys.core.rule.SafetyRuleCheck;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.service.OperatorRoleService;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.service.RoleService;
+import com.rongdu.p2psys.core.util.ValidateUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.exception.UserException;
+import com.rongdu.p2psys.user.service.UserCacheService;
+
+public class OperatorAction extends BaseAction implements ModelDriven<Operator> {
+
+	private Operator operator = new Operator();
+	private String sep = File.separator;
+
+	public Operator getModel() {
+		return operator;
+	}
+
+	private File file;
+
+	public File getFile() {
+		return file;
+	}
+
+	public void setFile(File file) {
+		this.file = file;
+	}
+
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private RoleService roleService;
+	@Resource
+	private OperatorRoleService userRoleService;
+	@Resource
+	private UserCacheService userCacheService;
+
+	private Map<String, Object> data;
+	@Resource
+	private NoticeService noticeService;
+	
+	/** 平台安全性规则 **/
+	private SafetyRuleCheck safetyRuleCheck = (SafetyRuleCheck) Global
+			.getRuleCheck("safety");
+	
+	/**
+	 * 获取验证码的图片
+	 * @throws Exception
+	 */
+	@Action(value="/modules/validCode")
+	public void validCode() throws Exception{
+		genernateCaptchaImage();
+	}
+	
+	/**
+	 * 异步验证验证码是否正确
+	 * @throws Exception
+	 */
+	@Action(value="/modules/validCodeTrue")
+	public void validCodeTrue() throws Exception{
+		String valicode = paramString("valicode");
+		Map<String, Object> data = new HashMap<String, Object>();
+		if (StringUtil.isBlank(valicode) || !ValidateUtil.checkValidCode(valicode)) {
+			throw new UserException("验证码错误!", 1);
+		}
+		data.put("result", true);
+		data.put("msg", "验证码正确!");
+		printJson(getStringOfJpaObj(data));
+	}
+	//[JSDBET-839] sxy 2015年3月21日  start
+	/**
+	 * 管理员登录
+	 * @author sunxiaoyong@ddtkj.com
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/login")
+	public void login() throws Exception {
+		data = new HashMap<String, Object>();
+		String userName = this.paramString("userName");
+		String password = this.paramString("password");
+		//后台登录时加入短信验证码，功能已完成，暂时注掉
+		/*String telCode =  this.paramString("telCode");*/
+		
+		if(null == userName || "".equals(userName)){
+			throw new BussinessException("请输入用户名！", 1);
+		}
+		if(null == password || "".equals(password)){
+			throw new BussinessException("请输入密码！", 1);
+		}
+		if(null != safetyRuleCheck){
+			String unAllowedName = safetyRuleCheck.admin.unallowed_username;
+			//System.out.println("admin,root,administrator,test,客服,晋商贷,云购,风控,企划,市场,jsd,JSD,管理员".indexOf("admin"));
+			if(unAllowedName.indexOf(userName)!=-1){
+				throw new BussinessException("用户名错误",1);
+			}
+		}
+		//LoginRuleCheck loginRule = new LoginRuleCheck();//用户登录规则(同前台)
+		LoginRuleCheck loginRule = (LoginRuleCheck) Global.getRuleCheck("login");
+		
+		Operator operator = operatorService.login(userName, password);
+		
+		//后台登录时加入短信验证码，功能已完成，暂时注掉
+		/*Operator optTelCode = operatorService.getUserByUserName(userName);
+		String todo = NoticeConstant.ADMIN_LOGIN;*/
+
+		
+		if(operator == null){
+			//说明用户不存在
+			throw new BussinessException("用户名或密码错误！", 1);
+			
+		}/*else if( optTelCode == null){
+			throw new BussinessException("用户不存在！");
+		}*/else{
+			
+			//校验手机验证码,功能已完成，暂时注掉
+			/*if (StringUtil.isBlank(telCode)) {
+				throw new BussinessException("手机验证码为空！", 1);
+			}
+			if (!ValidateUtil.checkPwdCode(todo+"_code", optTelCode.getUserName(), optTelCode.getId(), optTelCode.getMobile(),todo, telCode)) {
+				throw new BussinessException("手机验证码错误或已失效！", 1);
+			}*/
+			
+			if(operator.isDelete() == true){
+				//用户是否删除
+				throw new BussinessException("该用户已注销！", 1);
+			
+			}
+			
+			if(!"NN".equals(operator.getIsLocked())){
+				//用户是否锁定
+				throw new BussinessException("该用户已锁定！", 1);
+			}
+			
+			if(!MD5.encode(password).equals(operator.getPwd())){
+				//说明用户存在但密码不正确，登录次数开始计数增加
+				
+				//判断用户登录错误次数是否超过最大错误次数
+				if(operator.getLoginCount() >= loginRule.back_today_max_login_fail_times){
+					//超过则用户锁定
+					operator.setIsLocked(UserConstant.BACK_USER_LOCK_LOGIN);
+					operator.setLockRemark("密码错误次数过多账户已锁定");
+					operator.setLockTime(new Date());
+				}else{
+					//未超过可继续输入密码登录
+					operator.setLoginCount(operator.getLoginCount() + 1);//修改登录次数
+					operator.setLoginIp(getRequestIp());	//登录IP
+					operator.setLoginTime(new Date());
+				}
+				operatorService.userUpdate(operator);
+				
+				throw new BussinessException("用户名或密码错误！", 1);
+				
+			} else {
+				// 说明用户存在且密码正确
+				// 返回用户信息，成功登录
+				operator.setLoginCount(0);	//若登录成功则清空登录次数
+				operatorService.userUpdate(operator);
+				//operator.setLockRemark(null);
+				// 根据规则获取是否需要修改密码
+				if (null != safetyRuleCheck) {
+					if (safetyRuleCheck.admin.status == 1) {// 规则启用
+						if ((Long.parseLong(DateUtil.getTimeStr(new Date())) - Long
+								.parseLong(DateUtil.getTimeStr(operator
+										.getUpdatePwdTime())))
+								/ (24 * 3600) + 1 > safetyRuleCheck.admin.regular_modpwd_day) {
+							data.put("modifyPwd", true);
+							session.put("modify_pwd", "noticed");
+						} else {
+							data.put("modifyPwd", false);
+						}
+					}
+				}
+				
+				session.put(Constant.SESSION_OPERATOR, operator);
+				data.put("result", true);
+				data.put("msg", operator);
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+		
+	}
+	
+	/**
+	 * 后台登录时获取短信验证码
+	 * @throws IOException 
+	 */
+	@Action("/modules/adminLoginCode")
+	public void adminLoginCode() throws IOException{
+		data = new HashMap<String, Object>();
+		String userName = paramString("userName");
+		Operator operator = operatorService.getUserByUserName(userName);
+		Map<String, Object> map = new HashMap<String, Object>();
+		if(null != operator){
+			String code = RandomUtil.getRandomNumString(6);
+			Global.setTransfer("code", code);
+			Global.setTransfer("vtime", Global.getString("verify_code_time"));
+			map.put("userName", operator.getUserName());
+			map.put("todo", NoticeConstant.ADMIN_LOGIN);
+			map.put("code", code);
+			map.put("mobile", operator.getMobile());
+			map.put("email", operator.getEmail());
+			map.put("noticeTime", new Date());
+			map.put("vtime", Global.getString("verify_code_time"));
+			map.put("optId", operator.getId());
+			map.put("webname", Global.getValue("webname"));
+			HttpServletRequest request = ServletActionContext.getRequest();
+			request.getSession().setAttribute(NoticeConstant.ADMIN_LOGIN + "_code", map);
+		
+		
+			try {
+				noticeService.sendNotice(NoticeConstant.ADMIN_LOGIN, map);
+				Global.removeTransfer();
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (IOException e) {
+				data.put("result", false);
+				printJson(getStringOfJpaObj(data));
+			}
+		}
+	}
+	
+	
+	/**
+     * 锁定用户页面
+     * 
+     * @return String
+     * @throws Exception if has error
+     * @author sunxiaoyong 2015年3月21日
+     */
+    @Action(value = "/modules/system/operator/operatorLockPage")
+    public String userAdminLockPage() throws Exception {
+    	
+    	long userId = paramLong("id");
+		Operator operator = operatorService.getUserById(userId);
+		request.setAttribute("operator",operator);
+		request.setAttribute("isLocked", operator.isLocked());
+		saveToken("operatorLockToken");
+    	return "operatorLockPage";
+    	
+    }
+    
+    /**
+     * 锁定用户	后台用户登录锁定：UY; 后台管理员锁定：AY; 账户未锁定：NN;
+     * 
+     * @throws Exception if has error
+     * @author sunxiaoyong 2015年3月21日 
+     */
+	@Action(value = "/modules/system/operator/operatorLock")
+    public void userAdminLock() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		long userId = paramLong("id");
+		Operator operator = operatorService.getUserById(userId);
+		
+		if( !paramString("isLocked").equals(operator.isLocked()) && "AY".equals(paramString("isLocked"))){
+			operator.setLocked(paramString("isLocked"));
+			operator.setLockTime(Calendar.getInstance().getTime());
+		}else{
+			operator.setLocked(paramString("isLocked"));
+			operator.setLockTime(null);
+			operator.setLockRemark(null);
+			operator.setLoginCount(0);
+		}
+		
+		if("" != paramString("lockRemark")){
+			operator.setLockRemark(paramString("lockRemark"));
+		}
+		checkToken("operatorLockToken");
+		operatorService.userUpdate(operator);
+
+		data.put("msg", "修改成功！");
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		
+    }
+	//[JSDBET-839] sxy 2015年3月21日  end
+	/**
+	 * 退出系统
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/logout")
+	public void logout() throws Exception {
+		data = new HashMap<String, Object>();
+		session.put(Constant.SESSION_OPERATOR, null);
+		data.put("result", true);
+		data.put("msg", "退出系统成功！"); // 总行数
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 修改密码
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/general/userEditPwd")
+	public void userEditPwd() throws Exception {
+		data = new HashMap<String, Object>();
+		OperatorModel managerModel = OperatorModel.instance(operator);
+		managerModel.setOldPassword(this.paramString("oldPassword"));
+		managerModel.setConfirmPassword(this.paramString("confirmPassword"));
+		Operator manager = operatorService.getUserById(managerModel.getId());
+		managerModel.validModifyPwdModel(manager);
+		manager.setUpdateManager(getOperatorUserName());
+		manager.setPwd(MD5.encode(managerModel.getPwd()));
+		manager.setUpdatePwdTime(Calendar.getInstance().getTime());
+		operatorService.updateUserPwd(manager);
+		data.put("result", true);
+		data.put("msg", "修改密码成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 重置用户密码
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorResetPwd")
+	public void operatorResetPwd() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = this.paramLong("id");
+		Operator operator = operatorService.getUserById(id);
+		operator.setUpdateManager(getOperatorUserName());
+		operator.setPwd(MD5.encode(operator.getMobile()));//充值密码后将密码设置为用户的手机号
+		operatorService.updateUserPwd(operator);
+		data.put("result", true);
+		data.put("msg", "重置密码成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 用户管理页面
+	 * 
+	 * @return 页面
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorManager")
+	public String operatorManager() throws Exception {
+		return "operatorManager";
+	}
+
+	/**
+	 * 用户查询列表
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorList")
+	public void operatorList() throws Exception {
+		
+		long userId = getOperatorId();
+		List<Role> roleList = roleService.getRoleList(userId);
+		
+		// 查询当前登录的角色ID
+		Role loginRole = roleService.getRole(userId);
+		Long loginRoleIdStr = loginRole.getId();
+		String loginRoleId = loginRoleIdStr.toString();
+			
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		QueryParam param = QueryParam.getInstance().addPage(pageNumber, pageSize);
+		String name = paramString("name");
+		String loginName = paramString("userName");
+		String roleName = paramString("roleName");
+		String mobile = paramString("mobile");
+		String isDelete  = paramString("isDelete");
+		String isLocked = paramString("isLocked");
+		
+		
+		Map<String,Object> paramMap = new HashMap<String, Object>();
+		List<Integer> idlist = new ArrayList<Integer>();
+		if(roleList.size()!=0){
+			for(int i=0;i<roleList.size();i++){
+				Role role = roleList.get(i);
+				if(role.getId()!=11){
+					idlist.add((int) role.getId());
+				}
+			}
+			paramMap.put("pidList", idlist);
+		}
+
+		paramMap.put("name", name);
+		paramMap.put("userName", loginName);
+		paramMap.put("roleName", roleName);
+		paramMap.put("mobile", mobile);
+		paramMap.put("isDelete", isDelete);
+		paramMap.put("isLocked", isLocked);
+		PageDataList<Operator> userList = operatorService.getOperatorListByRole(paramMap, param);
+		
+		PageDataList<OperatorModel> optorPageList = new PageDataList<OperatorModel>();
+		List<OperatorModel> optorModelList = new ArrayList<OperatorModel>();
+		List<Operator> optlist = userList.getList();
+		for(int i=0;i<optlist.size();i++){
+			OperatorModel optModel = OperatorModel.instance(optlist.get(i));
+			List<Role> roleNList = roleService.getRoleList(optModel.getId());
+			StringBuffer roleStr = new StringBuffer();
+			for(int r=0;r<roleNList.size();r++){
+				Role role = roleNList.get(r);
+				roleStr.append(role.getName()+",");
+				optModel.setRoleId(role.getId());
+			}
+			optModel.setRoleName(roleStr.substring(0, roleStr.length()-1));
+			// 设置当前登录角色名
+			optModel.setLoginRoleId(loginRoleId);
+			// 设置当前登录用户名
+			optModel.setLoginName(getOperatorUserName());
+			if(optlist.get(i).isDelete()){
+				optModel.setDelOpt("Y");
+			}else{
+				optModel.setDelOpt("N");
+			}
+			optorModelList.add(optModel);
+		}
+		optorPageList.setList(optorModelList);
+		optorPageList.setPage(userList.getPage());
+		
+		data.put("total", optorPageList.getPage().getTotal()); // 总行数
+		data.put("rows", optorPageList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 用户添加页面
+	 * 
+	 * @return 页面
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorAddPage")
+	public String operatorAddPage() throws Exception {
+		//原有的方法注掉
+		//List<Role> roleList2 = roleService.getRoleList();
+		long userId = getOperatorId();
+		List<Role> roleList = roleService.getRoleList(userId);
+		RoleModel roleModel = new RoleModel(); 
+		
+		//判读是否为超级管理员，如果是则全部查出角色，不加条件
+		List<Integer> idlist = new ArrayList<Integer>();
+		/*if(1 != userId){
+			for(int i=0;i<roleList.size();i++){
+				idlist.add((int) roleList.get(i).getId());
+			}
+			roleModel.setIdlist(idlist);
+		}*/
+		
+		if(roleList.size()!=0){
+			for(int i=0;i<roleList.size();i++){
+				Role role = roleList.get(i);
+				if(role.getId()!=11){
+					idlist.add((int) role.getId());
+				}
+			}
+			roleModel.setIdlist(idlist);
+		}
+		
+		PageDataList<Role> pageList = roleService.list(roleModel);
+		//此角色所拥有下属的角色
+		List<Role> subRoleList = pageList.getList();
+
+		// 查询当前用户对应角色
+		if(idlist.size()>0){
+			Role role = roleService.getRole(userId);
+			int roleId = (int)role.getId();
+			// 移除当前登录角色
+			for (int j = 0; j < subRoleList.size(); j++) {
+
+				long id = subRoleList.get(j).getId();
+				if (id == roleId) {
+					subRoleList.remove(j);
+				}
+
+			}
+		}
+
+		request.setAttribute("roleList", subRoleList);
+		saveToken("operatorAddToken");
+		return "operatorAddPage";
+	}
+
+	/**
+	 * 用户添加
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorAdd")
+	public void operatorAdd() throws Exception {
+		data = new HashMap<String, Object>();
+		String[] roleIdArr = request.getParameterValues("roleId");
+		if (roleIdArr == null) {
+		    throw new BussinessException("请选择一个用户角色", 1);
+		}
+		Operator operators = operatorService.getUserByUserName(operator.getUserName());
+		if(null!=operators){
+			throw new BussinessException("用户名已存在！", 1);
+		}
+		OperatorModel userModel = OperatorModel.instance(operator);
+		userModel.setConfirmPassword(paramString("confirmPassword"));
+		userModel.validLoginModel();
+		userModel.validRegModel();
+		operator.setAddManager(getOperatorUserName());
+		operator.setUpdateManager(getOperatorUserName());
+		
+		operator.setLocked("NN");//状态为未锁定
+		
+		if (file != null) {
+			if (!ImageUtil.fileIsImage(file)) {
+				printResult("您上传的图片无效，请重新上传！", true);
+				throw new BussinessException("您上传的图片无效，请重新上传！", 1);
+			} else {
+				Operator oper = getOperator();
+				String imageUrl = this.getFilePath(oper, sep, file);
+				operator.setPath(imageUrl);
+			}
+		}
+		checkToken("operatorAddToken");
+		operatorService.addOperator(operator, roleIdArr);
+
+		data.put("result", true);
+		data.put("msg", "用户添加成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 用户修改页面
+	 * 
+	 * @return 页面
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorEditPage")
+	public String operatorEditPage() throws Exception {
+		long id = this.paramLong("id");
+		Operator operator = operatorService.getUserById(id);
+		List<OperatorRole> userRoleList = userRoleService.getUserRoleList(id);
+//		List<Role> roleList = roleService.getRoleList();
+		long userId = getOperatorId();
+		List<Role> roleList = roleService.getRoleList(userId);
+		
+		if(id == userId){
+			request.setAttribute("roleList", roleList);
+		}else{
+			RoleModel roleModel = new RoleModel(); 
+			
+			//判读是否为超级管理员，如果是则全部查出角色，不加条件
+			List<Integer> idlist = new ArrayList<Integer>();
+//			if(1 != userId){
+//				for(int i=0;i<roleList.size();i++){
+//					idlist.add((int) roleList.get(i).getId());
+//				}
+//				roleModel.setIdlist(idlist);
+//			}
+			
+			
+			if(roleList.size()!=0){
+				for(int i=0;i<roleList.size();i++){
+					Role role = roleList.get(i);
+					if(role.getId()!=11){
+						idlist.add((int) role.getId());
+					}
+				}
+				roleModel.setIdlist(idlist);
+			}
+			
+			PageDataList<Role> pageList = roleService.list(roleModel);
+			//此角色所拥有下属的角色
+			List<Role> subRoleList = pageList.getList();
+			
+			// 查询当前用户对应角色
+			Role role = roleService.getRole(userId);
+			int roleId = (int)role.getId();
+			// 移除当前登录角色
+			for (int j = 0; j < subRoleList.size(); j++) {
+
+				long idVal = subRoleList.get(j).getId();
+				if (idVal == roleId) {
+					subRoleList.remove(j);
+				}
+
+			}
+			request.setAttribute("roleList", subRoleList);
+		}
+		
+		request.setAttribute("operatorRoleList", userRoleList);
+		request.setAttribute("operator", operator);
+		request.setAttribute("isLocked", operator.getIsLocked());
+		ActionContext.getContext().getValueStack().push(operator);
+		saveToken("operatorEditToken");
+		return "operatorEditPage";
+	}
+
+	/**
+	 * 用户修改
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorEdit")
+	public void operatorEdit() throws Exception {
+		data = new HashMap<String, Object>();
+		String[] roleIdArr = request.getParameterValues("roleId");
+		if (roleIdArr == null) {
+			throw new BussinessException("请选择一个用户角色", 1);
+		}
+		String userName = paramString("userName");
+		Operator operators = operatorService.getUserByUserName(userName);
+		if(null != userName && null != operators && null != operators && !userName.equals(operators.getUserName())){
+			throw new BussinessException("用户名已被使用！请重新输入", 1);
+		}
+		
+		if (file != null) {
+			if (!ImageUtil.fileIsImage(file)) {
+				printResult("您上传的图片无效，请重新上传！", true);
+				throw new BussinessException("您上传的图片无效，请重新上传！", 1);
+			} else {
+				Operator oper = getOperator();
+				String imageUrl = this.getFilePath(oper, sep, file);
+				operator.setPath(imageUrl);
+			}
+		}
+		checkToken("operatorEditToken");
+		operatorService.userUpdate(operator, roleIdArr);
+		data.put("result", true);
+		data.put("msg", "用户修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	/**
+	 * 用户删除（逻辑删除）
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorDelete")
+	public void operatorDelete() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = this.paramLong("id");
+		int roleId = paramInt("roleId");
+		if(roleId == 2){
+			operatorService.deleteKefuById(id);
+		}else{
+			operatorService.userDelete(id);
+		}
+		data.put("result", true);
+		data.put("msg", "用户删除成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	/**
+	 * 用户删除（逻辑删除）
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/operatorUnDelete")
+	public void operatorUnDelete() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = this.paramLong("id");
+		Operator operator = operatorService.getDelOptorById(id, true);
+		Operator optRecover = operatorService.getUserByUserName(operator.getUserName());
+		
+		if(null != optRecover){
+			data.put("result", true);
+			data.put("msg", "此用户用户名已被使用，无法恢复！");
+		}else{
+			operator.setDelete(false);
+			try {
+				operatorService.userUpdate(operator);
+				data.put("result", true);
+				data.put("msg", "用户恢复成功！");
+			} catch (Exception e) {
+				data.put("result", true);
+				data.put("msg", "用户恢复失败！");
+			}
+		}
+		
+		
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * ajax请求验证用户
+	 * 
+	 * @throws Exception 异常
+	 */
+	@Action(value = "/modules/system/operator/checkOperator")
+	public void checkOperator() throws Exception {
+		data = new HashMap<String, Object>();
+		String userName = paramString("userName");
+		Operator manager = operatorService.getUserByUserName(userName);
+		if (manager != null) {
+			data.put("data", manager);
+			data.put("result", true);
+			printJson(getStringOfJpaObj(data));
+		} else {
+			data.put("result", false);
+			printJson(getStringOfJpaObj(data));
+		}
+	}
+
+	private String getFilePath(Operator user, String sep, File file) throws Exception {
+		String filePath;
+		String dataPath = ServletActionContext.getServletContext().getRealPath("/") + sep + "data";
+		// 临时解决linux下面路径不对问题
+		if (!dataPath.startsWith(sep)) {
+			dataPath = sep + dataPath;
+		}
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		Date d1 = new Date();
+		String upfiesDir = dataPath + sep + "upfiles" + sep + "images" + sep;
+		String destfilename1 = upfiesDir + DateUtil.dateStr2(d1) + sep + user.getId() + "_kefu" + "_" + d1.getTime()
+				+ ".jpg";
+		filePath = destfilename1;
+		filePath = this.truncatUrl(filePath, contextPath, sep);
+		File imageFile1 = new File(destfilename1);
+		FileUtils.copyFile(file, imageFile1);
+		return filePath.substring(1);
+	}
+
+	private String truncatUrl(String old, String truncat, String sep) {
+		String url = "";
+		url = old.replace(truncat, "");
+		url = url.replace(sep, "/");
+		return url;
+	}
+	
+}

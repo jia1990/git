@@ -1,0 +1,260 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.hsqldb.DatabaseURL;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.model.AccountDrawModel;
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.model.RpProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.domain.Operator;
+/**
+ * 红包产生servcie实现类
+ * @author YJF
+ *
+ */
+
+@Service("rpProduceService")
+public class RpProduceServiceImpl implements RpProduceService {
+
+	@Resource
+	private RpProduceDao rpProduceDao ;
+	
+	@Override
+	public RpProduce save(RpProduce rp) {
+		return this.rpProduceDao.save(rp);
+	}
+
+	@Override
+	public double sRedPackSumMoney(long userId) {
+
+		return rpProduceDao.sRedPackSumMoney(userId);
+	}
+	
+	@Override
+	public double sRedPackUsedSumMoney(long userId) {
+		// TODO Auto-generated method stub
+		return rpProduceDao.sRedPackUsedSumMoney(userId);
+	}
+
+	@Override
+	public double dRedPackGenerateSumMoney(long userId) {
+
+		return rpProduceDao.dRedPackGenerateSumMoney(userId);
+	}
+
+
+	@Override
+	public PageDataList<RpProduceModel> getPageDataList(
+			RpProduceModel rpProduceModel) {
+		
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("user.userId", rpProduceModel.getUser().getUserId());
+		param.addParam("rpType", rpProduceModel.getRpType());
+		
+		if(rpProduceModel.getInvitedUser()!=null){
+			param.addParam("invitedUser.userId", Operators.GT, rpProduceModel.getInvitedUser().getUserId());
+		}
+	
+		if(rpProduceModel.getRpStaticStatus()>0){
+			param.addParam("rpStaticStatus", rpProduceModel.getRpStaticStatus());
+			param.addOrder(OrderType.DESC, "rpStaticValidTime");
+		}else{
+			param.addOrder(OrderType.DESC, "rpCreateTime");
+		}
+		
+		param.addPage(rpProduceModel.getPage());
+		// 20150706  JSDP-212  sxy  start
+		PageDataList<RpProduce> pageDateList = rpProduceDao.findPageList(param);
+		PageDataList<RpProduceModel> pageDateList_ = new PageDataList<RpProduceModel>();
+		List<RpProduceModel> list = new ArrayList<RpProduceModel>();
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				RpProduce rpProduce = (RpProduce) pageDateList.getList().get(i);
+
+				/*Date deadTime = DateUtil.rollDay(rpProduce.getRpCreateTime(), rpProduce.getRpStaticValidTime());*/
+				int intYear = DateUtil.getTimeYear(new Date());
+				Date yearEnddate = DateUtil.monthLastDay(intYear,12);
+				RpProduceModel uam = new RpProduceModel();
+				uam.setDeadTime(yearEnddate);
+				
+				BeanUtils.copyProperties(rpProduce, uam);
+				list.add(uam);
+			}
+		}
+		pageDateList_.setPage(pageDateList.getPage());
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+
+	@Override
+	public PageDataList<RpProduceModel> getAwardedInvitePageDataList(
+			RpProduceModel rpProduceModel, long userId) {
+		PageDataList<RpProduceModel> pageDataList = rpProduceDao
+				.getAwardedInvitePageDataList(rpProduceModel, userId);
+		List<RpProduceModel> list = new ArrayList<RpProduceModel>();
+		PageDataList<RpProduceModel> pageDataList_ = new PageDataList<RpProduceModel>();
+		pageDataList_.setPage(pageDataList.getPage());
+		if (pageDataList.getList().size() > 0) {
+			for (int i = 0; i < pageDataList.getList().size(); i++) {
+				RpProduce rpProduce = (RpProduce) pageDataList.getList().get(i);
+				RpProduceModel rpmodel = RpProduceModel.instance(rpProduce);
+				rpmodel.setUserName(rpProduce.getUser().getUserName());
+				rpmodel.setAddTime(rpProduce.getInvitedUser().getAddTime());
+				rpmodel.setRpStaticMoney(rpProduce.getRpStaticMoney());
+				rpmodel.setRpStaticRes(rpProduce.getRpStaticRes());
+				rpmodel.setInvitedUser(rpProduce.getInvitedUser());
+				list.add(rpmodel);
+			}
+		}
+		pageDataList_.setList(list);
+		return pageDataList_;
+	}
+
+	@Override
+	public int getInviteAwardSum(RpProduceModel model, long userId) {
+		// TODO Auto-generated method stub
+		return rpProduceDao.getInviteAwardSum(model, userId);
+	}
+	
+	@Override
+	public double awardInvitedRPSum(long userId) {
+		// TODO Auto-generated method stub
+		return rpProduceDao.awardInvitedRPSum(userId);
+	}
+
+	@Override
+	public double dRedPackGenerateSumMoneyAll(String startDate,String endDate) {
+		
+		return rpProduceDao.dRedPackGenerateSumMoneyAll(startDate,endDate);
+	}
+	@Override
+	public double sRedPackSumMoneyAll(String startDate,String endDate) {
+		
+		return rpProduceDao.sRedPackSumMoneyAll(startDate,endDate);
+	}
+	//JSDP-167 xingjia 2015-05-28 start
+	@Override
+	public PageDataList<RpProduceModel> getPageList(RpProduceModel model) {
+		
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(model.getPage(), model.getSize());
+		if(StringUtil.isNotBlank(model.getType())  && !"99".equals(model.getType())){
+			param.addParam("rpType", model.getType());
+		}
+		
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName", model.getUserName());
+		}
+		
+		if(StringUtil.isNotBlank(model.getStartTime()) && !"undefined".equals(model.getStartTime())){
+			//JSDP-182 xingjia 20150615 start
+			Date start = DateUtil.valueOf(model.getStartTime());
+			param.addParam("rpCreateTime", Operators.GTE, start);
+		}
+		if(StringUtil.isNotBlank(model.getEndTime()) && !"undefined".equals(model.getEndTime())){
+			Date end = DateUtil.valueOf(model.getEndTime());
+			param.addParam("rpCreateTime", Operators.LT, end);
+			//JSDP-182 xingjia 20150615 end
+		}
+		//JSDP-195 xingjia 20150625 start
+		if(StringUtil.isNotBlank(model.getRpStaticRes())){
+			param.addParam("rpStaticRes", model.getRpStaticRes());
+		}
+		if(StringUtil.isNotBlank(model.getRpStaticReferrerName())){
+			param.addParam("rpStaticReferrerName", Operators.LIKE, model.getRpStaticReferrerName());
+		}
+		if(StringUtil.isNotBlank(model.getRpStatus()) && !"99".equals(model.getRpStatus())){
+			param.addParam("rpStaticStatus", model.getRpStatus());
+		}
+		//JSDP-195 xingjia 20150625 end
+		//JSDP-167 xingjia 20150529 start
+		PageDataList<RpProduce> pageDataList = rpProduceDao.findPageList(param);
+		//JSDP-167 xingjia 20150529 end
+		List<RpProduce> rpList = pageDataList.getList();
+		List<RpProduceModel> rpModelList = new ArrayList<RpProduceModel>();
+		
+		PageDataList<RpProduceModel> rpModelPageList = new PageDataList<RpProduceModel>();
+		for(int i=0;i<rpList.size();i++){
+			RpProduce rp = rpList.get(i);
+			RpProduceModel rpModel = RpProduceModel.instance(rp); 
+			if(rp.getRpType()==1){
+				rpModel.setType("静态红包");
+				rpModel.setRpProMoney(rp.getRpStaticMoney()+"");
+				rpModel.setRpStatus(rp.getRpStaticStatus()+"");
+
+			}else if(rp.getRpType()==2){
+				rpModel.setType("动态红包");
+				rpModel.setRpProMoney(rp.getRpDynamicMoney()+"");
+
+			}
+			rpModel.setUserName(rp.getUser().getUserName());
+			rpModel.setRealName(rp.getUser().getRealName());
+			rpModel.setAddTime(rp.getRpCreateTime());
+			rpModelList.add(rpModel);
+		}
+		rpModelPageList.setList(rpModelList);
+		rpModelPageList.setPage(pageDataList.getPage());
+		
+		return rpModelPageList;
+	}
+
+	@Override
+	public PageDataList<RpProduceModel> getRpSumPageList(RpProduceModel model) {
+		List<RpProduceModel> rpModelList = rpProduceDao.rpSumMoney(model);
+		PageDataList<RpProduceModel> pageDataList = new PageDataList<RpProduceModel>();
+		pageDataList.setList(rpModelList);
+		pageDataList.setPage(model.getPages());
+		return pageDataList;
+	}
+
+	@Override
+	public List getExcelList(RpProduceModel model) {
+		
+		return rpProduceDao.getExcelList(model);
+	}
+
+	@Override
+	public List getDetailExcelList(RpProduceModel model) {
+		
+		return rpProduceDao.getDetailExcelList(model);
+	}
+	
+	//JSDP-167 xingjia 2015-05-28 end
+	//JSDP-181 wcw 20150615 start
+	public List<RpProduce> getRpList(RpProduceModel model){
+		long userId=0;
+		if(model.getUser()!=null){
+			userId=model.getUser().getUserId();
+		}
+		return rpProduceDao.list(userId,model);
+	} 
+	public void modifyRp(RpProduce rp,double beforeRpStaticMoney,double afteRpStaticMoney){
+		rpProduceDao.update(rp, beforeRpStaticMoney, afteRpStaticMoney);
+	}
+	//JSDP-181 wcw 20150615 end
+	//JSDP-195 xingjia 20150625 start
+	@Override
+	public List recommendFriendExcel(RpProduceModel model) {
+		
+		return rpProduceDao.recommendFriendExcel(model);
+	}
+	//JSDP-195 xingjia 20150625 end
+}

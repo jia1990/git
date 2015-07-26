@@ -1,0 +1,167 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.user.dao.UserRealnameApplicationDao;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserRealnameApplication;
+import com.ddtkj.p2psys.user.model.UserRealnameApplicationModel;
+import com.ddtkj.p2psys.user.service.UserRealnameApplicationService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述：用户实名认证资料上传审核
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月29日 
+ */
+@Repository("userRealnameApplicationService")
+public class UserRealnameApplicationServiceImpl implements UserRealnameApplicationService{
+
+	@Resource
+	private UserRealnameApplicationDao userRealnameApplicationDao;
+	
+	@Resource
+	private UserDao userDao;
+	
+	// JSDP-115  20150514 SXY
+	@Resource
+	private RegionDao regionDao;
+	@Resource
+	private UserCacheDao userCacheDao;
+	// JSDP-115  20150514 SXY
+	
+	@Override
+	public void uploadUserRealNameApplication(UserRealnameApplicationModel model) throws Exception {
+		
+		UserRealnameApplication userRealnameApplication= userRealnameApplicationDao.find(model.getUser().getUserId());
+		if(userRealnameApplication == null){
+			
+			model.setCertificateType("00");
+			model.setAddTime(new Date());
+			model.setStatus(0);
+			userRealnameApplicationDao.save(model.prototype());
+		}else {
+			userRealnameApplication.setCertificateType("00");
+			userRealnameApplication.setAddTime(new Date());
+			userRealnameApplication.setPositivePhoto(model.getPositivePhoto());
+			userRealnameApplication.setReversePhoto(model.getReversePhoto());
+			//实名认证复审问题  gjh2015-5-11 start
+			userRealnameApplication.setStatus(0);
+			userRealnameApplication.setRemark(null);
+			userRealnameApplication.setOperateTime(null);
+			//实名认证复审问题  gjh2015-5-11 end
+			userRealnameApplicationDao.update(userRealnameApplication);	
+		}
+		User user = userDao.getUserById(model.getUser().getUserId());
+		user.setRealName(model.getRealName());
+		user.setCardNO(model.getCardNo());
+		userDao.update(user);	
+	}
+
+	@Override
+	public UserRealnameApplication findUserRealnameApplication(long userId)
+			throws Exception {
+
+		return userRealnameApplicationDao.find(userId);
+	}
+
+
+	@Override
+	public PageDataList<UserRealnameApplicationModel> list(
+			UserRealnameApplicationModel model, int page, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(page, size);
+		if(model != null){
+			if(model.getStatus() != 99){
+				param.addParam("status", model.getStatus());
+			}
+	        if (StringUtil.isNotBlank(model.getUserName())) {
+	            param.addParam("user.userName", Operators.LIKE, model.getUserName());
+	        }
+	        if(StringUtil.isNotBlank(model.getRealName())){
+	        	 param.addParam("user.realName", model.getRealName());
+	        }
+			
+			param.addOrder(OrderType.DESC, "addTime");
+		}
+		PageDataList<UserRealnameApplication> pList = userRealnameApplicationDao.findPageList(param);
+		PageDataList<UserRealnameApplicationModel> pageDataList = new PageDataList<UserRealnameApplicationModel>();
+		List<UserRealnameApplicationModel> bmList = new ArrayList<UserRealnameApplicationModel>();
+		pageDataList.setPage(pList.getPage());
+		if (pList.getList().size() > 0) {
+			for (int i = 0; i < pList.getList().size(); i++) {
+				UserRealnameApplication b = (UserRealnameApplication) pList.getList().get(i);
+				UserRealnameApplicationModel bm = UserRealnameApplicationModel.instance(b);	
+				bm.instance(b);
+				bm.setUserId(b.getUser().getUserId());
+				bm.setRealName(b.getUser().getRealName());
+				bm.setCardNo(b.getUser().getCardNO());
+				bm.setUserName(b.getUser().getUserName());
+				bmList.add(bm);
+			}
+			
+		}
+		pageDataList.setList(bmList);
+		return pageDataList;
+	}
+
+	@Override
+	public void modifyUserRealnameApplicationStatus(UserRealnameApplicationModel model)
+			throws Exception {
+		userRealnameApplicationDao.modifyUserRealnameApplicationStatus(model);
+		
+		// 若后台审核成功，保存用户省市县
+		String cardId = model.getCardNo();
+		//截取身份证号前6位
+	  	if(StringUtil.isNotBlank(cardId) && cardId.length()>6){
+	  		String address = cardId.substring(0,6);
+	  		// JSDP-115  20150514 SXY
+	  		UserCache userCache = model.getUser().getUserCache();
+	  	
+	  		//省
+	  		Region regionProvince = regionDao.findByCode(address.substring(0, 2)+"0000");
+	  		if(regionProvince!=null){
+	  			userCache.setProvince(regionProvince.getId()+"");
+	  		}
+	  		//市
+	  		Region regionCity = regionDao.findByCode(address.substring(0, 4)+"00");
+	  		if(regionCity!=null){
+	  			userCache.setCity(regionCity.getId()+"");
+	  		}
+	  		//县/区
+	  		Region regionArea = regionDao.findByCode(address);
+	  		if(regionArea!=null){
+	  			userCache.setArea(regionArea.getId()+"");
+	  		}
+	  		
+	  		userCacheDao.update(userCache);
+	  	    // JSDP-115  20150514 SXY
+	  	}
+	  	
+		//实名认证复审问题  gjh2015-5-11 start
+		if(model.getStatus() == 1){
+			userDao.modifythirdPartyOpenCount(model.getUser().getUserId(), 0);
+		}
+		//实名认证复审问题  gjh2015-5-11 end
+		
+	}
+
+}

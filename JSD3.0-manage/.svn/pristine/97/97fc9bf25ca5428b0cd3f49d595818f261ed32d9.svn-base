@@ -1,0 +1,281 @@
+package com.ddtkj.manage.action.phone;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.phone.domain.PhoneActivity;
+import com.ddtkj.p2psys.phone.model.PhoneActivityModel;
+import com.ddtkj.p2psys.phone.service.PhoneActivityService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * 活动发布管理
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 3.0
+ * @since 2015年1月10日
+ */
+public class ManagePhoneActivityAction extends BaseAction<PhoneActivityModel> implements ModelDriven<PhoneActivityModel> {
+
+	@Resource
+	private PhoneActivityService phoneActivityService;
+
+    private Map<String, Object> data;
+    
+   
+	/**
+	 * 活动列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/activity/phoneActivityManager")
+	public String phoneActivityManager() throws Exception {
+		request.setAttribute("weburl", Global.getString("weburl"));
+		
+		return "phoneActivityManager";
+	}
+
+	/**
+	 * 活动列表
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/activity/phoneActivityList")
+	public void phoneActivityList() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null) {
+		    model.setStatus((byte)-1);
+		}
+		
+		// 标题
+		if(null != paramString("title") && "" != paramString("title")){
+			model.setTitle(paramString("title"));
+		}
+		
+		// 类型
+		if(null != paramString("type") && "" != paramString("type")){
+			model.setType(paramString("type"));
+		}
+		
+		// 活动状态
+		if(null != paramString("activityStatus") && "" != paramString("activityStatus")){
+			model.setActivityStatus(paramString("activityStatus"));
+		}
+		
+		PageDataList<PhoneActivityModel> phoneActivityList = phoneActivityService.activityList(model, pageNumber, pageSize);
+		
+		data.put("total", phoneActivityList.getPage().getTotal()); // 总行数
+		data.put("rows", phoneActivityList.getList()); // 集合对象
+		
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 活动列表（方法同上）
+	 * 
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/activity/phoneActivityParamList")
+	public void activityParamList() throws Exception {
+		data = new HashMap<String, Object>();
+		int pageNumber = paramInt("page"); // 当前页数
+		int pageSize = paramInt("rows"); // 每页每页总数
+		String status = request.getParameter("status");
+		if (status == null) {
+		    model.setStatus((byte)-1);
+		}
+		PageDataList<PhoneActivityModel> phoneActivityList = phoneActivityService.activityList(model, pageNumber, pageSize);
+		data.put("total", phoneActivityList.getPage().getTotal()); // 总行数
+		data.put("rows", phoneActivityList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 添加活动页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/activity/phoneActivityAddPage")
+	public String activityAddPage() throws Exception {
+		//initRSAME();
+		saveToken("phoneActivityAddToken");
+		return "phoneActivityAddPage";
+	}
+
+	/**
+	 * 添加活动
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/activity/phoneActivityAdd")
+	public void activityAdd() throws Exception {
+		
+		
+		data = new HashMap<String, Object>();
+		PhoneActivity activityNew = model.prototype();
+		
+		String content = paramString("content");
+		
+		String type = paramString("type");
+		
+		if(null != type && "" != type){
+			activityNew.setType(type);
+		}else{
+			activityNew.setType("0");
+		}
+		
+		activityNew.setContent(content);
+		activityNew.setAddTime(new Date());
+		activityNew.setAddIp(Global.getIP());
+		activityNew.setClicks(0);
+		activityNew.setUpdateTime(Calendar.getInstance().getTime());
+		activityNew.setUpdateUser(getOperatorId());
+		activityNew.setUpdateUserName(getOperatorUserName());
+		
+		String picPath = imgUpload();
+		if (picPath != null) {
+			activityNew.setPicPath(picPath);
+		}
+		checkToken("phoneActivityAddToken");
+		phoneActivityService.activityAdd(activityNew);
+		data.put("result", true);
+		data.put("msg", "保存成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+
+	/**
+	 * 修改活动页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/activity/phoneActivityEditPage")
+	public String activityEditPage() throws Exception {
+		
+		long id = paramLong("id");
+		PhoneActivity phoneActivityNew = phoneActivityService.find(id);
+		saveToken("phoneActivityEditToken");
+		request.setAttribute("phoneActivity", phoneActivityNew);
+		return "phoneActivityEditPage";
+	}
+
+	/**
+	 * 修改活动
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/modules/phone/activity/phoneActivityEdit")
+	public void activityEdit() throws Exception {
+		
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		PhoneActivity phoneActivityNew = model.prototype();
+		
+		String content = paramString("content");
+		String addTime = paramString("addTime");
+		
+		String type = paramString("type");
+		
+		if(null != type && "" != type){
+			phoneActivityNew.setType(type);
+		}else{
+			phoneActivityNew.setType("0");
+		}
+		
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+		
+		Date addTimeDate = sdf.parse(addTime);
+		phoneActivityNew.setAddTime(addTimeDate);
+		phoneActivityNew.setContent(content);
+		phoneActivityNew.setId(id);
+		phoneActivityNew.setUpdateTime(Calendar.getInstance().getTime());
+		phoneActivityNew.setUpdateUser(getOperatorId());
+		phoneActivityNew.setUpdateUserName(getOperatorUserName());
+		String picPath = imgUpload();
+		
+        if (picPath != null) {
+        	phoneActivityNew.setPicPath(picPath);
+        }
+        checkToken("phoneActivityEditToken");
+        phoneActivityService.update(phoneActivityNew);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 删除活动
+	 * @throws Exception
+	 */
+	@Action(value="/modules/phone/activity/phoneActivityDel")
+	public void activityDel() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		PhoneActivity phoneActivityNew = phoneActivityService.find(id);
+		phoneActivityNew.setIsDelete(true);
+		phoneActivityService.update(phoneActivityNew);
+		data.put("result", true);
+		data.put("msg", "删除成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 * 修改显示状态（显示/隐藏，是否置顶，是否推荐）
+	 * @throws Exception
+	 */
+	@Action(value="/modules/phone/activity/phoneActivityUpdate")
+	public void activityUpdate() throws Exception{
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		String type = paramString("type");
+		int value = paramInt("value");
+		PhoneActivity phoneActivityNew = phoneActivityService.find(id);
+		//状态，0：隐藏，1：显示(显示状态：2：隐藏，1：显示)
+		if("status".equals(type)){
+			if(value==1){
+				phoneActivityNew.setStatus((byte) 2);
+			}else{
+				phoneActivityNew.setStatus((byte) 1);
+			}
+		}else if("isTop".equals(type)){
+			if(value==1){
+				phoneActivityNew.setIsTop((byte) 0);
+			}else{
+				phoneActivityNew.setIsTop((byte) 1);
+			}
+		}else if("isRecommend".equals(type)){
+			if(value==1){
+				phoneActivityNew.setIsRecommend((byte) 0);
+			}else{
+				phoneActivityNew.setIsRecommend((byte) 1);
+			}
+		}
+		phoneActivityNew.setUpdateUser(getOperatorId());
+		phoneActivityNew.setUpdateUserName(getOperatorUserName());
+		phoneActivityNew.setUpdateTime(Calendar.getInstance().getTime());
+		phoneActivityService.update(phoneActivityNew);
+		data.put("result", true);
+		data.put("msg", "修改成功！");
+		printJson(getStringOfJpaObj(data));
+	}
+	
+
+}

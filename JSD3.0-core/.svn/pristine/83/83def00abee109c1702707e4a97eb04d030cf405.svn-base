@@ -1,0 +1,59 @@
+
+package com.ddtkj.p2psys.cardaward.dao;
+import java.util.List;
+
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.rongdu.common.dao.BaseDao;
+
+/**
+ * @描述: 云购卡转账记录dao
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-31   
+ */
+public interface CardAwardTransferDao extends BaseDao<CardAwardTransfer> {
+	
+	
+	/**
+	 * 更新转账记录请求状态
+	 * @param  cardTransfer 
+	 * @throws Exception   
+	 */ 
+	void updateCardTransferStatus(CardAwardTransfer cardTransfer);
+	
+	/**
+	 * 云购卡转账金额的汇总
+	 * @param model
+	 * @return
+	 */
+	String transferTotal(CardAwardTransferModel model);
+	
+	/**
+	 * 更新转账记录回调状态
+	 * @param  cardTransfer 
+	 * @throws Exception   
+	 */ 
+	void updateCardTransferReceiveStatus(CardAwardTransfer cardTransfer);
+	
+	/**
+	 * 根据订单号获取转账记录
+	 * @param  transNo
+	 * @throws Exception   
+	 */ 
+	CardAwardTransfer getCardTransferByTransNo(String transNo);
+	
+	/**
+	 * 根据订单号更新转账记录
+	 * @param  transNo 
+	 * @throws Exception   
+	 */ 
+	void updateCardTransferByTransNo(CardAwardTransfer cardTransfer);
+	//JSDP-116 fengguoqin 2015-05-19 start
+	/**
+	 * excel导出云购转账记录
+	 * @param  transNo 
+	 * @throws Exception   
+	 */ 
+	List excelTransferList(CardAwardTransferModel model);
+	//JSDP-116 fengguoqin 2015-05-19 end
+}

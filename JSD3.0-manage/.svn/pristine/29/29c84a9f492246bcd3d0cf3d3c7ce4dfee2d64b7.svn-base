@@ -1,0 +1,356 @@
+package com.ddtkj.manage.action.redPackage;
+
+import java.io.IOException;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.question.domain.Question;
+import com.ddtkj.p2psys.question.service.QuestionService;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.model.RpActivityModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpActivityService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * JSDP-184
+ */
+public class ManageRpActivityConfigAction extends BaseAction implements ModelDriven<RpActivityModel>{
+
+	private RpActivityModel model = new RpActivityModel();
+	@Resource
+	private RpActivityProduceService rpActivityProduceService;
+	@Resource
+	private DictService dictService;
+	@Resource
+	private RpActivityService rpActivityService;
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private QuestionService questionService;
+	
+	private Map<String, Object> data;
+	
+	/**
+	 * 活动红包产生记录展示的页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/rpActivityConfigPage")
+	public String rpActivityConfigPage(){
+		
+	
+		return "rpActivityManage";
+	}
+	/**
+	 * 活动红包产生的查询方法
+	 * @throws IOException
+	 */
+	@Action("/modules/redPackage/rpActivityConfigList")
+	public void rpActivityConfigList() throws IOException{
+		data = new HashMap<String, Object>();
+		PageDataList<RpActivityModel> pageDataList = rpActivityService.pageDataList(model);
+		
+		data.put("total", pageDataList.getPage().getTotal()); // 总行数
+		data.put("rows", pageDataList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+	
+	/**
+	 * 添加红包活动的页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/addRpActivityConfigPage")
+	public String addActivityConfigPage(){
+		saveToken("rpActivityAddToken");
+		return "addActivityConfigPage";
+	}
+	/**
+	 * 添加红包活动的方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/redPackage/addRpActivityConfig")
+	public void addActivityConfig() throws IOException{
+		
+		data = new HashMap<String, Object>();
+		RpActivity rpa = model.prototype();
+		rpa.setAddTime(Calendar.getInstance().getTime());
+		rpa.setOperator(getOperator());
+		RpActivity rpActivity = rpActivityService.addRpActivity(rpa);
+		data.put("result", true);
+		if(null != rpActivity){
+			data.put("msg", "保存成功");
+		}else{
+			data.put("msg", "保存失败");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	/**
+	 * 红包活动修改页面
+	 * @return
+	 */
+	@Action("/modules/redPackage/editRpActivityConfigPage")
+	public String editActivityConfigPage(){
+		saveToken("rpActivityEditToken");
+		RpActivity rpActivity = rpActivityService.findRpActivityById(model.getId());
+		request.setAttribute("rpActivity", rpActivity);
+		return "editActivityConfigPage";
+	}
+	/**
+	 * 红包活动修改方法
+	 * @throws IOException 
+	 */
+	@Action("/modules/redPackage/editRpActivityConfig")
+	public void editActivityConfig() throws IOException{
+		checkToken("rpActivityEditToken");
+		data = new HashMap<String, Object>();
+		RpActivity rpActivity = model.prototype();
+		if(null != rpActivity){
+			rpActivity.setUpdateOperator(getOperator());
+			rpActivity.setUpdateTime(Calendar.getInstance().getTime());
+		}
+		if(StringUtil.isNotBlank(model.getOptName())){
+			Operator operator = operatorService.getUserByUserName(model.getOptName());
+			rpActivity.setOperator(operator);
+		}else{
+			rpActivity.setOperator(getOperator());
+		}
+		RpActivity rpa = rpActivityService.updateRpActivity(rpActivity);
+		data.put("result", true);
+		if(null != rpa){
+			data.put("msg", "修改成功！");
+		}else{
+			data.put("msg", "修改失败！");
+		}
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+	/**
+	 * 红包产生导出excel
+	 * @throws Exception 
+	 */
+	@Action("/modules/redPackage/rpActivityExcel")
+	public void rpActivityExcel() throws Exception{
+		
+//		response.setContentType("application/msexcel;charset=UTF-8");
+//		
+//		String title = "活动红包产生Excel表";
+//
+//		String[] hearders = new String[] { "编号","用户名", "真实姓名", "活动类型", "产生金额", "产生时间", "备注"};// 表头数组
+//		String[] fields = new String[] { "object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]"};// 对象属性数组
+//		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+//		String downloadFile = "";
+//		downloadFile = title + System.currentTimeMillis() + ".xls";
+//		String infile = contextPath + "/data/export/" + downloadFile;
+//		List newList = rpActivityProduceService.excelListRpProduce(model);
+//		ExcelHelper.writeExcel(infile, newList, fields, hearders);
+//		this.export(infile, downloadFile);
+	}
+	
+	/**
+	 * 智力答题问题设置页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/questions/questionsManage")
+	public String questionsManage() throws Exception{
+		
+		return "questionsManage";
+	}
+	
+	/**
+	 * 问题列表
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/questions/questionsList")
+	public void questionsList() throws Exception{
+		
+		int page = paramInt("page");
+		int rows = paramInt("rows");
+		if(rows == 0){
+			rows = 5;
+		}
+		data = new HashMap<String, Object>();
+		Question question = new Question();
+		question.setContent(paramString("content"));
+		PageDataList<Question>  pageDataList = questionService.getPageList(question, page, rows);
+		
+		data.put("total", pageDataList.getPage().getTotal()); // 总行数
+		data.put("rows", pageDataList.getList()); // 集合对象
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+	
+	/**
+	 * 问题添加页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/questions/addQuestionsPage")
+	public String addQuestionsPage()throws Exception{
+		saveToken("addQuestionsToken");
+		return "addQuestionsPage";
+	}
+	
+	/**
+	 * 问题添加
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/questions/addQuestions")
+	public void addQuesetions()throws Exception{
+		Question question = (Question) paramModel(Question.class);
+		data = new HashMap<String,Object>();
+		if(null != question){
+			if(StringUtil.isBlank(question.getTitle())){
+				throw new BussinessException("请输入标题！", 1);
+			}
+			if(StringUtil.isBlank(question.getContent())){
+				throw new BussinessException("请输入内容！", 1);
+			}
+			if(StringUtil.isBlank(question.getAnswer1())){
+				throw new BussinessException("请输入答案A！", 1);
+			}
+			if(StringUtil.isBlank(question.getAnswer2())){
+				throw new BussinessException("请输入答案B！", 1);
+			}
+			if(StringUtil.isBlank(question.getAnswer3())){
+				throw new BussinessException("请输入答案C！", 1);
+			}
+			if(StringUtil.isBlank(question.getAnswer4())){
+				throw new BussinessException("请输入答案D！", 1);
+			}
+			if(StringUtil.isBlank(question.getRightAnswer())){
+				throw new BussinessException("请选择正确答案！", 1);
+			}
+			question.setAddUser(getOperatorUserName());
+			checkToken("addQuestionsToken");
+			questionService.save(question);
+			data.put("result", true);
+			data.put("msg","添加问题成功");
+		}else{
+			data.put("result", false);
+			data.put("msg","添加问题失败！");
+		}
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		return;
+	}
+	
+	/**
+	 * 问题修改页面
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/questions/editQuestionsPage")
+	public String editQuestionsPage()throws Exception{
+		Question question = questionService.find(paramLong("id"));
+		request.setAttribute("question", question);
+		saveToken("editQuestionsToken");
+		return "editQuestionsPage";
+	}
+	
+	/**
+	 * 问题修改
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/questions/editQuestions")
+	public void editQuesetions()throws Exception{
+		Question question = questionService.find(paramLong("id"));
+		data = new HashMap<String,Object>();
+		if(null != question){
+			if(StringUtil.isBlank(paramString("title"))){
+				throw new BussinessException("请输入标题！", 1);
+			}else{
+				question.setTitle(paramString("title"));
+			}
+			if(StringUtil.isBlank(paramString("content"))){
+				throw new BussinessException("请输入内容！", 1);
+			}else{
+				question.setContent(paramString("content"));
+			}
+			if(StringUtil.isBlank(paramString("answer1"))){
+				throw new BussinessException("请输入答案A！", 1);
+			}else{
+				question.setAnswer1(paramString("answer1"));
+			}
+			if(StringUtil.isBlank(paramString("answer2"))){
+				throw new BussinessException("请输入答案B！", 1);
+			}else{
+				question.setAnswer2(paramString("answer2"));
+			}
+			if(StringUtil.isBlank(paramString("answer3"))){
+				throw new BussinessException("请输入答案C！", 1);
+			}else{
+				question.setAnswer3(paramString("answer3"));
+			}
+			if(StringUtil.isBlank(paramString("answer4"))){
+				throw new BussinessException("请输入答案D！", 1);
+			}else{
+				question.setAnswer4(paramString("answer4"));
+			}
+			if(StringUtil.isBlank(paramString("rightAnswer"))){
+				throw new BussinessException("请选择正确答案！", 1);
+			}else{
+				question.setRightAnswer(paramString("rightAnswer"));
+			}
+			question.setUpdateUser(getOperatorUserName());
+			checkToken("editQuestionsToken");
+			questionService.update(question);
+			data.put("result", true);
+			data.put("msg","修改问题成功");
+		}else{
+			data.put("result", false);
+			data.put("msg","修改问题失败！");
+		}
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		return;
+	}
+	
+	/**
+	 * 问题删除
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/modules/redPackage/questions/deleteQuesetions")
+	public void deleteQuesetions()throws Exception{
+		Question question = questionService.find(paramLong("id"));
+		int count = questionService.getQuestionCount();
+		data = new HashMap<String,Object>();
+		if(count <=10){
+			data.put("result", false);
+			data.put("msg","删除问题失败：问题数不能小于10个，如不足10个请添加");
+		}else{
+			question.setIsDelete(1);
+			questionService.update(question);
+			data.put("result", true);
+			data.put("msg","删除问题成功");
+		}
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		return;
+	}
+	
+	public RpActivityModel getModel() {
+		return model;
+	}
+	public void setModel(RpActivityModel model) {
+		this.model = model;
+	}
+
+}

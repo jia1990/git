@@ -1,0 +1,133 @@
+package com.rongdu.p2psys.borrow.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowBespeakDao;
+import com.rongdu.p2psys.borrow.dao.BorrowConfigDao;
+import com.rongdu.p2psys.borrow.domain.BorrowBespeak;
+import com.rongdu.p2psys.borrow.domain.BorrowConfig;
+import com.rongdu.p2psys.borrow.model.BorrowBespeakModel;
+import com.rongdu.p2psys.borrow.service.BorrowBespeakService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.region.dao.RegionDao;
+import com.rongdu.p2psys.region.domain.Region;
+
+@Service("borrowBespeakService")
+public class BorrowBespeakServiceImpl implements BorrowBespeakService {
+
+	@Resource
+	private BorrowBespeakDao borrowBespeakDao;
+	@Resource
+	private RegionDao regionDao;
+	@Resource
+	private BorrowConfigDao borrowConfigDao;
+	
+	@Override
+	public BorrowBespeak doBespeak(BorrowBespeak borrowBespeak) {
+		borrowBespeak.setAddTime(new Date());
+		borrowBespeak.setAddIp(Global.getIP());
+		return borrowBespeakDao.save(borrowBespeak);
+	}
+
+	@Override
+	public PageDataList<BorrowBespeak> borrowBespeakList(
+			BorrowBespeak borrowBespeak, int page, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(page, size);
+		if(borrowBespeak != null){
+			if(borrowBespeak.getStatus() != 0){
+				param.addParam("status", borrowBespeak.getStatus());
+			}else {
+				param.addParam("status", 0);
+			}
+			if(!StringUtil.isBlank(borrowBespeak.getCompanyName())){
+				param.addParam("companyName", Operators.LIKE, borrowBespeak.getCompanyName());
+			}
+			param.addOrder(OrderType.DESC, "addTime");
+		}
+		PageDataList<BorrowBespeak> pageDataList = borrowBespeakDao.findPageList(param);
+		return pageDataList;
+	}
+
+	@Override
+	public BorrowBespeak find(long id) {
+		return borrowBespeakDao.find(id);
+	}
+
+	@Override
+	public void borrowBespeakEdit(BorrowBespeak borrowBespeak) {
+		borrowBespeakDao.update(borrowBespeak);
+	}
+
+	@Override
+	public PageDataList<BorrowBespeakModel> list(
+			BorrowBespeak borrowBespeak, int page, int size) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(page, size);
+		if(borrowBespeak != null){
+			if(borrowBespeak.getStatus() != 0){
+				param.addParam("status", borrowBespeak.getStatus());
+			}else {
+				param.addParam("status", 0);
+			}
+			if(!StringUtil.isBlank(borrowBespeak.getCompanyName())){
+				param.addParam("companyName", Operators.LIKE, borrowBespeak.getCompanyName());
+			}
+			param.addOrder(OrderType.DESC, "addTime");
+		}
+		PageDataList<BorrowBespeak> pList = borrowBespeakDao.findPageList(param);
+		PageDataList<BorrowBespeakModel> pageDataList = new PageDataList<BorrowBespeakModel>();
+		List<BorrowBespeakModel> bmList = new ArrayList<BorrowBespeakModel>();
+		pageDataList.setPage(pList.getPage());
+		if (pList.getList().size() > 0) {
+			for (int i = 0; i < pList.getList().size(); i++) {
+				BorrowBespeak b = (BorrowBespeak) pList.getList().get(i);
+				BorrowBespeakModel bm = BorrowBespeakModel.instance(b);
+				//加入标的类型名称
+                BorrowConfig bconfig = borrowConfigDao.find(Long.parseLong(b.getType()));
+                bm.setTypeName(bconfig.getName());
+				
+				Region regionProv = regionDao.findById(StringUtil.toLong(b.getProvince()));
+				Region regionCity = regionDao.findById(StringUtil.toLong(b.getCity()));
+				Region regionCounty = regionDao.findById(StringUtil.toLong(b.getCounty()));
+				if (regionProv != null) {
+					bm.setProvinceName(regionProv.getName());
+				}else{
+					bm.setProvinceName(bm.getProvince());
+				}
+				if (regionCity != null) {
+					bm.setCityName(regionCity.getName());
+				}else{
+					bm.setCityName(bm.getCity());
+				}
+				if (regionCounty != null) {
+					bm.setCountyName(regionCounty.getName());
+				}else{
+					bm.setCountyName(bm.getCounty());
+				}
+				bmList.add(bm);
+			}
+		}
+		pageDataList.setList(bmList);
+		return pageDataList;
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<BorrowBespeakModel> excelListBorrowBespeak(
+			BorrowBespeakModel model) {
+		return borrowBespeakDao.excelListBorrowBespeak(model);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+	
+}

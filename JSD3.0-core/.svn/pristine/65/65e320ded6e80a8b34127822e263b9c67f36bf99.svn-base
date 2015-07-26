@@ -1,0 +1,510 @@
+package com.rongdu.p2psys.user.service;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import com.ddtkj.p2psys.tpp.ymd.domain.AccountOpenHistory;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+
+/**
+ * 用户Service
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月26日
+ */
+public interface UserService {
+
+	/**
+	 * 根据userId获取user
+	 * 
+	 * @param userId 用户ID
+	 * @return User实体类
+	 */
+	User find(long userId);
+	
+	
+	/**
+	 * 保存用户
+	 */
+
+	User save(User user) ;
+	/**
+	 * 根据用户名获取用户ID
+	 * 
+	 * @param username 用户名
+	 * @return 用户ID
+	 * @throws Exception 异常
+	 */
+	long getUserIdByUserName(String username) throws Exception;
+
+	/**
+	 * 统计注册数量
+	 * 
+	 * @return 注册数量
+	 */
+	int count(QueryParam param);
+
+	/**
+	 * 根据用户名计数
+	 * 
+	 * @param username 用户名
+	 * @return 计数
+	 */
+	int countByUserName(String username);
+	/**
+	 * 根据昵称计数
+	 * 
+	 * @param username 用户名
+	 * @return 计数
+	 */
+	int countByNickName(String nickname);
+
+	/**
+	 * 根据用户名获取用户
+	 * 
+	 * @param username 用户名
+	 * @return User实体类
+	 */
+	User getUserByUserName(String username);
+
+	/**
+	 * 根据身份证计数
+	 * 
+	 * @param cardId 身份证
+	 * @return 计数
+	 */
+	int countByCardId(String cardId);
+	
+    /**
+     * 根据手机计数
+     * 
+     * @param mobilePhone 手机
+     * @return 计数
+     */
+    int countByMobilePhone(String mobilePhone);
+    
+    /**
+     * 根据邮箱计数
+     * 
+     * @param email 邮箱
+     * @return 计数
+     */
+    int countByEmail(String email);
+
+	/**
+	 * 根据邮箱获取用户
+	 * 
+	 * @param email 邮箱
+	 * @return User实体类
+	 */
+	User getUserByEmail(String email);
+	/**
+	 * 根据身份证号查询用户
+	 * @param cardNo
+	 * @return
+	 */
+	User getUserByCardNo(String cardNo);
+
+	/**
+	 * 根据手机号获取用户
+	 * 
+	 * @param mobilePhone 手机号
+	 * @return User实体类
+	 */
+	User getUserByMobilePhone(String mobilePhone);
+
+	/**
+	 * 注册
+	 * 
+	 * @param user User实体类
+	 * @return User实体类
+	 */
+	User doRegister(User user);
+
+	/**
+	 * 注册-激活邮箱
+	 * 
+	 * @param idstr ID
+	 * @return User实体类
+	 * @throws Exception 异常
+	 */
+	User activationEmail(String idstr) throws Exception;
+
+	/**
+	 * 注册-手机绑定
+	 * 
+	 * @param idstr ID
+	 * @return User实体类
+	 * @throws Exception 异常
+	 */
+	User activationPhone(String idstr,String code) throws Exception;
+	/**
+	 * 登录
+	 * 
+	 * @param user User实体类
+	 * @param isRsa 是否加密
+	 * @return User实体类
+	 * @throws Exception 异常
+	 */
+	User doLogin(User user, int isRsa) throws Exception;
+
+	/**
+	 * 修改用户密码
+	 * 
+	 * @param user User实体类
+	 * @return User User实体类
+	 */
+	User modifyPwd(User user);
+
+	/**
+	 * 修改用户交易密码
+	 * 
+	 * @param user User实体类
+	 * @return User User实体类
+	 */
+	User modifyPaypwd(User user);
+
+	/**
+	 * 实名认证更新真实姓名
+	 * 
+	 * @param userId 用户ID
+	 * @param realName 真实姓名
+	 */
+	void modifyRealname(long userId, String realName);
+
+	/**
+	 * 邮箱认证更新邮箱
+	 * 
+	 * @param userId 用户ID
+	 * @param email 邮箱
+	 */
+	void modifyEmail(long userId, String email);
+
+	/**
+	 * 手机认证更新手机号码
+	 * 
+	 * @param userId 用户ID
+	 * @param phone 手机号码
+	 */
+	void modifyPhone(long userId, String phone);
+	/**
+	 * 手机认证修改手机号及状态
+	 * @param userId 用户ID
+	 * @param phone 手机号码
+	 * @param status 状态
+	 */
+	void modifyPhone(long userId, String phone, String status) throws Exception;
+
+	/**
+	 * 用户登录
+	 * 
+	 * @param userName 用户名
+	 * @param pwd 密码
+	 * @return User User实体类
+	 */
+	User login(String userName, String pwd);
+
+	/**
+	 * 找回密码-通过邮箱找回-第1步
+	 * 
+	 * @param request HttpServletRequest
+	 * @param userName 用户名
+	 * @param email 邮箱
+	 * @return User实体类
+	 */
+	User getPwdByEmailStep1(HttpServletRequest request, String userName, String email);
+
+	/**
+	 * 找回密码-通过手机找回-第1步
+	 * 
+	 * @param request HttpServletRequest
+	 * @param userName 用户名
+	 * @param mobilePhone 手机
+	 * @return User实体类
+	 */
+	User getPwdByPhoneStep1(HttpServletRequest request, String userName, String mobilePhone);
+
+	/**
+	 * 获得用户清单列表
+	 * 
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<UserModel> userList(int pageNumber, int pageSize, UserModel model);
+	
+	/**
+	 * 获得用户清单列表2
+	 * 
+	 * JSDPBUG-99 20150505  sxy
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<UserModel> registerUserList(int pageNumber, int pageSize, UserModel model);
+	
+	/**
+	 * 获得用户清单列表-用于认证统计
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<User> proveStatisticsUserList(UserModel model, int page, int size);
+	
+	/**
+	 * 获得用户清单列表
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * @param pageNumber 
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	public PageDataList<User> registerStatisticsUserList(UserModel model, int page, int size);
+
+	/**
+	 * 获得用户认证信息列表
+	 * 
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<UserModel> userAttestationList(int pageNumber, int pageSize, UserModel model);
+
+    
+    /**
+     * 获取担保公司
+     * @return 担保公司列表
+     */
+    List<User> getVouchFirms();
+       
+    /**
+     * 查找已开通第三方支付的企业账户Email集合
+     * @return
+     */
+    PageDataList<User> findUserList(BorrowModel model);
+    
+    /**
+     * 查找已开通第三方支付的企业账户Email集合
+     * @return
+     */
+    PageDataList<User> findUserEmailList(int pageNumber, int pageSize, UserModel model);
+
+    /**
+     * 根据登录名查找用户
+     * @param username
+     * @return
+     */
+    User getUserByInfo(String username);
+    /**
+     * 推介人链接解密
+     * @param idstr
+     * @return
+     * @throws Exception
+     */
+	User activationReferrer(String idstr) throws Exception;
+	/**
+	 * 更新用户记录
+	 * @param user
+	 * @throws Exception
+	 */
+	void updateUser(User user) throws Exception;
+	
+	
+	/**
+	 * 注销用户
+	 * @param  userId
+	 *         用户ID
+	 * @throws  Exception
+	 * */
+	
+	boolean userOff(long userId,long optId);
+	
+	
+	/**
+	 * @author 李建云
+	 * 当月实现借款人数
+	 * 
+	 * @throws  Exception
+	 * */
+	int countUserBySuccessBorrow();
+	/**
+	 * @author 郭俊辉
+	 * 当月成功投资人数
+	 * @return
+	 */
+	long countUserBySuccessInvest();
+	/**
+	 * @author 郭俊辉
+	 * 当月成交金额
+	 * @return
+	 */
+	long AmountByMonthly();
+	/**
+	 * 查询所用用户信息，分页
+	 * @author xingjia
+	 * @param map
+	 * @param currentPage
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<User> getUserPageDataList(Map<String,Object> map,int currentPage,int pageSize);
+	
+	/**
+	 * 查询借款人在第三方开户的邮箱
+	 * @param map
+	 * @param currentPage
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<AccountOpenHistory> getAccountOpenList(Map<String,Object> map,int currentPage,int pageSize);
+	
+	/**
+	 * @author 郭俊辉
+	 * 发送邮箱激活链接或手机、邮箱验证码（不带user不对库操作）
+	 * 
+	 * @param userName 用户名
+	 * @param email 邮箱
+	 * @return
+	 */
+	public boolean sendActivateOrCode(String email, String mobile);
+	
+	/**
+	 * @author 郭俊辉
+	 * 通过验证码激活认证用户的邮箱
+	 * 
+	 * @param userName 用户名
+	 * @param email 邮箱
+	 */
+	public void activateEmailByCode(String userName, String email);
+	
+	/**
+	 * @author 郭俊辉
+	 * 注册(手机验证成功后入库修改认证状态)
+	 * 
+	 * @param user User实体类
+	 * @return User实体类
+	 */
+	User doRegisterNew(User user, User inviteUser);
+	
+	/**
+	 * 查询注册用户数 —— 投资人
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countUserByType(int userType);
+	
+	/**
+	 * 查询上月注册用户数 —— 投资人
+	 * @return
+	 * @author guojunhui@ddtkj.com
+	 */
+	int countUltimoTender();
+	
+	/**
+	 * @author 冯国琴
+	 * 用户昵称修改
+	 * @return
+	 */
+	void modifyNickName(long userId,String nickName);
+	
+	/**
+	 * @author 李建云
+	 * 用户未奖励邀请列表
+	 * @return
+	 */
+	PageDataList<UserModel> getUnInviteAwardList(UserModel userModel,long userId);
+	
+	/**
+	 *@author 李建云
+	 *未奖励邀请个数
+	 * */
+	int getUnInviteAwardSum(UserModel userModel,long userId);
+	
+	
+	/**
+	 *@author 李建云
+	 *更新用户第三方开户次数 
+	 * */
+	void modifythirdPartyOpenCount(long userId, int count) throws Exception;
+	
+	/**
+	 * 处理用户数据，初始化昵称等
+	 * @param  user
+	 * @throws Exception   
+	 */ 
+	public void handleUserTransfer(User user);
+	
+	/**
+	 * 根据用户类型和用户性质查找用户
+	 * @param  userType
+	 * @param  userNature
+	 * @throws Exception   
+	 */ 
+	List<User> findUserByType(String userType, String userNature);
+	
+	/**
+     * 按照地区获取投资人注册用户数据
+     * @author 孙晓勇
+     * @return 担保公司列表
+     */
+    int getUserRegisterByAddress(String province,String city,String area,String userType,String sex);
+    /**
+     * 市场专员查询
+     * @param model
+     * @return
+     */
+    PageDataList<UserModel> userMarketerList(UserModel model);
+	
+	/**
+	 * 根据查询条件查询已经开户的借款的人
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param model
+	 * @return
+	 */
+	PageDataList<User> findBorrowUserEmali(int pageNumber, int pageSize, UserModel model);
+	//JSDP-116 fengguoqin 2015-05-16 start
+	/**
+	 * excel导出用户信息
+	 * @return
+	 * @author 冯国琴
+	 */
+	public List<UserModel> excelListUser(UserModel model);
+	//JSDP-116 fengguoqin 2015-05-16 end
+
+	//JSDP-123 gjh 2015-5-19 start
+	/**
+	 * 根据属性获取用户列表
+	 * 
+	 */
+	List<User> findByProperty(String property, Object value);
+	//JSDP-123 gjh 2015-5-19 end
+	//JSDP-123 gjh 2015-5-29 start
+	/**
+	 * 判断用户中心中手机号是否被占用  true为存在  false为不存在
+	 */
+	boolean isPhoneExistFromUserCenter(String phone) throws Exception;
+	/**
+	 * 判断用户中心中邮箱是否被占用  true为存在  false为不存在
+	 */
+	boolean isEmailExistFromUserCenter(String email) throws Exception;
+	/**
+	 * 判断用户中心中邮箱是否被占用  true为存在  false为不存在
+	 */
+	boolean isUserNameExistFromUserCenter(String userName) throws Exception;
+	//JSDP-123 gjh 2015-5-29 end
+}

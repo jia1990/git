@@ -1,0 +1,29 @@
+package com.ddtkj.manage.action.goods;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.service.GoodsPicService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.p2psys.core.web.BaseAction;
+public class ManageGoodsPicAction extends BaseAction implements ModelDriven<DdtkjGoodsPic> {
+
+	private DdtkjGoodsPic model = new DdtkjGoodsPic();
+	
+	@Override
+	public DdtkjGoodsPic getModel() {
+		// TODO Auto-generated method stub
+		return model;
+	}
+	
+	@Resource
+	private GoodsPicService goodsPicService;
+	
+	@Action("/modules/user/score/deleteGoodsPic")
+	public void deletePic() throws Exception{
+		goodsPicService.deleteGoodsPic(model.getId());
+		printJson("SUCCESS");
+	}
+}

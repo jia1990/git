@@ -1,0 +1,35 @@
+
+<script type="text/javascript">
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/user/user/user/userOff.html');	
+   
+</script>
+<form id="form"  method="post">
+<div class="popForm sForm">
+		<div class="formitm">
+		     <label class="lab">用户名： </label>
+		     <div class="ipt">
+		     	${user.userName}
+		     </div>
+		</div>
+
+		<div class="formitm">
+		     <label class="lab">锁定状态：</label>
+		     <div class="ipt">
+		     	<#if user.isLocked == 'AY'>锁定用户<#elseif user.isLocked == 'NN'>未锁定用户
+		     	<#elseif user.isLocked == 'UY'>挂起</#if>
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">是否注销： </label>
+		     <div class="ipt">
+		     	<input type="radio" name="isLocked" value="FF"/>&nbsp;&nbsp;是  
+		     	<input type="radio" name="isLocked" value="${user.isLocked}" checked="checked"/>&nbsp;&nbsp;否 
+		     </div>
+		</div>
+		
+		<input name="userId" value="${user.userId}" type="hidden"/>
+		
+		<input name="userOffToken" value="${userOffToken}" type="hidden"/>
+</div>
+</form>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>红包记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	var viewCompairAccountLogTitle = "对账";
+    var viewCompairAccountLogUrl = "/modules/account/accountlog/compairAccountLogPage.html"
+    var viewCompairAccountLogParmeters = "'{0}','" + viewCompairAccountLogTitle + "',800,500,'" + viewCompairAccountLogUrl + "'";
+
+    
+    var rpListTitle="红包详细记录";
+    var rpListUrl =  "/modules/redPackage/rpDetailManagePage.html";
+ 	var rpListWinParmeters =  "'{0}','{2}','{3}','{4}','"+rpListTitle+"',800,500,'"+rpListUrl+"'";
+ 	
+ 	
+ 	var rpConsumeListTitle="红包消费详细记录";
+    var rpConsumeListUrl =  "/modules/redPackage/rpDetailManagePage.html?typeConsume=consume";
+ 	var rpConsumeListWinParmeters =  "'{0}','{2}','{3}','{4}','"+rpConsumeListTitle+"',800,500,'"+rpConsumeListUrl+"'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'rpManageList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'userName', title: '用户名', width:80},
+			{ field: 'realName', title: '真实姓名', width: 80},
+			{ field: 'type', title: '红包类型', width: 100,formatter:function(value, row, index){
+				if(value=='1'){
+					return "静态红包";
+				}
+				if(value=="2"){
+					return "动态红包";
+				}
+			}},
+			{ field: 'rpProMoney', title: '产生总额', width: 100,formatter:function(value, row, index){
+				
+				if(value=='null'){
+					return "0";
+				}
+				return value;
+			}},
+			{ field: 'rpUsedMoney', title: '消费总额', width: 100 ,formatter:function(value, row, index){
+				if(value=='null'){
+					return "0";
+				}
+				return value;
+			}},
+			{ field: 'startTime', title: '开始时间', width: 150,fixed:true, sortable:false,hidden:true}, 
+            { field: 'endTime', title: '结束时间', width: 150,fixed:true, sortable:false,hidden:true}, 
+			{field : 'action',title : '操作',width :70,fixed:true,
+				formatter : function(value, row, index) {
+					var str = '';
+					str += '&nbsp;'; 
+					str += "<@secAuthorizeUrl value='/redPackage/rpDetailBtn.html' >";
+					str += $.formatString('<img onclick="$.fn.formOptions.viewFunRp('+rpListWinParmeters+');" src="{1}" title="红包产生记录"/>', row.userName, '${theme_dir}/css/images/extjs_icons/zoom/zoom_in.png',row.startTime,row.endTime,row.type);
+					str += "</@secAuthorizeUrl>";
+					str += '&nbsp;'; 
+					str += "<@secAuthorizeUrl value='/redPackage/rpConsumeDetailBtn.html' >";
+					str += $.formatString('<img onclick="$.fn.formOptions.viewFunRp('+rpConsumeListWinParmeters+');" src="{1}" title="红包消费记录"/>', row.userName, '${theme_dir}/css/images/extjs_icons/zoom/zoom_out.png',row.startTime,row.endTime,row.type);
+					str += "</@secAuthorizeUrl>";
+					str += '&nbsp;'; 
+					return str;
+				}
+			} 
+			 ]],
+			 toolbar : '#toolbar',
+			 onLoadSuccess : function() {
+					$('#searchForm table').show();
+					parent.$.messager.progress('close');
+					$(this).datagrid('tooltip');
+			 }
+		});
+		
+	});
+	function exportExcel(){
+		var url = "/modules/redPackage/rpSumMoneyExcel.html";
+		var userName = $("#userName").val();
+		
+		var type = $("#type").val();
+		
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&type=" + type + "&startTime=" + startTime + "&endTime=" + endTime;
+		
+		window.location.href = url + sou;
+	}
+	
+
+	
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<!-- <li>时间：<input type="text" name="startTime" id="startTime" onFocus="WdatePicker({maxDate:'#F{$dp.$D(\'endTime\')}',readOnly:true})" class="searchTime"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" onFocus="WdatePicker({minDate:'#F{$dp.$D(\'startTime\')}',readOnly:true})" class="searchTime"/></li>
+            		-->
+            		<li>红包类型：
+	            		<select name="type" class="type">
+	            			<!-- 红包查询的修改-->
+				            <option value="1" selected="selected">静态红包</option>
+				            <option value="2">动态红包</option>
+						</select>
+					</li>
+            		<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>		
+
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/redPackage/rpExcelBtn.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

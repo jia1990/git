@@ -1,0 +1,197 @@
+﻿<html xmlns="http://www.w3.org/1999/xhtml">
+<#include "../../include/resource1.html"> 
+<head>
+<meta name="robots" content="" />
+<meta name="author"  content="网页作者的资料">
+<meta name="description" content="晋商贷官网-互联网金融理财投资平台"/>
+<meta name="keywords"content="晋商贷|互联网金融|P2P投资理财|人人贷|积木盒子|陆金所|网贷理财"/>
+<meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="renderer" content="webkit">
+<link rel="stylesheet" type="text/css" href="${webroot}${theme_dir}/media/css/electronic_bill.css" />
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<style>
+.c_elec_total{width:52px;height:52px;position:absolute;background:url(${webroot}${theme_dir}/images/electronic/assets.png) no-repeat -142px 0;}
+</style>
+<title>晋商贷-电子账单</title>
+</head>
+<script>
+$(function(){
+	/*$(".c_this_range").hover(function(){
+		$(this).next().show();
+	})*/
+	$(".c_this_range").click(function(){
+		$(this).next().show();
+	})
+	$(".c_date_range ul li").click(function(){
+		$(".c_this_range").text($(this).text()).next().hide();
+	})
+	$(".c_date_range ul").mouseleave(function(){
+		$(this).hide();
+	})
+})
+</script>
+<body>
+	<#include "../../include/header.html">
+	<div class="c_electronic_bill">
+		<h2 class="c_elec_title">
+			<b style="font-size: 24px;line-height: 52px;">晋商贷电子月账单</b>
+			<#if timeList??> 
+			<div class="c_date_range">
+				<div class="c_this_range">
+				<input id="currentYearMonth" type="hidden" value="${timeList[0].lastYearMonth!}">
+				${timeList[0].lastYearMonth!}（${timeList[0].lastMonthFirstDay!}-${timeList[0].lastMonthFinallyDay!}）
+				</div>
+				<ul>
+				 <#list timeList as item>	
+					<li data-val='${item.lastYearMonth!}'>${item.lastYearMonth!}（${item.lastMonthFirstDay!}-${item.lastMonthFinallyDay!}）</li>
+				</#list>
+				</ul>
+			</div>
+			<div class="c_cal_bj"><em id="currentMonth"></em>月</div>
+			</#if>
+		</h2>
+		<!-- 资产统计 -->
+		<div class="c_assets_stat">
+			<h4 class="c_assets_title">资产统计</h4>
+			<div class="c_assets_content">
+				<ul>
+					<li class="c_net_asset"></li>
+					<li class="c_asset_detail"></li>
+				</ul>
+				<div class="c_clear"></div>
+			</div>
+			<div class="c_summary">
+				<#if timeList??>
+				<div class="c_summary_content">小结：截止<em class="dateDisplay">${timeList[0].lastMonthFinallyDay!}</em>，您在晋商贷累计充值金额：<i id="rechargeDiaplay"></i> 元，累计提现金额：<em id="cashDisplay"></em> 元 。
+					<p>更多交易记录请 <a href="/member/recharge/log.html" style="padding-left:20px;">点此查看>></a></p>
+				</div>
+				</#if>
+				<span>※累计统计数据指理财初始日至账单结束日的交易数据。</span>
+			</div>
+		</div>
+		<!-- 理财统计 -->
+		<div class="c_finance_stat">
+			<h4 class="c_assets_title c_finance_title">理财统计<span></span></h4>
+			<div class="c_finance_all">
+				<ul class="c_finance_list">
+					<li class="c_list_left">
+						<div class="c_elec_total"></div>
+						<dl>
+							<dd class="c_ele_one">
+								<span><em id="investAmount"></em>元<b>本月投资金额</b></span>
+							</dd>
+							<dd class="c_ele_two">
+								<div style="font-size:17px;">债权投资</div>
+								<span><em id="buyCreditMoneyCurrentMonth"></em>&nbsp;元<b>本月投资总额</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em id="buyCreditCountCurrentMonth"></em>&nbsp;笔<b>本月投资</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+						<dl class="c_li_two">
+							<dd class="c_ele_one">
+								<span><em id="collectedAmount"></em>元<b>本月已赚金额</b></span>
+							</dd>
+							<dd class="c_ele_two" style="padding-top:24px;height:68px;">
+								<span><em id="buyCreditInterestCurrentMonth"></em>&nbsp;元<b>本月已赚金额</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em id="creditCollectedSum"></em>&nbsp;笔<b>本月结清</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+					</li>
+					<li class="c_list_right">
+						<dl>
+							<dd class="c_ele_two">
+								<div style="font-size:17px;">投标投资</div>
+								<span><em id="currentTenderAccount"></em>&nbsp;元<b>本月投资总额</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em id="currentTenderSum"></em>&nbsp;笔<b>本月投资</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+						<dl class="c_li_two">
+							<dd class="c_ele_two" style="padding-top:24px;height:68px;">
+								<span><em class="currentMonthCollectedMoney"></em>&nbsp;元<b>本月已赚金额</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em style="color:#000;" id="currentCollectedSum"></em>&nbsp;笔<b>本月结清</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+					</li>
+					<div class="c_clear"></div>
+				</ul>
+				<div class="c_summary c_finace_summary">	
+					<#if timeList??>					
+					<div class="c_summary_content">小结：截止<em class="dateDisplay">${timeList[0].lastMonthFinallyDay!}</em>，您在晋商贷累计投资：<i id="investAmounteEndTime"></i> 元，累计已赚金额：<em id="collectedMoneyEndTime"></em> 元。
+						<p>更多交易记录请 <a href="/member/invest/myInvest.html" style="padding-left:20px;">点此查看>></a></p>
+					</div>
+					</#if>
+				</div>		
+				<ul class="c_claim">
+					<li class="c_claim_left">
+						<div class="c_claim_one"></div>
+						<h2 class="c_claim_text">债权转让</h2>
+						<dl style="margin-top:30px;">
+							<dd class="c_ele_two">
+								<span><em id="creditFeeSoldAccount"></em>&nbsp;元<b>本月成交金额</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em id="creditFeeCurrentMonth"></em>&nbsp;元<b>本月缴纳手续费</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+						<dl>
+							<dd class="c_ele_two">
+								<span><em style="color:#ff7800;" id="unCreditSumCurrentMonth"></em>&nbsp;份<b>本月未转出笔数</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em id="creditSumCurrentMonth"></em>&nbsp;份<b>本月转出份数</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+					</li>
+					<li class="c_claim_left c_claim_right">
+						<div class="c_claim_two"></div>
+						<h2 class="c_claim_text">投标收益</h2>
+						<dl style="margin-top:30px;">
+							<dd class="c_ele_two">
+								<span><em  class="currentMonthCollectedMoney" style="color:#ff7800;"></em>&nbsp;元<b>本月已赚金额</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em id="userReturnedMoneySum"></em>&nbsp;元<b>回款续投金额</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+						<dl>
+							<dd class="c_ele_two">
+								<span><em id="cashMoneyMonth"></em>&nbsp;元<b>本月已提取金额</b></span>
+							</dd>
+							<dd class="c_ele_last">
+								<span><em>0</em>&nbsp;份<b>回款中项目数量</b></span>
+							</dd>
+							<div class="c_clear"></div>
+						</dl>
+						<div class="c_summary c_claim_summary">
+							<#if timeList??>
+							<div class="c_summary_content">小结：截止<em class="dateDisplay">${timeList[0].lastMonthFinallyDay!}</em>，您在晋商贷累计收益再投资金额：<em>0.00</em> 元 。
+								<p>更多交易记录请 <a href="/member/invest/myCollection.html" style="padding-left:20px;">点此查看>></a></p>
+							</div>
+							</#if>
+						</div>
+					</li>
+					<div class="c_clear"></div>
+				</ul>
+			</div>
+		</div>
+	</div>
+	<#include "../../include/footer.html">
+</body>
+<script>seajs.use('member/electronicBill');</script> 
+</html>
+

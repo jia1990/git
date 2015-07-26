@@ -1,0 +1,87 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityConsumeDao;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的消费（夺宝骑兵）
+ * @作者：wangchangwei@ddtkj.com  JSDP-203
+ * @创建时间：2015年4月14日 
+ */
+public class RpActivityRpMoneyIndianaJonesConsumeWorker extends RpActivityBaseWorker{
+	
+	public RpActivityRpMoneyIndianaJonesConsumeWorker(BorrowTender tender,double consumeMoney){
+		super(tender, consumeMoney);
+	}
+
+	@Override
+	public void autoHandld() {
+		RpActivityConsumeDao rpActivityConsumeDao = (RpActivityConsumeDao) BeanUtil.getBean("rpActivityConsumeDao");
+		RpActivityProduceDao rpActivityProduceDao = (RpActivityProduceDao) BeanUtil.getBean("rpActivityProduceDao");
+		if(consumeMoney > 0){
+			
+			
+			RpActivityConsume rpConsume = rpActivityConsumeDao.getActivityRpConsumeByTender(tender.getUser().getUserId(),tender.getBorrow().getId(),
+					RpActivityConsume.RP_CONSUME_STATUS_FZEN);
+			rpConsume.setConsumeStatus(RpActivityConsume.RP_CONSUME_STATUS_SUC);
+			rpActivityConsumeDao.update(rpConsume);
+			//JSDP-203 20150720 xingjia start
+			double validDynamic = rpConsume.getConsumeMoney();
+			
+			//查询用户获得红包的记录，循环list判断消费的金额属于那个红包
+			QueryParam param = QueryParam.getInstance();
+			param.addParam("isEnable", 1);
+			param.addParam("awardUser.userId", tender.getUser().getUserId());
+			param.addParam("activityType", RpActivity.ACTIVITY_INDIANA_JONES);
+			List<RpActivityProduce> rapList = rpActivityProduceDao.findByCriteria(param);
+			double dynamicReal = 0;
+			for(int i=0;i<rapList.size();i++){
+				RpActivityProduce rap = rapList.get(i);
+				double usableMoney = BigDecimalUtil.sub(rap.getActivityAward(),
+						BigDecimalUtil.add(rap.getRpConsume(),rap.getRpUnvalid()));
+				double dynamicRest = 0;
+				if((validDynamic-dynamicReal)>0 && usableMoney>0){
+					if( usableMoney<(validDynamic-dynamicReal)){
+						dynamicRest = usableMoney;
+						dynamicReal = BigDecimalUtil.add(dynamicReal,dynamicRest);
+					}else{
+						dynamicRest = (validDynamic-dynamicReal);
+						dynamicReal = BigDecimalUtil.add(dynamicReal,dynamicRest);
+					}
+					rap.setRpConsume(BigDecimalUtil.add(rap.getRpConsume(),dynamicRest));
+					rpActivityProduceDao.update(rap);
+				}
+			}
+			//JSDP-203 20150720 xingjia end
+			
+			
+			//记录活动红包的消费资金日志，第三方不需要处理
+			Global.setTransfer("user", tender.getUser());
+			Global.setTransfer("rpMoney", consumeMoney);
+			
+			map.put("rechargeMoney", consumeMoney);
+			map.put("logType", "indianaJonesConsume");
+			AbstractExecuter executer = ExecuterHelper.doExecuter("rpActivityConsumeInvesterExecuter");
+			executer.execute(map, tender.getUser());
+		}
+
+
+	}
+	
+
+}

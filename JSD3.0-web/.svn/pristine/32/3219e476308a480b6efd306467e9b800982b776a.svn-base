@@ -1,0 +1,76 @@
+package com.rongdu.p2psys.web.redpacket;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.ddtkj.p2psys.redpacket.model.RpActivityConsumeModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityConsumeService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * 活动红包的消费
+ *
+ */
+public class RpActivityConsumeAction extends BaseAction implements ModelDriven<RpActivityConsumeModel> {
+	private RpActivityConsumeModel model = new RpActivityConsumeModel();
+	
+	@Resource
+	private RpActivityConsumeService rpActivityConsumeService;
+	private Map<String, Object> data;
+	
+	public RpActivityConsumeModel getModel() {
+		return model;
+	}
+	public void setModel(RpActivityConsumeModel model) {
+		this.model = model;
+	}
+	//fengguoqin JSDP-215 20150709  start
+	/**
+	 * 活动红包的消费
+	 */
+	@Action("/rpActivity/rpActivityConsumeList")
+	public void rpActivityConsumeList()throws Exception{
+		User user = this.getSessionUser();
+		data = new HashMap<String, Object>();
+		if(user==null){
+			this.redirect("/user/login.html");
+		}else{
+			model.setUserId(user.getUserId());
+			//JSDP-203 xingjia 20150724 start
+			model.setConsumeStatus(RpActivityConsume.RP_CONSUME_STATUS_SUC);
+			//JSDP-203 xingjia 20150724 end
+			PageDataList<RpActivityConsumeModel> RpActivityConsumeDataList = rpActivityConsumeService.getPageList(model);
+			data.put("data", RpActivityConsumeDataList);
+			printJson(getStringOfJpaObj(data));
+			data=null;
+		}
+	}
+	//fengguoqin JSDP-215 20150709  end
+	/**
+	 * 失效的活动红包  JSDP-203
+	 * @throws Exception
+	 */
+	@Action("/rpActivity/rpActivityConsumeUnvalidList")
+	public void rpActivityConsumeUnvalid() throws Exception{
+		User user = this.getSessionUser();
+		data = new HashMap<String, Object>();
+		if(user==null){
+			this.redirect("/user/login.html");
+		}else{
+			model.setUserId(user.getUserId());
+			model.setConsumeStatus(RpActivityConsume.RP_CONSUME_STATUS_UNLI);
+			PageDataList<RpActivityConsumeModel> RpActivityConsumeDataList = rpActivityConsumeService.getPageList(model);
+			data.put("data", RpActivityConsumeDataList);
+			printJson(getStringOfJpaObj(data));
+			data=null;
+		}
+	}
+	
+}

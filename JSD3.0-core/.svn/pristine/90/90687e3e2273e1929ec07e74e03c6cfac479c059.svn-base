@@ -1,0 +1,87 @@
+package com.ddtkj.p2psys.tpp.ymd.model.record.recharge;
+
+import java.util.Date;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountRechargeDao;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdRecharge;
+import com.ddtkj.p2psys.tpp.ymd.model.record.AbstractYmdEvent;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.NumberUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月8日 
+ */
+public class AccountRechargeRecord extends AbstractYmdEvent<AccountRecharge>{
+	
+	private AccountRechargeDao accountRechargeDao;
+	
+	private  AccountRecharge accountRecharge;
+    //JSDMOBILE-10 wcw 2015-3-20 start  充值來源优化
+	public AccountRechargeRecord(YmdRecharge y,User u,String addIp,String rechargeWay) {
+         getT();
+         init();
+         accountRecharge=accountRechargeDao.getRechargeByTradeno(y.getOutTradeNo());
+         if(accountRecharge!=null){
+        	 t=accountRecharge;
+         }
+         String recharge_rate=StringUtil.isBlank(Global.getString("recharge_rate"))?"0":Global.getString("recharge_rate");
+         String recharge_fee=StringUtil.isBlank(Global.getString("recharge_fee"))?"0":Global.getString("recharge_fee");
+         String isfree= StringUtil.isBlank(Global.getString("recharge_is_free"))?"0":Global.getString("recharge_is_free");
+         t.setTradeNo(y.getOutTradeNo());
+         t.setRechargeAmount(NumberUtil.getDouble2(y.getAmount()));
+         t.setRechargeType("00");
+         t.setUserRemark(y.urlDecoder(y.getRemark()));
+        // t.setRechargeWay(AccountTradeConstant.TRADE_WAY_PC);
+         t.setRechargeWay(rechargeWay);
+         t.setRechargeFee(NumberUtil.getDouble2(recharge_fee));
+         t.setRechargeRate(NumberUtil.getDouble2(recharge_rate));
+         t.setIsfree(isfree);
+         t.setInAccountAmount(NumberUtil.getDouble2(y.getAmount())-NumberUtil.getDouble2(y.getFee()));
+         t.setSendCleartextInfo(y.SumitSignInfoJsonStr());
+         t.setUser(u);
+         t.setAddTime(new Date());
+         t.setTradeStatus("55");
+         t.setAddIp(addIp);
+	}
+	//JSDMOBILE-10 wcw 2015-3-20 end
+	@Override
+	public void addRecord() {
+		 if(accountRecharge!=null){
+		     accountRechargeDao.update(t);
+		 }else{
+			 accountRechargeDao.save(t);
+		 }
+	}
+
+	@Override
+	public void init() {
+		accountRechargeDao=(AccountRechargeDao) BeanUtil.getBean("ymdAccountRechargeDao");
+		
+	}
+
+	public AccountRechargeDao getAccountRechargeDao() {
+		return accountRechargeDao;
+	}
+
+	public void setAccountRechargeDao(AccountRechargeDao accountRechargeDao) {
+		this.accountRechargeDao = accountRechargeDao;
+	}
+
+	public AccountRecharge getAccountRecharge() {
+		return accountRecharge;
+	}
+
+	public void setAccountRecharge(AccountRecharge accountRecharge) {
+		this.accountRecharge = accountRecharge;
+	}
+	
+	
+      
+}

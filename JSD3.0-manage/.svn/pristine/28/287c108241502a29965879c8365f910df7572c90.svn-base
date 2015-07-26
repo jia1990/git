@@ -1,0 +1,150 @@
+/**
+ * 
+ */
+package com.ddtkj.manage.action.openAccount;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserRealnameApplication;
+import com.ddtkj.p2psys.user.model.UserRealnameApplicationModel;
+import com.ddtkj.p2psys.user.service.UserRealnameApplicationService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.VerifyLog;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.service.VerifyLogService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：前台开户资料审核
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月30日 
+ */
+public class OpenAccountAction extends BaseAction<UserRealnameApplicationModel> implements ModelDriven<UserRealnameApplicationModel>{
+
+	private UserRealnameApplicationModel model = new UserRealnameApplicationModel();
+
+	public UserRealnameApplicationModel getModel() {
+		return model;
+	}
+
+	public void setModel(UserRealnameApplicationModel model) {
+		this.model = model;
+	}
+	
+	
+	@Resource
+	private UserRealnameApplicationService userRealnameApplicationService;
+	
+	@Resource
+	private UserService userService;
+	
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private VerifyLogService verifyLogService;
+	
+	private User user;
+	
+	private Map<String, Object> data = new HashMap<String, Object>();
+	
+	/**
+	 *@author 李建云
+	 *审核资料查询
+	 * 
+	 * */
+	@Action("/modules/user/user/openAccount/openAccountManager")
+	public  String openAccountManager(){
+		
+		return "openAccountManager";
+	}
+	
+	/**
+	 *@author 李建云
+	 *审核资料列表 
+	 **/
+	@Action("/modules/user/user/openAccount/openAccountList")
+	public  void openAccountList() throws IOException{
+		
+		PageDataList<UserRealnameApplicationModel> list = userRealnameApplicationService.list(model, paramInt("page"), paramInt("rows"));
+		data.put("total", list.getPage().getTotal());
+		data.put("rows", list.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+	
+	/**
+	 *@author 李建云
+	 * 审核页面
+	 * @throws Exception 
+	 * */
+	@Action("/modules/user/user/openAccount/openAccountEditPage")
+	public String  openAccountEditPage() throws Exception{
+		
+		//initRSAME();
+		//saveToken("userLockEditToken");
+		long userId = paramLong("id");
+		UserRealnameApplication userRealnameApplication = userRealnameApplicationService.findUserRealnameApplication(userId);
+		request.setAttribute("userRealnameApplication", userRealnameApplication);
+		return "openAccountEditPage";
+	}
+	
+	/**
+	 *@author 孙晓勇
+	 * 查看审核页面
+	 * @time 2015年4月13日
+	 * @throws Exception 
+	 * */
+	@Action("/modules/user/user/openAccount/openAccountViewPage")
+	public String  openAccountViewPage() throws Exception{
+		
+		//initRSAME();
+		//saveToken("userLockViewToken");
+		long userId = paramLong("id");
+		UserRealnameApplication userRealnameApplication = userRealnameApplicationService.findUserRealnameApplication(userId);
+		
+		Operator op = operatorService.getUserById(userRealnameApplication.getOperateUser());
+		request.setAttribute("userRealnameApplication", userRealnameApplication);
+		request.setAttribute("operatorName", op.getName());
+		request.setAttribute("operatorUserName", op.getUserName());
+		
+		return "openAccountViewPage";
+	}
+	
+	/**
+	 *@author 李建云
+	 *审核通过 
+	 * @throws Exception 
+	 * */
+	@Action("/modules/user/user/openAccount/openAccountEdit")
+	public void openAccountEdit() throws Exception{
+	long userId = 	this.paramInt("id");
+	String remark = this.paramString("remark");
+	
+	user = userService.find(userId);
+	user.setUserId(userId);
+	model.setUser(user);
+	model.setRemark(remark);
+	model.setOperateUser(this.getOperator().getId());
+	model.setCardNo(user.getCardNO());
+	userRealnameApplicationService.modifyUserRealnameApplicationStatus(model);
+	//实名认证添加审核日志 gjh 2015-5-11 start
+	VerifyLog verifyLog = new VerifyLog(getOperator(),"real",userId,1,model.getStatus()+"",model.getRemark());
+	verifyLogService.save(verifyLog);
+	//实名认证添加审核日志 gjh 2015-5-11 end
+	data.put("msg", "审核成功！");
+	data.put("result", true);
+	printJson(getStringOfJpaObj(data));
+	}
+	
+	
+	
+}

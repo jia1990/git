@@ -1,0 +1,510 @@
+package com.ddtkj.p2psys.borrow.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Entity
+@Table(name = "t_jsd_borrow_tender")
+public class BorrowTender implements Serializable{
+
+	private static final long serialVersionUID = -5904766438676094831L;
+	
+	/** 债权已转让**/
+	public static final int CREDIT_OUT_YES = 2;
+	public static final int CREDIT_OUT_NO = 1;
+
+	/**
+	 * 主键
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	@ManyToOne
+	@JoinColumn(name = "user_id")
+	private User user;// 投资人
+	@ManyToOne
+	@JoinColumn(name = "borrow_id")
+	private Borrow borrow;//借款标
+	private int status;// 状态 0投标待处理，1成功，2失败  
+	private double money;// 投标金额
+	private double account;// 借款总额
+	private double repaymentAccount; //预还总额(+利息)
+	private double interest; //利息
+	private double repaymentYesAccount;//已还金额
+	private double repaymentYesInterest;//已还利息
+	private double waitAccount;//待还总额
+	private double waitInterest;//待还利息
+	private byte tenderType;// 投标类型 0网站投标;1自动投标;2手机投标  3：补单投标
+	private Date addTime;//添加时间
+	private String addIp;//ip
+	private String tenderBilNo; //登记债权时候的订单号
+	private String rpBilNo;//红包订单号（流水号）
+	private String tenderAwardBilNo;//投标奖励订单号（流水号）
+	private String borrowManageFeeBilNo;//借款管理费订单号（流水号）
+	//JSDBET-872 wcw 2015-3-28 start
+	private String guaranteeTradeNo;//担保费订单号
+	//JSDBET-872 wcw 2015-3-28 end
+	private String tenderTradeNo;//交易批次号（针对即投即生息的标）
+	private double useRecharge; //投标使用充值
+	private double useAward;   //投标使用奖励
+	private double useInterest;//投标使用利息
+	private double useReturnedMoney;//投标使用回款
+	private double useRpDynamic ; //使用的钱袋子金额
+	private double produceRpDynamic; //本次投标产生的钱袋子金额
+	//JSDP-228 fenggq  投标使用静态红包    20150720 start 
+	private String staticRedPacketBilNo;//静态红包的订单号（流水号）
+	private double  useRpStatic;//投标使用静态红包
+	@Transient
+    private String isUseRpStatic; //是否使用静态红包   【Y 是,  N 否】
+	//JSDP-228  fenggq 20150720   投标使用静态红包   end
+	@Transient
+    private String isUseRecharge; //是否使用充值   【Y 是,  N 否】
+	@Transient
+    private String isUseAward;  //是否使用奖励 【Y 是 , N 否】
+	@Transient
+    private String isUseInterest; //是否使用利息 【Y 是,  N 否】
+	@Transient
+    private String isUseReturnedMoney; //是否使用回款 【Y 是,  N 否】
+	@Transient
+    private String isUseRpDynamicMoney; //是否使用钱袋子 【Y 是,  N 否】
+	
+	private int iscredit ; // 是否已转让【1 未转让，2 已转让】 
+	
+	//JSDP-53 wcw 2015-04-20 start
+	private String compareResult;
+	
+	public String getCompareResult() {
+		return compareResult;
+	}
+
+	public void setCompareResult(String compareResult) {
+		this.compareResult = compareResult;
+	}
+
+	//JSDP-53 wcw 2015-04-20 end
+	/**
+	 * 获取主键
+	 * 
+	 * @return 主键
+	 */
+	public long getId() {
+		return id;
+	}
+
+	/**
+	 * 设置主键
+	 * 
+	 * @param id 要设置的主键
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+
+	public Borrow getBorrow() {
+		return borrow;
+	}
+
+	public void setBorrow(Borrow borrow) {
+		this.borrow = borrow;
+	}
+
+	/**
+	 * 获取还款状态 0投标待处理，1成功，2失败
+	 * 
+	 * @return 还款状态 0投标待处理，1成功，2失败
+	 */
+	public int getStatus() {
+		return status;
+	}
+
+	/**
+	 * 设置还款状态 0投标待处理，1成功，2失败
+	 * 
+	 * @param status 0投标待处理，1成功，2失败
+	 */
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	/**
+	 * 获取投标金额
+	 * 
+	 * @return 投标金额
+	 */
+	public double getMoney() {
+		return money;
+	}
+
+	/**
+	 * 设置投标金额
+	 * 
+	 * @param money 要设置的投标金额
+	 */
+	public void setMoney(double money) {
+		this.money = money;
+	}
+
+	/**
+	 * 获取借款总额
+	 * 
+	 * @return 借款总额
+	 */
+	public double getAccount() {
+		return account;
+	}
+
+	/**
+	 * 设置借款总额
+	 * 
+	 * @param account 要设置的借款总额
+	 */
+	public void setAccount(double account) {
+		this.account = account;
+	}
+
+	/**
+	 * 获取预还总额(+利息)
+	 * 
+	 * @return 预还总额(+利息)
+	 */
+	public double getRepaymentAccount() {
+		return repaymentAccount;
+	}
+
+	/**
+	 * 设置预还总额(+利息)
+	 * 
+	 * @param repaymentAccount 要设置的预还总额(+利息)
+	 */
+	public void setRepaymentAccount(double repaymentAccount) {
+		this.repaymentAccount = repaymentAccount;
+	}
+
+	/**
+	 * 获取利息
+	 * 
+	 * @return 利息
+	 */
+	public double getInterest() {
+		return interest;
+	}
+
+	/**
+	 * 设置利息
+	 * 
+	 * @param interest 要设置的利息
+	 */
+	public void setInterest(double interest) {
+		this.interest = interest;
+	}
+
+	/**
+	 * 获取已还金额
+	 * 
+	 * @return 已还金额
+	 */
+	public double getRepaymentYesAccount() {
+		return repaymentYesAccount;
+	}
+
+	/**
+	 * 设置已还金额
+	 * 
+	 * @param repaymentYesAccount 要设置的已还金额
+	 */
+	public void setRepaymentYesAccount(double repaymentYesAccount) {
+		this.repaymentYesAccount = repaymentYesAccount;
+	}
+
+	/**
+	 * 获取已还利息
+	 * 
+	 * @return 已还利息
+	 */
+	public double getRepaymentYesInterest() {
+		return repaymentYesInterest;
+	}
+
+	/**
+	 * 设置已还利息
+	 * 
+	 * @param repaymentYesInterest 要设置的已还利息
+	 */
+	public void setRepaymentYesInterest(double repaymentYesInterest) {
+		this.repaymentYesInterest = repaymentYesInterest;
+	}
+
+	/**
+	 * 获取待还总额
+	 * 
+	 * @return 待还总额
+	 */
+	public double getWaitAccount() {
+		return waitAccount;
+	}
+
+	/**
+	 * 设置待还总额
+	 * 
+	 * @param waitAccount 要设置的待还总额
+	 */
+	public void setWaitAccount(double waitAccount) {
+		this.waitAccount = waitAccount;
+	}
+
+	/**
+	 * 获取待还利息
+	 * 
+	 * @return 待还利息
+	 */
+	public double getWaitInterest() {
+		return waitInterest;
+	}
+
+	/**
+	 * 设置待还利息
+	 * 
+	 * @param waitInterest 要设置的待还利息
+	 */
+	public void setWaitInterest(double waitInterest) {
+		this.waitInterest = waitInterest;
+	}
+
+	/**
+	 * 获取投标类型 0网站投标;1自动投标;2手机投标
+	 * 
+	 * @return 投标类型 0网站投标;1自动投标;2手机投标
+	 */
+	public byte getTenderType() {
+        return tenderType;
+    }
+
+	/**
+	 * 设置投标类型 0网站投标;1自动投标;2手机投标
+	 * 
+	 * @param tenderType 要设置的投标类型 0网站投标;1自动投标;2手机投标
+	 */
+    public void setTenderType(byte tenderType) {
+        this.tenderType = tenderType;
+    }
+	
+	public Date getAddTime() {
+		return addTime;
+	}
+
+    public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	/**
+	 * 获取ip
+	 * 
+	 * @return ip
+	 */
+	public String getAddIp() {
+		return addIp;
+	}
+
+	/**
+	 * 设置ip
+	 * 
+	 * @param addIp 要设置的ip
+	 */
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	public String getTenderBilNo() {
+		return tenderBilNo;
+	}
+
+	public void setTenderBilNo(String tenderBilNo) {
+		this.tenderBilNo = tenderBilNo;
+	}
+
+	public double getUseRecharge() {
+		return useRecharge;
+	}
+
+	public void setUseRecharge(double useRecharge) {
+		this.useRecharge = useRecharge;
+	}
+
+	public double getUseAward() {
+		return useAward;
+	}
+
+	public void setUseAward(double useAward) {
+		this.useAward = useAward;
+	}
+
+	public double getUseInterest() {
+		return useInterest;
+	}
+
+	public void setUseInterest(double useInterest) {
+		this.useInterest = useInterest;
+	}
+
+	public double getUseReturnedMoney() {
+		return useReturnedMoney;
+	}
+
+	public void setUseReturnedMoney(double useReturnedMoney) {
+		this.useReturnedMoney = useReturnedMoney;
+	}
+
+	public String getIsUseRecharge() {
+		return isUseRecharge;
+	}
+
+	public void setIsUseRecharge(String isUseRecharge) {
+		this.isUseRecharge = isUseRecharge;
+	}
+
+	public String getIsUseAward() {
+		return isUseAward;
+	}
+
+	public void setIsUseAward(String isUseAward) {
+		this.isUseAward = isUseAward;
+	}
+
+	public String getIsUseInterest() {
+		return isUseInterest;
+	}
+
+	public void setIsUseInterest(String isUseInterest) {
+		this.isUseInterest = isUseInterest;
+	}
+
+	public String getIsUseReturnedMoney() {
+		return isUseReturnedMoney;
+	}
+
+	public void setIsUseReturnedMoney(String isUseReturnedMoney) {
+		this.isUseReturnedMoney = isUseReturnedMoney;
+	}
+
+	public double getUseRpDynamic() {
+		return useRpDynamic;
+	}
+
+	public void setUseRpDynamic(double useRpDynamic) {
+		this.useRpDynamic = useRpDynamic;
+	}
+
+	public String getIsUseRpDynamicMoney() {
+		return isUseRpDynamicMoney;
+	}
+
+	public void setIsUseRpDynamicMoney(String isUseRpDynamicMoney) {
+		this.isUseRpDynamicMoney = isUseRpDynamicMoney;
+	}
+
+	public double getProduceRpDynamic() {
+		return produceRpDynamic;
+	}
+
+	public void setProduceRpDynamic(double produceRpDynamic) {
+		this.produceRpDynamic = produceRpDynamic;
+	}
+
+	public int getIscredit() {
+		return iscredit;
+	}
+
+	public void setIscredit(int iscredit) {
+		this.iscredit = iscredit;
+	}
+
+	public String getRpBilNo() {
+		return rpBilNo;
+	}
+
+	public void setRpBilNo(String rpBilNo) {
+		this.rpBilNo = rpBilNo;
+	}
+
+	public String getTenderAwardBilNo() {
+		return tenderAwardBilNo;
+	}
+
+	public void setTenderAwardBilNo(String tenderAwardBilNo) {
+		this.tenderAwardBilNo = tenderAwardBilNo;
+	}
+
+	public String getBorrowManageFeeBilNo() {
+		return borrowManageFeeBilNo;
+	}
+
+	public void setBorrowManageFeeBilNo(String borrowManageFeeBilNo) {
+		this.borrowManageFeeBilNo = borrowManageFeeBilNo;
+	}
+
+	public String getTenderTradeNo() {
+		return tenderTradeNo;
+	}
+
+	public void setTenderTradeNo(String tenderTradeNo) {
+		this.tenderTradeNo = tenderTradeNo;
+	}
+	//JSDBET-872 wcw 2015-3-28 start
+	public String getGuaranteeTradeNo() {
+		return guaranteeTradeNo;
+	}
+
+	public void setGuaranteeTradeNo(String guaranteeTradeNo) {
+		this.guaranteeTradeNo = guaranteeTradeNo;
+	}
+	//JSDBET-872 wcw 2015-3-28 end
+	
+	//JSDP-228 fenggq  投标使用静态红包    20150720 start 
+	public String getStaticRedPacketBilNo() {
+		return staticRedPacketBilNo;
+	}
+	public void setStaticRedPacketBilNo(String staticRedPacketBilNo) {
+		this.staticRedPacketBilNo = staticRedPacketBilNo;
+	}
+	public double getUseRpStatic() {
+		return useRpStatic;
+	}
+	public void setUseRpStatic(double useRpStatic) {
+		this.useRpStatic = useRpStatic;
+	}
+	public String getIsUseRpStatic() {
+		return isUseRpStatic;
+	}
+	public void setIsUseRpStatic(String isUseRpStatic) {
+		this.isUseRpStatic = isUseRpStatic;
+	}
+
+	//JSDP-228 fenggq  投标使用静态红包    20150720 end 
+}

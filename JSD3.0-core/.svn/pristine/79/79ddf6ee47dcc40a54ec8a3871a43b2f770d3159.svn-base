@@ -1,0 +1,170 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.transfer.dao.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.transfer.dao.AccountTransferDao;
+import com.ddtkj.p2psys.transfer.domain.AccountTransfer;
+import com.ddtkj.p2psys.transfer.model.AccountTransferModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+/**
+ * @描述：1.0资金账户转账到3.0 dao层实现类
+ * @作者：wangchangwei@ddtkj.com
+ * @创建时间：2015年3月26日 
+ */
+@Repository("accountTransferDao")
+public class AccountTransferDaoImpl extends BaseDaoImpl<AccountTransfer> implements AccountTransferDao {
+
+	@Override
+	public PageDataList<AccountTransfer> getTransferList(AccountTransferModel at,String startTime,String endTime) {
+  		PageDataList<AccountTransfer> pageDataList = new PageDataList<AccountTransfer>();
+		StringBuffer sb = new StringBuffer("select * from t_jsd_account_transfer at,t_jsd_user u where at.user_id=u.user_id ");
+		if(StringUtil.isNotBlank(at.getTransferNo())){
+			sb.append(" and at.transfer_no="+at.getTransferNo());
+		}
+		if(StringUtil.isNotBlank(startTime)){
+			sb.append(" and at.add_time>="+startTime);
+		}
+        if(StringUtil.isNotBlank(endTime)){
+        	sb.append(" and at.add_time<"+endTime);
+		}
+		Query query = em.createNativeQuery(sb.toString(), AccountTransfer.class);
+		Page page = new Page(query.getResultList().size(), at.getPage(), at.getSize());
+		query.setFirstResult((at.getPage() - 1) * at.getSize());
+		query.setMaxResults(at.getSize());
+		List<AccountTransfer> list = query.getResultList();
+		pageDataList.setList(list);
+		pageDataList.setPage(page);
+		return pageDataList;
+	}
+
+	@Override
+	public PageDataList<AccountTransfer> getTransferList(
+			AccountTransferModel model) {
+		PageDataList<AccountTransfer> pageDataList = new PageDataList<AccountTransfer>();
+		
+		//JSDP-199 gjh 2015-6-27 start
+		//JSDP-55 gjh 2015-5-21 start
+		StringBuffer sb = new StringBuffer("select * from t_jsd_account_transfer at LEFT JOIN t_jsd_user u ON at.user_id=u.user_id LEFT JOIN t_jsd_user u1 ON at.pop_user_id =u1.user_id WHERE 1=1 ");
+		//JSDP-55 gjh 2015-5-21 end
+		if(StringUtil.isNotBlank(model.getTransferNo())){
+			sb.append(" and at.transfer_no='"+model.getTransferNo()+"'");
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sb.append(" and u.user_name like '%"+model.getUserName()+"%'");
+		}
+		if(StringUtil.isNotBlank(model.getPopUserName())){
+			sb.append(" and u1.user_name like '%"+model.getPopUserName()+"%'");
+		}
+		
+		//JSDP-199 gjh 2015-6-27 end
+		//JSDP-156 xingjia 2015-05-22 start
+		if(StringUtil.isNotBlank(model.getTransferStatus()) && !model.getTransferStatus().equals("89")){
+			sb.append(" and at.transfer_status="+model.getTransferStatus());
+		}
+		if(0!=model.getTransferType() && 99 != model.getTransferType()){
+			sb.append(" and at.transfer_type = "+model.getTransferType());
+		}
+		//JSDP-156 xingjia 2015-05-22 start
+		
+		if(null != model.getStartTime()){
+			sb.append(" and at.add_time>='"+DateUtil.dateStr2(model.getStartTime())+"'");
+		}
+        if(null != model.getEndTime()){
+        	sb.append(" and at.add_time<'"+DateUtil.dateStr2(model.getEndTime())+"'");
+		}
+        sb.append(" order by at.add_time desc ");
+		Query query = em.createNativeQuery(sb.toString(), AccountTransfer.class);
+		Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+		query.setFirstResult((model.getPage() - 1) * model.getSize());
+		query.setMaxResults(model.getSize());
+		List<AccountTransfer> list = query.getResultList();
+		pageDataList.setList(list);
+		pageDataList.setPage(page);
+		return pageDataList;
+	}
+
+	@Override
+	public PageDataList<AccountTransfer> getForeTransferList(
+			AccountTransferModel model) {
+		PageDataList<AccountTransfer> pageDataList = new PageDataList<AccountTransfer>();
+		StringBuffer sb = new StringBuffer("select * from t_jsd_account_transfer at,t_jsd_user u where at.user_id=u.user_id ");
+		sb.append(" and u.user_id ="+model.getUser().getUserId());
+		//JSDP-156 xingjia 2015-05-22 start
+		if(model.getTransferType()==4){
+			sb.append(" and at.transfer_type="+model.getTransferType());
+			if(StringUtil.isNotBlank(model.getTransferStatus()) ){
+				sb.append(" and at.transfer_status = "+model.getTransferStatus());
+			}
+			if (null != model.getStartTime()) {
+				String startTime = DateUtil.dateStr(model.getStartTime(), "yyyy-MM-dd");
+				
+				sb.append(" and at.add_time >='"+(startTime + " 00:00:00")+"'");
+			}
+			Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+			if (model.getTime() == 7) {
+				sb.append(" and at.add_time >='"+DateUtil.dateStr(DateUtil.rollDay(nowdate, -7),"yyyy-MM-dd mm:HH:ss")+"'");
+				sb.append(" and at.add_time <'"+DateUtil.dateStr(nowdate,"yyyy-MM-dd mm:HH:ss")+"'");
+				
+			} else if (model.getTime() > 0 && model.getTime() < 4){
+				sb.append(" and at.add_time >="+DateUtil.dateStr(DateUtil.rollMon(nowdate, -model.getTime()),"yyyy-MM-dd mm:HH:ss"));
+				sb.append(" and at.add_time <'"+DateUtil.dateStr(nowdate,"yyyy-MM-dd mm:HH:ss")+"'");
+			}
+			if (null != model.getEndTime()) {
+				String endTime = DateUtil.dateStr(model.getEndTime(), "yyyy-MM-dd");
+				sb.append(" and at.add_time <'"+(endTime + " 23:59:59")+"'");
+			}
+			sb.append(" order by at.add_time desc ");
+			
+		}
+		//JSDP-156 xingjia 2015-05-22 start
+		Query query = em.createNativeQuery(sb.toString(), AccountTransfer.class);
+		Page page = new Page(query.getResultList().size(), model.getPage(), model.getSize());
+		query.setFirstResult((model.getPage() - 1) * model.getSize());
+		query.setMaxResults(model.getSize());
+		List<AccountTransfer> list = query.getResultList();
+		pageDataList.setList(list);
+		pageDataList.setPage(page);
+		return pageDataList;
+	}
+	//JSDP-116 xingjia 2015-05-18 start
+	@Override
+	public List excelListTransfer(AccountTransferModel model) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("SELECT att.transfer_no,u.user_name,att.transfer_amount,att.transfer_status,att.add_time,att.transfer_msg,att.add_ip"
+				+" FROM t_jsd_account_transfer att,t_jsd_user u WHERE att.user_id=u.user_id ");
+		if(StringUtil.isNotBlank(model.getTransferNo())){
+			sb.append(" and att.transfer_no='"+model.getTransferNo()+"'");
+		}
+		if(StringUtil.isNotBlank(model.getUserName())){
+			sb.append(" and u.user_name like '%"+model.getUserName()+"%'");
+		}
+		if(null != model.getStartTime()){
+			sb.append(" and att.add_time>='"+DateUtil.dateStr2(model.getStartTime())+"'");
+		}
+        if(null != model.getEndTime()){
+        	sb.append(" and att.add_time<'"+DateUtil.dateStr2(model.getEndTime())+"'");
+		}
+        sb.append(" order by att.add_time desc ");
+        
+		Query query = em.createNativeQuery(sb.toString());
+		List list = query.getResultList();
+		return list;
+	}
+	//JSDP-116 xingjia 2015-05-18 start
+}

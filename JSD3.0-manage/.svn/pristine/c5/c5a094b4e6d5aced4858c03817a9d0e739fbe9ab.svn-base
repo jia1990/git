@@ -1,0 +1,93 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/account/accountRecharge/accountRechargeEdit.html');
+	});
+</script>
+<div class="popShow" style="padding-bottom:0;">
+	<div class="showItem">
+		<span>流水号：</span>
+		${accountRecharge.tradeNo}
+	</div>
+	<div class="showItem">
+		<span>状态：</span>
+		<#if accountRecharge.status==1>充值成功
+			<#elseif accountRecharge.status==2>充值失败
+			<#else>等待审核
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>用户名：</span>
+		${user.userName!}
+	</div>
+	<div class="showItem">
+		<span>真实姓名：</span>
+		${user.realName!}
+	</div>
+	<div class="showItem">
+		<span>类型：</span>
+		<#if accountRecharge.type==1>网银直连
+		<#elseif accountRecharge.type==2> 网上支付
+		<#elseif accountRecharge.type==3> 线下支付
+		<#elseif accountRecharge.type==21>银行充值
+		<#elseif accountRecharge.type==22>线下充值奖励
+		<#elseif accountRecharge.type==23>回款续投奖励 
+		<#elseif accountRecharge.type==24>调单充值
+		<#elseif accountRecharge.type==25>活动奖励
+		<#elseif accountRecharge.type==26>其他充值
+		</#if>
+	</div>
+	<div class="showItem">
+		<span>支付类型：</span>
+		${accountRecharge.payment!}
+	</div>
+	<div class="showItem">
+		<span>充值金额：</span>
+		${accountRecharge.money!}元
+	</div>
+	<div class="showItem">
+		<span>费用：</span>
+		${accountRecharge.fee!}元
+	</div>
+	<div class="showItem">
+		<span>到账金额：</span>
+		${accountRecharge.money-accountRecharge.fee!}元
+	</div>
+	<div class="showItem">
+		<span>添加时间：</span>
+		${accountRecharge.addTime?string("yyyy-MM-dd HH:mm:ss")}
+	</div>
+	<div class="showItem">
+		<span>IP：</span>
+		${accountRecharge.addIp!}
+	</div>
+	<div class="showItem">
+		<span>线下充值备注：</span>
+		${accountRecharge.remark!}
+	</div>
+</div>	
+<form id="form"  method="post">	
+<div class="popForm" style="padding-top:0;">
+		<input type="hidden" name="verifyRechargeToken" value="${verifyRechargeToken}" />
+		<div class="formitm">
+		     <label class="lab">到账金额：</label>
+		     <div class="ipt">
+		     	<input type="text" name="money"  class="w400 easyui-validatebox"  value="${accountRecharge.money}" readonly="readonly"/>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">是否通过：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" class="easyui-validatebox" value="1" data-options="required: true"/>通过
+				<input type="radio" name="status" class="easyui-validatebox" value="2" data-options="required: true"/>不通过
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">审核备注：</label>
+		     <div class="ipt">
+		     	<textarea name="remark" class="w400 easyui-validatebox" data-options="required: false"></textarea>
+		     </div>
+		</div>
+		<input name="verifyFullBorrowToken" value="${verifyFullBorrowToken!}" type="hidden">
+		<input name="id" value="${accountRecharge.id}" type="hidden"/>	
+</form>
+</div>

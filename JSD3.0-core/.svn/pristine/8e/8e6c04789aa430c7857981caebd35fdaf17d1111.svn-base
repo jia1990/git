@@ -1,0 +1,327 @@
+package com.rongdu.p2psys.core.rule;
+
+import java.io.InputStream;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.NumberUtil;
+
+/**
+ * @描述:积分产生规则
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月19日
+ */
+public class ScoreProduceRuleCheck extends RuleCheck {
+	public static final int STATUS_OPEN = 1;
+	public static final int STATUS_CLOSE = 0;
+	private Register register;// 注册积分
+	private Sign sign;// 签到送积分
+    private Invest invest;//投资送积分
+    
+	public ScoreProduceRuleCheck() {
+	}
+
+	/**
+	 * 注册送积分
+	 * */
+	private static class Register implements java.io.Serializable {
+
+		private ScoreSet phone_verify; // 手机认证
+		private ScoreSet email_verify;// 邮箱认证
+		private ScoreSet realname_verify;// 实名认证
+
+		public ScoreSet getPhone_verify() {
+			return phone_verify;
+		}
+
+		public void setPhone_verify(ScoreSet phone_verify) {
+			this.phone_verify = phone_verify;
+		}
+
+		public ScoreSet getEmail_verify() {
+			return email_verify;
+		}
+
+		public void setEmail_verify(ScoreSet email_verify) {
+			this.email_verify = email_verify;
+		}
+
+		public ScoreSet getRealname_verify() {
+			return realname_verify;
+		}
+
+		public void setRealname_verify(ScoreSet realname_verify) {
+			this.realname_verify = realname_verify;
+		}
+
+	};
+
+	/**
+	 * 签到送积分
+	 * */
+
+	private static class Sign implements java.io.Serializable {
+
+		private int status;// 1,开启，2，关闭
+		private long score;// 积分
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public long getScore() {
+			return score;
+		}
+
+		public void setScore(long score) {
+			this.score = score;
+		}
+	};
+
+	/**
+	 * 投资积分
+	 * @描述：
+	 * @作者：wangchangwei@ddtkj.com
+	 * @创建时间：2015年2月2日
+	 */
+	private static class Invest implements java.io.Serializable {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -984550424823119335L;
+		private int[] borrow_type; //标类型数组
+		private double month_base_money;  //月标基准
+		private double day_base_money;  //天标基准
+		private double decimal_manage;  //积分四舍五入动态配置
+		private int is_enable_month;//是否启用天标投资送积分 0：不启用  1：启用
+		private int is_enable_day; //是否启用月标投资送积分  0：不启用  1：启用
+		
+		public int[] getBorrow_type() {
+			return borrow_type;
+		}
+		public void setBorrow_type(int[] borrow_type) {
+			this.borrow_type = borrow_type;
+		}
+		public int getIs_enable_month() {
+			return is_enable_month;
+		}
+		public void setIs_enable_month(int is_enable_month) {
+			this.is_enable_month = is_enable_month;
+		}
+		public int getIs_enable_day() {
+			return is_enable_day;
+		}
+		public void setIs_enable_day(int is_enable_day) {
+			this.is_enable_day = is_enable_day;
+		}
+		public double getMonth_base_money() {
+			return month_base_money;
+		}
+		public void setMonth_base_money(double month_base_money) {
+			this.month_base_money = month_base_money;
+		}
+		public double getDay_base_money() {
+			return day_base_money;
+		}
+		public void setDay_base_money(double day_base_money) {
+			this.day_base_money = day_base_money;
+		}
+		public double getDecimal_manage() {
+			return decimal_manage;
+		}
+		public void setDecimal_manage(double decimal_manage) {
+			this.decimal_manage = decimal_manage;
+		}
+		
+	}
+	private static class ScoreSet implements java.io.Serializable {
+		private int status;// 1,开启，2，关闭
+		private long score;// 积分
+
+		public int getStatus() {
+			return status;
+		}
+
+		public void setStatus(int status) {
+			this.status = status;
+		}
+
+		public long getScore() {
+			return score;
+		}
+
+		public void setScore(long score) {
+			this.score = score;
+		}
+	};
+
+	public Register getRegister() {
+		return register;
+	}
+
+	public void setRegister(Register register) {
+		this.register = register;
+	}
+
+	public Sign getSign() {
+		return sign;
+	}
+
+	public void setSign(Sign sign) {
+		this.sign = sign;
+	}
+
+	public Invest getInvest() {
+		return invest;
+	}
+
+	public void setInvest(Invest invest) {
+		this.invest = invest;
+	}
+
+
+	/**
+	 * 获取手机认证送积分
+	 * 
+	 * @return 返回积分 如果为-1 表示不送积分
+	 * */
+	public long phoneVerifyScore() {
+
+		if (register.phone_verify.status == 1) {
+			return register.phone_verify.score;
+		} else {
+			return -1;
+		}
+	}
+
+	/**
+	 * 获取实名认证送积分
+	 * 
+	 * @return 返回积分 如果为-1表示不送积分
+	 * */
+	public long realnameVerifyScore() {
+
+		if (register.realname_verify.status == 1) {
+			return register.realname_verify.score;
+		} else {
+			return -1;
+		}
+	}
+
+	/**
+	 * 获取邮箱认证送积分
+	 * 
+	 * @return 返回积分 如果为-1表示不送积分
+	 * */
+	public long emailVerifyScore() {
+
+		if (register.email_verify.status == 1) {
+
+			return register.email_verify.score;
+		} else {
+
+			return -1;
+		}
+	}
+
+	/**
+	 * 签到送积分
+	 * 
+	 * @return 返回积分 如果为-1 表示不送积分
+	 * */
+	public long signScore() {
+		if (sign.status == 1) {
+
+			return sign.score;
+		} else {
+
+			return -1;
+		}
+
+	}
+
+
+	/**
+	 * 投资送积分:根据投资金额与积分比例换算
+	 * 
+	 * @param investMoney
+	 *            投资金额
+	 * @param type
+	 *            标类型
+	 * @param borrowTimeType
+	 *            标是否是天标还是月标
+	 * @param timeLimit
+	 *            投资期限
+	 * @return 返回积分 如果为-1表示不送积分
+	 * */
+	public long investScore(double investMoney, int borrowTimeType, int timeLimit,int type) {
+		long r = 0L;
+		String score="";
+		if (investMoney == 0 || type == 0 || timeLimit == 0) {
+			return -1;
+		}
+		if(invest.borrow_type.length>0){
+			for(int borrowType:invest.borrow_type){
+				if(borrowType==type){
+					// 1 ：天标  0：月标
+					if (borrowTimeType == 0&&invest.is_enable_month==1) {
+						//月标投资
+						score=BigDecimalUtil.div(BigDecimalUtil.mul(investMoney, timeLimit), invest.month_base_money)+"";
+					} else if (borrowTimeType == 1&&invest.is_enable_day==1) {
+						//天标投资
+						//r = Long.parseLong(String.valueOf(Math.floor(1000 * (20 / 30d))));
+						score=BigDecimalUtil.div(BigDecimalUtil.div(BigDecimalUtil.mul(investMoney, timeLimit),30), invest.day_base_money)+"";
+					}
+					break;
+				}
+			}
+		}
+		double scoreCount=NumberUtil.getDouble(score);
+		int investMoneyInt=(int) scoreCount;
+		double investMoneyBefore=investMoneyInt;
+		double investMoneyAfter=investMoneyBefore+invest.decimal_manage;
+		if(scoreCount<investMoneyAfter){
+			r=(long) scoreCount;
+		}else{
+			r=(long) BigDecimalUtil.round(scoreCount, 0);
+		}
+		return r;
+	}
+    
+	/*测试*/
+	public static void main(String[] args) throws Exception {
+
+		// 测试使用
+		InputStream in = ScoreProduceRuleCheck.class
+				.getResourceAsStream("积分产生规则.json");
+		byte[] b = new byte[1024];
+		int length = 0;
+		StringBuilder sb = new StringBuilder();
+		while ((length = in.read(b)) != -1) {
+
+			sb.append(new String(b, 0, length).replaceAll("\r\n", "")
+					.replaceAll(" ", ""));
+		}
+		String json = sb.toString();
+		System.out.println(sb.toString());
+		Class<ScoreProduceRuleCheck> clazz = ScoreProduceRuleCheck.class;
+		Object jsonObj = JSON.parseObject(json, clazz);
+
+		ScoreProduceRuleCheck test = (ScoreProduceRuleCheck) jsonObj;
+		double r = Math.floor(1000 * (20 / 30d));
+		System.out.println(r);
+		
+		
+	}
+
+	@Override
+	public boolean checkRule() {
+
+		return false;
+	}
+}

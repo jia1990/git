@@ -1,0 +1,103 @@
+package com.ddtkj.p2psys.transfer.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.sms.sendMsg.RegisterMobileMsg;
+
+/**
+ * 
+ * @描述：用户购买会员服务
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年2月28日
+ */
+public class AccountTransferExecuter extends BaseExecuter {
+	
+	private String accountLogType = Constant.ACCOUNT_TRANSFER;
+	
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		//操作金额
+		log.setRechargeMoney(returnCapitalMoney);
+		//账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		//账户多种可用
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		log.setRpDynamicUsable(account.getRpDynamicTotal());
+		//账户多种冻结
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		log.setFreezeRpDynamic(account.getFreezeRpDynamic());
+		//账户待收总额
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)0);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		
+	   Account account = accountDao.getAccountByUserId(user.getUserId());
+	   // 账户各类可用金额
+	  // account.setRechargeUsable(BigDecimalUtil.add(account.getRechargeUsable(), rechargeMoney));
+	   account.setReturnCapitalUsable(BigDecimalUtil.add(account.getReturnCapitalUsable(), returnCapitalMoney));
+	   //账户总额
+	   account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),returnCapitalMoney));
+	   accountDao.update(account);
+	}
+
+	@Override
+	public void handleAccountSum() {
+		super.handleAccountSum();
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new RegisterMobileMsg(NoticeConstant.ACCOUNT_TRANSFER,user);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+		
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+}

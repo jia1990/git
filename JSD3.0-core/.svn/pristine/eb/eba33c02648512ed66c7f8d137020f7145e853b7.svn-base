@@ -1,0 +1,84 @@
+package com.rongdu.p2psys.core.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * 
+ *  
+ * TODO 类说明</p>
+ *  
+ * @author：Administrator 
+ * @version 1.0
+ * @since 2014年7月14日
+ */
+public interface OperatorDao extends BaseDao<Operator> {
+
+	/**
+	 * 查询用户
+	 * 
+	 * @return list
+	 */
+	List<Operator> userList();
+
+	/**
+	 * 用户查询
+	 * 
+	 * @param id 主键ID
+	 * @return 用户信息
+	 */
+	Operator userFind(long id);
+
+	/**
+	 * 根据用户名查询用户信息
+	 * 
+	 * @param userName 用户名
+	 * @return 用户信息
+	 */
+	Operator getManagerByUserName(String userName);
+	
+	/**
+	 * 根据角色获取此用户是否有下级用户
+	 * @param pid
+	 * @return
+	 */
+	List<Operator> getOperatorByRole(List<Integer> pid);
+	
+	/**
+	 * 根据用户角色获取用户分页
+	 * @param param
+	 * @return
+	 */
+	PageDataList<Operator> getOperatorListByRole(Map<String,Object> paramMap,QueryParam param);
+	/**
+	 * 获取所有角色
+	 * @param param
+	 * @return
+	 */
+	PageDataList<Operator> getAOperatorListByRole(Map<String,Object> paramMap,QueryParam param);
+	/**
+	 * 根据id和是否被删除来查用户
+	 */
+	Operator findOpterById(long id,boolean isDel);
+	/**
+	 * 根据客服组长和专属客服id查询客服，用于前台客服展示
+	 * @param paramMap
+	 * @param param
+	 * @return
+	 */
+	PageDataList<Operator> getKefuByRoleId(Map<String,Object> paramMap,QueryParam param);
+	
+	/**
+	 * 根据工号查询客服
+	 * //JSDP-BUG109 sxy
+	 * @param customerNo
+	 * @return
+	 */
+	Operator getOperatorByNo(String customerNo);
+
+}

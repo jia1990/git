@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>标信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+    //$.fn.iframeWidthResize(640);//页面最小宽度设置
+    var dataGrid;
+   /*  var winWidth =  900;
+    var winHeight = 500;
+    var verifyTitle = "投标记录";
+    var verifyUrl =  "/modules/loan/borrow/tenderDetailPage.html";
+    var verifyWinParmeters = "'{0}','"+verifyTitle+"',1000,700,'"+verifyUrl+"'";
+    
+    var detailTitle = "更新抵押物";
+    var detailUrl = "/modules/loan/borrow/getMortgageListPage.html"
+    var detailWinParmeters = "'{0}','" + detailTitle+ "','"+ detailUrl + "'";
+    
+    var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+    var viewWinParmeters = "'{0}','" + viewUrl + "'";
+    
+    var editpwdTitle = "编辑定向密码";
+    var editpwdUrl= "/modules/loan/borrow/showBorrowInfoPage.html";
+    var editpwdWinParmeters = "'{0}','" + editpwdTitle+ "',500,360,'"+ editpwdUrl + "'";
+    
+    var downProtocolUrl= "/modules/loan/borrow/manageProtocol.html";
+    var downProtocolWinParmeters = "'{0}','" + downProtocolUrl + "'";
+    */
+    var viewBorrowTitle = "查看借款信息";
+    var viewBorrowUrl = "/modules/loan/borrow/borrowViewPage.html"
+    var viewBorrowWinParmeters = "'{0}','" + viewBorrowTitle + "',800,500,'" + viewBorrowUrl + "'";
+    
+    
+    var compaireBorrowTenderTitle = "投标记录对账信息";
+    var compaireBorrowTenderUrl = "/modules/loan/tenderRecord/compaireBorrowTender.html"
+    var compaireBorrowTenderParmeters = "'{0}','" + compaireBorrowTenderTitle + "',800,500,'" + compaireBorrowTenderUrl + "'";
+ 	// JSDP-BUG106 20150504 sxy start
+    $(function() {
+        dataGrid = $('#borrowManagerList').datagrid({
+            url : '/modules/loan/tenderRecord/tenderList.html',
+            fit : true,
+            fitColumns : false,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            //sortName : 'id',//影响线上
+            //sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+			showFooter: true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 30, sortable:false },
+			  { field: 'borrowId', title: '标id', width: 40, sortable:false },
+			  { field: 'type', title: '标类型', width: 50, sortable:false,formatter:function(value,row,index){
+				  
+				  if(value == 113){
+            		  return '能源宝';
+            	  }else if(value == 103){
+            		  return '车贷宝';
+            	  }else if(value == 115){
+            		  return '微企贷';
+            	  }else if(value == 105){
+            		  return '分期宝';
+            	  }
+				  
+			  }},
+			  /* { field: 'borrowTimeType', title: '标类', width: 40, sortable:false,formatter:function(value,row,index){
+				  if(value == 0){
+            		  return '月标';
+            	  }else if(value == 1){
+            		  return '天标';
+            	  }
+			  }}, */
+			  { field: 'timeLimit', title: '借款期限', width: 80, sortable:false,formatter:function(value,row,index){
+				  if(row.borrowTimeType == 0){
+            		  return value+' 个月';
+            	  }else if(row.borrowTimeType == 1){
+            		  return value+' 天';
+            	  }
+			  }},
+			  { field: 'borrowUserName', title: '借款人', width: 100, sortable:false },
+			  { field: 'userName', title: '投标人', width: 80, sortable:false },
+			  { field: 'registerTime', title: '注册时间', width: 150, sortable:false,fixed:true,formatter: function(value,row,index){
+				  if(row.userName =='投资金额:'){
+            		  return value;
+            	  }else{
+            		  return getLocalTime(value,4);
+            	  }
+              } 
+              }, 
+			  { field: 'realName', title: '真实姓名', width: 100, sortable:false },
+			  /* //JSDP-BUG109 sxy */
+			  { field: 'customerUserId', title: '专属客服', width: 100, sortable:false },
+			  { field: 'tenderUserAccountStr', title: '账户总额', width: 100, sortable:false },
+              { field: 'money', title: '投标金额', width: 100, sortable:false,formatter:function(value,row,index){
+            	  return value;
+              }},  
+              { field: 'account', title: '有效投标金额', width: 100, sortable:false,formatter:function(value,row,index){
+            	  return value;
+              }},
+              
+              { field: 'interest', title: '利息', width: 100, sortable:false,formatter:function(value,row,index){
+            	  return value;
+              }},
+             
+              { field: 'repaymentAccount', title: '回收本息', width: 100, sortable:false,formatter:function(value,row,index){
+            	  return value;
+              }},
+              { field: 'borrowApr', title: '利率', width: 40, sortable:false,formatter:function(value,row,index){
+            	  if(row.userName =='投资金额:'){
+            		  return "";
+            	  }else{
+            		  return value+"%";
+            	  }
+            	  
+              }},
+              { field: 'tenderType', title: '投标类型', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  if(value==0){
+            		  return '网站投标';
+            	  }else if(value==1){
+            		  return '自动投标';
+            	  }else if(value==2){
+            		  return '手机投标';
+            	  }
+              } }, 
+              { field: 'status', title: '投标状态', width: 80,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  if(value==0){
+            		  return '投标处理中';
+            	  }else if(value==1){
+            		  return '成功';
+            	  }else if(value==2){
+            		  return '失败';
+            	  }
+              } }, 
+              { field: 'addTime', title: '投标时间', width: 150, sortable:false,fixed:true,formatter: function(value,row,index){
+            	  
+            	 // if(value=='投资金额:'){
+            	 //	  return value;
+            	 // }else{
+            		  return getLocalTime(value,4);
+            	 // }
+            	  
+              	} 
+              }, 
+              /* { field: 'addIp', title: '投标IP', width: 60, sortable:false }, */
+              { field: 'compareResult', title: '对账结果', width: 60, sortable:false,fixed:true, formatter: function(value,row,index){
+            	  if(row.userName =='投资金额:'){
+            		  return "";
+            	  }else{
+            		
+	            	  if(value=='ok'){
+	            		  return "正常";
+	            	  }else if(value=='error'){
+	            		  return "异常";
+	            	  }else{
+	            		  return "未知";
+	            	  }
+            	  }
+            	} 
+              },
+              { field : 'action',
+                  title : '操作',
+                  width :50,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                  	
+                	  if(row.userName =='投资金额:'){
+                		  return "";
+                	  }else{
+                	  
+                  		 var str = '';
+                  		 str += "<@secAuthorizeUrl value='/tenderRecord/viewBorrowDetailBtn.html' >";
+                         str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewBorrowWinParmeters + ');" src="{1}" title="查看借款信息"/>', row.borrowId, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                         str += "</@secAuthorizeUrl>";
+                         str += '&nbsp;';
+                         str += "<@secAuthorizeUrl value='/tenderRecord/compaireBorrowTender.html' >";
+                         str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + compaireBorrowTenderParmeters + ');" src="{1}" title="投标记录对账"/>', row.id, '${theme_dir}/css/images/extjs_icons/zoom/zoom.png');
+                         str += "</@secAuthorizeUrl>";
+                         str += '&nbsp;';
+                           
+       	                return str;
+                	  }
+                	  
+                  	}
+                     
+              }
+            
+            ] ],
+            toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+				$(this).datagrid('tooltip');
+			}
+        });
+    });
+ 	// JSDP-BUG106 20150504 sxy start
+	//投标记录excel导出
+	function exportExcel(){
+		var url = "/modules/loan/tenderRecord/tenderRecordExcel.html";
+		var userName = $("#userName").val();
+		var borrowType = $("#borrowType").val(); 
+		var status = $("#status").val(); 
+		var customerUserId = $("#customerUserId").val(); 
+		var tenderType = $("#tenderType").val();
+		var borrowId = $("#borrowId").val();
+		var compareResult = $("#compareResult").val();
+		
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		
+		var sou = "?userName=" + userName + "&borrowType="  + borrowType + "&status="  + status + "&customerUserId=" + customerUserId +"&tenderType=" + tenderType + "&borrowId="  + borrowId + "&compareResult="  + compareResult + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+</script>
+<style type="text/css">
+	/* 协议书下载 */
+	.downloadButton{
+		width:60px;
+		color:#666;
+		border:1px solid #ccc;
+		border-top-left-radius:3px;
+		border-top-right-radius:3px;
+		border-bottom-right-radius:3px;
+		border-bottom-left-radius:3px;
+	}
+	.downloadButton:hover{
+		border:1px solid #60ADFB;
+		color:#fff;
+		background-color: #60ADFB;
+	}
+</style>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>投资人：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>客服：<input type="text" name="customerUserId" id="customerUserId" autocomplete="off"/></li>
+            		<li>标ID：<input type="text" name="borrowId" id="borrowId" autocomplete="off"/></li>
+            		<li>标种：
+            		
+            			<select name="type" id="borrowType" class="type">
+            				<option value="">全部</option>
+            				<option value="113">能源宝</option>
+            				<option value="115">微企贷</option>
+            				<option value="103">车贷宝</option>
+            				<option value="105">分期宝</option>
+            				<!-- <option value="113">债权</option> -->
+            			
+            			</select>
+            		</li>
+            		<li>投标类型：
+            		
+            			<select name="tenderType"  id="tenderType"  class="type">
+            				<option value="">全部</option>
+            				<option value="10">网站投标</option>
+            				<option value="11">自动投标</option>
+            				<option value="12">手机投标</option>
+            			
+            			</select>
+            		</li>
+            		<li>对账类型：
+            		
+            			<select name="compareResult" id="compareResult" class="type">
+            				<option value="">全部</option>
+            				<option value="ok">正常</option>
+            				<option value="error">异常</option>
+            				<!-- <option value="null">未知</option> -->
+            			</select>
+            		</li>
+            		<li>投标状态：
+            			<select name="status" id="status" class="status">
+            				<option value="">全部</option>
+            				<option value="0">处理中</option>
+            				<option value="1">成功</option>
+            				<option value="2">失败</option>
+            			</select>
+            		</li>
+            		<!-- <li>借款人：<input type="text" name="borrowUserName" id="borrowUserName" autocomplete="off"/></li> -->
+            		
+	                <li>投标时间：<input type="text" name="startTime" id="startTime" class="searchTime" maxlength="10"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            		<!-- JSDP-98 gjh 2015-5-12 start  -->
+            		<!--  <li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.repaireBorrowTenderSearchFun('#borrowId','/modules/loan/tenderRecord/compaireBorrowTenderList.html',this);">对账</a>仅限于按标ID对账</li>-->
+            		<!-- JSDP-98 gjh 2015-5-12 end  -->
+            		<!-- //JSDP-219 gjh 2015-7-10 start -->
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.repaireBorrowTenderAllSearchFun('#userName','#borrowType','#status','#customerUserId','#tenderType','#borrowId','#compareResult','#startTime','#endTime','/modules/loan/tenderRecord/compaireBorrowTenderListAll.html',this);">对账</a>根据条件对账</li>
+            		<!-- //JSDP-219 gjh 2015-7-10 end  -->
+
+            		
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="borrowManagerList"></table>
+        </div>
+        <div id="toolbar" style="display: none;">
+		        <@secAuthorizeUrl value='/tenderRecordManagerExcel.html'>
+		            <a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		        </@secAuthorizeUrl>
+        </div>
+    </div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

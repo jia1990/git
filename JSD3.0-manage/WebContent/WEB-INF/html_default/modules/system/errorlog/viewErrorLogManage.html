@@ -1,0 +1,106 @@
+<form id="form"  method="post">
+<div class="popForm">
+	<div class="formitm">
+	     <label class="lab">异常名称：</label>
+	     <div class="ipt">
+	     	${errorLog.name!''}
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">异常等级：</label>
+	     <div class="ipt">
+			<#if errorLog.type=='1'>
+				微小
+			<#elseif errorLog.type=='2'>
+				轻微
+			<#elseif errorLog.type=='3'>
+				重要 
+			<#elseif errorLog.type=='4'>
+				严重
+			<#elseif errorLog.type=='5'>
+				危险
+			<#else>
+				其他
+			</#if>
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">异常模块：</label>
+	     <div class="ipt">
+			<#if errorLog.type=='A'>
+				充值模块
+			<#elseif errorLog.type=='B'>
+				提现模块
+			<#elseif errorLog.type=='C'>
+				投标模块 
+			<#elseif errorLog.type=='D'>
+				还款模块
+			<#elseif errorLog.type=='E'>
+				会员模块
+			<#elseif errorLog.type=='F'>
+				积分模块
+			<#elseif errorLog.type=='G'>
+				债权模块
+			<#elseif errorLog.type=='H'>
+				奖励模块
+			<#elseif errorLog.type=='I'>
+				标模块
+			<#elseif errorLog.type=='J'>
+				分期宝模块
+			<#elseif errorLog.type=='K'>
+				账户模块
+			<#else>
+				其他模块
+			</#if>
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">异常编码：</label>
+	     <div class="ipt">
+				${errorLog.errorCode!''}
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">异常信息：</label>
+	     <div class="ipt">
+				${errorLog.exception!''}
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">异常关联信息：</label>
+	     <div class="ipt">
+			${errorLog.errorModuleName!}-${errorLog.eid!}
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">异常出现平台：</label>
+	     <div class="ipt">
+			<#if errorLog.platform=='W'>
+				前台
+			<#elseif errorLog.platform=='M'>
+				后台
+			<#else>
+				其他
+			</#if>
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">添加时间：</label>
+	     <div class="ipt">
+	     	${errorLog.addTime?string("yyyy-MM-dd HH:mm:ss")}
+	     </div>
+	</div>
+	<div class="formitm">
+	     <label class="lab">操作者：</label>
+	     <div class="ipt">
+	     	${errorLog.addUserName!''}
+	     </div>
+	</div><br/>
+	<div class="formitm">
+	     <label class="lab">操作IP：</label>
+	     <div class="ipt">
+	     	${errorLog.addIp!''}
+	     </div>
+	</div>
+</div>
+</form>

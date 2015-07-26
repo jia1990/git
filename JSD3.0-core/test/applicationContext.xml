@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="
+    http://www.springframework.org/schema/beans 
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/tx
+    http://www.springframework.org/schema/tx/spring-tx.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+    http://www.springframework.org/schema/task
+    http://www.springframework.org/schema/task/spring-task-3.0.xsd ">
+
+	<!-- 使用annotation @Repository,@Service自动注册bean, 并保证@Required、@Autowired的属性被注入的包范围 -->
+	<context:component-scan base-package="com.rongdu,com.ddtkj,com.rongdu.p2psys.core.quartz" />
+	<context:annotation-config />
+
+	<bean id="propertyConfigurer"
+		class="com.rongdu.common.util.des.DecryptPropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:desdb.properties</value><!-- 加密后文件 -->
+			</list>
+		</property>
+		<property name="fileEncoding" value="utf-8" />
+		<property name="keyLocation" value="classpath:desdb.key" /><!-- 
+			密钥文件位置 -->
+	</bean>
+
+	<bean id="dataSource" class="com.jolbox.bonecp.BoneCPDataSource"
+		destroy-method="close">
+		<!-- Connection Info -->
+		<property name="driverClass" value="com.mysql.jdbc.Driver"/>
+		<!-- <property name="jdbcUrl" value="jdbc:mysql://10.1.10.239:3306/tcgroup?useUnicode=true&amp;characterEncoding=utf8&amp;zeroDateTimeBehavior=convertToNull" /> 
+		<property name="username" value="root" /> 
+		<property name="password" value="123456" />-->
+		<!--<property name="jdbcUrl" value="jdbc:mysql://112.124.29.205:3306/rdp2p?useUnicode=true&amp;characterEncoding=utf8&amp;zeroDateTimeBehavior=convertToNull" /> 
+		<property name="username" value="wwwrdp2pcom" />
+		<property name="password" value="AoRtwZMPs0s0v2H2" />-->
+		<!-- 本地测试环境 
+		<property name="jdbcUrl" value="jdbc:mysql://192.168.4.209:3306/jsd2test?useUnicode=true&amp;characterEncoding=utf8&amp;zeroDateTimeBehavior=convertToNull" /> 
+		<property name="username" value="jsd2test" />
+		<property name="password" value="sdfsdf123!@#" />		-->	
+		<!-- 本机 -->
+		<property name="jdbcUrl" value="jdbc:mysql://localhost:3306/jsd_2.0?useUnicode=true&amp;characterEncoding=utf8&amp;zeroDateTimeBehavior=convertToNull" /> 
+		<property name="username" value="root" />
+		<property name="password" value="19900826" />			
+		
+		<!-- 检查数据库连接池中空闲连接的间隔时间 -->
+		<property name="idleConnectionTestPeriod" value="4" />
+		<!-- 连接池中未使用的链接最大存活时间 -->
+		<property name="idleMaxAge" value="240" />
+		<!-- 设置每个分区含有connection最大个数 -->
+		<property name="maxConnectionsPerPartition" value="20" />
+		<!-- 设置每个分区含有connection最小个数 -->
+		<property name="minConnectionsPerPartition" value="10" />
+		<!-- 设置每个分区数 -->
+		<property name="partitionCount" value="3" />
+		<!-- 设置分区中的connection增长数量 -->
+		<property name="acquireIncrement" value="5" />
+		<property name="statementsCacheSize" value="50" />
+		<property name="releaseHelperThreads" value="3" />
+	</bean>
+
+	<!-- Jpa Entity Manager 配置 -->
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="jpaVendorAdapter" ref="hibernateJpaVendorAdapter" />
+		<property name="packagesToScan" value="com.rongdu.p2psys.*.domain" />
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.service.jdbc.connections.spi.provider_class">com.jolbox.bonecp.provider.BoneCPConnectionProvider
+				</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.format_sql">false</prop>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQL5InnoDBDialect</prop>
+				<prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+				<prop key="hibernate.cache.region.factory_class">org.hibernate.cache.ehcache.EhCacheRegionFactory</prop>
+			</props>
+		</property>
+	</bean>
+	<!-- 定时器定时器 -->
+    <context:component-scan base-package="com.rongdu,com.rongdu.quartz"/>  
+    
+	<bean id="hibernateJpaVendorAdapter"
+		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+	</bean>
+
+	<bean id="txManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+	
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="add*" propagation="REQUIRED" />
+			<tx:method name="delete*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+
+	<aop:config>
+		<aop:pointcut id="allManagerMethod"
+			expression="execution(* com..service.*.*(..)) 
+			and !execution(* com.rongdu.p2psys.borrow.service.impl.AutoBorrowServiceImpl.autoDealTender(..)) " />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="allManagerMethod" />
+	</aop:config>
+	 <task:annotation-driven/>     
+</beans>

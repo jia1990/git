@@ -1,0 +1,83 @@
+package com.ddt.p2psys.redpacket.service;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import junit.framework.TestCase;
+
+import com.ddt.test.util.BeanUtil;
+import com.ddtkj.p2psys.redpacket.domain.Activity;
+import com.ddtkj.p2psys.redpacket.service.ActivityService;
+import com.rongdu.p2psys.core.domain.Operator;
+/**
+ * 测试活动的基本操作
+ * 
+ * @author YJF
+ */
+public class ActivityServiceTest extends TestCase{
+
+   
+	/**
+    * 测试新建活动
+    * */
+	public void testSaveActivity(){
+		try {
+			ActivityService actService = BeanUtil.getBean("activityService",ActivityService.class);
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") ;
+			Activity ac = new Activity();
+			ac.setActName("2014圣诞节节注册活动");
+			ac.setBegintime(sdf.parse("2014-12-04 00:00:00"));
+			ac.setEndtime(sdf.parse("2014-12-26 00:00:00"));
+			ac.setCreatetime(new Date());
+			ac.setOperator(new Operator(1));
+			
+			Activity ac2 = new Activity();
+			ac2.setActName("2014圣诞节推广活动");
+			ac2.setBegintime(sdf.parse("2014-12-04 00:00:00"));
+			ac2.setEndtime(sdf.parse("2014-12-26 00:00:00"));
+			ac2.setCreatetime(new Date());
+			ac2.setOperator(new Operator(1));
+			
+			actService.save(ac);
+			actService.save(ac2);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	/**
+    * 测试更新红包类型  和 查询全部
+    * */
+	public void testUpdateActivity(){
+		ActivityService actService = BeanUtil.getBean("activityService",ActivityService.class);
+		// 获取所有的
+		List<Activity> list = actService.getAll();
+		for (Activity activity : list) {
+			System.out.println(activity.getActName());;
+		}
+		if(list.size()>0 && list!=null){
+			Activity rp = list.get(0) ;
+			rp.setActName("更改后的名称");
+			actService.update(rp) ;
+		}
+		
+	}
+	/**
+    * 测试更新红包类型  和 查询全部
+    * */
+	public void testDeleteActivity(){
+		ActivityService actService = BeanUtil.getBean("activityService",ActivityService.class);
+		// 获取所有的
+		List<Activity> list = actService.getAll();
+		for (Activity activity : list) {
+			System.out.println(activity.getActName());;
+		}
+		if(list.size()>0 && list!=null){
+			Activity rp = list.get(0) ;
+			rp.setActName("更改后的名称");
+			actService.delete(rp);
+		}
+		
+	}
+}

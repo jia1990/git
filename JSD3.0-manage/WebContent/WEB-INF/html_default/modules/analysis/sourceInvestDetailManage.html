@@ -1,0 +1,62 @@
+<script type="text/javascript">
+    var dataGrid;
+   
+    $(function() {
+        dataGrid = $('#tenderListGrid').datagrid({
+            url : '/modules/analysis/sourceInvestDetailList.html?sourceURL=${sourceURL!}&startTime=${startTime!}&endTime=${endTime!}',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : true,
+			singleSelect:true,
+			showFooter: true,
+            columns : [ [
+			  { field: 'userId', title: '用户id', width: 60, sortable:false },
+			  { field: 'userName', title: '用户名', width: 80, sortable:false },
+			  { field: 'investMoney', title: '投标金额', width: 60, sortable:false },
+			  { field: 'borrowName', title: '标名称', width: 100, sortable:false },
+              { field: 'sourceURL', title: '用户来源', width: 150, sortable:false }
+            
+            ] ],
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			}
+        });
+    });
+  //借款管理中的excel导出
+</script>
+
+	<!-- JSDP-166 xingjia 20150611 start -->
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：
+						<input name="userName" id="userName" type="text" autocomplete="off"/>
+					</li>
+					<#if startTime=='undefined'>
+					<li>时间：<input type="text" name="startTimes" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTimes" id="endTime"  class="searchTime" style="width:140px;"/></li>
+					<#else>
+					<li>时间：<input type="text" name="startTimes" id="startTime" class="searchTime" value="${startTime!}" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTimes" id="endTime" value="${endTime!}"  class="searchTime" style="width:140px;"/></li>
+					</#if>
+					
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+	<!-- JSDP-166 xingjia 20150611 end -->
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="tenderListGrid"></table>
+		</div>
+	</div>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>

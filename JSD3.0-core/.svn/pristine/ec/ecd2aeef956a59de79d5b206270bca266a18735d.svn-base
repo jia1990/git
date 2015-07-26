@@ -1,0 +1,85 @@
+package com.ddtkj.p2psys.phone.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.phone.domain.PhoneActivity;
+import com.ddtkj.p2psys.phone.model.PhoneActivityModel;
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * 活动Dao
+ * 
+ * @author sunxiaoyong@ddtkj.com
+ * @version 3.0
+ * @since 2015年1月10日
+ */
+public interface PhoneActivityDao extends BaseDao<PhoneActivity> {
+
+	/**
+	 * 列表
+	 * 
+	 * @param nid
+	 * @param size
+	 * @return
+	 */
+	List<PhoneActivityModel> listBySize(String type, int size);
+
+	/**
+	 * 分页
+	 * 
+	 * @param nid
+	 * @param page
+	 * @return
+	 */
+	PageDataList<PhoneActivityModel> list(String type, int page);
+
+	/**
+	 * 增加点击量
+	 * 
+	 * @param id
+	 */
+	void addClick(long id) throws Exception;
+
+	/**
+	 * 活动列表
+	 * 
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<PhoneActivityModel> activityList(PhoneActivityModel model, int pageNumber, int pageSize);
+	
+	/**
+	 * 手机端活动列表
+	 * 
+	 * @param model
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	PageDataList<PhoneActivityModel> phoneActivityList(PhoneActivityModel model, int pageNumber, int pageSize);
+
+	/**
+	 * 修改文章
+	 * 
+	 * @param activity
+	 */
+	void activityEdit(PhoneActivity phoneActivity);
+
+	/**
+	 * 下一篇文章
+	 * @param PhoneActivity
+	 * @return Activity
+	 */
+	PhoneActivity findNextActivity(PhoneActivity phoneActivity);
+    /**
+     * 上一篇文章
+     * @param PhoneActivity
+     * @return Activity
+     */
+	PhoneActivity findPrevActivity(PhoneActivity phoneActivity);
+
+    
+}

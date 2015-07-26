@@ -1,0 +1,91 @@
+package com.ddtkj.p2psys.core.util;
+
+import com.rongdu.common.util.BigDecimalUtil;
+
+/**
+ * @描述：公允价值计算
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月9日 
+ */
+public class MonthlyCreditCalculator implements CreditCalculatorUtil {
+	
+	
+	public static final int REPAYMENT_NO = 1 ;
+	public static final int REPAYMENT_YES = 2 ;
+	
+	private double residueAccount ;  //剩余本金
+	private double apr ; 	//年利率
+	private double discount ; // 折让费率
+	private int day ;  // 应计息天数
+	private int isRepayMent ;  //  本期 是否已还款 1 已还 2 未还
+	private double cprice = 100;
+	private int totalday ;
+	private double copies ;
+	
+	public MonthlyCreditCalculator(double residueAccount, double apr,
+			double discount, int day,int isRepayMent,int totalday,double copies) {
+		super();
+		this.residueAccount = residueAccount;
+		this.apr = BigDecimalUtil.div(apr, 100);
+		this.discount = discount;
+		this.day = day;
+		this.isRepayMent = isRepayMent ;
+		this.totalday =totalday ;
+		this.copies = copies ;
+	}
+	/**
+	 * 计算公允价值
+	 * @return
+	 */
+	public double calculator(){
+		//return BigDecimalUtil.round(BigDecimalUtil.mul(monthLy(), discount));
+		return BigDecimalUtil.decimal(BigDecimalUtil.mul(monthLy(), discount),2);
+	}
+	/**
+	 * 计算份数
+	 * @return
+	 */
+	public double getCopies(){
+		// 按月还息的，本金肯定是投资人投资的，是100的倍数
+		return copies;
+	}
+	/**
+	 * 计算每份价值
+	 * @return
+	 */
+	public double getCopiesPrice(){
+		// 一次性的和按月还息的，本金肯定是投资人投资的，是cprice的倍数
+		//return BigDecimalUtil.round(BigDecimalUtil.div(monthLy(),getCopies())) ;
+		return BigDecimalUtil.decimal(BigDecimalUtil.div(monthLy(),getCopies()),2) ;
+	}
+	/**
+	 * 计算每份价格
+	 * @return
+	 */
+	public double getCopiesAccount(){
+		//return BigDecimalUtil.round(getCopiesPrice() * discount) ;
+		return BigDecimalUtil.decimal(BigDecimalUtil.mul(getCopiesPrice(), discount),2) ;
+	}
+	
+	public double getCopiesInsterest(){
+		//return  BigDecimalUtil.round(BigDecimalUtil.mul(BigDecimalUtil.mul(BigDecimalUtil.div(day,totalday,4), residueAccount),BigDecimalUtil.div(apr,12)));
+		return  BigDecimalUtil.decimal(BigDecimalUtil.div(BigDecimalUtil.mul(BigDecimalUtil.mul(residueAccount,day),apr), BigDecimalUtil.mul(totalday,12)),2);
+	}
+	private double monthLy(){
+		// 应计利息
+		//double interest = BigDecimalUtil.mul(BigDecimalUtil.mul(BigDecimalUtil.div(day,totalday,4), residueAccount),BigDecimalUtil.div(apr,12)); 
+		double interest = BigDecimalUtil.decimal(BigDecimalUtil.div(BigDecimalUtil.mul(BigDecimalUtil.mul(residueAccount,day),apr), BigDecimalUtil.mul(totalday,12)),2); 
+		if(isRepayMent==1){
+			return BigDecimalUtil.add(residueAccount,interest);
+		}	
+		if(isRepayMent==2){
+			return BigDecimalUtil.sub(residueAccount,interest) ;
+		}
+		return 0.00 ;
+	}
+	public static void main(String[] args) {
+		 System.out.println(BigDecimalUtil.mul(BigDecimalUtil.mul(BigDecimalUtil.div(10,30), 1000),BigDecimalUtil.div(0.22,12)));
+		 System.out.println();
+	}
+	
+}

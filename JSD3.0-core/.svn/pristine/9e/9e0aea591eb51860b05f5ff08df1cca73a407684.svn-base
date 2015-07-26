@@ -1,0 +1,559 @@
+package com.rongdu.p2psys.borrow.service;
+
+import java.util.List;
+
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.domain.BorrowMortgage;
+import com.rongdu.p2psys.borrow.domain.BorrowRepayment;
+import com.rongdu.p2psys.borrow.domain.BorrowUpload;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.BorrowRepaymentModel;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * 标Service
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年4月4日
+ */
+public interface BorrowService {
+
+	/**
+	 * 新增
+	 * 
+	 * @param borrow
+	 */
+	Borrow save(BorrowModel model, User user, List<BorrowUpload> list);
+
+	/**
+	 * 分页
+	 * 
+	 * @param model
+	 * @return
+	 */
+	PageDataList<BorrowModel> list(BorrowModel model);
+
+	/**
+	 * 撤回标
+	 * 
+	 * @param id
+	 * @return Borrow
+	 */
+	void cancel(Borrow borrow) throws Exception;
+	
+	/**
+     *已登记未确认的借款标的取消
+     * 
+     * @param id
+     * @return Borrow
+     */
+    void borrowCancel(Borrow borrow) throws Exception;
+
+	/**
+	 * 修改标
+	 * 
+	 * @param model
+	 */
+	void update(Borrow borrow);
+
+	/**
+	 * 获取所有借款标
+	 * 
+	 * @return
+	 */
+	List<BorrowModel> getBorrowList();
+
+	/**
+	 * 未完成的净值标
+	 * 
+	 * @param userId userId
+	 * @return List
+	 */
+	int unfinshJinBorrowCount(long userId);
+
+	/**
+	 * 净值标待还本息
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	double getRepayTotalWithJin(long userId);
+
+	/**
+	 * 通过主键获得borrow实体类
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	Borrow find(long id);
+
+	/**
+	 * 还款操作
+	 * 
+	 * @param repay
+	 * @param act
+	 */
+	void doRepay(BorrowRepayment borrowRepayment);
+	
+	/**
+	 * 提前还款操作
+	 * @param borrowRepayment
+	 */
+	public void doPriorRepay(BorrowRepayment borrowRepayment);
+	
+	/**
+	 * 更新标
+	 * 
+	 * @param b
+	 */
+	void addBorrow(Borrow b);
+
+	/**
+	 * 标初审
+	 * 
+	 * @param model
+	 */
+	void verify(BorrowModel model, Operator operator)throws Exception;
+
+	/**
+	 * 标复审
+	 * 
+	 * @param model
+	 * @throws Exception
+	 */
+	void verifyFull(BorrowModel model, Operator operator) throws Exception;
+
+	/**
+	 * 更新标的状态
+	 * 
+	 * @param id 标ID
+	 * @param status 目标状态
+	 * @param preStatus 前一状态
+	 * @return
+	 */
+	void updateStatus(long id, int status, int preStatus);
+
+	/**
+	 * 根据标Id获得标的详情
+	 * 
+	 * @param id
+	 * @return
+	 */
+	Borrow getBorrowById(long id);
+
+	/**
+	 * 统计发标待审总数
+	 * 
+	 * @param status
+	 * @return
+	 */
+	int trialCount(int status);
+
+	/**
+	 * 统计满标复审总数
+	 * 
+	 * @param status
+	 * @return
+	 */
+	int fullCount(int status);
+
+	/**
+	 * 已成交的借款数 status=6,7,8
+	 * 
+	 * @return
+	 */
+	Object[] countByFinish();
+
+	/**
+	 * 截标
+	 * 
+	 * @param id
+	 */
+	void stopBorrow(Borrow borrow);
+
+	/**
+	 * 流标
+	 * 
+	 * @param model
+	 * @return
+	 */
+	List<BorrowModel> spreadBorrowList(BorrowModel model);
+
+	/**
+	 * 流标数量
+	 * 
+	 * @param model
+	 * @return
+	 */
+	int spreadBorrowCount(BorrowModel model);
+
+	/**
+	 * 校验用户是否借款人
+	 * 
+	 * @param borrow
+	 * @param user
+	 * @return
+	 */
+	boolean isBorrowUser(long borrowId, long userId);
+
+	/**
+	 * 校验用户是否投资人
+	 * 
+	 * @param borrow
+	 * @param user
+	 * @return
+	 */
+	boolean isTenderUser(long borrowId, long userId);
+
+	/**
+	 * 获得招标中的标
+	 * 
+	 * @param model
+	 * @return PageDataList<BorrowModel>
+	 */
+	PageDataList<BorrowModel> getInviteList(BorrowModel model);
+
+	/**
+	 * 获得非流转的标
+	 * 
+	 * @param borrowId 标ID
+	 * @return Borrow
+	 */
+	Borrow findNotFlow(long borrowId);
+
+	/**
+	 * 根据合同号查询借款标
+	 * @param dealNo
+	 * @return
+	 */
+	public Borrow findLoanByDealNo(String dealNo);
+	
+	/**
+	 * 根据父级合同号及借款标类型查询借款标
+	 * @param dealParent
+	 * @param borrowType
+	 * @return
+	 */
+	public List<Borrow> findLoanListByDealParent(String dealParent,int borrowType);
+	
+	/**
+	 * 根据父级合同号查询借款标
+	 * @param dealParent
+	 * @param borrowType
+	 * @return
+	 */
+	public List<Borrow> findLoanListByDealParent(String dealParent);
+	
+	public boolean allowPublish(User user, BorrowModel model);
+
+	/**
+	 * @param model
+	 * @param user
+	 * @param borrowMortgageList 
+	 * @param delMortgageIds 
+	 */
+	public void updateLoan(BorrowModel model, User user, Borrow oldBorrow, List<BorrowUpload> list, List<BorrowMortgage> borrowMortgageList, long[] ids, long[] delMortgageIds);
+
+	/**
+	 * 逾期垫付
+	 * @param borrowRepayment
+	 */
+	public void overduePayment(BorrowRepayment borrowRepayment);
+	/**
+	 * 查到当前ID所有BorrowUpload对象
+	 * @param id 标ID
+	 * @return List<BorrowUpload>
+	 */
+	List<BorrowUpload> findPicByBorrowId(long id);
+
+    /**
+     * 商家账户查看招标中的项目
+     * @param user
+     * @return
+     */
+    public List<Borrow> businessBid(User user);
+
+    /**
+     * 商家账户查看还款中的项目
+     * @param user
+     * @return
+     */
+    public List<BorrowModel> businessRepayment(User user);
+
+    /**
+     * 正在借款项目个数
+     * @param userId
+     * @return
+     */
+    public int findByStatusAndUserId(long userId, int status1, int status2);
+
+    /**
+     * 正在借款项目金额
+     * @param userId
+     * @return
+     */
+    public double findAccountTotalByStatus(long userId, int status1, int status2);
+
+    /**
+     * 可借款标
+     * @return
+     */
+    public List<BorrowModel> investList(User user);
+    
+    /**
+     * 前台分页
+     * @param model
+     * @return
+     */
+    PageDataList<BorrowModel> getList(BorrowModel model);
+    
+    
+    /**
+     * 借款信息  前台分页
+     * @param model
+     * @return
+     */
+    PageDataList<BorrowModel> getListOfBorrow(BorrowModel model);
+
+    /**
+     * 是否已存在合同号
+     * @param dealNo
+     * @return
+     */
+    boolean isExistDealNo(String dealNo);
+
+    /**
+     * 更新抵押物图片
+     * @param list 新上传的图片集合
+     * @param delIds 删除的图片ID
+     */
+    void updatePic(List<BorrowUpload> list, long[] delIds);
+    
+    /**
+     * 根据时间获取借款金额
+     * @param date
+     * @return 借款金额
+     */
+    Double getBorrowAccountByDate(String date);
+    
+    /**
+     * 成功发标个数
+     */
+    int count();
+    
+    /**
+     * 获取当前担保公司正在担保的标的总个数
+     * @param userId
+     * @return 标的总信息
+     */
+    int getGuaranteeingCount(long userId);
+    
+    /**
+     * 获取当前担保公司正在担保的标的总金额信息
+     * @param userId
+     * @return 标的总信息
+     */
+    double getGuaranteeingAccount(long userId);    
+    
+    /**
+     * 获取当前担保公司待登记的标的总个数
+     * @param userId
+     * @return 标的总信息
+     */
+    int getNeedGuaranteeRegisteCount(long userId);
+    
+    /**
+     * 获取当前担保公司待登记的标的总金额信息
+     * @param userId
+     * @return 标的总信息
+     */
+    double getNeedGuaranteeRegisteAccount(long userId);    
+    
+    
+    /**
+     * 获取当前担保公司逾期项目个数
+     */
+    int getOverdueCount(long userId);
+    
+    /**
+     * 获取当前担保公司待登记的标的信息列表
+     * @param userId
+     * @return 标的总信息
+     */
+    List<BorrowModel> getNeedGuaranteeRegisteList(long userId);
+    
+    /**
+     * 获取当前担保公司正在担保的标的信息列表
+     * @param userId
+     * @return 标的总信息
+     */
+    PageDataList<BorrowModel> getGuaranteeingList(BorrowModel model);     
+    
+    /**
+     * 获取当前担保公司要催收的标的信息列表
+     * @param userId
+     * @return 标的总信息
+     */
+    PageDataList<BorrowRepaymentModel> getUrgeGuaranteeList(String userId);    
+    
+    /**
+     * 获取当前担保公司逾期的标的信息列表
+     * @param userId
+     * @return 标的总信息
+     */
+    PageDataList<BorrowRepaymentModel> getOverdueGuaranteeList(BorrowModel model); 
+    
+    /**
+     * 获取当前担保公司已经代偿的标的信息列表
+     * @param userId
+     * @return 标的总信息
+     */
+    PageDataList<BorrowRepaymentModel> getCompensatedList(BorrowModel model);  
+    
+    /**
+     * 项目总数
+     */
+    int getAllCount(); 
+    
+    /**
+     * 项目总金额
+     */
+    double getAllMomeny();      
+    
+    /**
+     * 逾期项目总数
+     */
+    int getAllOverduedCount();
+    
+    /**
+     * 逾期项目金额
+     */
+    double getAllOverduedMomeny();    
+    
+    /**
+     * 根据标状态获取个数
+     */
+    int getCountByStatus(int status);
+    
+    /**
+     * 根据标状态获取金额
+     */
+    double getMomenyByStatus(int status);
+    /**
+     * 根据标状态和标类型获取金额
+     */
+    double getMomenyByStatusType(int status,int type);
+    
+    /**
+     * 已满标未复审的项目数量
+     */
+    int getVerifyFullCount();
+    
+    /**
+     * 已满标未复审的项目金额
+     */
+    double getVerifyFullMomeny();    
+    
+    /**
+     * 逾期中项目总数
+     */
+    int getAllOverdueingCount();
+    
+    /**
+     * 逾期中项目金额
+     */
+    double getAllOverdueingMomeny();
+    /**
+     * 发标管理中的标，待初审的标
+     * @param borrow
+     * @param currentPage
+     * @param pageSize
+     * @return
+     */
+    PageDataList<Borrow> verifyBorrow(Borrow borrow,int currentPage,int pageSize);
+    /**
+     * 根据合同号更新标的抵押物和担保函，删除其他的图片
+     * @param borrow
+     * @param list
+     * @param martgageList
+     * @param delIds 删除的图片ID
+     * @param delMortgageIds 删除的抵押物ID
+     */
+    public void uploadMortgageByContract(Borrow borrow,List<BorrowUpload> list,List<BorrowMortgage> martgageList,long[] delIds, long[] delMortgageIds);
+    /**
+     * 根据标的状态查询是否有借款人未完成的标(担保公司正在担保的标)
+     * @param userId
+     * @param idList
+     * @return
+     */
+    public List<Borrow> findBorrowByStatus(long userId,List<Integer> idList);
+    
+    /**
+     * 对借款金额汇总
+     * @param model
+     * @return
+     */
+    public String borrowTotal(BorrowModel model);
+    
+    /**
+     * 完成复审用户数
+     * @param model
+     * @return
+     */
+    public int borrowFulRecheckUserCount();
+    
+    /**
+	 * 发标管理导出excel使用sql
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 sxy 2015-05-15 start
+	List<Borrow> excelNewBorrowList(BorrowModel model);
+	//JSDP-116 sxy 2015-05-15 start
+	
+	/**
+	 * 投标进度导出excel使用sql
+	 * @param model
+	 * @return
+	 */
+	//JSDP-116 sxy 2015-05-18 start
+	List<Borrow> excelTenderPlanBorrowList(BorrowModel model);
+	//JSDP-116 sxy 2015-05-18 start
+   
+	//JSDP-116 fengguoqin 2015-05-16 start
+		/**
+		 * excel导出流标信息
+		 * @return
+		 * @author 冯国琴
+		 */
+		public List<BorrowModel> excelListFlowBorrow(BorrowModel model);
+		
+		/**
+		 * excel导出满标复审管理
+		 * @return
+		 * @author 冯国琴
+		 */
+		public List<BorrowModel> excelListFullBorrow(BorrowModel model);
+		
+		
+		/**
+		 * excel导出所有的借款标
+		 * @return
+		 * @author 冯国琴
+		 */
+		public List<BorrowModel> excelListBorrow(BorrowModel model);
+		//JSDP-116 fengguoqin 2015-05-19 end
+	//JSDP-165 xingjia 2015-05-26 start
+	/**
+	 * 修改标的延长时间
+	 * @param borrow
+	 * @param days
+	 */
+    void updateDelayBorrow(Borrow borrow,int days);
+    //JSDP-165 xingjia 2015-05-26 end
+    
+    public List<Borrow> getBorrowList(BorrowModel bm);
+}

@@ -1,0 +1,249 @@
+/**
+ * 
+ */
+package com.rongdu.p2psys.web.account;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.service.CreditAssignmentService;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.returnmoney.service.ReturnMoneyService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述： 电子账单查询
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月12日 
+ */
+public class ElectronicBillAction extends BaseAction{
+
+
+
+	@Resource
+	private AccountService accountService;
+
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	@Resource
+	private BorrowTenderService borrowTenderService;
+	@Resource
+	private BorrowCollectionService borrowCollectionService;
+	@Resource
+	private CreditAssignmentService creditAssignmentService;
+	@Resource
+	private CreditLogService creditLogService;
+	@Resource
+	private ReturnMoneyService returnMoneyService;
+
+	
+	private User user;
+
+	private Map<String, Object> data;
+	
+	
+	/**
+	 *@author 李建云 
+	 * 月电子账单页面
+	 * 
+	 * */
+	@Action("/member/bill/electronicBill")
+	public String electronicBill(){
+		//获取前6个月时间展示
+		List<Map<String,Object>> timeList = new ArrayList<Map<String,Object>>();
+		Map<String,Object> map = null;
+	
+		for(int i=-1;i>-7;i--){
+			map = new  HashMap<String, Object>();
+			
+			Date date = DateUtil.rollMon(new Date(), i);
+			//上个月（年月）
+			String  lastYearMonth=  DateUtil.dateStr9(DateUtil.rollMon(new Date(), i));
+
+			//上个月（第一天）
+			String  lastMonthFirstDay=  DateUtil.dateStr10(DateUtil.currMonthFirstDay(DateUtil.rollMon(new Date(), i)));
+			//上个月（最后一天）
+			String  lastMonthFinallyDay=  DateUtil.dateStr10(DateUtil.currMonthLastDay(DateUtil.rollMon(new Date(), i)));
+		 
+			map.put("date",date );
+			map.put("lastYearMonth", lastYearMonth);
+			map.put("lastMonthFirstDay", lastMonthFirstDay);
+			map.put("lastMonthFinallyDay", lastMonthFinallyDay);
+			
+			timeList.add(map);	
+			//JSDP-86 wcw 2015-05-05 start
+			map=null;
+			//JSDP-86 wcw 2015-05-05 end
+		}
+		this.request.setAttribute("timeList", timeList);
+		return "electronicBill";
+	}
+	
+	/**
+	 *@author 李建云 
+	 * 月电子账单资产统计:账户净资产、理财资产、账户余额
+	 * 
+	 * 当月统计数据
+	 * 
+	 * @throws Exception 
+	 * 
+	 * */
+	@Action("/member/bill/electronicBillDetail")
+	public void electronicBillDetail() throws Exception{
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		Account account = accountService.findByUser(user.getUserId());
+		//可用总额
+		double usableTotal=account.getUsableAccount();
+		//冻结总额
+		double freezeTotal=account.getFreezeAccount();
+		//待收总额
+		double collectionTotal = account.getCollectionTotal();
+		//账户净资产=可用总额+冻结总额+待收总额
+		double netAccount =BigDecimalUtil.round(BigDecimalUtil.add(usableTotal+freezeTotal+collectionTotal), 2);
+		//理财资产
+		double financeAsset = BigDecimalUtil.add(freezeTotal+collectionTotal);
+		
+		data.put("account", account);
+		data.put("netAccount", netAccount);
+		data.put("financeAsset", financeAsset);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+
+	}
+	
+	/**
+	 * @author 李建云
+	 * 
+	 * 查询当月 时间数据
+	 * */
+	@Action("/member/bill/billDynamicDetail")
+	public void billDynamicDetail() throws Exception{
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		String date = this.paramString("date");
+		Date currentDate = null;
+		
+		if(date != null && !"".equals(date)){	
+			//获取年
+			String year =  date.substring(0,date.indexOf("年"));
+			//获取月
+			String month = date.substring(date.indexOf("年")+1, date.indexOf("月"));
+			//根据年月获取当前时间
+			currentDate = DateUtil.monthLastDay(Integer.parseInt(year),Integer.parseInt(month));
+			
+		}else if("".equals(date)){
+			//查询上一个月
+			 currentDate = DateUtil.rollMon(new Date(), -1);
+		}
+		
+		//当月开始时间
+		Date monthFirstDay = DateUtil.currMonthFirstDay(currentDate);
+		//当月结束时间
+		Date monthLastDay = DateUtil.currMonthLastDay(currentDate);
+		
+		AccountRechargeModel accountRechargeModel= accountRechargeService.getRechargeSummaryByendTime(monthLastDay, this.getSessionUserId());
+		//上一个月结束以前累计充值金额
+		double rechargeTotal = accountRechargeModel.getRechargeTotal();
+		//上一个月结束以前累计提现金额		
+		double cashTotal= accountDrawCashService.allDrawCashMomenyByUserIdAndEndTime(monthLastDay, user.getUserId());
+		//投标投资
+		//本月投资总额（满标复审）
+		double tenderAccount = borrowTenderService.getInvesterTenderAccount(user.getUserId(), monthFirstDay, monthLastDay);
+		//本月投资笔数
+		int tenderSum = borrowTenderService.getInvesterTenderSum(user.getUserId(), monthFirstDay, monthLastDay);
+		//本月已赚利息
+		double currentIterest= borrowCollectionService.getBorrowCollectedInterest(user.getUserId(), monthFirstDay, monthLastDay);
+		//本月已赚逾期利息
+		double currentLastIterest = borrowCollectionService.getBorrowCollectedLateInterest(user.getUserId(), monthFirstDay, monthLastDay);
+		//本月已赚金额
+		double currentMonthMoney =  BigDecimalUtil.add(currentIterest,currentLastIterest);
+		//本月结清
+		int collectedSum = borrowCollectionService.getCollectedSum(user.getUserId(), monthFirstDay, monthLastDay,0);
+		//回款续投金额
+		double userReturnedMoneySum = returnMoneyService.getContinuedInvestMoneyCount(user.getUserId(), monthFirstDay, monthLastDay);
+		//本月已经提取金额
+		double cashMoneyMonth = accountDrawCashService.drawCashMoneyMonth(user.getUserId(), monthFirstDay, monthLastDay);
+		
+		//债权转出份数
+		int creditSumCurrentMonth = creditAssignmentService.getCreditAssignmentCount(user, CreditAssignment.CREDIT_CHECK2_SUCCESS,monthFirstDay,monthLastDay);	
+		//债权未转出
+		int unCreditSumCurrentMonth = creditAssignmentService.getCreditAssignmentCount(user, CreditAssignment.CREDIT_CHECK1_SUCCESS,monthFirstDay,monthLastDay);
+		//债权转出手续费
+		double creditFee = creditAssignmentService.calcCreditSellFee(user, CreditAssignment.CREDIT_CHECK2_SUCCESS, monthFirstDay, monthLastDay);
+		//债权转出金额(本月成交金额)
+		double creditFeeSoldAccount = creditAssignmentService.calcCreditSoldAccount(user, CreditAssignment.CREDIT_CHECK2_SUCCESS, monthFirstDay, monthLastDay);
+		//债权投资(本月投资总额)
+		double  buyCreditMoneyCurrentMonth = creditLogService.buyCreditMoneyTotal(user, CreditLog.CRELOG_STATUS_YEW, monthFirstDay, monthLastDay);
+		//债权投资(本月投资笔数)
+		double  buyCreditCountCurrentMonth = creditLogService.buyCreditCount(user, CreditLog.CRELOG_STATUS_YEW, monthFirstDay, monthLastDay);
+		//债权投资(本月已赚金额)
+		double buyCreditInterestCurrentMonth = borrowCollectionService.getInterestByUser(user, monthFirstDay, monthLastDay);
+		//债权投资(本月结清)
+		int creditCollectedSum = borrowCollectionService.getCollectedSum(user.getUserId(), monthFirstDay, monthLastDay,1);
+		//总计（本月投资金额）
+		double investAmount =  BigDecimalUtil.add(tenderAccount,buyCreditMoneyCurrentMonth);
+		//总计（本月已赚金额）
+		double collectedAmount =  BigDecimalUtil.add(currentIterest,buyCreditInterestCurrentMonth);
+	
+		//截止01月31日，您在晋商贷累计投资：元
+		double investAmounteEndTime =BigDecimalUtil.add(borrowTenderService.getInvesterTenderAccount(user.getUserId(), monthLastDay),creditLogService.buyCreditMoneyTotal(user, CreditLog.CRELOG_STATUS_YEW, monthLastDay)); 
+
+		//截止01月31日，累计已赚金额：0.00 元。
+
+		double collectedMoneyEndTime =  BigDecimalUtil.add(borrowCollectionService.getBorrowCollectedInterest(user.getUserId(), null, monthLastDay),borrowCollectionService.getBorrowCollectedLateInterest(user.getUserId(), null, monthLastDay),borrowCollectionService.getInterestByUser(user, null, monthLastDay));
+	
+				
+		data.put("currentMonth", DateUtil.dateStr11(currentDate));
+		data.put("currentDateLastDay", DateUtil.dateStr10(monthLastDay));
+		data.put("rechargeTotal", rechargeTotal);
+		data.put("cashTotal", cashTotal);
+		data.put("tenderAccount", tenderAccount);
+		data.put("tenderSum", tenderSum);
+		data.put("currentMonthMoney", currentMonthMoney);
+		data.put("collectedSum", collectedSum);
+		data.put("userReturnedMoneySum", userReturnedMoneySum);
+		data.put("cashMoneyMonth", cashMoneyMonth);		
+		data.put("creditSumCurrentMonth", creditSumCurrentMonth);		
+		data.put("unCreditSumCurrentMonth", unCreditSumCurrentMonth);		
+		data.put("creditFeeCurrentMonth", creditFee);		
+		data.put("creditFeeSoldAccount", creditFeeSoldAccount);		
+		data.put("buyCreditMoneyCurrentMonth", buyCreditMoneyCurrentMonth);		
+		data.put("buyCreditCountCurrentMonth", buyCreditCountCurrentMonth);		
+		data.put("buyCreditInterestCurrentMonth", buyCreditInterestCurrentMonth);		
+		data.put("creditCollectedSum", creditCollectedSum);		
+		data.put("investAmount", investAmount);		
+		data.put("collectedAmount", collectedAmount);		
+		data.put("investAmounteEndTime", investAmounteEndTime);		
+		data.put("investAmounteEndTime", investAmounteEndTime);		
+		data.put("collectedMoneyEndTime", collectedMoneyEndTime);		
+		
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+}

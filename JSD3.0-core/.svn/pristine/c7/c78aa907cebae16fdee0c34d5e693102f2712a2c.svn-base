@@ -1,0 +1,82 @@
+package com.ddtkj.p2psys.credit.domain;
+
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+/**
+ * @描述：
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月18日 
+ */
+@Entity
+@Table(name="t_jsd_ca_optLog")
+public class CaOptLog {
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id ;   // 标识ID
+	private int type ;  // 类型
+	@ManyToOne
+	@JoinColumn(name="ca_id")
+	private CreditAssignment creditAssignment ; // 相关的债权ID
+	private String operation ; // 操作描述
+	private String result ;   //  结果 
+	private String reason ;  // 出错原因
+	private Date addTime ;  // 添加时间
+	private String addIp ;  // 添加IP
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public int getType() {
+		return type;
+	}
+	public void setType(int type) {
+		this.type = type;
+	}
+	public CreditAssignment getCreditAssignment() {
+		return creditAssignment;
+	}
+	public void setCreditAssignment(CreditAssignment creditAssignment) {
+		this.creditAssignment = creditAssignment;
+	}
+	public String getOperation() {
+		return operation;
+	}
+	public void setOperation(String operation) {
+		this.operation = operation;
+	}
+	public String getResult() {
+		return result;
+	}
+	public void setResult(String result) {
+		this.result = result;
+	}
+	public String getReason() {
+		return reason;
+	}
+	public void setReason(String reason) {
+		this.reason = reason;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+}

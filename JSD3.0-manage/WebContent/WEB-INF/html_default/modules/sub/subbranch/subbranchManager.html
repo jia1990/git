@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>加盟商管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  600;
+	var winHeight = 460;
+	
+	var delMsg = "你确定要删除该加盟商吗？";
+	var delUrl = "/modules/sub/subbranch/subbranchDel.html";	//删除加盟商
+	var delWinParmeters = "'{0}','"+delUrl+"','"+delMsg+"'";
+    
+    var addTitle = "添加加盟商";
+	var addUrl = "/modules/sub/subbranch/subbranchAddPage.html";    
+	$(function() {
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'subbranchList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect : true,
+			showFooter : true,	//显示页脚
+			columns : [ [ 			
+			{ field: 'id', title: '序号', width: 70}, 
+			{ field: 'branchName', title: '加盟商名称', width: 70},
+			{ field: 'provinceStr', title: "省", width: 80,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'cityStr', title: "市", width: 80,formatter:function(value, row, index){
+				return value;
+			}},
+			{ field: 'areaStr', title: "县", width: 100},
+			{ field: 'detail', title: "详细地址", width: 100},
+			{ field: 'inviteCounts', title: "邀请人数", width: 100},
+			{ field: 'validCounts', title: "有效邀请人数", width: 100},
+			
+			{ field: 'action',title : '操作',width :60,fixed:true, formatter:function(value, row, index){
+				var str = '';
+				
+				str += "<@secAuthorizeUrl value='/branch/branchDel.html'>";
+				str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+delWinParmeters+');" src="{1}" title="删除"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+				str += "</@secAuthorizeUrl>";
+				
+                return str;
+			}}
+			 ] ],
+	            toolbar : '#toolbar'
+		});
+		
+	});
+	function exportExcel(){
+		var url = "/modules/account/account/exportExcelAccount.html";
+		var userName = $("#username").val();
+		var realName = $("#realname").val();
+		var sou = "?userType=" + 13 + "&userName=" + userName + "&realName=" + realName;
+		window.location.href = url + sou;
+	}
+
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>加盟商：<input type="text" name="branchName" id="username" autocomplete="off"/></li>
+            		<li>地址：<input type="text" name="detail" id="realname" autocomplete="off"/></li>
+            		<!-- <li>是否删除：<select name="isDelete"  id="isDelete" class="type">
+            			<option value="99">全部</option>
+            			<option value="Y">已删除</option>
+            			<option value="N" selected="selected">未删除</option>
+            		</select></li> -->
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/branch/branchAdd.html'>
+		<a onclick="$.fn.dataGridOptions.addFun(3,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">添加</a>
+		</@secAuthorizeUrl>
+	</div>
+</body>
+</html>

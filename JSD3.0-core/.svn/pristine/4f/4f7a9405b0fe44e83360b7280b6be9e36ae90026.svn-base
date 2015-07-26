@@ -1,0 +1,116 @@
+package com.ddtkj.p2psys.account.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+public interface AccountService {
+	/**
+	 * 用户账户列表
+	 * 
+	 * @param account
+	 * @return
+	 */
+	PageDataList<AccountModel> list(AccountModel model);
+
+	/**
+	 * 根据用户查询
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	Account findByUser(long userId);
+
+	/**
+	 * 用户待收金额信息
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	AccountModel getUserCollectionAccount(long userId) throws Exception;
+
+	/**
+	 * 更新用户的账户信息
+	 * 
+	 * @param act
+	 */
+	void updateAccount(Account act);
+	/**
+	 * 修改账户对账结果
+	 * @param compareResult
+	 * @param userId
+	 */
+	public void updateAccountCompareResult(String compareResult,long accountId);
+	
+	PageDataList<AccountModel> getPageDataList(AccountModel accountModel);
+	
+	/**
+     * 投资人账户可用余额总和
+     * 
+     * @param userId
+     * @return
+     */
+    double getAllUseMoney();
+    
+    /**
+     * 分页查询用户账户信息
+     * @param accountModel
+     * @return
+     */
+    PageDataList<Account> accountDataList(AccountModel accountModel);
+    
+    //JSDBET-802 wcw 2015-3-12 start
+    /**
+     * 本地某账户资金和一麻袋对账（单个）
+     * @param userId
+     * @return
+     * @throws Exception
+     */
+    void accountCompare(long userId)throws Exception;
+    
+    /**
+     * 账户列表
+     * @param am
+     * @return
+     */
+    List<AccountModel> accountList(AccountModel am);
+    /**
+     * 本地某账户资金和一麻袋对账（多个）
+     * @param model
+     * @throws Exception
+     */
+    void accountCompareList(AccountModel model)throws Exception;
+    /**
+     * 账户对账
+     * @param account
+     * @throws Exception
+     */
+    void accountCompare(Account account)throws Exception;
+    //JSDBET-802 wcw 2015-3-12 end
+	//JSDP-116 xingjia 2015-05-16 start
+    /**
+     * 使用sql导出excel(资金管理)
+     * @param model
+     * @return
+     */
+    List excelListAccount(AccountModel model);
+    //JSDP-116 xingjia 2015-05-16 start
+  //JSDP-169 xingjia 20150529 start
+    /**
+     * 借款人资金汇总
+     * @param model
+     * @return
+     */
+    Object[] accountTotal(AccountModel model);
+  //JSDP-169 xingjia 20150529 end
+
+}

@@ -1,0 +1,31 @@
+package com.rongdu.p2psys.cooperation.dao;
+
+import com.rongdu.common.dao.BaseDao;
+import com.rongdu.p2psys.cooperation.domain.CooperationLogin;
+
+public interface CooperationLoginDao extends BaseDao<CooperationLogin> {
+
+	/**
+	 * 根据openId和type查询联合登录信息
+	 * 
+	 * @param openId
+	 * @param type 合作登录类型
+	 * @return
+	 */
+	public CooperationLogin getCooperationLogin(String openId, int type);
+
+	/**
+	 * 新增联合登录信息
+	 * 
+	 * @param cooperation
+	 */
+	public void addCooperationLogin(CooperationLogin cooperation);
+	//JSDP-31  fengguoqin 5.21 start
+	/**
+	 * 将openId和openType入库之后需要绑定用户，添加用户ID
+	 * 
+	 * @param cooperation
+	 */
+	public void updateCooperationLogin(CooperationLogin cooperation);
+	//JSDP-31  fengguoqin 5.21 end
+}

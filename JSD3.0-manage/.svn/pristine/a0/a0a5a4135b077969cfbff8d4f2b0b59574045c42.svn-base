@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>短信接口查询</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var winWidth = 680;
+	var winHeight = 600;
+	var addTitle="新增短信通道";
+	var addUrl="/modules/system/sms/smsAddPage.html";
+	
+	var editSmsTitle = "编辑短信通道";
+	var editSmsUrl= "/modules/system/sms/showSmsPage.html";
+	var editSmsParmeters = "'{0}','"+ editSmsTitle+"',"+ winWidth+","+ winHeight+",'"+ editSmsUrl+"'";
+	
+	var viewSmsTitle = "查看短信通道";
+	var viewSmsUrl = "/modules/system/sms/viewSmsManage.html";
+	var viewSmsParmeters = "'{0}','" + viewSmsTitle + "',720,400,'" + viewSmsUrl + "'";
+
+	var querySmsTitle = "查询短信余额";
+	var querySmsUrl = "/modules/system/sms/queryBalance.html";
+	var querySmsParmeters = "'{0}','" + querySmsTitle + "',400,280,'" + querySmsUrl + "'";
+	
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'smsInterfaceList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'id',
+            sortOrder : 'desc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [[
+			  { field: 'id', title: '编号', width: 80,fixed:true, sortable:false },
+              { field: 'name', title: '短信接口名', width: 180, fixed:true,sortable:false ,formatter: function(value,row,index){
+            	  return hideTitleName(row.name,15);	
+              }},
+              { field: 'status', title: '短信接口状态', width: 150,fixed:true, sortable:false ,formatter: function(value,row,index){
+            	  if (value =="11"){
+            		  return "开启";
+            	  }else if(value =="22"){
+            		  return "关闭";			  
+            	  }else{
+            		  return "错误的状态";
+            	  }
+              }},
+              { field: 'nid', title: '短信接口简称', width: 120,fixed:true, sortable:false }, 
+              { field: 'smsNoticeUrl', title: '短信接口请求地址', width: 330,fixed:true, sortable:false },
+              { field: 'signContent', title: '短信接口签名内容', width: 150,fixed:true, sortable:false,formatter: function(value,row,index){
+            		if (value == null) {
+            			return "默认没有签名";
+            		} else{
+            			return row.signContent;
+            		} 
+              }},
+              { field: 'addUserName', title: '添加用户名', width: 120,fixed:true, sortable:false },
+              { field: 'operateUserName', title: '操作用户名', width: 120,fixed:true, sortable:false },
+              { field: 'addTime', title: '添加时间', width: 160,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4); 
+              }}, 
+              { field : 'action',
+                  title : '操作',
+                  width :120,
+                  fixed:true,
+                  formatter : function(value, row, index) {
+                      var str = '';  
+                      str += "<@secAuthorizeUrl value='/smsView.html'>";
+                      str += $.formatString('<img onclick="$.fn.formOptions.viewFun(' + viewSmsParmeters + ');" src="{1}" title="查看短信通道信息"/>', row.id, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                      str += "</@secAuthorizeUrl>";
+  	                  str += '&nbsp;&nbsp;';
+                      str += "<@secAuthorizeUrl value='/smsEdit.html'>";
+  	                  str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editSmsParmeters+');" src="{1}" title="编辑短信通道"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+                      str += "</@secAuthorizeUrl>";
+                      str += '&nbsp;&nbsp;';
+                      str += "<@secAuthorizeUrl value='/smsQuery.html'>";
+  	                  str += $.formatString('<img onclick="$.fn.dataGridOptions.viewFun('+querySmsParmeters+');" src="{1}" title="查询短信余额"/>', row.id, '${theme_dir}/css/images/extjs_icons/book_open.png');
+                      str += "</@secAuthorizeUrl>";
+  	                  return str;
+                  }
+              }
+             ]],
+             toolbar : '#toolbar'
+        }); 
+    });
+    
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>短信接口名：<input type="text" name="name" id="name" autocomplete="off"/></li>
+            		<li>状态：
+		                <select name="status" id="status" class="type" >
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="22">关闭</option>
+		                  <option value="11">开启</option>
+		                </select>
+		            </li>	 
+		            <li>操作用户名：<input type="text" name="operateUserName" id="operateUserName" autocomplete="off"/></li>
+		            <li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>          	
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+   </div>
+   
+    <@secAuthorizeUrl value='/smsInterfaceAdd.html'>
+    <div id="toolbar" style="display: none;">		
+		<a id="a" onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn">新增短信通道</a>
+	</div>
+	</@secAuthorizeUrl>
+
+</body>
+</html>

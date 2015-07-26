@@ -1,0 +1,25 @@
+package com.ddtkj.p2psys.account.dao.impl;
+
+import org.springframework.stereotype.Repository;
+import com.ddtkj.p2psys.account.dao.AccountExtraDao;
+import com.ddtkj.p2psys.account.domain.AccountExtra;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+
+/**
+ * @描述：静态红包账户资金   JSDP-228
+ * @作者:fengguoqin@ddtkj.com
+ * @创建时间:  2015.07.22
+ */
+@Repository("accountExtraDao")
+public class AccountExtraDaoImpl extends BaseDaoImpl<AccountExtra> implements AccountExtraDao{
+
+	@Override
+	public AccountExtra getAccountExtraByUserId(long userId) {
+		return super.findObjByProperty("user.userId", userId);
+	}
+
+	@Override
+	public AccountExtra addAccountExtra(AccountExtra accountExtra) {
+		return save(accountExtra);
+	}
+}

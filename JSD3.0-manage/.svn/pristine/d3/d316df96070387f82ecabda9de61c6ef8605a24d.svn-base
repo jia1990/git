@@ -1,0 +1,39 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/system/rule/ruleEdit.html',"修改成功！","修改失败！");
+	});
+</script>
+<div class="popForm sForm">
+    <form id="form"  method="post">
+		<div class="formitm">
+		     <label class="lab">规则名：</label>
+		     <div class="ipt">
+				<input type="text" name="name" class="w600 easyui-validatebox" value="${rule.name!}" data-options="required: true" maxlength="10"/>
+				<b>*</b>
+			</div>
+		</div>
+	    <div class="formitm">
+			<label class="lab">规则类型：</label>
+			<div class="ipt">
+				<input type="text" name="nid" class="w600 easyui-validatebox" value="${rule.nid!}" data-options="required: true" maxlength="10"/>
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">备注：</label>
+		     <div class="ipt">
+				<input type="text" name="remark" class="w600 easyui-validatebox" data-options="required: true" value="${rule.remark!}"  maxlength="120"/>
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">规则约束：</label>
+		     <div class="ipt">
+				<textarea name="ruleCheck" class="w600 easyui-validatebox" data-options="required: true" style="height:500px">${newFormatStr!}</textarea>
+				<b>*</b>
+			</div>
+		</div>
+		<input type="hidden" name="id" value="${rule.id!}">
+		<input name="ruleEditToken" value="${ruleEditToken!}" type="hidden">
+	</form>
+</div>

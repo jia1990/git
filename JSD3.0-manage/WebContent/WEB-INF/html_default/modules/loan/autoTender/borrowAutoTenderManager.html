@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户自动投标记录</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+   
+    $(function() {
+         dataGrid = $('#dataGrid').datagrid({
+            url : 'borrowAutoTenderList.html',
+            fit : true,
+            fitColumns : true,
+            border : false,
+            pagination : true,
+            idField : 'id',
+            pageSize : 10,
+            pageNums :1,
+            pageList : [ 10, 20, 30, 40, 50 ],
+            sortName : 'addTime',
+            sortOrder : 'asc',
+            checkOnSelect : false,
+            selectOnCheck : false,
+            nowrap : false,
+			singleSelect:true,
+            columns : [ [
+			  { field: 'id', title: '编号', width: 60,fixed:true, sortable:false },
+              { field: 'userName', title: '用户名', width: 150,fixed:true, sortable:false },
+              { field: 'realName', title: '真实姓名', width: 120,fixed:true, sortable:false },
+              { field: 'borrowName', title: '借款标题', width: 180,fixed:true, sortable:false ,
+            	  formatter:function(value, row, index){
+  					var viewUrl = "${weburl}/invest/detail.html?borrowPreview=1"
+  					var viewWinParmeters = "'{0}','" + viewUrl + "'";
+  					return $.formatString('<a onclick="$.fn.dataGridOptions.viewBorrowFun('+viewWinParmeters+');" src="{1}">'+row.borrowName+'</a>', row.id, '${theme_dir}/css/images/extjs_icons/link.png');
+  					
+  					} 
+              },
+              { field: 'style', title: '还款方式', width: 120, fixed:true,sortable:false,formatter: function(value,row,index){
+				  return borrowStyle(row.style);
+              }},
+			
+              { field: 'apr', title: '年利率', width: 100, fixed:true,sortable:false ,formatter: function(value,row,index){
+            	  return value+"%";	
+              }},
+
+              { field: 'time_limit', title: '借款期限', width: 100,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  if(row.borrowTimeType == 1){
+            		  return row.timeLimit+"天";
+            	  }else{
+            		  return row.timeLimit+"月";   
+            	  }  
+              }},
+              
+              { field: 'money', title: '实际投标金额', width: 100, fixed:true,sortable:false,formatter: function(value,row,index){
+            	  if (value == 0){
+            		  return "";
+            	  }
+            	  return value + "元";
+              }}, 
+              { field: 'status', title: '自动投标状态', width: 100,fixed:true, sortable:false,formatter: function(value,row,index){
+				  if(value == "22"){
+             		 return "失败"; 
+             	  }else if(value == "11"){
+             	 	 return "成功";
+             	  }
+              }},
+              { field: 'addTime', title: '自动投标时间', width: 160,fixed:true, sortable:false,formatter: function(value,row,index){
+            	  return getLocalTime(value,4);
+  				  }  
+              }, 
+              { field: 'addIp', title: '自动投标IP', width: 160,fixed:true, sortable:false },
+              { field: 'remark', title: '自动投标结果', width:300,fixed:true, sortable:false } 
+              
+             ] ],
+             toolbar : '#toolbar'
+        }); 
+    });
+    
+    
+    function exportExcel(){
+		var url = "/modules/loan/autoTender/exportTenderList.html";
+		var userName = $("#userName").val();
+		var realName = $("#realName").val();
+		var borrowName = $("#borrowName").val();
+		var status = $("#status").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		var sou = "?userName=" + userName + "&realName=" + realName + "&borrowName=" + borrowName + "&status=" + status + "&startTime=" + startTime + "&endTime=" + endTime;
+		window.location.href = url + sou;
+	}
+    
+       
+</script>
+</head>
+<body style="padding:0 20px;" >
+    <div class="easyui-layout" data-options="fit : true,border : false">
+        <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件<font color="#0587E7">（输入查询条件查询信息）</font></h2>
+            <form id="searchForm">
+            	<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		<li>真实姓名：<input type="text" name="realName" id="realName" autocomplete="off"/></li>
+            		<li>借款标题：<input type="text" name="borrowName" id="borrowName" autocomplete="off"/></li>
+            		<li> 状态：
+		                <select name="status" id="status" class="type">
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="11">成功</option>
+		                  <option value="22">失败</option>
+		                </select>
+		            </li>
+		            <li>自动投标时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>        
+		            		            
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+            </form>
+        </div>
+        <div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+            <table id="dataGrid"></table>
+        </div>
+    </div>
+    
+    <@secAuthorizeUrl value='/exportTenderList.html'>
+    <div id="toolbar" style="display: none;">		
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>	
+		<span>	</span>   <!-- TODO : ajax参数化请求数据求和 -->
+	</div>
+	</@secAuthorizeUrl>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

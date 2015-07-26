@@ -1,0 +1,68 @@
+package com.rongdu.p2psys.core.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * 规则表
+ * 
+ * @author lhm
+ * @version 2.0
+ * @since 2014-04-03
+ */
+@Entity
+@Table(name = "t_jsd_rule_log")
+public class RuleLog implements Serializable {
+	
+	private static final long serialVersionUID = -8683955056095948279L;
+	/**
+	 * 主键ID
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	private long updateOpt;//更新人
+	private Date updateTime;//更新时间
+	private String ruleOld;//规则修改前的值
+	private String ruleNew;//规则修改后的值
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public long getUpdateOpt() {
+		return updateOpt;
+	}
+	public void setUpdateOpt(long updateOpt) {
+		this.updateOpt = updateOpt;
+	}
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+	public String getRuleOld() {
+		return ruleOld;
+	}
+	public void setRuleOld(String ruleOld) {
+		this.ruleOld = ruleOld;
+	}
+	public String getRuleNew() {
+		return ruleNew;
+	}
+	public void setRuleNew(String ruleNew) {
+		this.ruleNew = ruleNew;
+	}
+	
+	
+	
+	
+}

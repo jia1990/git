@@ -1,0 +1,41 @@
+package com.rongdu.p2psys.web.weixin;
+
+import java.io.OutputStream;
+
+import javax.annotation.Resource;
+import javax.servlet.ServletOutputStream;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+import com.rongdu.p2psys.weixin.service.WxService;
+import com.rongdu.p2psys.weixin.util.QRCodeUtils;
+
+public class WxAction extends BaseAction<User>{
+
+	@Resource
+	private UserService userService;
+	@Resource
+	private WxService wxService;
+	/**
+	 * 绑定微信方法
+	 */
+	@Action(value = "/user/bindWx")
+	public void bindWx()throws Exception{
+		long userId=getSessionUserId();
+	    String submitUrl=wxService.bindWx(userId);
+	    System.out.println("submitUrl=="+submitUrl);
+	    /*ServletOutputStream os =response.getOutputStream();
+	    QRCodeUtils.encode(submitUrl, os);*/
+	}
+	/**
+	 * 绑定微信号回调地址
+	 */
+	@Action(value = "/user/bindWxCallBack")
+	public void bindWxCallBack(){
+		System.out.println("openId=="+request.getParameter("openId"));
+		System.out.println("uId=="+request.getParameter("uid"));
+	}
+}

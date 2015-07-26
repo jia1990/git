@@ -1,0 +1,73 @@
+package com.ddtkj.p2psys.goods.dao.impl;
+
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.goods.dao.GoodsDao;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+
+@Repository("ddtkjGoodsDao")
+public class GoodsDaoImpl extends BaseDaoImpl<DdtkjGoods> implements GoodsDao{
+	
+	@Override
+	public List<String> getColorList(GoodsModel model) {
+		String selSql = "SELECT color FROM t_jsd_goods WHERE category_id =:categoryId AND type=11 AND stock >0 GROUP BY color ORDER BY cost ASC";
+		Query query = em.createNativeQuery(selSql);
+		long categoryId = model.getGoodsCategory().getId();
+		query.setParameter("categoryId", categoryId);
+		List<String> list = query.getResultList();
+		return list;
+	}
+	@Override
+	public List<String> getSizeList(GoodsModel model) {
+		StringBuffer selSql = new StringBuffer("SELECT size FROM t_jsd_goods WHERE category_id =:categoryId AND type=11 AND stock >0");
+		if(StringUtil.isNotBlank(model.getVesion())){
+			selSql.append(" AND vesion =:vesion");
+		}
+		if(StringUtil.isNotBlank(model.getColor())){
+			selSql.append(" AND color =:color");
+		}
+		selSql.append(" GROUP BY size  ORDER BY cost ASC");
+		Query query = em.createNativeQuery(selSql.toString());
+		long categoryId = model.getGoodsCategory().getId();
+		query.setParameter("categoryId", categoryId);
+		if(StringUtil.isNotBlank(model.getVesion())){
+			query.setParameter("vesion", model.getVesion());
+		}
+		if(StringUtil.isNotBlank(model.getColor())){
+			query.setParameter("color", model.getColor());
+		}
+		List<String> list = query.getResultList();
+		return list;
+	}
+	@Override
+	public List<String> getVesionList(GoodsModel model) {
+		StringBuffer selSql = new StringBuffer("SELECT Vesion FROM t_jsd_goods WHERE category_id =:categoryId AND type=11 AND stock >0");
+		if(StringUtil.isNotBlank(model.getColor())){
+			selSql.append(" AND color =:color");
+		}
+		selSql.append(" GROUP BY vesion ORDER BY cost ASC");
+		Query query = em.createNativeQuery(selSql.toString());
+		long categoryId = model.getGoodsCategory().getId();
+		query.setParameter("categoryId", categoryId);
+		if(StringUtil.isNotBlank(model.getColor())){
+			query.setParameter("color", model.getColor());
+		}
+		List<String> list = query.getResultList();
+		return list;
+	}
+	@Override
+	public List<Integer> getCostMinIdList() {
+		String selSql = "SELECT g.id as id FROM (SELECT id,MIN(cost) FROM t_jsd_goods WHERE type=11 AND stock >0 GROUP BY category_id) AS g";
+		Query query = em.createNativeQuery(selSql);
+		List<Integer> list = query.getResultList();
+		return list;
+	}
+}

@@ -1,0 +1,173 @@
+
+package com.ddtkj.p2psys.cardaward.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * @描述: 购物卡转云购记录
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+@Entity
+@Table(name = "t_jsd_card_award_transfer")
+public class CardAwardTransfer implements Serializable {
+	
+	private static final long serialVersionUID = 2888462964460629526L;
+	
+	/** 成功 **/
+	public static final String TRANS_STATUS_SUCC = "11";
+	/** 默认，失败 **/
+	public static final String TRANS_STATUS_FAIL = "22";
+	/** 全部 **/
+	public static final String TRANS_STATUS_ALL = "99";
+	
+	/** 成功 **/
+	public static final String TRANS_RECEIVESTATUS_SUCC = "11";
+	/** 默认，失败 **/
+	public static final String TRANS_RECEIVESTATUS_FAIL = "22";
+	/** 全部 **/
+	public static final String TRANS_RECEIVESTATUS_ALL = "99";
+	
+	/** 转账类型： 新站购物卡转账 **/
+	public static final String TRANS_TYPE_CARDAWARD = "3";
+	/** 转账类型：新站现金转账 **/
+	public static final String TRANS_TYPE_MONEY = "4";
+	
+	/** 转账类型： 3.0抽奖云购卡转账到云购java版  **/
+	public static final String TRANS_TYPE_CARDAWARD_TOJYG = "N1";
+	
+	/** 转账类型： 3.0积分转账到云购java版  **/
+	public static final String TRANS_TYPE_SCORE_TOJYG = "N2";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;			//主键
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "operator_id")
+	private Operator verifyUser;
+	
+	private String transNo; 	//订单号
+	private double transMoney;  //转账金额
+    private String openId;		//云购ID
+    private String remark;		//备注
+    private Date addTime;		//添加时间
+    private String addIp;		//添加IP
+    private String transType;	//交易类型		
+    private String status;		//交易状态   (22未发送请求, 11已发送请求)
+    private Date verifyTime;	//审核时间
+    private double cardValue;	//本次兑换消费购物卡数值
+    
+    private String receiveStatus;	//交易状态  (22回调失败，原因网络问题等, 11回调成功) 
+    private String checkResult;     //查询状态
+    
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public Operator getVerifyUser() {
+		return verifyUser;
+	}
+	public void setVerifyUser(Operator verifyUser) {
+		this.verifyUser = verifyUser;
+	}
+	public String getTransNo() {
+		return transNo;
+	}
+	public void setTransNo(String transNo) {
+		this.transNo = transNo;
+	}
+	public double getTransMoney() {
+		return transMoney;
+	}
+	public void setTransMoney(double transMoney) {
+		this.transMoney = transMoney;
+	}
+	public String getOpenId() {
+		return openId;
+	}
+	public void setOpenId(String openId) {
+		this.openId = openId;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public String getTransType() {
+		return transType;
+	}
+	public void setTransType(String transType) {
+		this.transType = transType;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public Date getVerifyTime() {
+		return verifyTime;
+	}
+	public void setVerifyTime(Date verifyTime) {
+		this.verifyTime = verifyTime;
+	}
+	public double getCardValue() {
+		return cardValue;
+	}
+	public void setCardValue(double cardValue) {
+		this.cardValue = cardValue;
+	}
+	public String getReceiveStatus() {
+		return receiveStatus;
+	}
+	public void setReceiveStatus(String receiveStatus) {
+		this.receiveStatus = receiveStatus;
+	}
+	public String getCheckResult() {
+		return checkResult;
+	}
+	public void setCheckResult(String checkResult) {
+		this.checkResult = checkResult;
+	}
+	
+	
+}

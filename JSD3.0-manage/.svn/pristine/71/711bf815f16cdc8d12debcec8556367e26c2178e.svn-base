@@ -1,0 +1,86 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/system/sms/updateSmsInterface.html',"操作成功！","操作失败！");
+	});
+</script>
+<div class="popForm sForm">
+    <form id="form"  method="post" enctype="multipart/form-data">	
+		<div class="formitm">
+		     <label class="lab">短信名称：</label>
+		     <div class="ipt">
+				<input type="text" name="name" value="${sms.name!}" class="w300 easyui-validatebox" data-options="required: true" maxlength="26" />
+				<b>*</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+				<input type="radio" id="status" name="status" value="11" size="15" <#if sms??&&sms.status=="11">checked="checked"</#if> />&nbsp;&nbsp;启用&nbsp;&nbsp;
+				<input type="radio" id="status" name="status" value="22" size="15" <#if sms??&&sms.status=="22">checked="checked"</#if> />&nbsp;&nbsp;关闭
+				<b>*</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">简称：</label>
+		     <div class="ipt">
+				<input type="text" name="nid" value="${sms.nid!}" class="w300 easyui-validatebox" data-options="required: true" maxlength="30" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">序列号：</label>
+		     <div class="ipt">
+				<input type="text" name="smsSn" value="${sms.smsSn!}" class="w300 easyui-validatebox" onKeyUp="value=value.replace(/[^0-9]/g,'')" maxlength="15"/>
+				<b>(根据短信接口需要来添加)</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">用户名：</label>
+		     <div class="ipt">
+				<input type="text" name="smsUsername" value="${sms.smsUsername!}" class="w300 easyui-validatebox" maxlength="30" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">密码：</label>
+		     <div class="ipt">
+				<input type="text" name="smsPassword" value="${sms.smsPassword!}" class="w300 easyui-validatebox" data-options="required: true" maxlength="30" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">请求地址：</label>
+		     <div class="ipt">
+				<input type="text" name="smsNoticeUrl" value="${sms.smsNoticeUrl!}" class="w300 easyui-validatebox" data-options="required: true" maxlength="50" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">余额地址：</label>
+		     <div class="ipt">
+				<input type="text" name="smsBalanceUrl" value="${sms.smsBalanceUrl!}" class="w300 easyui-validatebox" data-options="required: true" maxlength="50" />
+				<b>*</b>
+			</div>
+		</div>
+			<div class="formitm">
+		     <label class="lab">签名内容：</label>
+		     <div class="ipt">
+				<input type="text" name="signContent"  value="${sms.signContent!}" class="w300 easyui-validatebox" maxlength="30" />
+			</div>
+		</div>
+		<div class="formitm">
+			<label class="lab">备注：</label>
+			<div class="ipt">
+			   <textarea name="remark" class="w400 easyui-validatebox" data-options="required: true">${sms.remark!}</textarea>
+			</div>
+		</div>
+	<!-- 正则表达式校验用户名和密码、url、简称待写 -->
+		<input type="hidden" name="id" value="${sms.id!}" id="smsId">
+		<input type="hidden" name="actionType" value="modify" id="actionType">
+		<input type="hidden" name="addSmsToken" value="${addSmsToken!}" />
+		
+	</form>
+</div>

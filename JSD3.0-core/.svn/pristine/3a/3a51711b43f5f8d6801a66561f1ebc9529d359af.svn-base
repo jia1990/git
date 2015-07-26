@@ -1,0 +1,46 @@
+package com.rongdu.p2psys.user.service;
+
+import java.util.List;
+
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.user.domain.UserNoticeConfig;
+import com.rongdu.p2psys.user.model.UserNoticeConfigModel;
+
+/**
+ * 用户通知配置
+ *  
+ * @author 郭俊辉
+ * @version 3.0
+ * @since 2015-7-1
+ */
+public interface UserNoticeConfigService {
+
+	/**
+	 * 
+	 * @param userId
+	 * @param noticeTypeNid
+	 * @return
+	 */
+	UserNoticeConfig getUNConfig(long userId, String noticeTypeNid);
+
+	/**
+	 * 
+	 * @param userId
+	 * @return
+	 */
+	List<UserNoticeConfig> getAllUNConfigs(long userId);
+
+	/**
+	 * 
+	 * @param uncList
+	 * @param userId
+	 */
+	void updateUNConfigs(List<UserNoticeConfig> uncList, long userId);
+
+	/**
+	 * 
+	 * @param userNoticeConfig
+	 * @return
+	 */
+	PageDataList<UserNoticeConfigModel> list(int page,int rows,UserNoticeConfigModel userNoticeConfig);
+}

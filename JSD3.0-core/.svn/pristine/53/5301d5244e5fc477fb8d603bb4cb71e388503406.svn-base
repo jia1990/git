@@ -1,0 +1,32 @@
+package com.ddtkj.p2psys.reset.global.util;
+
+import com.alibaba.fastjson.JSON;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.domain.Rule;
+import com.rongdu.p2psys.core.rule.RuleCheck;
+
+/**
+ * @描述:工具类，json转换为RuleCheck类型实例
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月23日
+ */
+public class JSON2RuleChek {
+	private static String rulePackageName = "com.rongdu.p2psys.core.rule";
+
+	public static RuleCheck getRuleCheck(Rule r) {
+		Object jsonObj = null;
+		try {
+			Class<?> clazz = null;
+			clazz = Class.forName(rulePackageName + "."
+					+ StringUtil.firstCharUpperCase(r.getNid()) + "RuleCheck");
+			jsonObj = JSON.parseObject(r.getRuleCheck(), clazz);
+			if (jsonObj == null) {
+				jsonObj = clazz.newInstance();
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return (RuleCheck) jsonObj;
+	}
+}

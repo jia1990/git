@@ -1,0 +1,376 @@
+package com.ddtkj.p2psys.account.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @描述：用户账户资金日志实体
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Entity
+@Table(name = "t_jsd_account_log")
+
+public class AccountLog implements Serializable{
+	private static final long serialVersionUID = -6904876060794197147L;
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;
+    @ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+    private User user;
+    private String type;   //类型 产生这条记录的操作
+    //投资人相关
+    private double rechargeMoney; //充值操作金额
+    private double awardMoney;  //奖励操作金额
+    private double interestMoney;  //利息操作金额
+    private double returnCapitalMoney; //回款本金操作金额
+    private double rpDynamicMoney ; //钱袋子操作金额
+    private double accountTotal;  //账户总额
+	private double interestUsable;  //利息可用总额
+	private double awardUsable;    //奖励可用总额
+	private double rechargeUsable;  //充值可用总额
+	private double rpDynamicUsable ; //钱袋子可用金额
+	private double returnCapitalUsable;  //回款本金可用总额
+	private double freezeUseInterest;  //冻结使用利息金额
+	private double freezeUseRecharge;  //冻结使用充值金额
+	private double freezeUseReturnCapital;  //冻结使用回款本金金额
+	private double freezeUseAward;   //冻结使用奖励金额
+	private double freezeRpDynamic ; //冻结钱袋子金额
+	private double collectionTotal;  //待收总额
+	//JSDP-228 fengguoqin   2015.07.22  start
+	 private double rpStaticMoney ; //静态红包操作金额
+	 private double rpStaticUsable ; //钱袋子可用金额
+	private double freezeRpStatic ; //冻结静态红包金额
+	//JSDP-228 fengguoqin   2015.07.22  end
+	//借款人相关
+	private double borrowerRechargeMoney; //借款人充值操作金额
+	private double borrowerEnterMoney; //借款人借款入账操作金额
+	private double borrowerRechargeUsable; //借款人充值可用金额
+	private double borrowerEnterUsable; //借款人借款入账可用金额	
+	private double borrowerFreezeUseRecharge; //借款人冻结充值金额
+	private double borrowerFreezeUseEnter; //借款人冻结借款入账金额
+	private double repaymentTotal; //待还金额
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "to_user")
+	private User toUser; //交易对方用户ID
+	private String remark; //备注
+	private int paymentsType; //收支明细 0是不变  1是收入  2是支出'
+	
+	private String tradeNo;//交易批次号
+	private String outTradeNo;//交易流水号
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date addTime;  //记录添加时间
+	private String addIp; //记录添加IP
+	/**
+	 * 借款人操作金额
+	 * @return
+	 */
+	public double getBorrowOptMoney(){
+		return BigDecimalUtil.add(borrowerEnterMoney,borrowerRechargeMoney);
+	}
+	/**
+	 * 操作金额
+	 * @return
+	 */
+	public double getInvestOptMoney(){
+		return BigDecimalUtil.add(rechargeMoney,awardMoney,interestMoney,returnCapitalMoney,rpStaticMoney);
+	}
+	/**
+	 * 获取借款人可用金额
+	 * @return
+	 */
+	public double getBorrowUseMoney(){
+		return BigDecimalUtil.add(borrowerRechargeUsable,borrowerEnterUsable);
+	}
+	/**
+	 * 获取投资人可用金额
+	 * @return
+	 */
+	public double getInvestUseMoney(){
+		return BigDecimalUtil.add(interestUsable,awardUsable,rechargeUsable,returnCapitalUsable);
+	}
+	/**
+	 * 获取投资人冻结总额
+	 * @return
+	 */
+	public double getFreezeAccount(){
+		return BigDecimalUtil.add(freezeUseAward,freezeUseInterest,freezeUseRecharge,freezeUseReturnCapital) ;
+	}
+	/**
+	 * 获取借款人冻结总额
+	 * @return
+	 */
+	public double getBorrowerFreezeTotal(){
+		return BigDecimalUtil.add(borrowerFreezeUseRecharge,borrowerFreezeUseEnter) ;
+	}
+	
+	
+	/**
+	 * 钱袋子总额
+	 * @return
+	 */
+	public double getRpDynamicTotal(){
+		return BigDecimalUtil.add(rpDynamicUsable,freezeRpDynamic);
+	}
+	
+	
+	public AccountLog() {
+		super();
+	}
+	public AccountLog(User user, String type, User toUser) {
+		super();
+		this.user = user;
+		this.type = type;
+		this.toUser = toUser;
+		this.addTime = new Date();
+		this.addIp = Global.getIP();
+	}
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public String getType() {
+		return type;
+	}
+	public void setType(String type) {
+		this.type = type;
+	}
+	public double getAccountTotal() {
+		return accountTotal;
+	}
+	public void setAccountTotal(double accountTotal) {
+		this.accountTotal = accountTotal;
+	}
+	public double getInterestUsable() {
+		return interestUsable;
+	}
+	public void setInterestUsable(double interestUsable) {
+		this.interestUsable = interestUsable;
+	}
+	public double getAwardUsable() {
+		return awardUsable;
+	}
+	public void setAwardUsable(double awardUsable) {
+		this.awardUsable = awardUsable;
+	}
+	public double getRechargeUsable() {
+		return rechargeUsable;
+	}
+	public void setRechargeUsable(double rechargeUsable) {
+		this.rechargeUsable = rechargeUsable;
+	}
+	public double getReturnCapitalUsable() {
+		return returnCapitalUsable;
+	}
+	public void setReturnCapitalUsable(double returnCapitalUsable) {
+		this.returnCapitalUsable = returnCapitalUsable;
+	}
+	public double getFreezeUseInterest() {
+		return freezeUseInterest;
+	}
+	public void setFreezeUseInterest(double freezeUseInterest) {
+		this.freezeUseInterest = freezeUseInterest;
+	}
+	public double getFreezeUseRecharge() {
+		return freezeUseRecharge;
+	}
+	public void setFreezeUseRecharge(double freezeUseRecharge) {
+		this.freezeUseRecharge = freezeUseRecharge;
+	}
+	
+	public double getFreezeUseReturnCapital() {
+		return freezeUseReturnCapital;
+	}
+	public void setFreezeUseReturnCapital(double freezeUseReturnCapital) {
+		this.freezeUseReturnCapital = freezeUseReturnCapital;
+	}
+	public double getFreezeUseAward() {
+		return freezeUseAward;
+	}
+	public void setFreezeUseAward(double freezeUseAward) {
+		this.freezeUseAward = freezeUseAward;
+	}
+	public double getCollectionTotal() {
+		return collectionTotal;
+	}
+	public void setCollectionTotal(double collectionTotal) {
+		this.collectionTotal = collectionTotal;
+	}
+	
+	public User getToUser() {
+		return toUser;
+	}
+	public void setToUser(User toUser) {
+		this.toUser = toUser;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public int getPaymentsType() {
+		return paymentsType;
+	}
+	public void setPaymentsType(int paymentsType) {
+		this.paymentsType = paymentsType;
+	}
+	
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	public double getRechargeMoney() {
+		return rechargeMoney;
+	}
+	public void setRechargeMoney(double rechargeMoney) {
+		this.rechargeMoney = rechargeMoney;
+	}
+	public double getAwardMoney() {
+		return awardMoney;
+	}
+	public void setAwardMoney(double awardMoney) {
+		this.awardMoney = awardMoney;
+	}
+	public double getInterestMoney() {
+		return interestMoney;
+	}
+	public void setInterestMoney(double interestMoney) {
+		this.interestMoney = interestMoney;
+	}
+	public double getReturnCapitalMoney() {
+		return returnCapitalMoney;
+	}
+	public void setReturnCapitalMoney(double returnCapitalMoney) {
+		this.returnCapitalMoney = returnCapitalMoney;
+	}
+	public double getRepaymentTotal() {
+		return repaymentTotal;
+	}
+	public void setRepaymentTotal(double repaymentTotal) {
+		this.repaymentTotal = repaymentTotal;
+	}
+	public double getBorrowerRechargeUsable() {
+		return borrowerRechargeUsable;
+	}
+	public void setBorrowerRechargeUsable(double borrowerRechargeUsable) {
+		this.borrowerRechargeUsable = borrowerRechargeUsable;
+	}
+	public double getBorrowerEnterUsable() {
+		return borrowerEnterUsable;
+	}
+	public void setBorrowerEnterUsable(double borrowerEnterUsable) {
+		this.borrowerEnterUsable = borrowerEnterUsable;
+	}
+	public double getBorrowerFreezeUseRecharge() {
+		return borrowerFreezeUseRecharge;
+	}
+	public void setBorrowerFreezeUseRecharge(double borrowerFreezeUseRecharge) {
+		this.borrowerFreezeUseRecharge = borrowerFreezeUseRecharge;
+	}
+	public double getBorrowerFreezeUseEnter() {
+		return borrowerFreezeUseEnter;
+	}
+	public void setBorrowerFreezeUseEnter(double borrowerFreezeUseEnter) {
+		this.borrowerFreezeUseEnter = borrowerFreezeUseEnter;
+	}
+	public double getBorrowerRechargeMoney() {
+		return borrowerRechargeMoney;
+	}
+	public void setBorrowerRechargeMoney(double borrowerRechargeMoney) {
+		this.borrowerRechargeMoney = borrowerRechargeMoney;
+	}
+	public double getBorrowerEnterMoney() {
+		return borrowerEnterMoney;
+	}
+	public void setBorrowerEnterMoney(double borrowerEnterMoney) {
+		this.borrowerEnterMoney = borrowerEnterMoney;
+	}
+	public double getRpDynamicMoney() {
+		return rpDynamicMoney;
+	}
+	public void setRpDynamicMoney(double rpDynamicMoney) {
+		this.rpDynamicMoney = rpDynamicMoney;
+	}
+	public double getRpDynamicUsable() {
+		return rpDynamicUsable;
+	}
+	public void setRpDynamicUsable(double rpDynamicUsable) {
+		this.rpDynamicUsable = rpDynamicUsable;
+	}
+	public double getFreezeRpDynamic() {
+		return freezeRpDynamic;
+	}
+	public void setFreezeRpDynamic(double freezeRpDynamic) {
+		this.freezeRpDynamic = freezeRpDynamic;
+	}
+
+	public String getTradeNo() {
+		return tradeNo;
+	}
+
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+
+	public String getOutTradeNo() {
+		return outTradeNo;
+	}
+
+	public void setOutTradeNo(String outTradeNo) {
+		this.outTradeNo = outTradeNo;
+	}
+	//JSDP-228 fengguoqin   2015.07.22  start
+	public double getRpStaticMoney() {
+		return rpStaticMoney;
+	}
+	public void setRpStaticMoney(double rpStaticMoney) {
+		this.rpStaticMoney = rpStaticMoney;
+	}
+	public double getFreezeRpStatic() {
+		return freezeRpStatic;
+	}
+	public void setFreezeRpStatic(double freezeRpStatic) {
+		this.freezeRpStatic = freezeRpStatic;
+	}
+	public double getRpStaticUsable() {
+		return rpStaticUsable;
+	}
+	public void setRpStaticUsable(double rpStaticUsable) {
+		this.rpStaticUsable = rpStaticUsable;
+	}
+	//JSDP-228 fengguoqin   2015.07.22  end
+}

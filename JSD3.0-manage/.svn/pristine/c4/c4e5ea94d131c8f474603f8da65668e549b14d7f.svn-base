@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户收货地址查询</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../../include/resources.html">
+<script type="text/javascript">
+	$.userLock = true;
+</script>
+
+<script type="text/javascript">
+
+	var editTitle = "其他地址";
+	var editUrl =  "/modules/user/receipt/otherAddressManage.html"; 
+	var editWinParmeters = "'{0}','"+editTitle+"',500,300,'"+editUrl+"'";
+
+	var dataGrid;
+	//var winWidth =  500;
+	//var winHeight = 300;
+	//var editTitle = "其他地址";
+	//var editUrl =  "/modules/user/receipt/otherAddressManage.html";
+	//var editWinParmeters = "'{0}','"+editTitle+"',"+winWidth+","+winHeight+",'"+editUrl+"'";
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'addressList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'asc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			autoRowHeight : true,
+			nowrap : false,
+			singleSelect:true,
+			columns : [ [
+			{ field: 'id', title: '编号', width: 50, fixed :true,checkbox : false},
+			//{ field: 'user.userId', title: '会员id', width: 100, fixed :true,sortable: false },
+			{ field: 'userName', title: '会员名', width: 100, fixed :true,sortable: false },
+			{ field: 'name', title: '收货人姓名', width: 100, fixed :true,sortable: false },
+			{ field: 'provinceName', title: '省', width: 150, fixed :true,sortable: false},
+			{ field: 'cityName', title: '市', width: 150,fixed :true, sortable: false },
+			{ field: 'detailAddress', title: '详细地址',width: 200, sortable: false },
+			{ field: 'phone', title: '电话',fixed :true, width: 100, sortable: false },
+			{ field: 'zipCode', title: '邮编', width: 85, sortable: false },
+			{	field : 'action',
+				title : '操作',
+				width :120,
+				fixed :true,
+				formatter : function(value, row, index) {
+					var str = '';
+					
+					if ($.userLock) {
+						str += $.formatString('<input type="button" value="其他地址" onclick="showOtherAddress('+row.user.userId+')" class="otherAddress"/>');
+					}
+					
+					str += '&nbsp;';
+					return str;
+				}
+					
+			}
+			] ],
+			loadFilter: function(data){
+				$.each(data.rows,function(index,row){
+					if(row.userId){
+						row.userId=row.user.userId;
+					}
+				}); 
+				return data;
+			},
+			toolbar : '#toolbar',
+		});
+	});
+	//用户冻结查询管理中的excel导出
+	function exportExcel(){
+		var url = "/modules/user/receipt/addressExcel.html";
+		var userName = $("#userName").val();
+		var phone = $("#phone").val();
+		var userType = $("#userType").val();
+		var sou = "?user.userName=" + userName + "&phone=" + phone + "&userType=" + userType;
+		window.location.href = url + sou;
+	}	
+</script>
+<style type="text/css">
+.otherAddress{
+	margin-left:0px;margin-top:10px;width:100px;border:none;font-size:16px;color:#fff;background-color: #4b93cf;text-align: center;-moz-border-radius:5px; -webkit-border-radius: 5px; border-radius: 5px;cursor: pointer;
+}
+</style>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+	           		<li>会员名：<input type="text" name="user.userName" id="userName" autocomplete="off"/></li>
+	           		<li>用户类型：
+	           		<select name="userType" id="userType">
+						<option value="">全部</option>
+						<option value="10">投资人</option>
+						<option value="11">借款人</option>
+	           		</select>
+	           		</li>
+	           		<li>电话号码：<input type="text" name="phone" id="phone" autocomplete="off"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+		<div id="toolbar" style="display: none;">		
+		<@secAuthorizeUrl value='/user/addressExcel.html'>
+            <a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>
+	</div>
+	</div>
+</body>
+</html>

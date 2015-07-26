@@ -1,0 +1,389 @@
+
+package com.ddtkj.manage.action.cardaward;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.manage.ExcelHelper;
+import com.ddtkj.p2psys.authorize.domain.Client;
+import com.ddtkj.p2psys.authorize.model.ClientUserModel;
+import com.ddtkj.p2psys.authorize.service.ClientUserService;
+import com.ddtkj.p2psys.cardaward.domain.CardAwardTransfer;
+import com.ddtkj.p2psys.cardaward.model.CardAwardTransferModel;
+import com.ddtkj.p2psys.cardaward.service.CardAwardTransferService;
+import com.ddtkj.p2psys.cardaward.service.MemberCardAwardService;
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.service.ScoreRuleAwardService;
+import com.ddtkj.p2psys.score.service.UserScoreAwardService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.enums.EnumRuleNid;
+import com.rongdu.p2psys.core.domain.OperationLog;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.rule.YunGouTransferRuleCheck;
+import com.rongdu.p2psys.core.service.OperationLogService;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.util.excel.ExcelUtils;
+import com.rongdu.p2psys.core.util.excel.JsGridReportBase;
+import com.rongdu.p2psys.core.util.excel.TableData;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述: 后台购物卡转账记录查询
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-31   
+ */
+public class ManageCardAwardTransferAction extends BaseAction implements ModelDriven<CardAwardTransferModel> {
+	private static Logger logger = Logger.getLogger(ManageCardAwardTransferAction.class);
+	@Resource
+	private MemberCardAwardService memberCardAwardService;
+	@Resource
+	private CardAwardTransferService cardAwardTransferService;
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private ClientUserService clientUserService;
+	@Resource
+	private ScoreRuleAwardService scoreRuleAwardService;
+	@Resource
+	private OperationLogService operationLogService;
+	@Resource
+	private UserScoreAwardService userScoreAwardService;
+	
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	private CardAwardTransferModel model = new CardAwardTransferModel();
+
+	public CardAwardTransferModel getModel() {
+		return model;
+	}
+	
+	/**
+	 * 购物卡转账记录
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/cardAwardTransferManage")
+	public String cardAwardTransferManage() throws Exception {
+		
+		return "cardAwardTransferManage";
+	}
+		
+	/**
+	 * 取得购物卡转账列表，参数化查询求和
+	 * @throws Exception
+	 */
+	@Action("/modules/user/cardaward/cardAwardTransferList")
+	public void cardAwardTransferList() throws Exception {
+		String transferTotal = null;
+		PageDataList<CardAwardTransferModel> pageList = new PageDataList<CardAwardTransferModel>(); 
+		if(StringUtil.isNotBlank(model.getUserName()) || StringUtil.isNotBlank(model.getRealName()) || StringUtil.isNotBlank(model.getStatus()) ||
+				StringUtil.isNotBlank(model.getStartTime()) || StringUtil.isNotBlank(model.getTransNo()) || StringUtil.isNotBlank(model.getOperatorUserName())){
+			pageList = cardAwardTransferService.getCardTransferList(model);
+			transferTotal = cardAwardTransferService.transferTotal(model);
+			int totalPage = pageList.getPage().getTotal();
+			map.put("rows", pageList.getList());
+			map.put("total", totalPage);
+		}
+	
+		//获取汇总数据
+		List<Map<String,String>> footerList = new ArrayList<Map<String,String>>();
+		if(null != transferTotal){
+    		Map<String,String> footerMap = new HashMap<String,String>();
+    		footerMap.put("transMoney", "转账总金额："+ transferTotal);
+    		footerList.add(footerMap);
+		}
+		
+		map.put("footer", footerList);
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 导出购物卡转账记录
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/exportCardTransfer")
+	public void exportCardTransfer() throws Exception {
+		//JSDP-116 fengguoqin 2015-05-19 start
+		response.setContentType("application/msexcel;charset=UTF-8");
+		String status = paramString("status");
+		/*
+		// 第一页开始
+		model.setPage(1);
+		// 最多出99999999条记录
+		model.setSize(99999999);
+		// 记录取得
+		List<CardAwardTransferModel> list = cardAwardTransferService.getCardTransferList(model).getList();
+		List<CardAwardTransferModel> newList = new ArrayList<CardAwardTransferModel>();		
+		for(int i=0;i<list.size();i++){
+			CardAwardTransferModel cardTransferModel = list.get(i);
+			cardTransferModel.setStatus(cardTransferModel.convertCardTransferStatus(cardTransferModel.getStatus()));
+			cardTransferModel.setReceiveStatus(cardTransferModel.convertCardTransferReceiveStatus(cardTransferModel.getReceiveStatus()));
+			cardTransferModel.setTransType(cardTransferModel.convertCardTransferType(cardTransferModel.getTransType()));
+			newList.add(cardTransferModel);
+		}*/
+		List<CardAwardTransferModel> list = cardAwardTransferService.excelTransferList(model);
+		String title = "";
+		if (CardAwardTransfer.TRANS_STATUS_ALL.equals(status)) {
+			title = "云购购物卡转账所有记录Excel表";
+		}else if (CardAwardTransfer.TRANS_STATUS_SUCC.equals(status)) {
+			title = "云购购物卡转账成功记录Excel表";
+		}else if (CardAwardTransfer.TRANS_STATUS_FAIL.equals(status)){
+			title = "云购购物卡未转账记录Excel表";
+		}
+		String[] hearders = new String[] {"编号","用户名","真实姓名","订单号","转账金额","转账类型","是否兑换","是否转账成功","审核时间","备注","添加时间","添加IP" };// 表头数组
+		/*String[] fields = new String[] { "id","userName","realName","transNo","transMoney","transType","status","receiveStatus","verifyTime","remark","addTime","addIp"};// 对象属性数组*/		
+		String[] fields = new String[] {"object[0]","object[1]","object[2]","object[3]","object[4]","object[5]","object[6]","object[7]","object[8]","object[9]","object[10]","object[11]"};// 对象属性数组
+		/*int sheetRows = 50000;	//导出一页的条数
+ 		int sheetPage = newList.size()/sheetRows;
+		if(newList.size()%sheetRows > 0){
+			sheetPage += 1;
+		}
+		List<TableData> tableDatas = new ArrayList<TableData>();
+		for(int i = 0; i < sheetPage; i++){
+			List<CardAwardTransferModel> tdList = new ArrayList<CardAwardTransferModel>();
+			for(int j = i * sheetRows ; j < (i+1)*sheetRows && j <newList.size(); j++ ){
+				CardAwardTransferModel cm = newList.get(j);
+				tdList.add(cm);
+			}
+			TableData td = ExcelUtils.createTableData(tdList, ExcelUtils.createTableHeader(hearders), fields);
+			td.setSheetTitle(title + "--第" + (i+1) + "页");
+			tableDatas.add(td);
+		}
+		JsGridReportBase report = new JsGridReportBase(request, response);
+		report.exportToExcel(title, getOperator().getUserName(), tableDatas);*/
+		String contextPath = ServletActionContext.getServletContext().getRealPath("/");
+		String downloadFile = "";
+		downloadFile = "weekReport" + System.currentTimeMillis() + ".xls";
+		String infile = contextPath + "/data/export/" + downloadFile;
+
+		ExcelHelper.writeExcel(infile, list, fields, hearders);
+		this.export(infile, downloadFile);
+		//JSDP-116 fengguoqin 2015-05-19 end
+	}
+
+	/**
+	 * 购物卡转账手动补单页面
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/manualTransferManage")
+	public String manualTransferManage() throws Exception {
+		saveToken("manualTranferToken");
+		String transNo = paramString("tradeNo");
+		logger.info("transNo===="+transNo);
+		if(StringUtil.isNotBlank(transNo)){
+			logger.info("cardAwardTransfer====查询开始");
+			CardAwardTransfer cardAwardTransfer = cardAwardTransferService.getCardTransferByTransNo(transNo);
+			logger.info("cardAwardTransfer====查询结束");
+			// 判断转账状态
+			if(cardAwardTransfer != null && CardAwardTransfer.TRANS_RECEIVESTATUS_SUCC.equals(cardAwardTransfer.getReceiveStatus())){
+				logger.info("receive status:"+cardAwardTransfer.getReceiveStatus());
+				printResult("此订单号转账记录已转账成功,请注意核实！", false);
+				return null;
+			}
+            if(cardAwardTransfer==null){
+            	printResult("此订单号转账记录不存在", false);
+				return null;
+			}
+            logger.info("user====查询开始");
+			User user = cardAwardTransfer.getUser();
+			logger.info("user====查询开始====user_id="+user.getUserId());
+			request.setAttribute("user", user);
+			request.setAttribute("cardTransfer", cardAwardTransfer);
+			return "manualTransferManage";
+		}else{
+			printResult("此订单号不存在！", false);
+			return null;
+		}
+	}
+
+	/**
+	 * 云购卡转账查询
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/queryYunGou")
+	public String queryYunGou() throws Exception {
+		String queryUrl = "";
+		String transNo = paramString("id");
+		CardAwardTransfer cardAwardTransfer = cardAwardTransferService.getCardTransferByTransNo(transNo);
+		if(EnableCardTransfer() != null){
+			queryUrl = EnableCardTransfer().getCardTransfer().getQueryUrl();
+		}
+		String queryResult = cardAwardTransferService.queryCardAwardTransferResult(cardAwardTransfer, queryUrl);
+		logger.info("queryResult:"+queryResult);
+		cardAwardTransfer.setCheckResult(queryResult);
+		cardAwardTransferService.updateCardAwardTransferByTransNo(cardAwardTransfer);
+		User user = userService.find(cardAwardTransfer.getUser().getUserId());
+		request.setAttribute("user", user);
+		request.setAttribute("queryResult", queryResult);
+		request.setAttribute("cardTransfer", cardAwardTransfer);
+		return "queryYunGouManage";
+	}
+		
+	/**
+	 * 购物卡转账手动补单
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/manualTransfer")
+	public void manualTransfer() throws Exception {
+		String tradeNo = paramString("transNo");
+		Operator operator = getOperator();
+		String backReqUrl = "";
+		String clientId = "";
+		double convertmoney = 0;
+		CardAwardTransfer cardTransferBack = cardAwardTransferService.getCardTransferByTransNo(tradeNo);
+		if(EnableCardTransfer() != null){
+			backReqUrl = EnableCardTransfer().getCardTransfer().getBackReqUrl();
+			clientId = EnableCardTransfer().getCardTransfer().getClientId();
+		}
+		if (StringUtil.isBlank(model.getRemark())){
+			printResult("审核备注内容不能为空", false);
+		}
+		if (CardAwardTransfer.TRANS_RECEIVESTATUS_SUCC.equals(model.getReceiveStatus())) {
+			printResult("此订单号转账记录已转账成功,请注意核实！", false);
+		}
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatusAndActiType(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE, ScoreRuleAward.ACTIVITY_TYPE_SCOREAWARD);
+		if (ruleAward != null) {
+			Date startTime = ruleAward.getStartDate();
+			Date endTime = ruleAward.getEndDate();
+			convertmoney = userScoreAwardService.getCardTotalByStatusAndTransNo(CardAwardTransfer.TRANS_RECEIVESTATUS_FAIL, 
+					startTime, endTime, cardTransferBack.getUser(), tradeNo);
+		}
+		logger.info("convertmoney and transMoney:"+convertmoney+","+cardTransferBack.getTransMoney());
+		if (cardTransferBack.getTransMoney() != convertmoney) {
+			printResult("补单金额与数据库记录不符，请注意核实！", false);
+		}
+		checkToken("manualTranferToken");
+		if (cardTransferBack != null) {
+			Client currentClient = new Client();
+			currentClient.setClientId(clientId);
+			User user = userService.find(cardTransferBack.getUser().getUserId());
+			ClientUserModel userInfo = clientUserService.updateOauthUserInfo(user, currentClient);
+			
+			cardTransferBack.setVerifyTime(new Date());
+			cardTransferBack.setRemark(model.getRemark());
+			cardTransferBack.setVerifyUser(operator);
+			boolean isSuccess = cardAwardTransferService.handelCardAwardTransferManage(cardTransferBack, userInfo, backReqUrl, operator);
+			if(isSuccess) {
+				printResult("补单成功！", true);
+			}else{
+				printResult("手动补单异常，请联系管理员！", false);
+			}
+		}
+		if (operator != null) {
+			OperationLog log = new OperationLog(null, getOperator(), "cardtransfer_manual");
+			log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+					+ Global.getIP() + "）的操作员对此笔转账记录进行手动补单(订单号："+tradeNo+")");
+			operationLogService.save(log);
+		}
+	}
+
+	private YunGouTransferRuleCheck EnableCardTransfer(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(check != null && check.getCardTransfer() != null && YunGouTransferRuleCheck.TRANSFER_STATUS_ENABLE.equals(check.getCardTransfer().getStatus())) {
+			return check;
+		}
+		return null;
+	}
+	
+	/**
+	 * 购物卡转账手动补单
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/manualTransferYg")
+	public void manualTransferYg() throws Exception {
+		String tradeNo = paramString("transNo");
+		Operator operator = getOperator();
+		String supplyReqUrl = null;
+		String ygSign = null;
+		double convertmoney = 0;
+		CardAwardTransfer cardTransferBack = cardAwardTransferService.getCardTransferByTransNo(tradeNo);
+		if(EnableCardTransfer() != null){
+			supplyReqUrl = EnableCardTransferYg().getCardTransferYg().getSupplyReqUrl();
+			ygSign = EnableCardTransferYg().getCardTransferYg().getSign();
+		}
+		if (StringUtil.isBlank(model.getRemark())){
+			printResult("审核备注内容不能为空", false);
+		}
+		if (CardAwardTransfer.TRANS_RECEIVESTATUS_SUCC.equals(model.getReceiveStatus())) {
+			printResult("此订单号转账记录已转账成功,请注意核实！", false);
+		}
+		ScoreRuleAward ruleAward = scoreRuleAwardService.getRuleAwardByStatusAndActiType(ScoreRuleAward.RULE_AWARD_STATUS_ENABLE, ScoreRuleAward.ACTIVITY_TYPE_SCOREAWARD);
+		if (ruleAward != null) {
+			Date startTime = ruleAward.getStartDate();
+			Date endTime = ruleAward.getEndDate();
+			convertmoney = userScoreAwardService.getCardTotalByStatusAndTransNo(CardAwardTransfer.TRANS_RECEIVESTATUS_FAIL, 
+					startTime, endTime, cardTransferBack.getUser(), tradeNo);
+		}
+		logger.info("convertmoney and transMoney:"+convertmoney+","+cardTransferBack.getTransMoney());
+		if (cardTransferBack.getTransMoney() != convertmoney) {
+			printResult("补单金额与数据库记录不符，请注意核实！", false);
+		}
+		checkToken("manualTranferToken");
+		if (cardTransferBack != null) {
+			User user = userService.find(cardTransferBack.getUser().getUserId());
+			cardTransferBack.setVerifyTime(new Date());
+			cardTransferBack.setRemark(model.getRemark());
+			cardTransferBack.setVerifyUser(operator);
+			boolean isSuccess = cardAwardTransferService.handelCardAwardTransferManageYg(cardTransferBack, user, supplyReqUrl, ygSign, operator);
+			if(isSuccess) {
+				printResult("补单成功！", true);
+			}else{
+				printResult("手动补单异常，请联系管理员！", false);
+			}
+		}
+		if (operator != null) {
+			OperationLog log = new OperationLog(null, getOperator(), "cardtransfer_manual");
+			log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+					+ Global.getIP() + "）的操作员对此笔转账记录进行手动补单(订单号："+tradeNo+")");
+			operationLogService.save(log);
+		}
+	}
+	
+	private YunGouTransferRuleCheck EnableCardTransferYg(){
+		YunGouTransferRuleCheck check = (YunGouTransferRuleCheck) Global.getRuleCheck("yunGouTransfer");
+		if(check != null && check.getCardTransferYg() != null && YunGouTransferRuleCheck.TRANSFER_STATUS_ENABLE.equals(check.getCardTransfer().getStatus())) {
+			return check;
+		}
+		return null;
+	}
+	
+	/**
+	 * 云购卡转账查询
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/user/cardaward/queryYunGou")
+	public String queryYunGouYg() throws Exception {
+		String queryUrl = null;
+		String transNo = paramString("id");
+		CardAwardTransfer cardAwardTransfer = cardAwardTransferService.getCardTransferByTransNo(transNo);
+		if(EnableCardTransfer() != null){
+			queryUrl = EnableCardTransferYg().getCardTransferYg().getSupplyQueryUrl();
+		}
+		String queryResult = cardAwardTransferService.queryCardAwardTransferResult(cardAwardTransfer, queryUrl);
+		logger.info("queryResult:"+queryResult);
+		cardAwardTransfer.setCheckResult(queryResult);
+		cardAwardTransferService.updateCardAwardTransferByTransNo(cardAwardTransfer);
+		User user = userService.find(cardAwardTransfer.getUser().getUserId());
+		request.setAttribute("user", user);
+		request.setAttribute("queryResult", queryResult);
+		request.setAttribute("cardTransfer", cardAwardTransfer);
+		return "queryYunGouManage";
+	}
+	
+}

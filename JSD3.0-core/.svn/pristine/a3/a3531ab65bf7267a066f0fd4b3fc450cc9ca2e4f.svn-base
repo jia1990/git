@@ -1,0 +1,34 @@
+package com.ddtkj.p2psys.article.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.article.dao.ArticlePicDao;
+import com.ddtkj.p2psys.article.domain.ArticlePic;
+import com.ddtkj.p2psys.article.service.ArticlePicService;
+@Service("articlePicService")
+public class ArticlePicServiceImpl implements ArticlePicService{
+
+	// JSDP-131 SXY start
+    @Resource
+    private ArticlePicDao articlePicDao;
+    
+    @Override
+    public ArticlePic addArticlePic(ArticlePic pic) {
+        return articlePicDao.save(pic);
+    }
+
+    @Override
+    public void deleteArticlePic(long id) {
+    	articlePicDao.delete(id);
+    }
+
+    @Override
+    public List<ArticlePic> getArticlePicByArticleId(long articleId) {
+        return articlePicDao.getArticlePic(articleId);
+    }
+    
+}

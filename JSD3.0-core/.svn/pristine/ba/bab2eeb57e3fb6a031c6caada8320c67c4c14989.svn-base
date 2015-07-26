@@ -1,0 +1,56 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.service.impl;
+
+import java.util.Calendar;
+import java.util.Date;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.member.dao.MemberVipAwardDao;
+import com.ddtkj.p2psys.member.model.MemberVipAwardModel;
+import com.ddtkj.p2psys.user.dao.UserInvitedSummaryDao;
+import com.ddtkj.p2psys.user.domain.UserInvitedSummary;
+import com.ddtkj.p2psys.user.service.UserInvitedSummaryService;
+
+/**
+ * @描述：好友邀请统计
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月22日 
+ */
+@Repository("userInvitedSummaryService")
+public class UserInvitedSummaryServiceImpl implements UserInvitedSummaryService{
+	
+	@Resource
+	private UserInvitedSummaryDao userInvitedSummaryDao;
+	
+	@Resource
+	private MemberVipAwardDao memberVipAwardDao;
+	
+	@Override
+	public UserInvitedSummary findUserInvitedSummaryByUserId(long userId) {
+		return userInvitedSummaryDao.findUserInvitedSummaryByUserId(userId);
+	}
+
+	@Override
+	public void modifyInviteUsedTotal(MemberVipAwardModel model) {
+		
+		userInvitedSummaryDao.modifyInviteUsedTotal(model.getUser().getUserId(), model.getVipConvertUsedPeople());
+		
+		Date startTime = Calendar.getInstance().getTime();
+		model.setAddTime(startTime);
+		model.setAwardResource("P4");
+		model.setIsConvert(0);
+		memberVipAwardDao.save(model.prototype());
+		
+	}
+
+	@Override
+	public void modifyInviteTotal(long userId) {
+		userInvitedSummaryDao.modifyInviteTotal(userId);	
+	}
+
+}

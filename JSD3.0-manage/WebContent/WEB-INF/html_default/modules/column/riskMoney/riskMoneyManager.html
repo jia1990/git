@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>风险备用金管理</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+
+<style>
+.datagrid-body a{cursor:pointer;color:#999933}
+</style>
+<script type="text/javascript">
+	$.canEdit = true;
+</script>
+<script type="text/javascript">
+	$.canDelete = true;
+</script>
+<script type="text/javascript">
+	$.canAdd = true;
+</script>
+
+<script>
+	function articleUpdate(id,param,value){
+		$.ajax({
+			url : '/modules/column/article/articleUpdate.html',
+			dataType: "json",
+			data: {id:id,type:param,value:value},
+			success : function(data){
+				if(data.result){
+					$('#dataGrid').datagrid('reload'); 
+					parent.$.messager.alert('提示', data.msg, 'info');
+				}
+			}
+		});
+	}
+	
+</script>
+
+<script type="text/javascript">
+    var dataGrid;
+    var winWidth =  830;
+    var winHeight = 700;
+    var addTitle = "添加信息";
+	var addUrl =  "/modules/column/riskMoney/riskMoneyAddPage.html?typeName=${typeName}";
+	
+	var editSurveyTitle = "编辑信息";
+    var editSurveyUrl =  "/modules/column/riskMoney/riskMoneyEditPage.html?typeName=${typeName}";
+    var editSurveyWinParmeters = "'{0}','"+editSurveyTitle+"',830,700,'"+editSurveyUrl+"'";
+	
+    var deleteUrl = "/modules/column/article/articleDel.html";	//删除记录接口地址
+    var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+    
+	$(function() {
+		
+		var editIndex = undefined;
+		dataGrid = $('#dataGrid').datagrid({
+			url : '/modules/column/riskMoney/riskMoneyList.html?typeName=riskMoney',
+			fit : true,
+			fitColumns : true,
+			border : true,
+			pagination : true,
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			nowrap : true,
+			columns : [ [ 			
+			{ field: 'id', title: '编号', width: 50,fixed:true, checkbox : false},
+			{ field: 'name', title: '名称', width: 80, sortable : false},
+			//{ field: 'title', title: '标题', width: 100, sortable : false},
+			{ field: 'title', title: '标题', width: 100, sortable : false},
+			{ field: 'nid', title: '类型', width: 100, hidden:true},
+			{ field: 'status', title: '状态', width: 50, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 0){
+						return "<a onclick='articleUpdate("+row.id+",\"status\","+value+")'>隐藏</a>";
+					}else if(value == 1){
+						return "<a onclick='articleUpdate("+row.id+",\"status\","+value+")'>显示</a>";
+					}
+					return "";
+				}
+			},
+			/* { field: 'isRecommend', title: '是否推荐', width: 40, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 0){
+						return "<a onclick='articleUpdate("+row.id+",\"isRecommend\","+value+")'>否</a>";
+					}else if(value == 1){
+						return "<a onclick='articleUpdate("+row.id+",\"isRecommend\","+value+")'>是</a>";
+					}
+					return "";
+				}	
+			},
+			{ field: 'isTop', title: '是否置顶', width: 40, sortable:false,
+				formatter:function(value, row, index){
+					if(value == 0){
+						return "<a onclick='articleUpdate("+row.id+",\"isTop\","+value+")'>否</a>";
+					}else if(value == 1){
+						return "<a onclick='articleUpdate("+row.id+",\"isTop\","+value+")'>是</a>";
+					}
+					return "";
+				}	
+			}, */
+			// { field: 'introduction', title: '简介', width: 200, sortable:false },
+			// { field: 'content', title: '内容', width: 200, sortable:false },
+			{ field: 'clicks', title: '点击量', width: 50, sortable:false },
+			{ field: 'sort', title: '排序', width: 50, sortable:false },
+			{ field: 'addTime', title: '添加时间', width: 90,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{field:'updateUserName', title:'操作人',width: 100},
+			{field:'updateTime', title:'修改时间',width: 100,formatter:function(value, row, index){
+				if (value){
+					return getLocalTime(value,4);
+				} else {
+					return "";
+				}
+			}},
+			{	field : 'action',
+				title : '操作',
+				fixed: true,
+				width :90,
+				formatter : function(value, row, index) {
+					var str = '';
+					if ($.canEdit) {
+						str += "<@secAuthorizeUrl value='/riskMoney/riskMoneyEditBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFun('+editSurveyWinParmeters+');" src="{1}" title="编辑" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/pencil.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					str += '&nbsp;';
+					if ($.canDelete) {
+						str += "<@secAuthorizeUrl value='/riskMoney/riskMoneyDelBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					
+					return str;
+				}
+			} ] ],
+			toolbar : '#toolbar',
+			onLoadSuccess : function() {
+				$('#searchForm table').show();
+				parent.$.messager.progress('close');
+			} 
+		});
+    });
+</script>
+
+</head>
+<body  style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>标题：<input type="text" name="title" autocomplete="off"/></li>
+            		<li>状态：
+	                	<select name="status" class="type">
+							<option value="-1" selected="selected">全部</option>
+							<option value="1">显示</option>
+							<option value="2">隐藏</option>
+						</select>
+					</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');" ondragstart="return false">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');" ondragstart="return false">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center',border:false">
+            <table id="dataGrid"></table>
+        </div>
+	</div>
+	<div id="toolbar" style="display: none;padding-top:25px;">	
+			<@secAuthorizeUrl value='/riskMoney/riskMoneyAddBtn.html'>	
+			<a onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn" ondragstart="return false">添加</a>
+			</@secAuthorizeUrl>
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

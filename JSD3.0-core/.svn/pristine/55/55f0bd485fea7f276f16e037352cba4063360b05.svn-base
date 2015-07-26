@@ -1,0 +1,120 @@
+
+package com.ddtkj.p2psys.cardaward.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述: 购物卡记录		，此表已弃用
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+@Entity
+@Table(name = "t_jsd_member_card_award")
+public class MemberCardAward implements Serializable {
+
+	private static final long serialVersionUID = -3280777677512462417L;
+	
+	/** 已兑换 **/
+	public static final String CONVERT_STATUS_YES = "11";
+	/** 默认，未兑换 **/
+	public static final String CONVERT_STATUS_NO = "22";
+	/** 全部 **/
+	public static final String CONVERT_STATUS_ALL = "99";
+	
+	/** CARD奖励来源: 积分抽奖 **/
+	public static final String CARD_AWARD_RESOURCE_SCOREAWARD = "R1";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;			//主键
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;
+	
+	private String awardResource;			//奖励来源(R1积分抽奖, 其他未定)
+	private double awardValue;				//奖励数值
+	private Date awardConvertTime;			//奖励兑换时间
+	private int effectiveTime;				//有效时间，以天为单位
+	private String isConvert;				//是否兑换(11已兑换, 22未兑换)
+	private Date addTime;					//添加时间
+	private String addIp;					//添加IP
+	
+	private String transNo;					//订单号
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public String getAwardResource() {
+		return awardResource;
+	}
+	public void setAwardResource(String awardResource) {
+		this.awardResource = awardResource;
+	}
+	public double getAwardValue() {
+		return awardValue;
+	}
+	public void setAwardValue(double awardValue) {
+		this.awardValue = awardValue;
+	}
+	public Date getAwardConvertTime() {
+		return awardConvertTime;
+	}
+	public void setAwardConvertTime(Date awardConvertTime) {
+		this.awardConvertTime = awardConvertTime;
+	}
+	public int getEffectiveTime() {
+		return effectiveTime;
+	}
+	public void setEffectiveTime(int effectiveTime) {
+		this.effectiveTime = effectiveTime;
+	}
+	public String getIsConvert() {
+		return isConvert;
+	}
+	public void setIsConvert(String isConvert) {
+		this.isConvert = isConvert;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAddIp() {
+		return addIp;
+	}
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	
+	public String getTransNo() {
+		return transNo;
+	}
+	public void setTransNo(String transNo) {
+		this.transNo = transNo;
+	}
+
+	
+}

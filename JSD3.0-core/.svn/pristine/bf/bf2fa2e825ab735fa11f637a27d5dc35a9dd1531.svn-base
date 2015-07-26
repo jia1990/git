@@ -1,0 +1,84 @@
+
+package com.ddtkj.p2psys.score.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.score.domain.ScoreRuleAward;
+import com.ddtkj.p2psys.score.model.ScoreRuleAwardModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述: 积分抽奖规则service
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+public interface ScoreRuleAwardService {
+	
+	/**
+	 * 根据规则ID取得抽奖规则信息
+	 * @param ruleId 规则ID
+	 * @return 抽奖规则信息
+	 */
+	ScoreRuleAward getRuleAwardByRuleId(long ruleId);
+
+	/**
+	 * 取得抽奖规则列表
+	 * @return 抽奖规则列表
+	 */
+	List<ScoreRuleAward> getRuleAwardList();
+
+	/**
+	 * 更新抽奖规则表
+	 * @param data 规则信息
+	 */
+	void updateRuleAward(ScoreRuleAward data);
+
+	/**
+	 * 新增抽奖规则信息
+	 * @param data 抽奖规则信息
+	 */
+	void addRuleAward(ScoreRuleAward data);
+	
+	/**
+	 * 根据抽奖类型取得有效时间的规则ID
+	 * @param awardType 抽奖类型
+	 * @return 规则ID
+	 */
+	long getRuleIdByAwardType(int awardType);
+
+	/**
+	 * 根据抽奖类型取得有效时间的规则信息
+	 * @param awardType 抽奖类型
+	 * @return 规则信息
+	 */
+	ScoreRuleAward getRuleAwardByAwardType(int awardType);
+	
+	/**
+	 * 更新抽奖规则表的总金额
+	 * @param ruleId 规则ID
+	 * @param money 总金额
+	 */
+	void updateTotalMoney(long ruleId, double money);
+	
+	/**
+	 * 取得抽奖规则列表分页
+	 * @return 抽奖规则列表
+	 */
+	PageDataList<ScoreRuleAwardModel> getRuleAwardList(ScoreRuleAwardModel model);
+	
+	/**
+	 * 根据状态获取抽奖规则
+	 * @param  status
+	 * @throws Exception   
+	 */ 
+	ScoreRuleAward getRuleAwardByStatus(String status);
+	
+	/**
+	 * 根据状态和Id获取抽奖规则
+	 * @param  status
+	 * @param  id
+	 * @throws Exception   
+	 */ 
+	ScoreRuleAward getRuleAwardByStatusAndId(String status, long id);
+
+}

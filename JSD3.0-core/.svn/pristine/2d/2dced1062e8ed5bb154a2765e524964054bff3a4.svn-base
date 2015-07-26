@@ -1,0 +1,355 @@
+
+package com.rongdu.p2psys.core.rule;
+
+import java.io.Serializable;
+
+/**
+ * @描述: 云购卡转账规则
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-4-2   
+ */
+public class YunGouTransferRuleCheck extends RuleCheck {
+	
+	private static final long serialVersionUID = 2582793005229370857L;
+	/** 云购购物卡转账规则  **/
+	private CardTransfer cardTransfer;
+	//JSDP-159 xingjia 2015-05-23 start
+	/** 3.0转账云购规则**/
+	private MoneyTransfer moneyTransfer;
+	//JSDP-159 xingjia 2015-05-23 end
+	//JSDP-171 xingjia 20150607 start
+	private YungouNoticeUrl yungouNoticeUrl; 
+	//JSDP-171 xingjia 20150607 end
+	
+	/** 3.0抽奖转账云购 **/
+	private CardTransferYg cardTransferYg;
+	
+	/** 云购体验卡规则   */
+	private YungouCardTransfer yungouCardTransfer;
+	/** 云购体验卡功能1为开启  */
+	public static final String YUNGOUCARD_STATUS_ENABLE = "1";
+	
+	/** 云购卡转账1为开启  **/
+	public static final String TRANSFER_STATUS_ENABLE = "1";
+	
+	/**
+	 * 晋商贷储值卡key
+	 */
+	private String jsd_petcard_key;
+	/**
+	 * 云购购物卡key
+	 */
+	private String yungou_petcard_key;
+
+	
+	public static class CardTransfer implements java.io.Serializable{
+
+		private static final long serialVersionUID = 5187121557229030773L;
+		
+		private String status;		//状态
+		private String clientId;	//应用ID
+		private String reqUrl;		//请求url
+		private String callUrl;		//回调url
+		private String backReqUrl;  //后台补单请求url
+		private String queryUrl;    //补单查询url
+		
+		public String getStatus() {
+			return status;
+		}
+		public void setStatus(String status) {
+			this.status = status;
+		}
+		public String getClientId() {
+			return clientId;
+		}
+		public void setClientId(String clientId) {
+			this.clientId = clientId;
+		}
+		public String getReqUrl() {
+			return reqUrl;
+		}
+		public void setReqUrl(String reqUrl) {
+			this.reqUrl = reqUrl;
+		}
+		public String getCallUrl() {
+			return callUrl;
+		}
+		public void setCallUrl(String callUrl) {
+			this.callUrl = callUrl;
+		}
+		public String getBackReqUrl() {
+			return backReqUrl;
+		}
+		public void setBackReqUrl(String backReqUrl) {
+			this.backReqUrl = backReqUrl;
+		}
+		public String getQueryUrl() {
+			return queryUrl;
+		}
+		public void setQueryUrl(String queryUrl) {
+			this.queryUrl = queryUrl;
+		}
+		
+	}
+	
+	
+	//JSDP-159 xingjia 2015-05-23 start
+	public static class MoneyTransfer implements Serializable{
+
+		private static final long serialVersionUID = 360553281594111637L;
+		private String status;		//状态 是否需要后台审核
+		private String clientId;	//应用ID
+		private String reqUrl;		//请求url
+		private String callUrl;		//回调url
+		private String supplyOrderUrl;  //后台补单请求url
+		/**
+		 * @return 状态 是否需要后台审核 status
+		 */
+		public String getStatus() {
+			return status;
+		}
+		/**
+		 * @param status 状态 是否需要后台审核
+		 */
+		public void setStatus(String status) {
+			this.status = status;
+		}
+		/**
+		 * @return 应用ID clientId
+		 */
+		public String getClientId() {
+			return clientId;
+		}
+		/**
+		 * @param clientId 应用ID
+		 */
+		public void setClientId(String clientId) {
+			this.clientId = clientId;
+		}
+		/**
+		 * @return 请求url
+		 */
+		public String getReqUrl() {
+			return reqUrl;
+		}
+		/**
+		 * @param 请求url
+		 */
+		public void setReqUrl(String reqUrl) {
+			this.reqUrl = reqUrl;
+		}
+		/**
+		 * @return 回调url
+		 */
+		public String getCallUrl() {
+			return callUrl;
+		}
+		/**
+		 * @param 回调url
+		 */
+		public void setCallUrl(String callUrl) {
+			this.callUrl = callUrl;
+		}
+		/**
+		 * @return 后台补单请求url
+		 */
+		public String getSupplyOrderUrl() {
+			return supplyOrderUrl;
+		}
+		/**
+		 * @param 后台补单请求url
+		 */
+		public void setSupplyOrderUrl(String supplyOrderUrl) {
+			this.supplyOrderUrl = supplyOrderUrl;
+		}
+		
+		
+	}
+	//JSDP-171 xingjia 20150607 start
+	public static class YungouNoticeUrl implements Serializable{
+		
+		private static final long serialVersionUID = -4864994407820517523L;
+		private String rechargeNoticeUrl;//充值成功后通知云购url
+		private String status;  //开关1为开启0为关闭
+		private String signKey;//加密key
+		private String supplyWinTimeUrl;//补单中奖时间的url
+		
+		
+		public String getStatus() {
+			return status;
+		}
+		public void setStatus(String status) {
+			this.status = status;
+		}
+		public String getRechargeNoticeUrl() {
+			return rechargeNoticeUrl;
+		}
+		public void setRechargeNoticeUrl(String rechargeNoticeUrl) {
+			this.rechargeNoticeUrl = rechargeNoticeUrl;
+		}
+		public String getSignKey() {
+			return signKey;
+		}
+		public void setSignKey(String signKey) {
+			this.signKey = signKey;
+		}
+		public String getSupplyWinTimeUrl() {
+			return supplyWinTimeUrl;
+		}
+		public void setSupplyWinTimeUrl(String supplyWinTimeUrl) {
+			this.supplyWinTimeUrl = supplyWinTimeUrl;
+		}
+		
+		
+		
+	}
+	//JSDP-171 xingjia 20150607 start
+	//JSDP-159 xingjia 2015-05-23 end
+	@Override
+	public boolean checkRule() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	public CardTransfer getCardTransfer() {
+		return cardTransfer;
+	}
+	public void setCardTransfer(CardTransfer cardTransfer) {
+		this.cardTransfer = cardTransfer;
+	}
+	
+	//JSDP-159 xingjia 2015-05-23 start
+	public MoneyTransfer getMoneyTransfer() {
+		return moneyTransfer;
+	}
+ 
+	public void setMoneyTransfer(MoneyTransfer moneyTransfer) {
+		this.moneyTransfer = moneyTransfer;
+	}
+	//JSDP-159 xingjia 2015-05-23 end 
+	
+	public YungouNoticeUrl getYungouNoticeUrl() {
+		return yungouNoticeUrl;
+	}
+	public void setYungouNoticeUrl(YungouNoticeUrl yungouNoticeUrl) {
+		this.yungouNoticeUrl = yungouNoticeUrl;
+	}
+	
+	public CardTransferYg getCardTransferYg() {
+		return cardTransferYg;
+	}
+	public void setCardTransferYg(CardTransferYg cardTransferYg) {
+		this.cardTransferYg = cardTransferYg;
+	}
+
+	public static class CardTransferYg implements java.io.Serializable{
+
+		private static final long serialVersionUID = 5187121557229030773L;
+		
+		private String status;		//状态
+		private String sign;		//校验签名
+		private String reqUrl;		//请求url
+		private String memberQueryUrl; 	//账户中心查询url
+		private String callBackUrl; 	//回调url，跳转云购账户中心
+		private String supplyReqUrl;    //后台补单请求url
+		private String supplyQueryUrl;  //补单查询url
+		
+		public String getStatus() {
+			return status;
+		}
+		public void setStatus(String status) {
+			this.status = status;
+		}
+		public String getSign() {
+			return sign;
+		}
+		public void setSign(String sign) {
+			this.sign = sign;
+		}
+		public String getReqUrl() {
+			return reqUrl;
+		}
+		public void setReqUrl(String reqUrl) {
+			this.reqUrl = reqUrl;
+		}
+		public String getCallBackUrl() {
+			return callBackUrl;
+		}
+		public void setCallBackUrl(String callBackUrl) {
+			this.callBackUrl = callBackUrl;
+		}
+		public String getSupplyReqUrl() {
+			return supplyReqUrl;
+		}
+		public void setSupplyReqUrl(String supplyReqUrl) {
+			this.supplyReqUrl = supplyReqUrl;
+		}
+		public String getMemberQueryUrl() {
+			return memberQueryUrl;
+		}
+		public void setMemberQueryUrl(String memberQueryUrl) {
+			this.memberQueryUrl = memberQueryUrl;
+		}
+		public String getSupplyQueryUrl() {
+			return supplyQueryUrl;
+		}
+		public void setSupplyQueryUrl(String supplyQueryUrl) {
+			this.supplyQueryUrl = supplyQueryUrl;
+		}
+	}
+	
+	
+	public static class YungouCardTransfer implements Serializable {
+
+		private static final long serialVersionUID = -5659275839284497613L;
+		
+		private String status;			//状态
+		private String signKey;			//签名
+		private String noticeUrl;		//通知url
+		private String ygsignkey;		//通知云购签名	
+		
+		public String getStatus() {
+			return status;
+		}
+		public void setStatus(String status) {
+			this.status = status;
+		}
+		public String getSignKey() {
+			return signKey;
+		}
+		public void setSignKey(String signKey) {
+			this.signKey = signKey;
+		}
+		public String getNoticeUrl() {
+			return noticeUrl;
+		}
+		public void setNoticeUrl(String noticeUrl) {
+			this.noticeUrl = noticeUrl;
+		}
+		public String getYgsignkey() {
+			return ygsignkey;
+		}
+		public void setYgsignkey(String ygsignkey) {
+			this.ygsignkey = ygsignkey;
+		}
+	}
+	
+	public YungouCardTransfer getYungouCardTransfer() {
+		return yungouCardTransfer;
+	}
+	public void setYungouCardTransfer(YungouCardTransfer yungouCardTransfer) {
+		this.yungouCardTransfer = yungouCardTransfer;
+	}
+	public String getJsd_petcard_key() {
+		return jsd_petcard_key;
+	}
+	public void setJsd_petcard_key(String jsd_petcard_key) {
+		this.jsd_petcard_key = jsd_petcard_key;
+	}
+	public String getYungou_petcard_key() {
+		return yungou_petcard_key;
+	}
+	public void setYungou_petcard_key(String yungou_petcard_key) {
+		this.yungou_petcard_key = yungou_petcard_key;
+	}
+	
+}

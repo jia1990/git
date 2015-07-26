@@ -1,0 +1,183 @@
+package com.rongdu.p2psys.core.service.impl;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.code.MD5;
+import com.rongdu.p2psys.core.dao.OperatorDao;
+import com.rongdu.p2psys.core.dao.OperatorRoleDao;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.domain.OperatorRole;
+import com.rongdu.p2psys.core.domain.Role;
+import com.rongdu.p2psys.core.rule.LoginRuleCheck;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.user.dao.UserCacheDao;
+
+@Service("managerService")
+public class OperatorServiceImpl implements OperatorService {
+
+	@Resource
+	private OperatorDao operatorDao;
+	@Resource
+	private OperatorRoleDao operatorRoleDao;
+	@Resource
+	private UserCacheDao userCacheDao;
+	
+	public Operator login(String userName, String pwd) throws Exception {
+		
+		if(null == userName || "".equals(userName)){
+			throw new BussinessException("请输入用户名！", 1);
+		}
+		if(null == pwd || "".equals(pwd)){
+			throw new BussinessException("请输入密码！", 1);
+		}
+		
+		QueryParam param = QueryParam.getInstance().addParam("userName", userName);
+		param.addParam("pwd", MD5.encode(pwd));
+		param.addParam("isDelete", false);
+		param.addParam("status",0);
+		
+		Operator operator = operatorDao.findByCriteriaForUnique(param);
+		
+		
+		return operator;
+		
+	}
+
+	public void addOperator(Operator operator, String[] roleIdArr) {
+		operator.setAddTime(new Date());
+		operator.setUpdateTime(new Date());
+		operator.setPwd(MD5.encode(operator.getPwd()));
+		operator = operatorDao.save(operator);
+		for (int i = 0; i < roleIdArr.length; i++) {
+			String roleIdStr = roleIdArr[i];
+			long roleId = Long.parseLong(roleIdStr);
+			Role r = new Role(roleId);
+			OperatorRole operatorRole = new OperatorRole();
+			operatorRole.setOperator(operator);
+			operatorRole.setRole(r);
+			operatorRoleDao.save(operatorRole);
+		}
+	}
+
+	public List<Operator> getUserList() {
+		return operatorDao.userList();
+	}
+
+	public void userUpdate(Operator operator, String[] roleIdArr) {
+		operator.setUpdateTime(new Date());
+//		Operator u = operatorDao.find(operator.getId());
+		Operator u = operatorDao.findOpterById(operator.getId(), false);
+		operator.setPwd(u.getPwd());
+		operatorDao.update(operator);
+		operatorRoleDao.deleteByUserId(u.getId());
+		for (int i = 0; i < roleIdArr.length; i++) {
+			String roleIdStr = roleIdArr[i];
+			long roleId = Long.parseLong(roleIdStr);
+			Role r = new Role(roleId);
+			OperatorRole operatorRole = new OperatorRole();
+			operatorRole.setOperator(operator);
+			operatorRole.setRole(r);
+			operatorRoleDao.save(operatorRole);
+		}
+	}
+
+	public void userDelete(long id) {
+		Operator operator = operatorDao.userFind(id);
+		operator.setDelete(true);
+		operator.setUpdateTime(new Date());
+		operatorDao.update(operator);
+	}
+
+	public Operator getUserById(long id) {
+		return operatorDao.userFind(id);
+	}
+
+	public PageDataList<Operator> getUserPageList(QueryParam param) {
+		return operatorDao.findPageList(param);
+	}
+
+	public void userUpdate(Operator operator) {
+		operatorDao.update(operator);
+	}
+
+	public void updateUserPwd(Operator operator) {
+		operator.setUpdateTime(new Date());
+		this.userUpdate(operator);
+	}
+
+	public Operator getUserByUserName(String userName) {
+		if (userName == null || userName.length() <= 0) {
+			return null;
+		}
+		return operatorDao.getManagerByUserName(userName);
+	}
+
+	@Override
+	public List<Operator> getOperatorByRole(List<Integer> pid) {
+		return operatorDao.getOperatorByRole(pid);
+	}
+
+	@Override
+	public PageDataList<Operator> getOperatorListByRole(Map<String,Object> paramMap,
+			QueryParam param) {
+		return operatorDao.getOperatorListByRole(paramMap, param);
+	}
+	@Override
+	public PageDataList<Operator> getAOperatorListByRole(Map<String,Object> paramMap,
+			QueryParam param) {
+		return operatorDao.getAOperatorListByRole(paramMap, param);
+	}
+
+	@Override
+	public Operator deleteKefuById(long id) {
+		Operator operator = operatorDao.userFind(id);
+		operator.setDelete(true);
+		operator.setUpdateTime(new Date());
+		Operator optor = operatorDao.update(operator);
+		List<UserCache> userCacheList = userCacheDao.findUserByCustomId(id);
+		for(int i=0;i<userCacheList.size();i++){
+			UserCache uc = userCacheList.get(i);
+			uc.setCustomerUserId(0);
+			uc.setCustomerUserName(null);
+			userCacheDao.update(uc);
+		}
+		return optor;
+	}
+
+	@Override
+	public Operator getOperatorByNo(String customerNo) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("no", customerNo);
+		param.addParam("isDelete", false);
+		Operator operator = operatorDao.findByCriteriaForUnique(param);
+		return operator;
+	}
+
+	@Override
+	public Operator getDelOptorById(long id,boolean isDel) {
+		Operator operator = operatorDao.findOpterById(id, isDel);
+		if(null != operator){
+			return operator;
+		}
+		return null;
+	}
+
+	@Override
+	public PageDataList<Operator> getKefuByRoleId(Map<String, Object> paramMap,
+			QueryParam param) {
+		
+		return operatorDao.getKefuByRoleId(paramMap, param);
+	}
+
+}

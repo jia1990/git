@@ -1,0 +1,180 @@
+package com.ddtkj.p2psys.statistics.service;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.account.domain.AccountDraw;
+import com.ddtkj.p2psys.account.domain.AccountRecharge;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.statistics.model.StatisticsDataModel;
+import com.ddtkj.p2psys.user.domain.User;
+
+
+/**
+ * 数据统计
+ * 
+ * @author sxy
+ * @version 3.0
+ * @since 2015-04-22
+ * 
+ * JSDPBUG-99 20150505  sxy
+ */
+public interface StatisticsDataService {
+
+	/**
+	 * 根据标识和时间类型查询统计记录
+	 * 
+	 * @param sign
+	 * @param timeType
+	 * @return
+	 */
+	public StatisticsData getStatisticsDataCount(String sign, String timeType);
+	
+	/**
+	 * 
+	 * 调用存储结构
+	 * 
+	 */
+	public void callProcedureStatistics();
+	
+
+    /**
+	 * 查询某类型用户在某时间内的注册数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countUserByTypeAndTime(StatisticsDataModel model);
+	
+	/**
+	 * 查询在某时间内的投资用户数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countTenderUserByTime(String timeType,String startTime,String endTime);
+	
+	/**
+	 * 查询三项认证的用户数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countIdentifiedUserByTime(StatisticsDataModel model);
+
+	/**
+	 * 查询在某时间内的充值用户数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	int countRechargeUserByTime(String timeType,String startTime,String endTime);
+	
+
+	/**
+	 * 查询在某时间内的充值金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	double countRechargeMoneyByTime(StatisticsDataModel model);
+	
+	/**
+	 * 查询在某时间内的债权转让(售出)金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	public double creaditOutMoneyByTime(String timeType,String startTime,String endTime);
+	
+	/**
+	 * 查询在某时间内的债权转让(买入)金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	public double creaditInMoneyByTime(String timeType,String startTime,String endTime);
+	
+	
+	/**
+	 * 查询在某时间内的提现金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	double countDrawMoneyByTime(String timeType,String startTime,String endTime);
+	
+	/**
+	 * 查询在某时间内的投资金额数
+	 * @return
+	 * @author 孙晓勇
+	 */
+	double countTenderMoneyByTime(StatisticsDataModel model);
+	
+
+	/**
+	 * 注册用户统计excel使用sql
+	 * 
+	 * @param model
+	 * @return
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	List<User> excelStatisticsRegisterUserList(StatisticsDataModel model);
+	// JSDP-99 sxy 2015-05-25 start
+	
+	/**
+	 * 充值金额统计excel使用sql
+	 * 
+	 * @param model
+	 * @return
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	List<AccountRecharge> excelStatisticsRechargeMoneyList(StatisticsDataModel model);
+	// JSDP-99 sxy 2015-05-25 start
+	
+	/**
+	 * 认证人数统计excel使用sql
+	 * 
+	 * @param model
+	 * @return
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	List<User> excelStatisticsIdentifiedList(StatisticsDataModel model);
+	// JSDP-99 sxy 2015-05-25 start
+	
+	/**
+	 * 投资金额统计excel使用sql
+	 * 
+	 * @param model
+	 * @return
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	List<BorrowTender> excelStatisticsTenderMoneyList(StatisticsDataModel model);
+	// JSDP-99 sxy 2015-05-25 start
+	/**
+	 * 提现金额统计excel使用sql
+	 * 
+	 * @param model
+	 * @return
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	List<AccountDraw> excelStatisticsDrawMoneyList(StatisticsDataModel model);
+	// JSDP-99 sxy 2015-05-25 start
+	
+	/**
+	 * 债权(售出)金额统计excel使用sql
+	 * 
+	 * @param model
+	 * @return
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	List<CreditAssignment> excelStatisticsCreaditOutMoneyList(StatisticsDataModel model);
+	// JSDP-99 sxy 2015-05-25 start
+	
+	/**
+	 * 债权(买入)金额统计excel使用sql
+	 * 
+	 * @param model
+	 * @return
+	 */
+	// JSDP-99 sxy 2015-05-25 start
+	List<CreditLog> excelStatisticsCreaditInMoneyList(StatisticsDataModel model);
+	// JSDP-99 sxy 2015-05-25 start
+	
+	
+	
+}

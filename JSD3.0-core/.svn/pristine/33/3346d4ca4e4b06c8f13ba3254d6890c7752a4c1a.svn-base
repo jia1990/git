@@ -1,0 +1,203 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.activity.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+/**
+ * @描述：
+ * @作者：shenguoping@ddtkj.com
+ * @创建时间：2015-7-23 
+ */
+@Entity
+@Table(name = "t_jsd_activity_goods_log")
+public class ActivityGoodsLog implements Serializable {
+
+	private static final long serialVersionUID = -4569041295732912854L;
+
+	/**物品变动日志类型nid 积分抽奖*/
+	public static final String GOODSLOG_TYPE_NID_SCOREAWARD = "score_award";
+	
+	/**物品变动日志类型名称 积分抽奖*/
+	public static final String GOODSLOG_TYPE_NAME_SCOREAWARD = "积分抽奖";
+
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User user;
+	
+	private int opNum;					//操作数值
+	private String opType;				//操作类型          （1增加 ，2减少 ；constant中调用）
+	private int valid;					//变更后可用
+	private int freeze;					//变更后冻结
+	private String typeNid;				//操作类型nid
+	private String typeName;			//操作类型名称	
+	private double actNum;				//操作动作数值	（例投标动作就是投标金额）
+	private String remark;				//备注
+	private Date addTime;				//添加时间
+	private String addIp;				//添加IP
+	
+	/**
+	 * @return the id
+	 */
+	public long getId() {
+		return id;
+	}
+	/**
+	 * @param id the id to set
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+	/**
+	 * @return the user
+	 */
+	public User getUser() {
+		return user;
+	}
+	/**
+	 * @param user the user to set
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
+	/**
+	 * @return the opNum
+	 */
+	public int getOpNum() {
+		return opNum;
+	}
+	/**
+	 * @param opNum the opNum to set
+	 */
+	public void setOpNum(int opNum) {
+		this.opNum = opNum;
+	}
+	/**
+	 * @return the opType
+	 */
+	public String getOpType() {
+		return opType;
+	}
+	/**
+	 * @param opType the opType to set
+	 */
+	public void setOpType(String opType) {
+		this.opType = opType;
+	}
+	/**
+	 * @return the valid
+	 */
+	public int getValid() {
+		return valid;
+	}
+	/**
+	 * @param valid the valid to set
+	 */
+	public void setValid(int valid) {
+		this.valid = valid;
+	}
+	/**
+	 * @return the freeze
+	 */
+	public int getFreeze() {
+		return freeze;
+	}
+	/**
+	 * @param freeze the freeze to set
+	 */
+	public void setFreeze(int freeze) {
+		this.freeze = freeze;
+	}
+	/**
+	 * @return the typeNid
+	 */
+	public String getTypeNid() {
+		return typeNid;
+	}
+	/**
+	 * @param typeNid the typeNid to set
+	 */
+	public void setTypeNid(String typeNid) {
+		this.typeNid = typeNid;
+	}
+	/**
+	 * @return the typeName
+	 */
+	public String getTypeName() {
+		return typeName;
+	}
+	/**
+	 * @param typeName the typeName to set
+	 */
+	public void setTypeName(String typeName) {
+		this.typeName = typeName;
+	}
+	/**
+	 * @return the actNum
+	 */
+	public double getActNum() {
+		return actNum;
+	}
+	/**
+	 * @param actNum the actNum to set
+	 */
+	public void setActNum(double actNum) {
+		this.actNum = actNum;
+	}
+	/**
+	 * @return the remark
+	 */
+	public String getRemark() {
+		return remark;
+	}
+	/**
+	 * @param remark the remark to set
+	 */
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	/**
+	 * @return the addTime
+	 */
+	public Date getAddTime() {
+		return addTime;
+	}
+	/**
+	 * @param addTime the addTime to set
+	 */
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	/**
+	 * @return the addIp
+	 */
+	public String getAddIp() {
+		return addIp;
+	}
+	/**
+	 * @param addIp the addIp to set
+	 */
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+	
+	
+}

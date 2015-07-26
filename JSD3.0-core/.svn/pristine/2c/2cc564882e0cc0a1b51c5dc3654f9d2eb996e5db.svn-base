@@ -1,0 +1,100 @@
+package com.ddtkj.p2psys.redpacket.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.executer.BaseRechargeSuccessExecuter;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * 活动红包的产生 JSDP-203
+ * @author xj
+ * @version 2.0
+ * @since 2015-06-09
+ */
+public class RpActivityProduceInvesterExecuter extends BaseRechargeSuccessExecuter {
+
+	private String accountLogType = null;
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void addAccountLog() {
+		Account account = accountDao.findObjByProperty("user.userId", this.user.getUserId());
+		accountLogType = logType;
+		AccountLog log = new AccountLog(super.user, accountLogType, new User(Constant.ADMIN_ID));
+		
+		
+		log.setRechargeMoney(rechargeMoney);
+		log.setRechargeUsable(account.getRechargeUsable());
+		log.setAwardUsable(account.getAwardUsable());
+		log.setInterestUsable(account.getInterestUsable());
+		log.setReturnCapitalUsable(account.getReturnCapitalUsable());
+		log.setAccountTotal(account.getAccountTotal());
+		log.setFreezeUseAward(account.getFreezeUseAward());
+		log.setFreezeUseInterest(account.getFreezeUseInterest());
+		log.setFreezeUseRecharge(account.getFreezeUseRecharge());
+		log.setFreezeUseReturnCapital(account.getFreezeUseReturnCapital());
+		log.setCollectionTotal(account.getCollectionTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)1);//0不变   1收入  2支出
+		log.setTradeNo(tradeNo);
+		log.setOutTradeNo(outTradeNo);
+		accountLogDao.save(log);
+
+	}
+
+	@Override
+	public void handleAccount() {
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+	    // 账户的冻结可用金额
+	    account.setFreezeUseRecharge(BigDecimalUtil.add(account.getFreezeUseRecharge(), rechargeMoney));
+        //账户总额
+	    account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(), rechargeMoney));
+  		accountDao.modifyInvesterAccount(account, user.getUserId());
+	}
+
+	@Override
+	public void handleAccountSum() {
+		super.handleAccountSum();
+
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		BaseMsg msg = new BaseMsg(NoticeConstant.RP_ACTIVITY_PRODUCE);
+		msg.doEvent();
+	}
+
+	@Override
+	public void addOperateLog() {
+		/*OperationLog operationLog = new OperationLog(super.user, super.operator, Constant.ONLINE_RECHARGE_SUCCESS);
+		operationLog.setOperationResult("（IP:" + super.operator.getLoginIp() + "）用户名为" + super.operator.getUserName()
+				+ "的操作员审核网上充值" + super.user.getUserName() + super.money + "元成功");
+		operationLogDao.save(operationLog);*/
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+
+}

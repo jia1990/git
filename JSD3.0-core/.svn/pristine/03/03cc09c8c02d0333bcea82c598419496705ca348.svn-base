@@ -1,0 +1,57 @@
+
+package com.ddtkj.p2psys.cardaward.service;
+
+import java.util.Date;
+import java.util.List;
+
+import com.ddtkj.p2psys.cardaward.domain.MemberCardAward;
+import com.ddtkj.p2psys.cardaward.model.MemberCardAwardModel;
+import com.rongdu.common.model.jpa.PageDataList;
+
+/**
+ * @描述: 购物卡记录service
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-3-30   
+ */
+public interface MemberCardAwardService {
+	
+	
+	/**
+	 * 根据状态获取购物卡兑换总额
+	 * @param status 
+	 * @throws Exception   
+	 */ 
+	public double getCardTotalByStatusAndTime(String status, Date startTime, Date endTime);
+	
+	/**
+	 * 根据状态获取购物卡列表
+	 * @param  status
+	 * @return List<MemberCardAward> 
+	 * @throws Exception   
+	 */ 
+	List<MemberCardAward> getCardAwardListByStatusAndTime(String status, Date startTime, Date endTime);
+	
+	/**
+	 * 后台查询抽奖购物卡记录
+	 * @param  model
+	 * @return PageDataList<MemberCardAward> 
+	 * @throws Exception   
+	 */ 
+	PageDataList<MemberCardAwardModel> getCardAwardList(MemberCardAwardModel model);
+	
+	/**
+	 * 更新抽奖购物卡记录
+	 * @param  cardAward 
+	 * @throws Exception   
+	 */ 
+	void updateMemberCardAward(MemberCardAward cardAward);
+	
+	/**
+	 * 更新抽奖购物卡记录列表
+	 * @param  list 
+	 * @throws Exception   
+	 */ 
+	public void updateMemberCardAwardList(List<MemberCardAward> list);
+	
+	
+}

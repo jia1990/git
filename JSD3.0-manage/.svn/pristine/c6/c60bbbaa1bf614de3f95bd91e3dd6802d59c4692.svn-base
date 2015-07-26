@@ -1,0 +1,81 @@
+package com.rongdu.manage.action.tpp;
+
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.InterceptorRef;
+import org.springframework.beans.BeanUtils;
+
+import com.alibaba.fastjson.JSON;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCash;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdCashDetails;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdModel;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.util.MessageUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.disruptor.DisruptorUtils;
+import com.rongdu.p2psys.core.web.BaseAction;
+/**
+ * 汇潮后台回调处理
+ * @author wcw
+ *
+ */
+public class ManageYmdAction extends BaseAction<YmdCash> {
+	private static Logger logger = Logger.getLogger(ManageYmdAction.class);
+	
+	
+	
+	/**
+	 * 返回系通处理的信息
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/public/ymd/getResult")
+	public String getResult() throws Exception{
+ 		String result = "";
+		String resultFlag = paramString("resultFlag");
+		if(StringUtil.isBlank(resultFlag)){
+			result="查询处理信息错误";
+		}else{
+			result = (String)Global.RESULT_MAP.get(resultFlag);
+			Global.RESULT_MAP.remove(resultFlag);//系统消息取出来之后立即删除，保证集合为空
+		}
+		Map<String,String> map = new HashMap<String, String>();
+		map.put("msg_data", result);
+		printJson(JSON.toJSONString(map));
+		return null;
+	}
+	/**
+	 * 回调参数拼接共用方法
+	 * 
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public String getRequestParams() {
+		String params = "";
+		try {
+			Enumeration<String> e = (Enumeration<String>) request.getParameterNames();
+			while (e.hasMoreElements()) {
+				String parName = e.nextElement();
+				String value = request.getParameter(parName);
+				params += parName + "=" + value + "&";
+			}
+		} catch (Exception e) {
+			logger.error(e);
+		}
+		return params;
+	}
+
+	public static String getErrMsg(String errCode, String defaultMsg){
+		String errMsg = MessageUtil.getMessage(errCode);
+		if(!StringUtil.isBlank(errMsg)){
+			return errMsg;
+		}else{
+			return defaultMsg;
+		}
+	}
+}

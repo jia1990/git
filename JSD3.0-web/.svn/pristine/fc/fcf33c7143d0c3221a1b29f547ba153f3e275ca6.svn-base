@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<#if subListMap?? && subListMap.article?? >
+ <title>${subListMap?if_exists.article?if_exists.title?if_exists}</title>
+<#elseif site?? && site.nid?? && site.nid='supervise'>
+  <title>晋商新闻-晋商贷</title>
+<#else>
+<title>平台公告-晋商贷</title>
+</#if>
+<meta name="description" content="晋商贷之晋商新闻，24小时提供最新的晋商人物动态，晋商企业动态等。" />
+<meta name="keywords" content="晋商，晋商人物，晋商动态" />
+<link rel="stylesheet" type="text/css"href="${webroot}${theme_dir}/media/css/media.css">
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<script>
+	$(function(){
+		var type = $("#typeId").html();
+		if(type=="supervise"){
+			$(".c_sub_nav dd a").removeClass("c_contact_us");
+			$(".c_sub_nav dd a").eq(2).addClass("c_contact_us");
+			
+		}else if(type=="notice"){
+			$(".c_sub_nav dd a").removeClass("c_contact_us");
+			$(".c_sub_nav dd a").eq(0).addClass("c_contact_us");	
+		}
+	}) 
+	
+</script>
+</head>
+<#include "../include/resource1.html">
+<#include "../include/header.html">
+<body>
+	
+	<!-- 平台资讯二级导航 -->
+	<div class="c_sub_nav">
+		<dl>
+			<dd>
+				<a href="${webroot}/article/detail.html?nid=notice" id='noticeId'>平台公告</a>
+			</dd>
+			<dd>
+				<a href="${webroot}/article/mediaDetail.html?nid=media" id="mediaId">媒体报道</a>
+			</dd>
+			<dd>
+				<a href="${webroot}/article/detail.html?nid=supervise" id="superviseId">晋商新闻</a>
+			</dd>
+			<!-- // JSDP-131 SXY start -->
+			<dd>
+				<a class="c_contact_us" href="${webroot}/article/risk.html?nid=riskMoney" id="riskMoneyId">风险备用金</a>
+			</dd>
+			<div class="c_clear"></div>
+		</dl>
+	</div>
+	<!-- 新闻列表 -->
+	<div class="c_plat_notice">
+		<!--S- service_right_con -->
+		<div class="service_right_con" style="margin:0;">
+			<#if subListMap?? && subListMap.article?? >
+				<div class="arcInfo_content">
+					<script>
+						window._bd_share_config = {
+							"common" : {
+								"bdSnsKey" : {},
+								"bdText" : "",
+								"bdMini" : "2",
+								"bdMiniList" : false,
+								"bdPic" : "",
+								"bdStyle" : "0",
+								"bdSize" : "16"
+							},
+							"share" : {},
+							"image" : {
+								"viewList" : [ "qzone", "tsina", "tqq",
+										"renren", "weixin" ],
+								"viewText" : "分享到：",
+								"viewSize" : "16"
+							}
+						};
+						with (document)
+							0[(getElementsByTagName('head')[0] || body)
+									.appendChild(createElement('script')).src = 'http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='
+									+ ~(-new Date() / 36e5)];
+					</script>
+			</div> 
+			<div class="c_plat_detail" style="padding-left:59px;padding-right:59px;width:880px;">
+			 	<h1>${subListMap?if_exists.article?if_exists.title?if_exists}</h1>
+			 	<span class="y_plat_noticetime">${subListMap?if_exists.article?if_exists.addTime?string("yyyy-MM-dd HH:mm:ss")?if_exists}</span>
+				<div class="c_article">
+					${subListMap?if_exists.article?if_exists.content?if_exists}</div>
+				<div class="pageTurning">
+					<p class="return">
+						<a href="javascript:history.go(-1);">返回</a>
+					</p>
+					<br><br><br>
+				</div>
+				<ul class="c_article_piece">
+					<p class="Up">
+						上一篇： <#if subListMap.prevArticle??> <a
+							href="${webroot}/article/detail.html?nid=${subListMap.prevArticle.site.nid}&id=${subListMap.prevArticle.id}">${subListMap.prevArticle.title}</a>
+						<#else> <a href="javascript:;">无</a> </#if>
+					</p>
+					<p class="Down">
+						下一篇： <#if subListMap.nextArticle??> <a
+							href="${webroot}/article/detail.html?nid=${subListMap.nextArticle.site.nid}&id=${subListMap.nextArticle.id}">${subListMap.nextArticle.title}</a>
+						<#else> <a href="javascript:;">无</a> </#if>
+					</p>
+				</ul>
+			</div>
+			<#elseif subListMap?? && subListMap.leafChild?? &&subListMap.leafChild.type == 2>
+			<div class="c_notice_list" style="min-height: 180px">
+				<ul class="c_notice_list_part c_notice_list_part1">
+				
+				</ul>
+				<div id="kkpager" style="text-align:center;"></div>
+			</div>
+			<ul class="arcList" data-val="${subListMap.leafChild.nid}"></ul>
+			
+			</#if>
+			<div class="c_look_more c_artical_end">没有更多文章了</div>
+		</div>
+		</div>
+		<div  id="typeId" style="display: none">${site?if_exists.nid!}</div>
+</body>
+
+<script type="text/javascript">
+	seajs.use("${webroot}${theme_dir}/media/js/arcList");
+</script>
+</html>
+<#include "../include/footer.html">

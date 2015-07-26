@@ -1,0 +1,395 @@
+package com.ddtkj.p2psys.account.dao.impl;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.exception.AccountException;
+
+/**
+ * @描述：
+ * @作者:wangchangwei@ddtkj.com
+ * @创建时间:  2014年12月13日 
+ */
+@Repository("accountDao")
+public class AccountDaoImpl extends BaseDaoImpl<Account> implements AccountDao{
+	@Override
+	public PageDataList<AccountModel> list(AccountModel model) {
+		QueryParam param = QueryParam.getInstance();
+		if (StringUtil.isNotBlank(model.getUsername())) {
+			param.addParam("user.userName", Operators.LIKE, model.getUsername());
+		}
+		if (StringUtil.isNotBlank(model.getRealname())) {
+			param.addParam("user.realName", Operators.LIKE, model.getRealname());
+		}
+		if(StringUtil.isNotBlank(model.getUserType())){
+			param.addParam("user.userCache.userType", model.getUserType());
+		}
+		if(model.getCollectionTotal()>0){
+			param.addParam("collectionTotal",Operators.GTE, model.getCollectionTotal());
+		}
+		if(StringUtil.isNotBlank(model.getCompareResult())){
+			param.addParam("compareResult",model.getCompareResult());
+		}
+		param.addPage(model.getPage(), model.getRows());
+		if (model.getOrder().equals("desc")) {
+			param.addOrder(OrderType.DESC, model.getSort());
+		} else {
+			param.addOrder(OrderType.ASC, model.getSort());
+		}
+		PageDataList<Account> pageDateList = findPageList(param);
+		PageDataList<AccountModel> pageDateList_ = new PageDataList<AccountModel>();
+		List<AccountModel> list = new ArrayList<AccountModel>();
+		pageDateList_.setPage(pageDateList.getPage());
+		if (pageDateList.getList().size() > 0) {
+			for (int i = 0; i < pageDateList.getList().size(); i++) {
+				Account account = (Account) pageDateList.getList().get(i);
+				AccountModel am = new AccountModel();
+				BeanUtils.copyProperties(account, am);
+				try{
+    				am.setUsername(account.getUser().getUserName());
+    				am.setRealname(account.getUser().getRealName());
+    				am.setUserId(account.getUser().getUserId());
+    				/*
+    				//投资人
+    				private double interestUsableStr;  //利息可用总额
+    				private double awardUsableStr;    //奖励可用总额
+    				private double rechargeUsableStr;  //充值可用总额
+    				private double returnCapitalUsableStr;  //回款本金可用总额
+    				private double freezeUseInterestStr;  //冻结使用利息金额
+    				private double freezeUseRechargeStr;  //冻结使用充值金额
+    				private double freezeUseReturnCapitalStr;  //冻结使用回款本金金额
+    				private double freezeUseAwardStr;   //冻结使用奖励金额
+    				private double collectionTotalStr;  //待收总额
+    				
+    				//借款人
+    				private double repaymentTotalStr;   //还款总额
+    				private double borrowerRechargeUsableStr;  //借款人充值可用金额
+    				private double borrowerEnterUsableStr;  //借款人借款入账可用金额
+    				private double borrowerFreezeUseRechargeStr; //借款人冻结充值可用金额
+    				private double borrowerFreezeUseEnterStr; //借款人冻结借款入账可用金额
+    				
+    				private double rpDynamicTotalStr;// 钱袋子总额
+    				private double freezeRpDynamicStr; //冻结钱袋子金额
+*/    				
+    				
+    				DecimalFormat df =new DecimalFormat("#0.00");
+    				am.setAccountTotalStr(df.format(account.getAccountTotal()));
+    				am.setInterestUsableStr(df.format(account.getInterestUsable()));
+    				am.setAwardUsableStr(df.format(account.getAwardUsable()));
+    				am.setRechargeUsableStr(df.format(account.getRechargeUsable()));
+    				am.setReturnCapitalUsableStr(df.format(account.getRechargeUsable()));
+    				am.setFreezeUseInterestStr(df.format(account.getFreezeUseInterest()));
+    				am.setFreezeUseRechargeStr(df.format(account.getFreezeUseRecharge()));
+    				am.setFreezeUseReturnCapitalStr(df.format(account.getFreezeUseReturnCapital()));
+    				am.setFreezeUseAwardStr(df.format(account.getFreezeUseAward()));
+    				am.setCollectionTotalStr(df.format(account.getCollectionTotal()));
+    				
+    				am.setRepaymentTotalStr(df.format(account.getRepaymentTotal()));
+    				am.setBorrowerRechargeUsableStr(df.format(account.getBorrowerRechargeUsable()));
+    				am.setBorrowerEnterUsableStr(df.format(account.getBorrowerEnterUsable()));
+    				am.setBorrowerFreezeUseRechargeStr(df.format(account.getBorrowerFreezeUseRecharge()));
+    				am.setBorrowerFreezeUseEnterStr(df.format(account.getBorrowerFreezeUseEnter()));
+    				am.setRpDynamicTotalStr(df.format(account.getRpDynamicTotal()));
+    				am.setFreezeRpDynamicStr(df.format(account.getFreezeRpDynamic()));
+    				
+    				am.setFreezeUseMoneyTotal(df.format(account.getFreezeAccount()));
+    				am.setFreezeBorrowerMoneyTotal(df.format(account.getBorrowerFreezeTotal()));
+    				
+    				am.setBorrowerUsableMoney(df.format(account.getBorrowerUsableTotal()));
+    				am.setUsableMoneyTotal(df.format(account.getUsableAccount()));
+    				
+    				am.setRpDynamicTotalStr(df.format(account.getRpDynamicTotal()));
+    				am.setResultBorrow(df.format(account.getBorrowerUsableTotal()+account.getBorrowerFreezeTotal()));
+    				am.setResult(df.format(account.getFreezeAccount()+account.getUsableAccount()+account.getCollectionTotal()));
+    				
+    				
+    				
+    				list.add(am);
+				}catch(Exception e){
+				    e.printStackTrace();
+				}
+			}
+		}
+		pageDateList_.setList(list);
+		return pageDateList_;
+	}
+
+	@Override
+	public Account getAccountByUserId(long userId) {
+		return super.findObjByProperty("user.userId", userId);
+	}
+
+	@Override
+	public void modify(Account act) {
+	   Account account = getAccountByUserId(act.getUser().getUserId());
+	   // 总金额
+	   account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(), act.getAccountTotal()));
+	   // 可用金额
+	   account.setRechargeUsable(BigDecimalUtil.add(account.getRechargeUsable(), act.getRechargeUsable()));
+	   
+	   account.setAwardUsable(BigDecimalUtil.add(account.getAwardUsable(), act.getAwardUsable()));
+	  
+	   account.setInterestUsable(BigDecimalUtil.add(account.getInterestUsable(), act.getInterestUsable()));
+	   
+	   account.setReturnCapitalUsable(BigDecimalUtil.add(account.getReturnCapitalUsable(), act.getReturnCapitalUsable()));
+	   // 冻结金额
+       account.setFreezeUseAward(BigDecimalUtil.add(account.getFreezeUseAward(), act.getFreezeUseAward()));
+       
+       account.setFreezeUseReturnCapital(BigDecimalUtil.add(account.getFreezeUseReturnCapital(), act.getFreezeUseReturnCapital()));
+       
+       account.setFreezeUseInterest(BigDecimalUtil.add(account.getFreezeUseInterest(), act.getFreezeUseInterest()));
+       
+       account.setFreezeUseRecharge(BigDecimalUtil.add(account.getFreezeUseRecharge(), act.getFreezeUseRecharge()));
+	  
+	   account.setCollectionTotal(BigDecimalUtil.add(account.getCollectionTotal(), act.getCollectionTotal()));
+	   
+	   if(account.getRechargeUsable() < 0){
+	       throw new AccountException("充值可用金额不足！", 1);
+	   }
+	   if(account.getInterestUsable() < 0){
+	       throw new AccountException("利息可用金额不足！", 1);
+	   }
+	   if(account.getAwardUsable() < 0){
+	       throw new AccountException("奖励可用金额不足！", 1);
+	   }
+	   if(account.getReturnCapitalUsable()< 0){
+	       throw new AccountException("回款可用金额不足！", 1);
+	   }
+	   // 更新
+	   super.update(account);
+	}
+	
+	@Override
+	public void modify(double totalVar, double useVar, double nouseVar,double repaymentVar, long userId) {
+	  /* Account account = getAccountByUserId(userId);
+	   // 总金额
+	   account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(), totalVar));
+	   // 可用金额
+	   account.setBorrowerUsableTotal(BigDecimalUtil.add(account.getBorrowerUsableTotal(), useVar));
+	   // 冻结金额
+	   account.setBorrowerFreezeTotal(BigDecimalUtil.add(account.getBorrowerFreezeTotal(), nouseVar));
+	   
+	   account.setRepaymentTotal(BigDecimalUtil.add(account.getRepaymentTotal(), repaymentVar));
+	   if(account.getBorrowerUsableTotal()< 0){
+	       throw new AccountException("可用金额不足！", 1);
+	   }
+	   // 更新
+	   update(account);*/
+	}
+
+	/**
+	 * 查询投资人账户可用余额(利息可用金额+奖励可用金额+充值可用金额+回款本金可用金额)
+	 * @author 孙晓勇
+	 */
+	@Override
+	public double getAllUseMoney() {
+        String sql = "SELECT SUM(t1.interest_usable+t1.award_usable+t1.recharge_usable+t1.return_capital_usable) FROM t_jsd_account t1,t_jsd_user_cache t2 WHERE t1.user_id = t2.user_id AND t2.user_type = '10'";
+        Query query = em.createNativeQuery(sql);
+        Object obj = query.getSingleResult();
+        if (obj != null) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+	}
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AccountModel> accountList(AccountModel model) {
+		String sql="select a.* from t_jsd_account a,t_jsd_user u,t_jsd_user_cache uc where a.user_id=u.user_id and a.user_id=uc.user_id ";
+	    if(StringUtil.isNotBlank(model.getUsername())){
+	    	sql+=" and u.user_name like '%"+model.getUsername()+"%'";
+	    }
+	    if(StringUtil.isNotBlank(model.getRealname())){
+	    	sql+=" and u.real_name='"+model.getRealname()+"'";
+	    }
+	    if(StringUtil.isNotBlank(model.getUserType())){
+	    	sql+=" and uc.user_type='"+model.getUserType()+"'";
+	    }
+	    if(model.getCollectionTotal()>0){
+	    	sql+=" and a.collection_total>="+model.getCollectionTotal();
+	    }
+	    if(StringUtil.isNotBlank(model.getCompareResult())){
+	    	sql+=" and a.compare_result='"+model.getCompareResult()+"'";
+	    }
+	    Query query = em.createNativeQuery(sql, Account.class);
+		List<AccountModel> list = (List<AccountModel>) query.getResultList();
+		return list;
+	}
+
+	@Override
+	public List excelListAccount(AccountModel model) {
+		StringBuffer sql = new StringBuffer();
+
+		
+		if(StringUtil.isNotBlank(model.getUserType()) && model.getUserType().equals("10")){
+			sql.append("SELECT user1_.user_name,user1_.real_name,account0_.account_total,"
+					+ "account0_.interest_usable,account0_.award_usable,account0_.recharge_usable,account0_.return_capital_usable,"
+					+" account0_.freeze_use_interest,account0_.freeze_use_recharge,account0_.freeze_use_return_capital,"
+					+ "account0_.freeze_use_award,"
+					+" account0_.collection_total,account0_.rp_dynamic_total,account0_.freeze_rp_dynamic");
+		}else if(StringUtil.isNotBlank(model.getUserType()) && model.getUserType().equals("11")){
+			sql.append("SELECT user1_.user_name,user1_.real_name,account0_.recharge_usable,account0_.account_total,"
+					+ " account0_.repayment_total,account0_.borrower_recharge_usable,"
+					+ " account0_.borrower_enter_usable,account0_.borrower_freeze_use_recharge,"
+					+ " account0_.borrower_freeze_use_enter");
+		}else if(StringUtil.isNotBlank(model.getUserType()) && model.getUserType().equals("12")){
+			sql.append("SELECT user1_.user_name,user1_.real_name,account0_.account_total,account0_.repayment_total,"
+					+" account0_.borrower_recharge_usable,account0_.borrower_enter_usable,account0_.borrower_freeze_use_recharge,"
+					+" account0_.borrower_freeze_use_enter");
+		}else{
+			sql.append("SELECT user1_.user_name,user1_.real_name,account0_.account_total,account0_.borrower_enter_usable");
+		}
+		
+		
+		sql.append(" FROM t_jsd_account account0_" 
+					+" LEFT OUTER JOIN t_jsd_user user1_" 
+					+" ON account0_.user_id = user1_.user_id" 
+					+" LEFT OUTER JOIN t_jsd_user_cache usercache2_" 
+					+" ON user1_.user_id = usercache2_.user_id "
+					+" WHERE 1=1 ");
+		
+		if (StringUtil.isNotBlank(model.getUsername())) {
+			sql.append(" and user1_.user_name like '%"+model.getUsername()+"%'");
+		}
+		if (StringUtil.isNotBlank(model.getRealname())) {
+			//sql.append(" and user1_.real_name =:realName");
+			sql.append(" and user1_.real_name like '%"+model.getRealname()+"%'  ");
+		}
+		if(StringUtil.isNotBlank(model.getUserType())){
+			sql.append(" and usercache2_.user_type=:userType ");
+		}
+		if(model.getCollectionTotal()>0){
+			//sql.append(" and account0_.collection_total =:collectionTotal ");
+			sql.append(" and account0_.collection_total >= "+model.getCollectionTotal()+" ");
+		}
+		if(StringUtil.isNotBlank(model.getCompareResult()) && !"all".equals(model.getCompareResult())){
+			sql.append(" and account0_.compare_result =:compareResult ");
+		}
+		sql.append("ORDER BY account0_.account_total DESC ");
+		
+		Query query = em.createNativeQuery(sql.toString());
+		// JSDP-185 sxy 20150619 start
+		/*if (StringUtil.isNotBlank(model.getRealname())) {
+			query.setParameter("realName", model.getRealname());
+		}*/
+		if(StringUtil.isNotBlank(model.getUserType())){
+			query.setParameter("userType", model.getUserType());
+		}
+		/*if(model.getCollectionTotal()>0){
+			query.setParameter("collectionTotal", model.getCollectionTotal());
+		}*/
+		if(StringUtil.isNotBlank(model.getCompareResult()) && !"all".equals(model.getCompareResult())){
+			query.setParameter("compareResult", model.getCompareResult());
+		}
+		
+		List list = query.getResultList();
+
+		return list;
+	}
+	//JSDP-164 wcw 20150527 start
+	@Override
+	public void modifyInvesterAccount(Account account,long userId){
+		StringBuffer sql =new StringBuffer("update t_jsd_account set account_total=:account_total,interest_usable=:interest_usable,award_usable=:award_usable,"
+				+ "recharge_usable=:recharge_usable,return_capital_usable=:return_capital_usable,freeze_use_interest=:freeze_use_interest,"
+				+ "freeze_use_recharge=:freeze_use_recharge,freeze_use_return_capital=:freeze_use_return_capital,freeze_use_award=:freeze_use_award,"
+				+ "collection_total=:collection_total,rp_dynamic_total=:rp_dynamic_total,freeze_rp_dynamic=:freeze_rp_dynamic where user_id=:user_id") ;
+		Query query = em.createNativeQuery(sql.toString());
+		query.setParameter("account_total", account.getAccountTotal());
+		query.setParameter("interest_usable", account.getInterestUsable());
+		query.setParameter("award_usable", account.getAwardUsable());
+		query.setParameter("recharge_usable", account.getRechargeUsable());
+		query.setParameter("return_capital_usable", account.getReturnCapitalUsable());
+		query.setParameter("freeze_use_interest", account.getFreezeUseInterest());
+		query.setParameter("freeze_use_recharge", account.getFreezeUseRecharge());
+		query.setParameter("freeze_use_return_capital", account.getFreezeUseReturnCapital());
+		query.setParameter("freeze_use_award", account.getFreezeUseAward());
+		query.setParameter("collection_total", account.getCollectionTotal());
+		query.setParameter("rp_dynamic_total", account.getRpDynamicTotal());
+		query.setParameter("freeze_rp_dynamic", account.getFreezeRpDynamic());
+		query.setParameter("user_id", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更改投资人账户资金记录失败！", 1);
+		}
+	}
+	@Override
+	public void modifyBorrowerAccount(Account account,long userId){
+		StringBuffer sql = new StringBuffer("update t_jsd_account set account_total=:account_total,borrower_recharge_usable=:borrower_recharge_usable,borrower_enter_usable=:borrower_enter_usable,"
+				+ "borrower_enter_usable=:borrower_enter_usable,borrower_freeze_use_recharge=:borrower_freeze_use_recharge,borrower_freeze_use_enter=:borrower_freeze_use_enter where user_id=:user_id");
+		Query query = em.createNativeQuery(sql.toString());
+		query.setParameter("account_total", account.getAccountTotal());
+		query.setParameter("borrower_recharge_usable", account.getBorrowerRechargeUsable());
+		query.setParameter("borrower_enter_usable", account.getBorrowerEnterUsable());
+		query.setParameter("borrower_freeze_use_recharge", account.getBorrowerFreezeUseRecharge());
+		query.setParameter("borrower_freeze_use_enter", account.getBorrowerFreezeUseEnter());
+		query.setParameter("user_id", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更改借款人账户资金记录失败！", 1);
+		}
+	}
+	//JSDP-164 wcw 20150527 end
+	//JSDP-169 xingjia 20150529 start
+	@Override
+	public Object[] accountTotal(AccountModel model) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("SELECT SUM(a.account_total) accountTotal,SUM(a.interest_usable+a.award_usable+a.recharge_usable+a.return_capital_usable) accountUseableTotal,"
+				+"SUM(a.freeze_use_interest+a.freeze_use_recharge+a.freeze_use_return_capital+a.freeze_use_award) freezeUseableTotal,SUM(a.collection_total) collecTotal,"
+				+"SUM(a.repayment_total) borrowerRepaymentTotal,SUM(a.borrower_recharge_usable+a.borrower_enter_usable) borrowerUsableTotal,"
+				+"SUM(a.borrower_freeze_use_recharge+a.borrower_freeze_use_enter) borrowerFreezeTotal,"
+				+"SUM(a.rp_dynamic_total) dynamicTotal,SUM(a.freeze_rp_dynamic) freezeDynamicTotatl FROM "
+				+"t_jsd_account a,t_jsd_user u ,t_jsd_user_cache uc WHERE u.user_id=a.user_id AND uc.user_id=u.user_id");
+		if (StringUtil.isNotBlank(model.getUsername())) {
+			sql.append(" and u.user_name like '%"+model.getUsername()+"%'");
+		}
+		if (StringUtil.isNotBlank(model.getRealname())) {
+			sql.append(" and u.real_name like '%"+model.getRealname()+"%'");
+		}
+		if(StringUtil.isNotBlank(model.getUserType())){
+			sql.append(" and uc.user_type = "+ model.getUserType());
+		}
+		if(model.getCollectionTotal()>0){
+			sql.append(" and a.collection_total >= "+model.getCollectionTotal());
+		}
+		if(StringUtil.isNotBlank(model.getCompareResult())){
+			//JSDP-169 xingjia 20150529 start
+			sql.append(" and a.compare_result = '"+model.getCompareResult()+"'");
+			//JSDP-169 xingjia 20150529 end
+		}
+		Query query = em.createNativeQuery(sql.toString());
+		
+		Object[] object = (Object[]) query.getSingleResult();
+		return object;
+	}
+	//JSDP-169 xingjia 20150529 end
+	
+	@Override
+	public void updateCompareResult(String compareResult,long userId){
+		StringBuffer sql =new StringBuffer("update t_jsd_account set compare_result=:compare_result where user_id=:user_id") ;
+		Query query = em.createNativeQuery(sql.toString());
+		query.setParameter("compare_result", compareResult);
+		query.setParameter("user_id", userId);
+		int result = query.executeUpdate();
+		if (result != 1) {
+			throw new BussinessException("更改投资人账户资金对账结果失败！", 1);
+		}
+	}
+	
+	
+}

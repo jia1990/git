@@ -1,0 +1,82 @@
+package com.ddt.p2psys.redpacket.service;
+
+import java.util.Date;
+import java.util.List;
+
+import junit.framework.TestCase;
+
+import com.ddt.test.util.BeanUtil;
+import com.ddtkj.p2psys.redpacket.domain.RedPacket;
+import com.ddtkj.p2psys.redpacket.service.RedPacketService;
+import com.rongdu.p2psys.core.domain.Operator;
+
+/**
+ * 测试红包的基本操作
+ * @author YJF
+ *
+ */
+
+public class RedPacketServiceTest extends TestCase{
+
+   
+	/**
+    * 测试新建红包类型
+    * */
+	public void testSaveRedpacket(){
+		RedPacketService userservice = BeanUtil.getBean("redPacketService",RedPacketService.class);
+		
+		RedPacket p = new RedPacket() ;
+		p.setName("注册");
+		p.setIsopen("Y");
+		Operator o = new Operator(1);
+		p.setOperator(o);
+		p.setCreatetime(new Date());
+		p.setValidtime(7);
+		p.setTypeCode("register");
+
+		RedPacket p2 = new RedPacket() ;
+		p2.setName("推广");
+		p2.setIsopen("Y");
+		p2.setOperator(o);
+		p2.setCreatetime(new Date());
+		p2.setValidtime(7);
+		p2.setTypeCode("popularize");
+		
+		userservice.save(p);
+		userservice.save(p2) ;
+		
+	}
+	/**
+    * 测试更新红包类型  和 查询全部
+    * */
+	public void testUpdateRedpacket(){
+		RedPacketService userservice = BeanUtil.getBean("redPacketService",RedPacketService.class);
+		// 获取所有的
+		List<RedPacket> list = userservice.getAll();
+		for (RedPacket redPacket : list) {
+			System.out.println(redPacket.getName());;
+		}
+		if(list.size()>0 && list!=null){
+			RedPacket rp = list.get(0) ;
+			rp.setIsopen("N");
+			userservice.update(rp) ;
+		}
+		
+	}
+	/**
+    * 测试更新红包类型  和 查询全部
+    * */
+	public void testDeleteRedpacket(){
+		RedPacketService userservice = BeanUtil.getBean("redPacketService",RedPacketService.class);
+		// 获取所有的
+		List<RedPacket> list = userservice.getAll();
+		for (RedPacket redPacket : list) {
+			System.out.println(redPacket.getName());;
+		}
+		if(list.size()>0 && list!=null){
+			RedPacket rp = list.get(0) ;
+			userservice.delete(rp);
+		}
+		
+	}
+}

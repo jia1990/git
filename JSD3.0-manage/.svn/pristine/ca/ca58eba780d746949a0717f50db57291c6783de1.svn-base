@@ -1,0 +1,85 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/system/sms/addSmsInterface.html',"添加成功！","添加失败！");
+	});
+</script>
+<div class="popForm sForm">
+    <form id="form"  method="post" enctype="multipart/form-data">	
+		<div class="formitm">
+		     <label class="lab">短信名称：</label>
+		     <div class="ipt">
+				<input type="text" name="name" class="w300 easyui-validatebox" data-options="required: true" maxlength="26" />
+				<b>*</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+				<input type="radio" id="status" name="status" value="11" size="15" checked="checked" />&nbsp;&nbsp;启用&nbsp;&nbsp;
+				<input type="radio" id="status" name="status" value="22" size="15" />&nbsp;&nbsp;关闭
+				<b>*</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">简称：</label>
+		     <div class="ipt">
+				<input type="text" name="nid" class="w300 easyui-validatebox" data-options="required: true" maxlength="30" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">序列号：</label>
+		     <div class="ipt">
+				<input type="text" name="smsSn" class="w300 easyui-validatebox" onKeyUp="value=value.replace(/[^0-9]/g,'')" maxlength="15"/>
+				<b>(根据短信接口需要来添加)</b>
+			</div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">用户名：</label>
+		     <div class="ipt">
+				<input type="text" name="smsUsername" class="w300 easyui-validatebox" maxlength="30" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">密码：</label>
+		     <div class="ipt">
+				<input type="text" name="smsPassword" class="w300 easyui-validatebox" data-options="required: true" maxlength="30" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">请求地址：</label>
+		     <div class="ipt">
+				<input type="text" name="smsNoticeUrl" class="w300 easyui-validatebox" data-options="required: true"  maxlength="50" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">余额地址：</label>
+		     <div class="ipt">
+				<input type="text" name="smsBalanceUrl" class="w300 easyui-validatebox" data-options="required: true"  maxlength="50" />
+				<b>*</b>
+			</div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">签名内容：</label>
+		     <div class="ipt">
+				<input type="text" name="signContent" class="w300 easyui-validatebox" maxlength="30" />
+			</div>
+		</div>
+		<div class="formitm">
+			<label class="lab">备注：</label>
+			<div class="ipt">
+			   <textarea name="remark" class="w400 easyui-validatebox" data-options="required: true"></textarea>
+			</div>
+		</div>
+		
+		<input type="hidden" name="actionType" value="add" id="actionType">
+		<input type="hidden" name="addSmsToken" value="${addSmsToken!}" />
+		
+	</form>
+</div>

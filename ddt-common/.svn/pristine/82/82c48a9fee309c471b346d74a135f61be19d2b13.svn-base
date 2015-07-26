@@ -1,0 +1,59 @@
+package com.rongdu.common.util.watermark;
+
+import java.awt.Color;
+
+/**
+ * 
+ * 颜色筛选
+ * 
+ * @author sunxiaoyong
+ * @version jsd 3.0 2014年12月18日
+ *
+ */
+public class ColorList {
+	
+	private Color colors[] = {Color.blue, Color.cyan, Color.green, Color.red, Color.gray,
+			Color.darkGray, Color.lightGray, Color.magenta, Color.orange, Color.pink,
+			Color.yellow, Color.black, Color.white};
+	
+	private static String fontcolor[] = {"蓝色","青色","绿色","红色","灰色","深灰色","浅灰色",
+			"洋红色","桔黄色","粉红色","黄色","黑色","白色"};
+	
+	/**
+	 * 获取各颜色参数
+	 * @return String[]
+	 */
+	public String[] getFontColor(){
+		
+		String fontcolorNew[] = fontcolor;
+		
+		return fontcolorNew;
+	}
+	
+	/**
+	 * 根据选择设置颜色
+	 * @param colorName
+	 * @return Color
+	 */
+	public Color selectColor(String colorName){
+		
+		Color color = null;
+		for(int i = 0;i < fontcolor.length;i ++){
+			
+			//得到颜色值
+			if(fontcolor[i].equals(colorName)){
+				color = colors[i];
+			}
+			
+			//若得到颜色为空，默认黑色
+			if(null == colorName || "" == colorName){
+				color = Color.black;
+			}
+			
+		}
+		
+		return color;
+		
+	}
+	
+}

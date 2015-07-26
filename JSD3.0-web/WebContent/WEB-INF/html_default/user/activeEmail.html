@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<#include "../include/resource1.html">
+<style>
+.c_mail_icon {
+	text-align: center;
+	line-height: 80px;
+}
+
+.c_mail_icon img {
+	width: 104px;
+	height: 104px;
+}
+
+.c_quick_valid {
+	border-style: none;
+	width: 222px;
+	height: 46px;
+	line-height: 46px;
+	background: #12ADFF;
+	border-radius: 4px;
+	color: #fff;
+	font-family: microsoft Yahei;
+	font-size: 18px;
+}
+
+.c_quick_valid:focus {
+	outline: none;
+}
+</style>
+
+<body>
+<#assign nid="member">
+<div class="c_register_bj">
+
+
+<!-- 验证邮箱 -->
+<div class="c_logo" id="login2"><a href="${webroot}/"
+	style="display: block; width: 62px; height: 122px; margin: 0 auto;"></a></div>
+<div class="loginContent c_loginContent" id="email_box"
+	style="padding: 0px;">
+<form action="${webroot}/user/checkEmailCode.html" method="post"
+	name="formEmail" id="checkEmailForm" style="margin: 60px auto 303px;">
+<h3 class="login_title"
+	style="font-size: 22px; margin: 0; margin-bottom: 10px; text-align: center;">验证邮箱</h3>
+<div class="user c_email"><span></span> <input type="text"
+	name="emom" id="email" class="border" value="请输入邮箱号码"><br />
+<p class="c_error"></p>
+</div>
+<div class="validCode c_validCode"><input type="text"
+	name="validCode" id="emailValidCode" class="border c_msg_valid"
+	value="邮箱验证码"> <span id="emailCode" class="c_get_code"
+	style="width: 150px;">获取邮箱验证码</span>
+<p class="c_error" style="width: 156px;"></p>
+</div>
+<div class="line c_line" style="border: none;"><input
+	type="submit" class="denglu register" value="完成"
+	style="margin-top: 20px;"></div>
+	<!-- JSDBET-822 gjh 2015-3-19 start -->
+	<input type="hidden" id="mobilePhone1" name="mobile" value="${mobile!}"/>
+	<!-- JSDBET-822 gjh 2015-3-19 end -->
+</form>
+</div>
+ <!-- JSDP-223 gjh 2015-7-15 start -->
+ <#include "../include/imgValid.html">
+ <!-- JSDP-223 gjh 2015-7-15 end -->
+</div>
+<#include "xieyi.html">
+<script type="text/javascript">
+	seajs.use("${webroot}${theme_dir}/media/js/register");
+</script>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+package com.rongdu.p2psys.tpp;
+
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * 托管接口工厂类
+ * @author lx
+ * @version 2.0
+ * @since 2014年7月22日
+ */
+public final class TPPFactory {
+	private TPPFactory(){}
+	public static TPPWay getTPPWay(UserModel model, User user, AccountRechargeModel rechargeModel, String extra, Borrow borrow) {
+		int apiCode = Global.getInt("api_code");
+		TPPWay dw = null;
+		switch (apiCode) {
+			/*case 1:
+			// TODO  于俊斐  
+			//	dw = new YjfTPPWay(model, user, rechargeModel, extra,borrow);
+				break;
+			case 2:
+			// TODO  于俊斐  
+			//	dw = new IpsTPPWay(model, user, rechargeModel, extra,borrow);
+				break;*/
+			case 3:
+                dw = new YmdTPPWay(model, user, rechargeModel, extra,borrow);
+                break;
+			default:
+				break;
+		}
+		return dw;
+	}
+	public static TPPWay getTPPWay() {
+		return getTPPWay(null, null, null,null,null);
+	}
+	
+	public static TPPWay getTPPWay(User user) {
+        return getTPPWay(null, user, null,null,null);
+    }
+	
+	public static TPPWay getTPPWay(double money) {
+		AccountRechargeModel rechargeModel=new AccountRechargeModel();
+		rechargeModel.setMoney(money);
+		return getTPPWay(null, null, rechargeModel,null,null);
+	}
+	
+	/*public static TPPService getTPPService(Map<String,Object> map,List<Object> taskList) {
+		int apiCode = Global.getInt("api_code");
+		TPPService ts = null;
+		switch (apiCode) {
+			case 1:
+				ts = new YjfServiceImpl(map, taskList);
+				break;
+			case 2:
+				ts = new IpsServiceImpl(map, taskList);
+				break;
+			default:
+				break;
+		}
+		return ts;
+	}
+	public static TPPService getTPPService() {
+		return getTPPService(null,null);
+	}
+	*/
+	
+}

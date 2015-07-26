@@ -1,0 +1,2933 @@
+package com.rongdu.p2psys.web.account;
+
+import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Result;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountSum;
+import com.ddtkj.p2psys.account.model.AccountLogModel;
+import com.ddtkj.p2psys.account.model.AccountModel;
+import com.ddtkj.p2psys.account.model.AccountRechargeModel;
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountLogService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.goods.model.GoodsOrderModel;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.ddtkj.p2psys.goods.service.GoodsPicService;
+import com.ddtkj.p2psys.goods.service.GoodsService;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserCache;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.ddtkj.p2psys.user.domain.UserLoginHisotry;
+import com.ddtkj.p2psys.user.model.UserCacheModel;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardSum;
+import com.ddtkj.p2psys.webpetcard.service.PetCardSumService;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.account.model.accountlog.BaseAccountLog;
+import com.rongdu.p2psys.account.model.accountlog.noac.GetCodeLog;
+import com.rongdu.p2psys.account.service.AccountBankService;
+import com.rongdu.p2psys.account.service.AccountSumService;
+import com.rongdu.p2psys.borrow.model.BorrowCollectionModel;
+import com.rongdu.p2psys.borrow.model.BorrowModel;
+import com.rongdu.p2psys.borrow.model.BorrowRepaymentModel;
+import com.rongdu.p2psys.borrow.model.interest.InstallmentRepaymentCalculator;
+import com.rongdu.p2psys.borrow.service.BorrowCollectionService;
+import com.rongdu.p2psys.borrow.service.BorrowRepaymentService;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.domain.Dict;
+import com.rongdu.p2psys.core.domain.Operator;
+import com.rongdu.p2psys.core.model.OperatorModel;
+import com.rongdu.p2psys.core.rule.ScoreProduceRuleCheck;
+import com.rongdu.p2psys.core.service.DictService;
+import com.rongdu.p2psys.core.service.MessageService;
+import com.rongdu.p2psys.core.service.OperatorService;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.region.domain.Region;
+import com.rongdu.p2psys.region.service.RegionService;
+import com.rongdu.p2psys.score.constant.ScoreTypeConstant;
+import com.rongdu.p2psys.score.domain.Score;
+import com.rongdu.p2psys.score.domain.ScoreLog;
+import com.rongdu.p2psys.score.service.ScoreLogService;
+import com.rongdu.p2psys.score.service.ScoreService;
+import com.rongdu.p2psys.tpp.BaseTPPWay;
+import com.rongdu.p2psys.user.domain.KefuRecord;
+import com.rongdu.p2psys.user.domain.UserCredit;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+import com.rongdu.p2psys.user.domain.UserPwdQuestion;
+import com.rongdu.p2psys.user.exception.UserException;
+import com.rongdu.p2psys.user.model.UserLogisticsAddressModel;
+import com.rongdu.p2psys.user.model.UserPwdQuestionModel;
+import com.rongdu.p2psys.user.service.KefuChangeService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+import com.rongdu.p2psys.user.service.UserCreditService;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserLoginHisotryService;
+import com.rongdu.p2psys.user.service.UserLogisticsAddressService;
+import com.rongdu.p2psys.user.service.UserPwdQuestionService;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 账户中心资金相关处理
+ * 
+ * @author：xx
+ * @version 1.0
+ * @since 2014年6月17日
+ */
+@SuppressWarnings("rawtypes")
+public class MemberAction extends BaseAction<GoodsModel> {
+
+	@Resource
+	private UserCreditService userCreditService;
+	@Resource
+	private OperatorService operatorService;
+	@Resource
+	private KefuChangeService kefuChangeService;
+	@Resource
+	private AccountService accountService;
+	@Resource
+	private ScoreService scoreService;
+	@Resource
+	private MessageService messageService;
+	@Resource
+	private AccountSumService accountSumService;
+	@Resource
+	private BorrowCollectionService borrowCollectionService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private UserCacheService userCacheService;
+	@Resource
+	private AccountBankService accountBankService;
+	@Resource
+	private BorrowRepaymentService borrowRepaymentService;
+	@Resource
+	private BorrowService borrowService;
+	@Resource
+	private AccountRechargeService accountRechargeService;
+	@Resource
+	private AccountDrawCashService accountDrawCashService;
+	@Resource
+	private AccountLogService accountLogService;
+	@Resource
+	private UserPwdQuestionService userPwdQuestionService;
+	@Resource
+	private DictService dictService;
+	@Resource
+	private UserLoginHisotryService userLoginHisotryService;
+	@Resource
+	private RegionService regionServcie;
+	@Resource
+	private ScoreLogService scoreLogService;
+	@Resource
+	private GoodsService goodsService;
+	@Resource
+	private GoodsOrderService goodsOrderSerive;
+	@Resource
+	private GoodsPicService goodsPicService;
+	@Resource
+	private UserLogisticsAddressService userLogisticsAddressService ;
+	@Resource
+	private PetCardSumService petCardSumService;
+	
+	
+	private User user;
+
+	/** 积分规则 */
+	private ScoreProduceRuleCheck spRuleCheck = (ScoreProduceRuleCheck) Global
+			.getRuleCheck("scoreProduce");
+	private Map<String, Object> data;
+
+	/**
+	 * 账户主页
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member/main", results = {
+			@Result(name = "main", type = "ftl", location = "/member/main.html"),
+			@Result(name = "main_firm", type = "ftl", location = "/member_borrow/main.html"),
+			@Result(name = "main_merchant", type = "ftl", location = "/member_merchant/main.html"),
+			@Result(name = "main_vouch", type = "ftl", location = "/member_guarantee/main.html") })
+	public String main() throws Exception {
+		user = getSessionUser();
+		User u = userService.find(user.getUserId());
+        //JSDP-119 wcw 2015-05-16 start
+		if(session.get(Constant.SESSION_USER)!=null){
+			session.remove(Constant.SESSION_USER);
+		}
+		//JSDP-119 wcw 2015-05-16 end
+		session.put(Constant.SESSION_USER, u); 
+		// 获得信用额度
+		UserCredit amount = userCreditService.findByUserId(u.getUserId());
+		request.setAttribute("amount", amount);
+		// 获得资金详情
+		Account account = accountService.findByUser(u.getUserId());
+		request.setAttribute("account", account);
+		// 系统通知未读信息的总数
+		int unreadCount = messageService.unreadCount(u.getUserId());
+		request.setAttribute("unreadCount", unreadCount);
+
+		// 更新用户认证状态
+		UserIdentify userIdentify = getSessionUserIdentify();
+		userIdentify = userIdentifyService.findById(userIdentify.getUserId());
+		//JSDP-119 wcw 2015-05-16 start
+		if(session.get(Constant.SESSION_USER_IDENTIFY)!=null){
+			session.remove(Constant.SESSION_USER_IDENTIFY);
+		}
+		//JSDP-119 wcw 2015-05-16 end
+		session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+		// 银行卡数量
+		int bankAccount = accountBankService.count(u.getUserId());
+		request.setAttribute("bankAccount", bankAccount);
+		UserCache uc = u.getUserCache();
+		Operator o = operatorService.getUserById(uc.getCustomerUserId());
+		request.setAttribute("kefu", o);
+		if (UserConstant.USER_SORT_BORROW.equals(uc.getUserType())) {
+			return "main_firm";
+		} else if(UserConstant.USER_SORT_ASSURE.equals(uc.getUserType())){
+			return "main_vouch";
+		} else if(UserConstant.USER_SORT_MERCHANT.equals(uc.getUserType())){
+			
+			
+			request.setAttribute("kefu", o);
+			
+			return "main_merchant";
+		} else if ("23".equals(uc.getUserNature())) { // 　TODO
+																		// 于俊斐
+																		// 这个没有状态，需添加
+			return "main_vouch";
+		}
+		return "main";
+	}
+
+	/**
+	 * 用户签到送积分
+	 * 
+	 * @return
+	 * @throws Exception
+	 * @throws Exception
+	 */
+	@Action("/member/user/userSignIn")
+	public void signIntegral() throws Exception {
+		user = getSessionUser();
+		
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+		
+			User u = userService.find(user.getUserId());
+			// 用户签到信息
+			List<ScoreLog> scoreLoglist = scoreLogService.getLastTimeSign(u
+					.getUserId());
+			data = new HashMap<String, Object>();
+			if (scoreLoglist != null && scoreLoglist.size() > 0) {
+				ScoreLog scoreLog = scoreLoglist.get(0);
+				String signLastTime = DateUtil.dateStr2(scoreLog.getAddTime());
+				String today = DateUtil.dateStr2(new Date());
+				// 以前签到过 判断今天是否签到过
+				if (!signLastTime.equals(today)) {
+					if (spRuleCheck != null) {
+						signInHelp(u);
+						data.put("result", true);
+					}
+				} else {
+					data.put("result", false);
+				}
+			} else {
+				// 没有签到过
+				signInHelp(u);
+			}
+			printJson(getStringOfJpaObj(data));
+			
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+
+	}
+
+	public void signInHelp(User u) {
+		Score score = scoreService.getScoreByUserId(u.getUserId());
+		int scoreCount = (int) spRuleCheck.signScore();
+		// 添加积分
+		if(scoreCount!=-1){
+			score.setTotalScore(score.getTotalScore() + scoreCount);
+			score.setValidScore(score.getValidScore() + scoreCount);
+			score.setAddTime(new Date());
+			scoreService.update(score);
+			// 添加积分日志记录
+			ScoreLog sl = new ScoreLog(score);
+			sl.setUser(u);
+			sl.setAddTime(new Date());
+			sl.setScore(scoreCount);
+			sl.setScoreTypeName("用户签到");
+			sl.setScoreTypeNid(ScoreTypeConstant.SCORE_USER_SIGNIN);
+			sl.setType(ScoreTypeConstant.SCORE_USER_SIGNIN);
+			sl.setRemark("用户签到成功，获得" + scoreCount + "个积分。");
+			scoreLogService.save(sl);
+			data.put("result", true);
+		}else{
+			scoreCount = 0;//签到不送积分，将变动积分值设置为0
+			//fgq 签到不送积分 3.30  start 
+			score.setTotalScore(score.getTotalScore() +scoreCount);
+			score.setValidScore(score.getValidScore() + scoreCount);
+			//fgq 签到不送积分 3.30  end 
+			score.setAddTime(new Date());
+			scoreService.update(score);
+			// 添加积分日志记录
+			ScoreLog sl = new ScoreLog(score);
+			sl.setUser(u);
+			sl.setAddTime(new Date());
+			sl.setScore(scoreCount);
+			sl.setScoreTypeName("用户签到");
+			sl.setScoreTypeNid(ScoreTypeConstant.SCORE_USER_SIGNIN);
+			sl.setType(ScoreTypeConstant.SCORE_USER_SIGNIN);
+			sl.setRemark("用户签到成功，获得" + scoreCount + "个积分。");
+			scoreLogService.save(sl);
+			data.put("result", true);
+			
+		}
+		
+	}
+
+	/**
+	 * 借款人，商户资金记录页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value = "/member_borrow/account/log", results = {
+			@Result(name = "log", type = "ftl", location = "/member_borrow/account/log.html"),
+			@Result(name = "log_merchant", type = "ftl", location = "/member_merchant/account/log.html")})
+	public String accountLog() throws Exception {
+		if(UserConstant.USER_SORT_MERCHANT.equals(this.getSessionUser().getUserCache().getUserType())){
+			return "log_merchant";
+		}
+		return "log";
+	}
+
+	/**
+	 * 借款人修改头像页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value="/member_borrow/info/face",results = { 
+			@Result(name = "face", type = "ftl", location = "/member_borrow/info/face.html"),
+			@Result(name = "assure_face", type = "ftl", location = "/member_guarantee/info/face.html"),
+			@Result(name = "face_merchant", type = "ftl", location = "/member_merchant/info/face.html")
+			})
+	public String face() throws Exception {
+		user = getSessionUser();
+		UserIdentify ui = userIdentifyService.findByUserId(user.getUserId());
+		request.setAttribute("realNameStatus", ui.getRealNameStatus());
+		if(UserConstant.USER_SORT_BORROW.equals(user.getUserCache().getUserType())){
+			return "face";
+		}else if(UserConstant.USER_SORT_ASSURE.equals(user.getUserCache().getUserType())){
+			return "assure_face";
+		}else if(UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())){
+			return "face_merchant";
+		}
+		return null;
+	}
+
+	/**
+	 * 安全中心页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/setting")
+	public String setting() throws Exception {
+		user = getSessionUser();
+		UserIdentify ui = userIdentifyService.findByUserId(user.getUserId());
+		request.setAttribute("realNameStatus", ui.getRealNameStatus());
+		return "setting";
+	}
+
+	/**
+	 * 活动页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/activity")
+	public String activitive() throws Exception {
+		return "activity";
+	}
+
+	/**
+	 * 站内信息页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value="/member_borrow/message/detail",results = {
+			@Result(name = "detail", type = "ftl", location = "/member_borrow/message/detail.html"),
+			@Result(name = "detail_merchant", type = "ftl",location ="/member_merchant/message/detail.html")
+	})
+	public String detail() throws Exception {
+		if(UserConstant.USER_SORT_MERCHANT.equals(this.getSessionUser().getUserCache().getUserType())){
+			return "detail_merchant";
+		}
+		return "detail";
+	}
+
+	@Action("/member/infoJson")
+	public void infoJson() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		data.put("companyName", user.getUserCache().getCompanyName());
+		data.put("companyRegNo", user.getUserCache().getCompanyRegNo());
+		data.put("taxRegNo", user.getUserCache().getCompanyTaxNo());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/***************************** 商家个人中心显示数据 start **********************************/
+
+	/**
+	 * 手机认证通过页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/identifedPhoneView")
+	public String identifedPhoneView() throws Exception {
+		request.setAttribute("user", getSessionUser());
+		return "identifedPhoneView";
+	}
+
+	/**
+	 * 邮箱认证通过页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/identifedEmailView")
+	public String identifedEmailView() throws Exception {
+		request.setAttribute("user", getSessionUser());
+		return "identifedEmailView";
+	}
+
+	/**
+	 * 邮箱认证通过页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/identifedRealNameView")
+	public String identifedRealNameView() throws Exception {
+		request.setAttribute("user", getSessionUser());
+		return "identifedRealNameView";
+	}
+
+	/**
+	 * 开通第三方账户页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+
+	@Action(value="/member_borrow/security/realNameIdentify",results = {
+			@Result(name = "realNameIdentify", type = "ftl", location = "/member_borrow/security/realNameIdentify.html"),
+			@Result(name = "member_merchant_realNameIdentify", type = "ftl",location ="/member_merchant/security/realNameIdentify.html"),
+			@Result(name = "member_guarantee_realNameIdentify", type = "ftl",location ="/member_guarantee/security/realNameIdentify.html")
+	})
+	public String realNameIdentify() throws Exception {
+		User u = getSessionUser();
+		boolean isOnlineConfig = BaseTPPWay.isOnlineConfig();
+		request.setAttribute("isOnlineConfig", isOnlineConfig);
+		request.setAttribute("apiStatus", u.getThirdPartyIsOpen());
+		request.setAttribute("thirdAccount", u.getThirdPartyAccount());
+		request.setAttribute("ymdUrl", Global.getValue("ymd_submit_test_url"));
+		if(UserConstant.USER_SORT_MERCHANT.equals(u.getUserCache().getUserType())){
+			return "member_merchant_realNameIdentify";
+		}else if(UserConstant.USER_SORT_ASSURE.equals(u.getUserCache().getUserType())){
+			return "member_guarantee_realNameIdentify";
+			
+		}
+		
+		return "realNameIdentify";
+	}
+
+	/**
+	 * 开通第三方账号之后的数据
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/realNameJson")
+	public void realNameJson() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		data.put("user", user);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 后台开户后，第一次登录修改登录密码
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/changeLoginPwd")
+	public String changeLoginPwd() throws Exception {
+		return "changeLoginPwd";
+	}
+
+	/**
+	 * 提现
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/recharge/log")
+	public String rechargeLog() throws Exception {
+		AccountRechargeModel recharge = accountRechargeService
+				.getRechargeSummary(getSessionUser().getUserId());
+		Account account = accountService.findByUser(this.getSessionUserId());
+		request.setAttribute("recharge", recharge);
+		request.setAttribute("account", account);
+		return "log";
+	}
+
+	/**
+	 * 查看正在借款项目详情
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/borrow/mine")
+	public String mine() throws Exception {
+		String status = request.getParameter("status");
+		if (status != null) {
+			request.setAttribute("status", status);
+		}
+		return "mine";
+	}
+
+	/**
+	 * 待还详情
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/borrow/repayment")
+	public String repayment() throws Exception {
+		return "repayment";
+	}
+	/**
+	 * 订单详情
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/borrow/indentDetail")
+	public String indentDetail() throws Exception {
+		return "indentDetail";
+	}
+	
+	
+	/**
+	 * 商户订单详情
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_merchant/storeIndentDetail")
+	public String StoreIndentDetail() throws Exception {
+		return "storeIndentDetail";
+	}
+	
+	
+	
+	/**
+	 * 分期宝订单详情
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/borrow/indentDetailList")
+	public String indentDetailList() throws Exception {
+		GoodsOrderModel model = (GoodsOrderModel)paramModel(GoodsOrderModel.class);
+		model.setPage(paramInt("page"));
+		model.setRows(paramInt("rows"));
+		model.setTimeSearch(paramInt("timeSearch"));
+		model.setStatusSearch(paramInt("status"));
+		if(paramInt("timeSearch") ==5){
+			model.setStartTimeF(paramString("startTime"));
+			model.setEndTimeF(paramString("endTime"));
+		}
+		User user = getSessionUser();
+		model.setUser(user);
+		PageDataList<GoodsOrderModel> list = goodsOrderSerive.getGoodsOrderPageListWithBorrow(model);
+		data = new HashMap<String, Object>();
+		data.put("data",  list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	
+	
+	/**
+	 * 商户分期宝订单详情
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_guarantee/borrow/storeIndentDetailList")
+	public String storeIndentDetailList() throws Exception {
+		GoodsOrderModel model = (GoodsOrderModel)paramModel(GoodsOrderModel.class);
+		model.setPage(paramInt("page"));
+		model.setRows(paramInt("rows"));
+		model.setTimeSearch(paramInt("timeSearch"));
+		model.setStatusSearch(paramInt("status"));
+		if(paramInt("timeSearch") ==5){
+			model.setStartTimeF(paramString("startTime"));
+			model.setEndTimeF(paramString("endTime"));
+		}
+		User user = getSessionUser();
+		model.setUser(user);
+		PageDataList<GoodsOrderModel> list = goodsOrderSerive.getGoodsOrderPageListWithBorrow(model);
+		data = new HashMap<String, Object>();
+		data.put("data",  list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 商家(借款人)招标中项目
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/businessBid")
+	public String businessBid() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		BorrowModel model = new BorrowModel();
+		model.setUser(user);
+		model.setSize(4);
+		model.setStatus(1);
+		PageDataList<BorrowModel> page = borrowService.getList(model);
+		data.put("businessBidList", page.getList());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 商家(借款人)还款中项目
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/businessRepayment")
+	public String businessRepayment() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		List<BorrowModel> businessRepaymentList = borrowService
+				.businessRepayment(user);
+		data.put("businessRepaymentList", businessRepaymentList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 交易记录
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/accountTransactionLog")
+	public String accountTransactionLog() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		List<AccountLogModel> accountLogList = accountLogService.accountTransactionLog(user);
+		data.put("accountLogList", accountLogList);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 商家(借款人)更新用户认证状态
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/businessUserIdentify")
+	public String businessUserIdentify() throws Exception {
+		data = new HashMap<String, Object>();
+		UserIdentify userIdentify = getSessionUserIdentify();
+		userIdentify = userIdentifyService.findById(userIdentify.getUserId());
+		session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+		user = getSessionUser();
+		user = userService.find(user.getUserId());
+		UserCache uc = userCacheService.findByUserId(user.getUserId());
+		/*
+		 * if("81".equals(userIdentify.getEmailStatus())){
+		 * data.put("apiUsercustName", "" );// TODO 于俊斐
+		 * 参数为:user.getApiUsercustId() 现在不在User表中了 }
+		 */
+		// 用户最后登录时间
+		UserLoginHisotry userLoginHistory = userLoginHisotryService
+				.getLastTimeLogin(user.getUserId());
+		if (userLoginHistory != null) {
+			String sysDatetime = DateUtil.dateStr4(userLoginHistory
+					.getLoginTime());
+			data.put("lastLoginTime", sysDatetime);
+		} else {
+			String sysDatetime = DateUtil.dateStr4(new Date());
+			data.put("lastLoginTime", sysDatetime);
+		}
+		// 系统通知未读信息的总数
+		int unReadCount = messageService.unreadCount(user.getUserId());
+		data.put("userId", user.getUserCache().getUserId());
+		data.put("unReadCount", unReadCount);
+		data.put("apiStatus", "N".equals(user.getThirdPartyIsOpen()) ? 0 : 1); // 　TODO
+																				// 于俊斐
+																				// 参数为：
+																				// user.getApiStatus()
+																				// 现在不在user表中了
+		// data.put("apiStatus", ""); //　TODO 于俊斐 参数为： user.getApiStatus()
+		// 现在不在user表中了
+		data.put("thirdPartyIsOpen", user.getThirdPartyIsOpen());
+		data.put("thirdPartyAccount", user.getThirdPartyAccount());
+		data.put("emailStatus", userIdentify.getEmailStatus());
+		data.put("realnameStatus", userIdentify.getRealNameStatus());
+		data.put("mobilePhoneStatus", userIdentify.getMobilePhoneStatus());
+		data.put("companyName", uc.getCompanyName());
+		data.put("email", user.getEmail());
+		data.put("realName", user.getRealName());
+		data.put(
+				"imagepath",
+				getRequest().getSession().getServletContext()
+						.getAttribute("webroot")
+						+ ""
+						+ getRequest().getSession().getServletContext()
+								.getAttribute("theme_dir"));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 商家(借款人)可提现余额 正在借款项目个数 正在借款金额 下一个待还日期信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/businessHandleMoney")
+	public String businessHandleMoney() throws Exception {
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		// 可提现余额
+		Account account = accountService.findByUser(user.getUserId());
+		data.put("useMoney", account.getBorrowerUsableTotal());
+		// 正在借款项目信息
+		int count = borrowService.findByStatusAndUserId(user.getUserId(), 1, 0);
+		data.put("count", count);
+		double total = borrowService.findAccountTotalByStatus(user.getUserId(),
+				1, 0);
+		data.put("total", total);
+		// 待还的统计
+		BorrowRepaymentModel brm = borrowRepaymentService.getReapyStatistics(user.getUserId());
+		data.put("borrowRepay", brm);
+		// 待还总额 待还总项目
+		int repaymentCount = borrowService.findByStatusAndUserId(user.getUserId(), 6, 7);
+		data.put("repaymentCount", repaymentCount);
+		double repaymentTotal = borrowService.findAccountTotalByStatus(
+				user.getUserId(), 6, 7);
+		data.put("repaymentTotal", repaymentTotal);
+		data.put("kfimagepath", getRequest().getSession().getServletContext()
+				.getAttribute("webroot")
+				+ "");
+		// 查询是否有更换客服的信息 如果有更换客服的信息，那么显示当前未更换客服，现在更换状态
+		UserCache uc = userService.find(user.getUserId()).getUserCache();
+		KefuRecord kfr = kefuChangeService.getKefuByUseridAndType(
+				user.getUserId(), uc.getCustomerUserId(), 1);
+		if (kfr != null) {
+			data.put("haveRecorde", true);
+			data.put("cstatus", kfr.getVerifyResult());
+		} else {
+			data.put("haveRecorde", false);
+		}
+		Operator o = operatorService.getUserById(uc.getCustomerUserId());
+		if (o != null) { // 没有客服
+			data.put("kefu", o);
+		}
+		data.put("url", Global.getValue("adminurl"));
+		data.put(
+				"imgpath",
+				getRequest().getSession().getServletContext()
+						.getAttribute("webroot").toString()
+						+ getRequest().getSession().getServletContext()
+								.getAttribute("theme_dir").toString());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 公司主页
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/home")
+	public String home() throws Exception {
+		String id = request.getParameter("id");
+		request.setAttribute("id", id);
+		return "home";
+	}
+	/**
+	 * 个人主页
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/user_home")
+	public String userHome() throws Exception {
+		String id = request.getParameter("id");
+		request.setAttribute("id", id);
+		User user = getSessionUser();
+		Region province = regionServcie.getRegionById(Long.parseLong(user.getUserCache().getProvince()));
+		Region city = regionServcie.getRegionById(Long.parseLong(user.getUserCache().getCity()));
+		Region area = regionServcie.getRegionById(Long.parseLong(user.getUserCache().getArea()));
+		request.setAttribute("province", province);
+		request.setAttribute("city", city);
+		request.setAttribute("area", area);
+		return "userHome";
+	}
+	
+	/**
+	 * 分期宝详情页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/stagesDetail")
+	public String stagesDetail() throws Exception {
+		long id = paramInt("id");
+		GoodsModel goodsModel = GoodsModel.instance(goodsService.getGoodsById(id));
+		GoodsModel model = new GoodsModel();
+		model.setGoodsCategory(goodsModel.getGoodsCategory());
+		
+		List<String> colorListAll = goodsService.getColorList(model);//全部颜色
+		List<String> vesionListAll = goodsService.getVesionList(model);//全部版本
+		List<String> sizeListAll = goodsService.getSizeList(model);//全部尺寸
+		List<String> vesionList = goodsService.getVesionList(goodsModel);//当前颜色的可选版本
+		List<String> sizeList = goodsService.getSizeList(goodsModel);//当前颜色当前版本可选的尺寸
+		
+		List<Map> vesionListShow = new ArrayList<Map>();
+		for(String v:vesionListAll){
+			Map<String,Object> vesionListMap = new HashMap<String,Object>();
+			vesionListMap.put("vesion", v);
+			vesionListMap.put("status", false);
+			for(String v1:vesionList){
+				if(v.equals(v1)){
+					vesionListMap.put("status", true);
+				}
+			}
+			vesionListShow.add(vesionListMap);
+			//JSDP-86 wcw 2015-05-05 start
+			vesionListMap=null;
+			//JSDP-86 wcw 2015-05-05 end
+		}
+		List<Map> sizeListShow = new ArrayList<Map>();
+		for(String s:sizeListAll){
+			Map<String,Object> sizeListMap = new HashMap<String,Object>();
+			sizeListMap.put("name", s);
+			sizeListMap.put("status", false);
+			for(String s1:sizeList){
+				if(s.equals(s1)){
+					sizeListMap.put("status", true);
+				}
+			}
+			sizeListShow.add(sizeListMap);
+			//JSDP-86 wcw 2015-05-05 start
+			sizeListMap=null;
+			//JSDP-86 wcw 2015-05-05 end
+		}
+		// 月供
+		double repayCount =  BigDecimalUtil.round(mrpi(goodsModel.getCost(), BigDecimalUtil.div(goodsModel.getGoodsApr(),100), 1), 2) ;
+		double fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.round(Global.getString("stages_fee"),4),goodsModel.getCost()),2) ;
+		request.setAttribute("fee", fee);
+		List goodsPicList = goodsPicService.getGoodsPicByGoodsId(goodsModel.getId());
+		request.setAttribute("colorList", colorListAll);
+		request.setAttribute("vesionList", vesionListShow);
+		request.setAttribute("sizeList", sizeListShow);
+		request.setAttribute("repayCount", repayCount);
+		request.setAttribute("goods", goodsModel);
+		request.setAttribute("goodsPicList", goodsPicList);
+		return "stagesDetail";
+	}
+	@Action("/member_borrow/getAccountByInstall")
+	public void getAccountByInstall() throws Exception{
+		data = new HashMap<String, Object>() ;
+		long id = paramInt("id");
+		GoodsModel goodsModel = GoodsModel.instance(goodsService.getGoodsById(id));
+		// 月供
+		double repayCount =  BigDecimalUtil.round(mrpi(BigDecimalUtil.sub(goodsModel.getCost(),paramDouble("onePay")), BigDecimalUtil.div(goodsModel.getGoodsApr(),100), paramInt("period")), 2) ;
+		//JSDBET-790 gjh 2015-3-12 start
+		double fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.round(Global.getString("stages_fee"),4),BigDecimalUtil.sub(goodsModel.getCost(),paramDouble("onePay"))),2) ;
+		//JSDBET-790 gjh 2015-3-12 end
+		data.put("repay",repayCount);
+		data.put("fee",fee) ;
+		data.put("total",BigDecimalUtil.round(BigDecimalUtil.add(repayCount,fee),2));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	@Action("/member_borrow/getDefaultAddress")
+	public void getDefaultAddress() throws Exception{
+		data = new HashMap<String, Object>() ;
+		UserLogisticsAddress addr = userLogisticsAddressService.queryLogisticsAddressByUserId(this.getSessionUserId());
+		if(addr!=null){
+			UserLogisticsAddressModel addrModel = UserLogisticsAddressModel.instance(addr);
+			addrModel.setProvinceName(addr.getRegionProvince().getName());
+			addrModel.setCityName(addr.getRegionCity().getName());
+			data.put("addr", addrModel);
+			data.put("result", true);	
+		}else{
+			data.put("result", false) ;
+		}
+		
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	@Action("/member_borrow/getAddress")
+	public void getAddress() throws Exception{
+		data = new HashMap<String, Object>() ;
+		List<UserLogisticsAddress> list = userLogisticsAddressService.list(this.getSessionUserId());
+		List<UserLogisticsAddressModel> modelList = new ArrayList<UserLogisticsAddressModel>();
+		for(int i=0;i<list.size();i++){
+			UserLogisticsAddress addrs = list.get(i);
+			UserLogisticsAddressModel addrsModel = UserLogisticsAddressModel.instance(addrs);
+			addrsModel.setProvinceName(addrs.getRegionProvince().getName());
+			addrsModel.setCityName(addrs.getRegionCity().getName());
+			modelList.add(addrsModel);
+		}
+		data.put("list", modelList);
+		data.put("result", true);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	@Action("/member_borrow/buyPre")
+	public String buyPre() throws Exception{  
+		if(getSessionUser()!=null){
+			User user = userService.find(getSessionUserId()) ;
+			request.setAttribute("isHavePaypwd",StringUtil.isNotEmpty(user.getPaypwd())?1:2);
+		}
+		long id = paramInt("id");
+		this.saveToken("orderToken");
+		GoodsModel goodsModel = GoodsModel.instance(goodsService.getGoodsById(id));
+		int period = paramInt("period") ;
+		double onePay = paramDouble("onePay") ;
+		getRequest().setAttribute("period", period);
+		getRequest().setAttribute("onePay",onePay);
+		//JSDBET-790 gjh 2015-3-12 start
+		double fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.round(Global.getString("stages_fee"),4),BigDecimalUtil.sub(goodsModel.getCost(),onePay)),2) ;
+		int type = paramInt("type");
+		if(type == 2){
+			fee = BigDecimalUtil.round(0.00);
+		}
+		//JSDBET-790 gjh 2015-3-12 end
+		getRequest().setAttribute("fee", fee);
+		getRequest().setAttribute("goods", goodsModel);
+		List<DdtkjGoodsPic> pics = goodsPicService.getGoodsPicByGoodsId(goodsModel.getId());
+		String picPath = pics.get(0).getPicUrl();
+		getRequest().setAttribute("picPath", picPath);
+		getRequest().setAttribute("type",paramInt("type"));
+		String resultFlag = System.currentTimeMillis() + "" + Math.random()
+		* 10000;
+		getRequest().setAttribute("resultFlag",resultFlag);
+		return "confirmOrder" ;
+	}
+	/**
+	 * 分期宝 提交 分期 申请提交
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/goodToBorrow")
+	public void goodToBorrow() throws Exception{ //  分期宝分期购买
+		User user = userService.find(getSessionUserId()) ;
+		data = new HashMap<String, Object>() ;
+		long id = paramInt("id");
+		GoodsModel goodsModel = GoodsModel.instance(goodsService.getGoodsById(id));
+		// 各种验证信息
+		GoodsOrder go = null;
+		try {
+			this.checkToken("orderToken") ;
+			//JSDBET-802 wcw 2015-3-12 start
+			//本地账户余额与一麻袋账户余额对账
+			accountService.accountCompare(this.getSessionUserId());
+			//JSDBET-802 wcw 2015-3-12 end
+			
+			if(goodsModel.getCost() == paramDouble("onePay")){ // 首付等于商品金额，就是直接购买
+				go = goodsOrderSerive.addOneByNoBorrow(user, goodsModel,paramString("resultFlag")) ;
+			}else{
+				go = goodsOrderSerive.addOne(user,goodsModel,paramInt("period"),paramDouble("onePay"),paramString("resultFlag"));
+			}
+			if(go!=null){
+				
+				data.put("result", true) ;
+				data.put("msg", "分期购买成功！");
+			}else{
+				data.put("result",false) ;
+				data.put("msg", "分期购买失败！");
+			}
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		} catch (Exception e) {
+			data.put("result", false) ;
+			data.put("msg", e.getMessage());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	@Action("/member_borrow/goodToOnePay")
+	public void goodToOnePay() throws Exception{ //  分期宝立即购买
+		User user = userService.find(getSessionUserId()) ;
+		this.checkToken("orderToken") ;
+		data = new HashMap<String, Object>() ;
+		long id = paramInt("id");
+		GoodsModel goodsModel = GoodsModel.instance(goodsService.getGoodsById(id));
+		// 各种验证信息
+		GoodsOrder go = null;
+		try {
+			
+			//JSDBET-802 wcw 2015-3-12 start
+			//本地账户余额与一麻袋账户余额对账
+			accountService.accountCompare(this.getSessionUserId());
+			//JSDBET-802 wcw 2015-3-12 end
+			
+			
+			go = goodsOrderSerive.addOneByNoBorrow(user, goodsModel,paramString("resultFlag")) ;
+			if(go!=null){
+				data.put("result", true) ;
+				data.put("msg", "购买成功！");
+			}else{
+				data.put("result",false) ;
+				data.put("msg", "购买失败！");
+			}
+			//JSDBET-812 gjh 2015-3-16 start
+		} catch (HandleException e) {
+			throw e;
+			//JSDBET-812 gjh 2015-3-16 end
+		} catch (Exception e) {
+			data.put("result", false) ;
+			data.put("msg", e.getMessage());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	public double mrpi(double p, double r, int mn) {
+		double mr = r / 12;
+		double aprPow = Math.pow(1 + mr, mn);
+		double period = 1;
+		if (aprPow > 1) {
+			period = aprPow - 1;
+		}
+		double monPay = p * mr * aprPow / period;
+		return monPay;
+	}
+	/**
+	 * 分期宝详情页面商品分类获取
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/goodsClassification")
+	public void goodsClassification() throws Exception {
+		int id = paramInt("id");
+		String color = paramString("color");
+		String size = paramString("size");
+		String vesion = paramString("vesion");
+		GoodsModel goodsModel = GoodsModel.instance(goodsService.getGoodsById(id));
+		GoodsModel model = new GoodsModel();
+		model.setGoodsCategory(goodsModel.getGoodsCategory());
+		List<String> colorListAll = goodsService.getColorList(model);//全部颜色
+		List<String> vesionListAll = goodsService.getVesionList(model);//全部版本
+		List<String> sizeListAll = goodsService.getSizeList(model);//全部尺寸
+		if(StringUtil.isNotBlank(color)){
+			model.setColor(color);
+		}
+		if(StringUtil.isNotBlank(size)){
+			model.setSize(size);
+		}
+		if(StringUtil.isNotBlank(vesion)){
+			model.setVesion(vesion);
+		}
+		List<String> vesionList = goodsService.getVesionList(model);//当前颜色的可选版本
+		List<String> sizeList = goodsService.getSizeList(model);//当前颜色当前版本可选的尺寸
+		//model.setIsList("min");
+		model.setType(DdtkjGoods.UP_SHELVES);
+		PageDataList<GoodsModel> list = goodsService.getGoodsPage(model);
+		if(list.getList().size() == 0){
+			model.setSize(null);
+			list = goodsService.getGoodsPage(model);
+		}
+		List<Map> vesionListShow = new ArrayList<Map>();
+		for(String v:vesionListAll){
+			Map<String,Object> vesionListMap = new HashMap<String,Object>();
+			vesionListMap.put("vesion", v);
+			vesionListMap.put("status", false);
+			for(String v1:vesionList){
+				if(v.equals(v1)){
+					vesionListMap.put("status", true);
+				}
+			}
+			vesionListShow.add(vesionListMap);
+		}
+		List<Map> sizeListShow = new ArrayList<Map>();
+		for(String s:sizeListAll){
+			Map<String,Object> sizeListMap = new HashMap<String,Object>();
+			sizeListMap.put("name", s);
+			sizeListMap.put("status", false);
+			for(String s1:sizeList){
+				if(s.equals(s1)){
+					sizeListMap.put("status", true);
+				}
+			}
+			sizeListShow.add(sizeListMap);
+		}
+		InstallmentRepaymentCalculator calculator = new InstallmentRepaymentCalculator(list.getList().get(0).getCost(), list.getList().get(0).getGoodsApr()/100, new Date(), 1, 0);
+		List calculatorList = calculator.calculator();
+		double apr = calculator.getRepayInterest();
+		data = new HashMap<String,Object>();
+		data.put("colorList", colorListAll);
+		data.put("vesionList", vesionListShow);
+		data.put("sizeList", sizeListShow);
+		data.put("goods", list.getList().get(0));
+		data.put("apr", apr);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	/**
+	 * 分期宝列表页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/stagesDetailList")
+	public String stagesDetailList() throws Exception {
+		GoodsModel goodsModel = new GoodsModel();
+		goodsModel.setIsList("min");
+		goodsModel.setType(DdtkjGoods.UP_SHELVES);
+		goodsModel.setRows(12);
+		goodsModel.setStock(1);
+		goodsModel.setPage(paramInt("page"));
+		PageDataList<GoodsModel> list = goodsService.getGoodsPage(goodsModel);
+		for(int i = 0; i < list.getList().size() ; i++){
+			List<DdtkjGoodsPic> picList = goodsPicService.getGoodsPicByGoodsId(list.getList().get(i).getId());
+			list.getList().get(i).setPicUrl(picList.get(0).getPicUrl());
+		}
+		printJson(getStringOfJpaObj(list));
+		return null;
+	}
+	
+	
+
+	/**
+	 * 公司主页动态数据
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/companyHomeJson")
+	public String companyHomeJson() throws Exception {
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		UserCache uc;
+		String id = request.getParameter("id");
+		if ("undefined".equals(id)) {
+			uc = userCacheService.findByUserId(user.getUserId());
+			data.put("flag", true);
+		} else {
+			uc = userCacheService.findById(Long.parseLong(id));
+		}
+		if (uc == null || !"11".equals(uc.getUserType())) {
+			throw new UserException("用户不存在或不是借款用户", 1);
+		}
+		long pid = Long.parseLong(uc.getProvince());
+		long cid = Long.parseLong(uc.getCity());
+		long areaid = Long.parseLong(uc.getArea());
+		UserCacheModel ucs = UserCacheModel.instance(uc);
+		String companyName = ucs.getCompanyName();
+		if (companyName.length() > 5) {
+			ucs.setCompanyName(companyName.substring(0, 2) + "****"
+					+ companyName.substring(companyName.length() - 4));
+		}
+		String companyRegNo = ucs.getCompanyRegNo();
+		ucs.setCompanyRegNo(companyRegNo.charAt(0) + "****"
+				+ companyRegNo.charAt(companyRegNo.length() - 1));
+		String taxRegNo = ucs.getCompanyTaxNo();
+		if(taxRegNo.length()>0){
+			ucs.setCompanyTaxNo(taxRegNo.charAt(0) + "****"
+					+ taxRegNo.charAt(taxRegNo.length() - 1));
+		}
+		String companyPhone = ucs.getCompanyPhone();
+		if (companyPhone != null) {
+			if (companyPhone.length() <= 7) {
+				ucs.setCompanyPhone(companyPhone.substring(0, 2) + "****"
+						+ companyPhone.substring(companyRegNo.length() - 2));
+			}else{
+				ucs.setCompanyPhone(companyPhone.substring(0, 4) + "****"
+						+ companyPhone.substring(companyRegNo.length() - 2));
+			}
+		}
+		String companyFax = ucs.getCompanyFax();
+		if (companyFax != null && companyFax.length() > 5) {
+			ucs.setCompanyFax(companyFax.substring(0, 4) + "****"
+					+ companyFax.substring(companyFax.length() - 2));
+		}
+		String companyEmail = ucs.getCompanyEmail();
+		if (StringUtils.isNotEmpty(companyEmail)) {
+			ucs.setCompanyEmail("****"
+					+ companyEmail.substring(companyEmail.lastIndexOf("@")));
+		}
+		User u = ucs.getUser();
+		String realName = u.getRealName();
+		String mobilePhone = u.getMobilePhone();
+		String email = u.getEmail();
+		ucs.setProvinceName(this.regionServcie.getRegionById(pid).getName());
+		ucs.setCityName(this.regionServcie.getRegionById(cid).getName());
+		ucs.setAreaName(this.regionServcie.getRegionById(areaid).getName());
+		data.put("uc", ucs);
+		data.put("url", Global.getValue("adminurl"));
+		data.put("realName", realName.charAt(0) + "**");
+		data.put("email", "****" + email.substring(email.lastIndexOf("@")));
+		data.put("mobilePhone", mobilePhone.substring(0, 2) + "****"
+				+ mobilePhone.substring(mobilePhone.length() - 2));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 投诉客服
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/cf")
+	public String cf() throws Exception {
+		User user = getSessionUser();
+		KefuRecord kfr = new KefuRecord();
+		kfr.setUserId(user.getUserId());
+		String str = paramString("kfid");
+		kfr.setEventReason(paramString("reason"));
+		kfr.setNewKefuId(Integer.parseInt(str));
+		kfr.setEventType(2);
+		kfr.setAddTime(new Date());
+		kfr.setAddIp(getRequestIp());
+		kefuChangeService.save(kfr);
+		data = new HashMap<String, Object>();
+		if (kfr.getId() != 0) {
+			data.put("result", true);
+		} else {
+			data.put("result", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 更换客服 申请
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/changeCf")
+	public String changeCf() throws Exception {
+		User user = getSessionUser();
+		KefuRecord kfr = new KefuRecord();
+		kfr.setUserId(user.getUserId());
+		String str = paramString("kfid");
+		kfr.setEventReason(paramString("reason"));
+		kfr.setNewKefuId(Integer.parseInt(str));
+		kfr.setEventType(1);
+		kfr.setAddTime(new Date());
+		kfr.setVerifyResult(5);
+		kfr.setAddIp(getRequestIp());
+		kefuChangeService.save(kfr);
+		data = new HashMap<String, Object>();
+		if (kfr.getId() != 0) {
+			data.put("result", true);
+		} else {
+			data.put("result", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * @author 于俊斐 客服列表，可供用户选择
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/ReKfPre")
+	public String ReKfPre() throws Exception {
+		user = getSessionUser();
+		OperatorModel m = (OperatorModel) paramModel(OperatorModel.class);
+		List<Integer> idlist = new ArrayList<Integer>();
+		if("11".equals(user.getUserCache().getUserType())){
+			idlist.add(2);
+		}
+		if("12".equals(user.getUserCache().getUserType())){
+			idlist.add(2);
+		}
+		if("13".equals(user.getUserCache().getUserType())){
+			idlist.add(2);
+		}
+		if("10".equals(user.getUserCache().getUserType())){
+			idlist.add(66);
+			idlist.add(63);
+		}
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("pidList", idlist);
+		map.put("name", m.getName());
+//		PageDataList<Operator> list = operatorService.getAOperatorListByRole(
+//				map, QueryParam.getInstance().addPage(m.getPage()));
+		PageDataList<Operator> list = operatorService.getKefuByRoleId(
+				map, QueryParam.getInstance().addPage(m.getPage()));
+		
+		
+		
+		data = new HashMap<String, Object>();
+		data.put("data", list);
+		UserCache uc = userCacheService.findById(user.getUserId());
+		data.put("oldkfid", uc.getCustomerUserId());
+		data.put("url", Global.getValue("adminurl"));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * @author 郭俊辉 查询用户是否有客服
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/queryUserKf")
+	public void queryUserKf() throws Exception {
+		User user = (User) session.get(Constant.SESSION_USER);
+		long kfid = userCacheService.getUserCache(user.getUserId())
+				.getCustomerUserId();
+
+		data = new HashMap<String, Object>();
+		data.put("kfid", kfid);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * @author 于俊斐 借款人 更换客服
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/ReKf")
+	public String ReKf() throws Exception {
+		user = getSessionUser();
+		UserCache uc = this.userCacheService.findByUserId(user.getUserId());
+		KefuRecord kfr = kefuChangeService.getKefuByUseridAndType(
+				user.getUserId(), uc.getCustomerUserId(), 1);
+		if (kfr != null) { // 如果不为空，则是更换 如果为空 能到这儿的就是新增
+			kfr.setVerifyResult(4); // 取消上一个客服的关系
+			this.kefuChangeService.updateKefuRecord(kfr);
+		}
+		uc.setCustomerUserId(paramInt("newkfid"));
+		this.userCacheService.update(uc);
+		data = new HashMap<String, Object>();
+		data.put("flag", true);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人  商户  账户设置
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action(value="/member_borrow/account/asetpre",results = { @Result(name = "accset",  type = "ftl", location = "/member_borrow/account/accset.html"),
+			@Result(name = "member_merchant_accset", type = "ftl", 
+               location =  "/member_merchant/account/accset.html")})
+	public String asetpre() throws Exception {
+		user = getSessionUser();
+		request.setAttribute("user", user);
+		String flag = paramString("flag");
+		if (flag != null && flag.equals("findpaypwd")) {
+			if (user.getPaypwd() == null) {
+				flag = "setpaypwd";
+			}
+		}
+		request.setAttribute("flag", flag);
+		if(UserConstant.USER_SORT_MERCHANT.equals(user.getUserCache().getUserType())){
+			return "member_merchant_accset";
+		}
+		return "accset";
+	}
+	
+	
+
+	/**
+	 * 账户设置中获取用户的手机和邮箱
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/account/UserInfo")
+	public void UserInfo() throws Exception {
+		user = getSessionUser();
+		user = userService.find(user.getUserId());
+		data = new HashMap<String, Object>();
+		data.put("user", user);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 获取各种认证信息
+	 */
+	@Action("/member_borrow/account/identifyInfo")
+	public String identifyInfo() throws Exception {
+		user = getSessionUser();
+		UserCache uc = this.userCacheService.findByUserId(user.getUserId());
+		UserIdentify ui = this.userIdentifyService.findByUserId(user
+				.getUserId());
+		data = new HashMap<String, Object>();
+		data.put("uc", uc);
+		data.put("realNameStatus", ui.getRealNameStatus());
+		data.put("mobilePhoneStatus", ui.getMobilePhoneStatus());
+		data.put("emailStatus", ui.getEmailStatus());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/******************************************** 借款人 交易密码修改 start *************************************************/
+	/**
+	 * 借款人 找回交易密码 准备数据
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/findPaypwd")
+	public String findPaypwd() throws Exception {
+		user = getSessionUser();
+		List<UserPwdQuestion> question = this.userPwdQuestionService.list(user
+				.getUserId());
+		data = new HashMap<String, Object>();
+		data.put("mobile", user.getMobilePhone());
+		data.put("email", user.getEmail());
+		data.put("que", question);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 找回交易密码 发送手机验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/sendMobileMsg")
+	public String sendMobileMsg() throws Exception {
+		user = getSessionUser();
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+				
+			String flag = paramString("flag");
+			data = new HashMap<String, Object>();
+			
+			try {
+				if (StringUtils.isNotEmpty(flag) && "voice".equals(flag)) {
+					// TODO 于俊斐 发送语音验证码
+	
+				} else {
+					BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+							null, user.getMobilePhone(),
+							NoticeConstant.GETCODE_PAYPWD_MOBILE);
+					blog.initCode("paypwd_mobile");
+					blog.doEvent();
+				}
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", "验证码发送失败！");
+				printJson(getStringOfJpaObj(data));
+			}
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+		
+	}
+
+	/**
+	 * 借款人 找回交易密码 校验手机验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/verifyPaypwdMobileCode")
+	public String checkPaypwdMobileCode() throws Exception {
+		printJson(getStringOfJpaObj(this.findPaypwdCheckMobile(
+				NoticeConstant.GETCODE_PAYPWD_MOBILE, "paypwd_mobile")));
+		return null;
+	}
+
+	/**
+	 * 借款人 找回交易密码 发送邮件验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/sendEmailMsg")
+	public String sendEmailMsg() throws Exception {
+		user = getSessionUser();
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+							
+			data = new HashMap<String, Object>();
+			try {
+				BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+						user.getEmail(), null, NoticeConstant.GETCODE_PAYPWD_EMAIL);
+				blog.initCode("paypwd_email");
+				blog.doEvent();
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(data));
+			}
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 找回交易密码 校验邮箱验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/verifyPaypwdEmailCode")
+	public String checkPaypwdEmailCode() throws Exception {
+		printJson(getStringOfJpaObj(this.findPaypwdCheckEmail(
+				NoticeConstant.GETCODE_PAYPWD_EMAIL, "paypwd_email")));
+		return null;
+	}
+
+	/**
+	 * 借款人 设置新的交易密码
+	 */
+	@Action("/member_borrow/account/setNewPaypwd")
+	public String setNewPaypwd() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserModel um = (UserModel) paramModel(UserModel.class);
+		try {
+			um.validModifyPaypwdFind(user);
+			user.setPaypwd(um.getNewPayPwd());
+			session.put(Constant.SESSION_USER, userService.modifyPaypwd(user));
+			data.put("msg", "设置或修改交易密码成功");
+			data.put("code", "01");
+			data.put("result", true);
+			printJson(getStringOfJpaObj(data));
+		} catch (Exception e) {
+			data.put("msg", e.getMessage());
+			data.put("code", "02");
+			data.put("result", false);
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/******************************************** 借款人 交易密码修改 end *************************************************/
+
+	/******************************************** 借款人 修改绑定手机 start *********************************************/
+	/**
+	 * 借款人 修改绑定手机 原手机发送验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/upMByOldMobile")
+	public String upMByOldMobile() throws Exception {
+		user = getSessionUser();
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+		
+			String flag = paramString("flag");
+	
+			data = new HashMap<String, Object>();
+			try {
+				if (StringUtils.isNotEmpty(flag) && "voice".equals(flag)) {
+					// TODO 于俊斐 发送语音验证码
+	
+				} else {
+					BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+							null, user.getMobilePhone(),
+							NoticeConstant.GETCODE_UPM_MOBILE);
+					blog.initCode("upm_mobile");
+					blog.doEvent();
+				}
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(data));
+			}
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 修改绑定手机 校验原手机验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/verifyUMOldMobileCode")
+	public String verifyUMOldMobileCode() throws Exception {
+		printJson(getStringOfJpaObj(this.findPaypwdCheckMobile(
+				NoticeConstant.GETCODE_UPM_MOBILE, "upm_mobile")));
+		return null;
+	}
+
+	/**
+	 * 借款人 修改绑定手机 判断手机号码是否已经被占用
+	 */
+	@Action("/member_borrow/account/newPhoneCount")
+	public String newPhoneCount() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		try {
+			String phone = paramString("phone");
+			// 是否被使用
+			int count = userService.countByMobilePhone(phone);
+			if (count > 0) {
+				data.put("result", false);
+				data.put("msg", "手机已经被使用,请重新输入。");
+			} else {
+				data.put("result", true);
+			}
+		} catch (Exception e) {
+			data.put("result", false);
+			data.put("msg", e.getMessage());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+
+	}
+	
+		/**
+		 * 修改紧急联系人信息   发送手机验证码
+		 * 
+		 * @author fenggq@ddtkj.com
+		 */
+		@Action("/member/info/sendMobileMsg")
+		public String sendContactsMobileMsg() throws Exception {
+			user = getSessionUser();
+			// BUG JSDP-107
+			// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+			if (null != user) {
+			
+				String flag = paramString("flag");
+				data = new HashMap<String, Object>();
+				try {
+					if (StringUtils.isNotEmpty(flag) && "voice".equals(flag)) {
+		
+					} else {
+						BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+								null, user.getMobilePhone(),
+								NoticeConstant.GETCODE_CONTACTS_MOBILE);
+						blog.initCode("getcode_contacts_mobile");
+						blog.doEvent();
+					}
+					data.put("result", true);
+					printJson(getStringOfJpaObj(data));
+				} catch (Exception e) {
+					data.put("result", false);
+					data.put("msg", "验证码发送失败！");
+					printJson(getStringOfJpaObj(data));
+				}
+			} else {
+				data.put("result", false);
+				data.put("msg", "用户未登录");
+				printJson(getStringOfJpaObj(data));
+			}
+			//JSDP-86 wcw 2015-05-05 start
+			data=null;
+			//JSDP-86 wcw 2015-05-05 end
+			return null;
+			// JSDP-10 2015年5月4日    孙晓勇   end
+			// BUG JSDP-107
+		}
+		
+		/**
+		 *修改紧急联系人信息   校验手机验证码
+		 * 
+		 * @author fenggq@ddtkj.com
+		 */
+		@Action("/member/info/verifyContactsMobileCode")
+		public String verifyContactsMobileCode() throws Exception {
+			printJson(getStringOfJpaObj(this.findPaypwdCheckMobile(
+					NoticeConstant.GETCODE_CONTACTS_MOBILE, "getcode_contacts_mobile")));
+			return null;
+		}
+		
+		
+		/**
+		 * 修改紧急联系人信息   发送邮件验证码
+		 * 
+		 * @author fenggq@ddtkj.com
+		 */
+		@Action("/member/info/sendContactsEmailMsg")
+		public String sendContactsEmailMsg() throws Exception {
+			user = getSessionUser();
+			// BUG JSDP-107
+			// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+			if (null != user) {
+				
+				data = new HashMap<String, Object>();
+				try {
+					BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+							user.getEmail(), null, NoticeConstant.GETCODE_CONTACTS_EMAIL);
+					blog.initCode("getcode_contacts_email");
+					blog.doEvent();
+					data.put("result", true);
+					printJson(getStringOfJpaObj(data));
+				} catch (Exception e) {
+					data.put("result", false);
+					data.put("msg", e.getMessage());
+					printJson(getStringOfJpaObj(data));
+				}
+			} else {
+				
+				data.put("result", false);
+				data.put("msg", "用户未登录");
+				printJson(getStringOfJpaObj(data));
+				
+			}
+			// JSDP-10 2015年5月4日    孙晓勇   end
+			// BUG JSDP-107
+			//JSDP-86 wcw 2015-05-05 start
+			data=null;
+			//JSDP-86 wcw 2015-05-05 end
+			return null;
+		}
+
+		/**
+		 * 修改紧急联系人信息   校验邮件验证码
+		 * 
+		 * @author fenggq@ddtkj.com
+		 */
+		@Action("/member/info/verifyContactsEmailCode")
+		public String verifyContactsEmailCode() throws Exception {
+			printJson(getStringOfJpaObj(this.findPaypwdCheckEmail(
+					NoticeConstant.GETCODE_CONTACTS_EMAIL, "getcode_contacts_email")));
+			return null;
+		}
+		
+	/**
+	 * 借款人 修改绑定手机 新手机发送手机验证码
+	 */
+	@Action("/member_borrow/account/sendMobileMsgUM")
+	public String sendMobileMsgUM() throws Exception {
+		user = getSessionUser();
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+			
+			String flag = paramString("flag");
+			data = new HashMap<String, Object>();
+			try {
+				String phone = paramString("phone");
+				// 是否被使用
+				// int count = userService.countByMobilePhone(phone);
+				// if (count > 0) {
+				// data.put("result", false);
+				// data.put("msg", "手机已经被使用");
+				// } else {
+				if (StringUtils.isNotEmpty(flag) && "voice".equals(flag)) {
+					// TODO 于俊斐 发送语音验证码
+	
+				} else {
+					BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+							null, paramString("phone"),
+							NoticeConstant.GETCODE_UPM_MOBILE);
+					blog.initCode("upm_new_mobile");
+					blog.doEvent();
+				}
+				data.put("result", true);
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+			}
+			printJson(getStringOfJpaObj(data));
+		} else {
+			
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+			
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 修改绑定手机 校验新手机验证码,通过后,保存
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/updateCheckMobile")
+	public String updateCheckMobile() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserModel um = (UserModel) paramModel(UserModel.class);
+		try {
+			um.findNewPaypwdValidMobile("upm_new_mobile", user,
+					paramString("phone"));
+			userService.modifyPhone(user.getUserId(), paramString("phone"));
+			session.put(Constant.SESSION_USER,
+					this.userService.find(user.getUserId()));
+			data.put("code", "01");
+			data.put("msg", "验证码通过");
+			data.put("result", true);
+
+		} catch (Exception e) {
+			data.put("code", "02");
+			data.put("msg", e.getMessage());
+			data.put("result", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 修改绑定手机 发送邮件验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/upMSendEmailMsg")
+	public String upMSendEmailMsg() throws Exception {
+		user = getSessionUser();
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+				
+			data = new HashMap<String, Object>();
+			try {
+				BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+						user.getEmail(), null, NoticeConstant.GETCODE_UPM_EMAIL);
+				blog.initCode("upm_email");
+				blog.doEvent();
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(data));
+			}
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+			
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 找回交易密码 校验邮箱验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/verifyUMEmailCode")
+	public String verifyUMEmailCode() throws Exception {
+		printJson(getStringOfJpaObj(this.findPaypwdCheckEmail(
+				NoticeConstant.GETCODE_UPM_EMAIL, "upm_email")));
+		return null;
+	}
+
+	/******************************************** 借款人 修改绑定手机 end *********************************************/
+	/******************************************** 借款人 修改绑定邮箱 start *******************************************/
+
+	/**
+	 * 借款人 修改绑定邮箱 原邮箱发送邮件验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/upEOldEmailMsg")
+	public String upEOldEmailMsg() throws Exception {
+		user = getSessionUser();
+		
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+							
+			data = new HashMap<String, Object>();
+			try {
+				BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+						user.getEmail(), null, NoticeConstant.GETCODE_UPE_EMAIL);
+				blog.initCode("upe_email");
+				blog.doEvent();
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(data));
+			}
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+		
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	    return null;
+	}
+
+	/**
+	 * 借款人 修改绑定邮箱 校验邮箱验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/verifyUEOldEmailCode")
+	public String verifyUEOldEmailCode() throws Exception {
+		printJson(getStringOfJpaObj(this.findPaypwdCheckEmail(
+				NoticeConstant.GETCODE_UPE_EMAIL, "upe_email")));
+		return null;
+	}
+
+	/**
+	 * 借款人 更改邮箱，判断新邮箱是否已经被用户占用，占用则给予提示
+	 */
+	@Action("/member_borrow/account/newEmailCount")
+	public String newEmailCount() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		try {
+			String email = paramString("email");
+			// 如果该邮件已经有人使用，那么不能发邮件，给用户说明
+			int count = userService.countByEmail(email);
+			if (count > 0) {
+				data.put("result", false);
+				data.put("msg", "邮箱已被使用，请重新输入。");
+			} else {
+				data.put("result", true);
+			}
+		} catch (Exception e) {
+			data.put("result", false);
+			data.put("msg", e.getMessage());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 修改绑定邮箱 新邮箱发送邮件验证码
+	 */
+	@Action("/member_borrow/account/sendEmailMsgNA")
+	public String sendEmailMsgNA() throws Exception {
+		user = getSessionUser();
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+				
+			data = new HashMap<String, Object>();
+			try {
+				String email = paramString("email");
+				// 如果该邮件已经有人使用，那么不能发邮件，给用户说明
+				int count = userService.countByEmail(email);
+				/*
+				 * if(count>0){ data.put("result",false) ;
+				 * data.put("msg","邮箱已被使用，请重新输入！!") ; }else{
+				 */
+				BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+						paramString("email"), null,
+						NoticeConstant.GETCODE_UPE_EMAIL);
+				blog.initCode("upe_new_email");
+				blog.doEvent();
+				data.put("result", true);
+				/* } */
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+			}
+			printJson(getStringOfJpaObj(data));
+		} else {
+			
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end
+		// BUG JSDP-107
+		
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;	
+			
+	}
+
+	/**
+	 * 借款人 修改绑定邮箱 新邮箱校验 ，通过 保存
+	 */
+	@Action("/member_borrow/account/updateCheckEmail")
+	public String updateCheckEmail() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserModel um = (UserModel) paramModel(UserModel.class);
+		try {
+			um.findPaypwdNewValidEmail("upe_new_email", user,
+					paramString("email"));
+			userService.modifyEmail(user.getUserId(), paramString("email"));
+			session.put(Constant.SESSION_USER,
+					this.userService.find(user.getUserId()));
+			data.put("code", "01");
+			data.put("msg", "验证码通过");
+			data.put("result", true);
+
+		} catch (Exception e) {
+			data.put("code", "02");
+			data.put("msg", e.getMessage());
+			data.put("result", false);
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 找回交易密码 发送手机验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/upESendMobileMsg")
+	public String upESendMobileMsg() throws Exception {
+		user = getSessionUser();
+		// BUG JSDP-107
+		// JSDP-10 2015年5月4日    孙晓勇   start  对用户为null做处理
+		if (null != user) {
+			
+			String flag = paramString("flag");
+	
+			data = new HashMap<String, Object>();
+			try {
+				if (StringUtils.isNotEmpty(flag) && "voice".equals(flag)) {
+					// TODO 于俊斐 发送语音验证码
+	
+				} else {
+					BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+							null, user.getMobilePhone(),
+							NoticeConstant.GETCODE_UPE_MOBILE);
+					blog.initCode("upe_mobile");
+					blog.doEvent();
+				}
+				data.put("result", true);
+				printJson(getStringOfJpaObj(data));
+			} catch (Exception e) {
+				data.put("result", false);
+				data.put("msg", e.getMessage());
+				printJson(getStringOfJpaObj(data));
+			}
+		} else {
+			data.put("result", false);
+			data.put("msg", "用户未登录");
+			printJson(getStringOfJpaObj(data));
+		}
+		// JSDP-10 2015年5月4日    孙晓勇   end	
+		// BUG JSDP-107
+		
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+		
+	}
+
+	/**
+	 * 借款人 找回交易密码 校验手机验证码
+	 * 
+	 * @author yujunfei@ddtkj.com
+	 */
+	@Action("/member_borrow/account/verifyUEMobileCode")
+	public String verifyUEMobileCode() throws Exception {
+		printJson(getStringOfJpaObj(this.findPaypwdCheckMobile(
+				NoticeConstant.GETCODE_UPE_MOBILE, "upe_mobile")));
+		return null;
+	}
+
+	/******************************************** 借款人 修改绑定邮箱 end *******************************************/
+
+	/**
+	 * 根据 nid todo 校验手机验证码
+	 */
+	private Map<String, Object> findPaypwdCheckMobile(String nid, String todo)
+			throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserModel um = (UserModel) paramModel(UserModel.class);
+		try {
+			um.findPaypwdValidMobile(todo, user);
+			data.put("code", "01");
+			data.put("msg", "验证码通过");
+			data.put("result", true);
+
+		} catch (Exception e) {
+			data.put("code", "02");
+			data.put("msg", e.getMessage());
+			data.put("result", false);
+		}
+		return data;
+	}
+
+	/**
+	 * 根据 nid todo 校验邮箱验证码
+	 */
+	private Map<String, Object> findPaypwdCheckEmail(String nid, String todo)
+			throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserModel um = (UserModel) paramModel(UserModel.class);
+		try {
+			um.findPaypwdValidEmail(todo, user);
+			data.put("code", "01");
+			data.put("msg", "验证码通过");
+			data.put("result", true);
+
+		} catch (Exception e) {
+			data.put("code", "02");
+			data.put("msg", e.getMessage());
+			data.put("result", false);
+		}
+		return data;
+	}
+
+	/**
+	 * 借款人 设置密保问题
+	 */
+	@Action("/member_borrow/account/setNewQuestion")
+	public String setNewQuestion() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserPwdQuestionModel um = (UserPwdQuestionModel) paramModel(UserPwdQuestionModel.class);
+		long id = paramLong("quid1");
+		Dict d = this.dictService.find(id);
+		try {
+			um.setId1(d.getId());
+			um.setQuestion1(d.getName());
+			um.setUser(user);
+			userPwdQuestionService.addOne(um);
+			data.put("msg", "设置密保问题成功");
+			data.put("code", "01");
+			data.put("result", true);
+			printJson(getStringOfJpaObj(data));
+		} catch (Exception e) {
+			data.put("msg", e.getMessage());
+			data.put("code", "02");
+			data.put("result", false);
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 验证密保问题
+	 */
+	@Action("/member_borrow/account/checkNewQuestion")
+	public String updateNewQuestion() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserPwdQuestionModel um = (UserPwdQuestionModel) paramModel(UserPwdQuestionModel.class);
+		try {
+			UserPwdQuestion upq = userPwdQuestionService.find(
+					paramLong("cqid"), user.getUserId());
+			if (um.getAnswer1().equals(upq.getAnswer())) {
+				data.put("msg", "密保问题验证成功");
+				data.put("code", "01");
+				data.put("result", true);
+			} else {
+				data.put("msg", "密保问题答案错误");
+				data.put("code", "03");
+				data.put("result", false);
+			}
+			printJson(getStringOfJpaObj(data));
+		} catch (Exception e) {
+			data.put("msg", e.getMessage());
+			data.put("code", "02");
+			data.put("result", false);
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 借款人 修改密保问题
+	 */
+	@Action("/member_borrow/account/updateQuestion")
+	public String updateQuestion() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		UserPwdQuestionModel um = (UserPwdQuestionModel) paramModel(UserPwdQuestionModel.class);
+		um.setId1(paramLong("cqid"));
+		try {
+			Dict d = this.dictService.find(um.getId1());
+			um.setQuestion1(d.getName());
+			userPwdQuestionService.updateQuestion(um, paramLong("oldid"), user);
+			data.put("msg", "密保问题修改成功");
+			data.put("code", "01");
+			data.put("result", true);
+			printJson(getStringOfJpaObj(data));
+		} catch (Exception e) {
+			data.put("msg", e.getMessage());
+			data.put("code", "02");
+			data.put("result", false);
+			printJson(getStringOfJpaObj(data));
+		}
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 绑定邮箱-获取校验码
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member_borrow/security/bindEmailCode")
+	public void bindEmailCode() throws Exception {
+		user = getSessionUser();
+		BaseAccountLog blog = new GetCodeLog(user, user.getUserName(),
+				user.getEmail(), null, NoticeConstant.NOTICE_BIND_EMAIL);
+		blog.initCode("bindEmail");
+		blog.doEvent();
+		printSuccess();
+	}
+
+	/**
+	 * 借款人 密保问题验证 修改交易密码
+	 */
+	@Action("/member_borrow/account/checkQuestion")
+	public String checkQuestion() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		try {
+			List<UserPwdQuestion> question = this.userPwdQuestionService
+					.list(user.getUserId());
+			if (question != null && question.size() == 1) {
+				UserPwdQuestion upq = question.get(0);
+				if (upq.getAnswer().equals(paramString("answer"))) {
+					data.put("result", true);
+					data.put("code", "01");
+					data.put("msg", "验证成功");
+				} else {
+					data.put("result", false);
+					data.put("code", "02");
+					data.put("msg", "答案不正确");
+				}
+			}
+
+		} catch (Exception e) {
+			data.put("result", false);
+			data.put("msg", e.getMessage());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/***************************** 商家个人中心显示数据 end **********************************/
+
+	/***************************** 投资者个人中心显示数据 start **********************************/
+
+	/**
+	 * 投资人 担保 公司 用户认证状态
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/investIdentify")
+	public String investIdentify() throws Exception {
+		data = new HashMap<String, Object>();
+		UserIdentify userIdentify = getSessionUserIdentify();
+		userIdentify = userIdentifyService.findById(userIdentify.getUserId());
+		//JSDP-119 wcw 2015-05-16 start
+		if(session.get(Constant.SESSION_USER_IDENTIFY)!=null){
+			session.remove(Constant.SESSION_USER_IDENTIFY);
+		}
+		//JSDP-119 wcw 2015-05-16 end
+		session.put(Constant.SESSION_USER_IDENTIFY, userIdentify);
+		user = getSessionUser();
+		user = userService.find(user.getUserId());
+		//JSDP-119 wcw 2015-05-16 start
+        if(session.get(Constant.SESSION_USER)!=null){
+        	session.remove(Constant.SESSION_USER);
+        }
+        session.put(Constant.SESSION_USER, user);
+        //JSDP-119 wcw 2015-05-16 end
+		// 用户最后登录时间
+		UserLoginHisotry userLoginHistory = userLoginHisotryService
+				.getLastTimeLogin(user.getUserId());
+		if (userLoginHistory != null) {
+			String sysDatetime = DateUtil.dateStr4(userLoginHistory
+					.getLoginTime());
+			data.put("lastLoginTime", sysDatetime);
+		} else {
+			String sysDatetime = DateUtil.dateStr4(new Date());
+			data.put("lastLoginTime", sysDatetime);
+		}
+		if ("81".equals(userIdentify.getEmailStatus())) {
+			data.put("thirdPartyAccount", user.getThirdPartyAccount()); // TODO
+																		// 于俊斐
+																		// 参数为
+																		// user.getApiUsercustId()
+																		// 现在不在用户表中了
+		}
+		// 系统通知未读信息的总数
+		int unReadCount = messageService.unreadCount(user.getUserId());
+		data.put("nickname", user.getNickname());
+		data.put("unReadCount", unReadCount);
+		data.put("thirdPartyIsOpen", user.getThirdPartyIsOpen()); // TODO 于俊斐
+																	// 参数为：user.getApiStatus()
+																	// 现在不在用户表中了
+		data.put("emailStatus", userIdentify.getEmailStatus());
+		data.put("realNameStatus", userIdentify.getRealNameStatus());
+		data.put("mobilePhoneStatus", userIdentify.getMobilePhoneStatus());
+		data.put("userName", user.getUserName());
+		data.put("email", user.getEmail());
+		data.put("realName", user.getRealName());
+		data.put("memberLevel", user.getMemberLevel());
+		data.put("thirdPartyAccount", user.getThirdPartyAccount());
+		//与担保公司共用的，担保公司的公司名称
+		data.put("companyName",user.getUserCache().getCompanyName());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 资产统计页面
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/account/assets")
+	public String assets() throws Exception {
+		user = getSessionUser();
+		Account account = accountService.findByUser(user.getUserId());
+		request.setAttribute("account", account);
+		double interest = borrowCollectionService.getInterestByUser(user);
+		double capital = borrowCollectionService.getCapitalByUser(user);
+		request.setAttribute("interest", interest);
+		request.setAttribute("capital", capital);
+		/*
+		 * double total = BigDecimalUtil.add(interest, capital,
+		 * account.getNoUseMoney(), account.getUseMoney());
+		 * request.setAttribute("total", total);
+		 */
+		List<String> dates = borrowCollectionService.getCollectionDate(user);
+		if (dates == null || dates.size() <= 0) {
+			dates.add(DateUtil.dateStr(new Date(), "yyyy-MM"));
+		}
+		request.setAttribute("dates", dates);
+		return "assets";
+	}
+
+	/**
+	 * 待收利息JSON
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/account/interestJson")
+	public void interestJson() throws Exception {
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		List<Object[]> list = borrowCollectionService.getInterestByUserAndDate(
+				user, paramString("date"));
+		List<Object> days = new ArrayList<Object>();
+		List<Object> values = new ArrayList<Object>();
+		for (Object[] o : list) {
+			days.add(o[0]);
+			values.add(o[1]);
+		}
+		List<String> numList = this.getDateNum(paramString("date"));
+		for (int i = 0; i < numList.size(); i++) {
+			String str = numList.get(i);
+			if (days.contains(str)) {
+				continue;
+			} else {
+				days.add(i, str);
+				values.add(i, 0);
+			}
+		}
+		data.put("day", days.toArray());
+		data.put("value", values.toArray());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+
+	/**
+	 * 待收本金JSON
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/account/capitalJson")
+	public void capitalJson() throws Exception {
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		List<Object[]> list = borrowCollectionService.getCapitalByUserAndDate(
+				user, paramString("date"));
+		List<Object> days = new ArrayList<Object>();
+		List<Object> values = new ArrayList<Object>();
+		for (Object[] o : list) {
+			days.add(o[0]);
+			values.add(o[1]);
+		}
+		List<String> numList = this.getDateNum(paramString("date"));
+		for (int i = 0; i < numList.size(); i++) {
+			String str = numList.get(i);
+			if (days.contains(str)) {
+				continue;
+			} else {
+				days.add(i, str);
+				values.add(i, 0);
+			}
+		}
+		data.put("day", days.toArray());
+		data.put("value", values.toArray());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+	}
+	@Action("/member/investHandleBorrower")
+	public String investHandleBorrower() throws Exception {
+		data = new HashMap<String, Object>() ;
+		user = getSessionUser() ;
+		Account account = accountService.findByUser(user.getUserId());
+		data.put("cashMoney", account.getBorrowerUsableTotal());
+		double repayMoney  = borrowRepaymentService.getUserBorrowRepayTotal(user.getUserId()) ;
+		DecimalFormat newReayMoney = new DecimalFormat("#.##");
+		data.put("repayMoney", newReayMoney.format(repayMoney)) ;
+		double borrowMoneyTotal =  borrowService.findAccountTotalByStatus(user.getUserId(),
+				1, 0);
+		data.put("borrowMoneyTotal", borrowMoneyTotal) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	//担保我的资产信息
+	@Action("/member/investHandleGuarantee")
+	public String investHandleGuarantee() throws Exception {
+		data = new HashMap<String, Object>() ;
+		user = getSessionUser() ;
+		
+		// 正在担保项目个数
+		data.put("guaranteeingCount", borrowService.getGuaranteeingCount(user.getUserId()));
+		
+		// 催收项目个数
+		//data.put("urgeCount", borrowRepaymentService.getUrgeCount(user.getUserId()));
+		data.put("urgeCount", borrowRepaymentService.getCollectionCount(user.getUserId()));
+		// 催收项目记录数（按期数）
+		BorrowModel borrowModel = new BorrowModel();
+		borrowModel.setVouchFirmId(getSessionUserId());
+		PageDataList<BorrowRepaymentModel> list = borrowRepaymentService.getCollectionListCount(borrowModel);
+		//data.put("urgeCount", list.getList().size());
+		// 逾期项目个数
+		data.put("overdueCount", borrowRepaymentService.getOverdueCount(user.getUserId()));
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	//商户我的资产信息
+	@Action("/member/investHandleMervhant")
+	public String investHandleMervhant() throws Exception {
+		data = new HashMap<String, Object>() ;
+		user = getSessionUser() ;
+		
+		Account account = accountService.findByUser(user.getUserId());
+		
+		// 用户总金额
+		double usableMount = account.getAccountTotal();
+		//累计提现总额
+		double cashTotal = accountDrawCashService.allDrawCashMomeny(this.getSessionUserId());
+		// 用户完成订单金额
+		double moneyCount = goodsOrderSerive.orderMoneyCountByUser((int)user.getUserId());
+		
+		data.put("usableMount", usableMount);
+		data.put("cashTotal", cashTotal) ;
+		data.put("moneyCount", moneyCount) ;
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+	
+	
+	/**
+	 * 资金统计信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/investHandleMoney")
+	public String investHandleMoney() throws Exception {
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		Account account = accountService.findByUser(user.getUserId());
+		data.put("account", account);
+
+		// 可用总额
+		double usableTotal = account.getUsableAccount();
+		// 冻结总额
+		double freezeTotal = account.getFreezeAccount();
+		data.put("usableTotal", usableTotal);
+		data.put("freezeTotal", freezeTotal);
+
+		AccountRechargeModel accountRechargeModel = accountRechargeService
+				.getRechargeSummary(user.getUserId());
+		// 累计成功充值总额
+		double rechargeAmount = accountRechargeModel.getRechargeTotal();
+		data.put("rechargeAmount", rechargeAmount);
+
+		Score score = scoreService.getScoreByUserId(user.getUserId());
+		// 用户积分
+		data.put("score", score);
+		Object[] object = null;
+		if(score != null){
+			// 柱形图数据
+			object = new Object[] { account.getAccountTotal(),
+					usableTotal, account.getCollectionTotal(), freezeTotal,
+					rechargeAmount, score.getTotalScore() };
+		}else{
+			// 柱形图数据
+			object = new Object[] { account.getAccountTotal(),
+					usableTotal, account.getCollectionTotal(), freezeTotal,
+					rechargeAmount, 0};
+		}
+		data.put("object", object);
+		// 今日收益
+		/*double sumTodayInterest = borrowCollectionService
+				.sumTodayInterest(user);
+		data.put("sumTodayInterest", sumTodayInterest);*/
+		// 累计净收益
+		double sumInterest = borrowCollectionService.accumulatedNetIncome(user);
+		data.put("sumInterest", sumInterest);
+		// 在投金额
+		/*double sumInMoney = borrowCollectionService.inInvestAmount(user, 0);
+		data.put("sumInMoney", sumInMoney);*/
+		// 累计投资
+		/*double investTotal = borrowCollectionService.inInvestAmount(user, 1);
+		data.put("investTotal", investTotal);*/
+		//JSDP-171 xingjia 20150714 start
+		//体验卡汇总信息
+		PetCardSum petCardSum = petCardSumService.findPetCardSumByUserId(user.getUserId());
+		if(null != petCardSum){
+			data.put("ptAccountFzen", petCardSum.getPtAccountFzen());
+			data.put("ptAccountAll", petCardSum.getPtAccountAll());
+			data.put("ptAccountUsed", petCardSum.getPtAccountUsed());
+			data.put("ptAccountUnuse", petCardSum.getPtAccountUnuse());
+		}else{
+			data.put("ptAccountFzen", 0);
+			data.put("ptAccountAll", 0);
+			data.put("ptAccountUsed", 0);
+			data.put("ptAccountUnuse", 0);
+		}
+		//JSDP-171 xingjia 20150714 end
+		// 用户签到信息
+		List<ScoreLog> scoreLoglist = scoreLogService.getLastTimeSign(user
+				.getUserId());
+		int totalDays =0;
+		if (scoreLoglist != null && scoreLoglist.size() > 0) {
+			ScoreLog scoreLog = scoreLoglist.get(0);
+			String signLastTime = DateUtil.dateStr2(scoreLog.getAddTime());
+			String today = DateUtil.dateStr2(new Date());
+			// 判断今天是否签到过 0：没有签到 1：已经签到
+			if (!signLastTime.equals(today)) {
+				data.put("isSignIn", 0);
+				totalDays = scoreLoglist.size();
+			}else {
+				data.put("isSignIn", 1);
+				for(int i = 0;i<scoreLoglist.size();i++){
+					ScoreLog sc = scoreLoglist.get(i);
+						totalDays += sc.getScore();
+				}
+			}
+		} else {
+			//从来没有签到过
+			 data.put("isSignIn", 0);
+		}
+		data.put("totalDays", totalDays);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 可借款标
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/investList")
+	public String investList() throws Exception {
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		List<BorrowModel> list = borrowService.investList(user);
+		data.put("list", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 收款（3条）
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/investCollectionList")
+	public String investCollectionList() throws Exception {
+		user = getSessionUser();
+		List<BorrowCollectionModel> list = borrowCollectionService
+				.investCollectionList(user);
+		data = new HashMap<String, Object>();
+		data.put("data", list);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 投资者通过投标详情跳转到借款人的公司主页
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/borrowHome")
+	public String borrowHome() throws Exception {
+		return "home";
+	}
+
+	/**
+	 * 公司主页动态数据
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/companyHome")
+	public String companyHome() throws Exception {
+		data = new HashMap<String, Object>();
+		long id = paramLong("id");
+		UserCache uc = userCacheService.findById(id);
+		data.put("uc", uc);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 投资人获取客服信息
+	 * 
+	 * @throws Exception
+	 */
+	@Action("/member/getKFShow")
+	public String getKFShow() throws Exception {
+		data = new HashMap<String, Object>();
+		user = getSessionUser();
+		// 查询是否有更换客服的信息 如果有更换客服的信息，那么显示当前未更换客服，现在更换状态
+		UserCache uc = userService.find(user.getUserId()).getUserCache();
+		KefuRecord kfr = kefuChangeService.getKefuByUseridAndType(
+				user.getUserId(), uc.getCustomerUserId(), 1);
+		if (kfr != null) {
+			data.put("haveRecorde", true);
+			data.put("cstatus", kfr.getVerifyResult());
+		} else {
+			data.put("haveRecorde", false);
+		}
+		Operator o = operatorService.getUserById(uc.getCustomerUserId());
+		if (o != null) {
+			data.put("kefu", o);
+			data.put("url", Global.getValue("adminurl"));
+		} else {
+			data.put("url", getRequest().getSession().getServletContext()
+					.getAttribute("webroot").toString()
+					+ getRequest().getSession().getServletContext()
+							.getAttribute("theme_dir").toString());
+		}
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/*****************************
+	 * 投资者个人中心显示数据 end*********************************
+	 * 
+	 * 
+	 * /** 待收 json数据
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/repayCollectJson")
+	public String repayCollectJson() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		// 待收的统计
+		BorrowCollectionModel bcm = borrowCollectionService
+				.getCollectStatistics(user.getUserId());
+		data.put("borrowCollect", bcm);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 用户待收金额信息
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/getUserCollectionAccount")
+	public String getUserCollectionAccount() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		// 用户待收金额信息
+		AccountModel accountModel = accountService
+				.getUserCollectionAccount(user.getUserId());
+		data.put("accountModel", accountModel);
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 用户已赚金额信息
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Action("/member/getUserEarnedAccount")
+	public String getUserEarnedAccount() throws Exception {
+		user = getSessionUser();
+		data = new HashMap<String, Object>();
+		long userId = user.getUserId();
+		// 已赚利息
+		double receivedInterestSum = borrowCollectionService
+				.getReceivedInterestSum(userId);
+		// 已赚奖励
+		AccountSum accountSum = accountSumService.findByUserId(userId);
+		data.put("receivedInterestSum", receivedInterestSum);
+		data.put("award", accountSum.getAccumulativeAward());
+		printJson(getStringOfJpaObj(data));
+		//JSDP-86 wcw 2015-05-05 start
+		data=null;
+		//JSDP-86 wcw 2015-05-05 end
+		return null;
+	}
+
+	/**
+	 * 获取月份的所有天数
+	 * 
+	 * @param time
+	 *            月份，格式必须为yyyy-MM
+	 * @return 月份的天数
+	 */
+	private List<String> getDateNum(String time) {
+		try {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
+			Date date = sdf.parse(time);
+			Calendar a = Calendar.getInstance();
+			a.setTime(date);
+			a.set(Calendar.DATE, 1);
+			a.roll(Calendar.DATE, -1);
+			int num = a.get(Calendar.DATE);
+			List<String> list = new ArrayList<String>();
+			for (int i = 0; i < num; i++) {
+				Date j = DateUtil.rollDay(date, i);
+				list.add(DateUtil.dateStr8(j));
+			}
+			return list;
+		} catch (ParseException e) {
+			return null;
+		}
+	}
+
+}

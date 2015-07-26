@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>储值卡消费记录列表</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	// 查看
+	//var viewTitle = "查看信息";
+	//var viewUrl = "/modules/petcard/petcardlog/viewPetCardLogPage.html";
+	//var viewWinParmeters = "'{0}','" + viewTitle + "',550,600,'" + viewUrl + "'";
+	var viewCompairAccountLogTitle = "对账";
+    var viewCompairAccountLogUrl = "/modules/account/accountlog/compairAccountLogPage.html"
+    var viewCompairAccountLogParmeters = "'{0}','" + viewCompairAccountLogTitle + "',800,500,'" + viewCompairAccountLogUrl + "'";s
+    
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : '/modules/petcard/petcardlog/petCardLogManageList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'idInt', title: '编号', width:30},
+			{ field: 'tradeNo', title: '流水号', width:100},
+			{ field: 'consumeMoney', title: '消费金额', width: 100,formatter:function(value, row, index){
+				if(value=='null'){
+					return "0";
+				}
+				return value+"元";
+			}},
+			
+			
+			{ field: 'userName', title: '消费用户', width: 100,sortable:false,formatter:function(value, row, index){
+				return value;
+			}}, 
+            { field: 'status', title: '状态', width: 50,formatter:function(value, row, index){
+				if(value=='suc'){
+					return "成功";
+				}else if(value=="fail"){
+					return "失败";
+				}else{
+					return "未知";
+				}
+			}},
+			{ field: 'consumeTime', title: '消费时间', width: 150, sortable:false,formatter:function(value, row, index){
+				return getLocalTime(value,4);
+			}}, 
+			{ field: 'remark', title: '备注', width: 300, sortable:false,formatter:function(value, row, index){
+				return value;
+			}}, 
+            {field : 'action',title : '操作',width :60,
+				formatter : function(value, row, index) {
+					var str = '';
+					str += "<@secAuthorizeUrl value='/petcardlog/petcardLogSupplyBtn.html' >";
+					str += $.formatString('<img onclick="$.fn.formOptions.viewFunCompair(' + viewCompairAccountLogParmeters + ');" src="{1}" title="对账"/>', row.tradeNo, '${theme_dir}/css/images/extjs_icons/zoom/zoom.png');
+					str += "</@secAuthorizeUrl>";
+					str += '&nbsp;';
+					return str;
+				}
+			 }
+			 ]],
+			 toolbar : '#toolbar',
+			 onLoadSuccess : function() {
+					$('#searchForm table').show();
+					parent.$.messager.progress('close');
+					$(this).datagrid('tooltip',['content']);
+			 }
+		});
+		
+	});
+ 	 
+ 	 
+ 	// 储值卡导出Excel表
+	function exportExcel(){
+		var url = "/modules/petcard/petcardlog/petCardLogExcel.html";
+		//var batchNo = $("#batchNo").val();
+		//var cardNo = $("#cardNo").val();
+		var userName = $("#userName").val();
+		var status = $("#status").val();
+		var startTime = $("#startTime").val();
+		var endTime = $("#endTime").val();
+		//var sou = "?batchNo=" + batchNo + "&cardNo=" + cardNo + "&userName=" + userName + "&status=" + status + "&startTime=" + startTime + "&endTime=" + endTime;
+		var sou = "?userName=" + userName + "&status=" + status + "&startTime=" + startTime + "&endTime=" + endTime;
+		
+		window.location.href = url + sou;
+	}
+	
+
+	
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+            		
+            		<li>状态：
+	            		<select name="status" id="status" class="status">
+				            <option value="" selected="selected">全部</option>
+				            <option value="suc">成功</option>
+				            <option value="fail">失败</option>
+						</select>
+					</li>
+            		
+            		<li>消费时间：<input type="text" name="startTime" id="startTime" class="searchTime"  style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime" class="searchTime"  style="width:140px;"/></li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>		
+
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/petcardlog/petCardLogExcelBtn.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+	</div>
+</body>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>
+</html>

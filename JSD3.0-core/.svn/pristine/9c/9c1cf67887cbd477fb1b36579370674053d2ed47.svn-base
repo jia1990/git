@@ -1,0 +1,130 @@
+package com.ddtkj.p2psys.returnmoney.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import com.ddtkj.p2psys.user.domain.User;
+
+@Entity
+@Table(name="t_jsd_return_use")
+public class ReturnMoneyUse implements Serializable{
+	private static final long serialVersionUID = 3764170268110453128L;
+	
+	
+	public static final int CONTINUED_INVEST_APPLY_STATUS=1;
+	public static final int CONTINUED_INVEST_AUDIT_SUCCESS_STATUS=2;
+	public static final int COMTINUED_INVEST_AUDIT_FAIL_STATUS=3;
+	public static final int RETURN_MONEY_USE_SUCCESS_STATUS=4;
+	public static final int RETURN_MONEY_USE_FAIL_STATUS=5;
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+    private int id; //标示ID
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+    private User user;
+	private double continuedInvestMoney;//回款续投金额
+	private double continuedInvestAward; //回款续投奖励金额
+	private double continuedInvestRate; //回款续投奖励费率
+	private int status; //状态   1：回款奖励申请  2.回款奖励审核通过  3.回款奖励审核不通过        4.提现使用回款成功  5.提现使用回款失败
+	private int drawId;//提现记录ID
+	private double cashUseReturnMoney; //使用回款金额
+	private String remark;  //备注
+	@Temporal(TemporalType.TIMESTAMP)
+	private  Date addTime;  //添加时间
+	private String auditRemark; //审核备注
+	private int operatorId; //审核人Id
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date auditTime; //审核时间
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
+	}
+	public double getContinuedInvestMoney() {
+		return continuedInvestMoney;
+	}
+	public void setContinuedInvestMoney(double continuedInvestMoney) {
+		this.continuedInvestMoney = continuedInvestMoney;
+	}
+	
+	public double getContinuedInvestAward() {
+		return continuedInvestAward;
+	}
+	public void setContinuedInvestAward(double continuedInvestAward) {
+		this.continuedInvestAward = continuedInvestAward;
+	}
+	public double getContinuedInvestRate() {
+		return continuedInvestRate;
+	}
+	public void setContinuedInvestRate(double continuedInvestRate) {
+		this.continuedInvestRate = continuedInvestRate;
+	}
+	public int getStatus() {
+		return status;
+	}
+	public void setStatus(int status) {
+		this.status = status;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public Date getAddTime() {
+		return addTime;
+	}
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+	public String getAuditRemark() {
+		return auditRemark;
+	}
+	public void setAuditRemark(String auditRemark) {
+		this.auditRemark = auditRemark;
+	}
+	public Date getAuditTime() {
+		return auditTime;
+	}
+	public void setAuditTime(Date auditTime) {
+		this.auditTime = auditTime;
+	}
+	public int getOperatorId() {
+		return operatorId;
+	}
+	public void setOperatorId(int operatorId) {
+		this.operatorId = operatorId;
+	}
+	public int getDrawId() {
+		return drawId;
+	}
+	public void setDrawId(int drawId) {
+		this.drawId = drawId;
+	}
+	public double getCashUseReturnMoney() {
+		return cashUseReturnMoney;
+	}
+	public void setCashUseReturnMoney(double cashUseReturnMoney) {
+		this.cashUseReturnMoney = cashUseReturnMoney;
+	}
+
+}

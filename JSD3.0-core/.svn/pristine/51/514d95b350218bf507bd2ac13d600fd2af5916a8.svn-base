@@ -1,0 +1,25 @@
+package com.rongdu.p2psys.user.model.register;
+
+import javax.servlet.http.HttpServletRequest;
+
+import com.rongdu.p2psys.core.util.BeanUtil;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * 忘记密码-通过手机找回密码
+ * 
+ * @author xx
+ * @version 2.0
+ * @since 2014年3月2日
+ */
+public class GetRegisterPhone extends BaseGetRegister {
+
+	@Override
+	public void getRegisterStep2(User user, String code) throws Exception {
+		UserModel userModel = UserModel.instance(user);
+		userModel.setCode(code);
+		userModel.validRegisterByPhoneStep2();
+	}
+}

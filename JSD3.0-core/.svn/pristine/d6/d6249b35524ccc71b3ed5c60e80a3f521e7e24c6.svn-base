@@ -1,0 +1,79 @@
+package com.ddtkj.p2psys.goods.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.Table;
+
+import com.ddtkj.p2psys.user.domain.User;
+/**
+ * 
+ * @描述：商品的图片实体
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年1月29日
+ */
+@Entity
+@Table(name = "t_jsd_goods_pic")
+public class DdtkjGoodsPic implements Serializable{
+
+	private static final long serialVersionUID = 8957749146358922186L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	
+	//商品ID
+	private long goodsId;
+	
+	//图片路径 
+	private String picUrl;
+	
+	private String type;//图片显示的类型
+	//添加时间 
+	private Date addTime;
+	
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public long getGoodsId() {
+        return goodsId;
+    }
+
+    public void setGoodsId(long goodsId) {
+        this.goodsId = goodsId;
+    }
+
+    public String getPicUrl() {
+		return picUrl;
+	}
+
+	public void setPicUrl(String picUrl) {
+		this.picUrl = picUrl;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+	
+}

@@ -1,0 +1,32 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/loan/borrow/editBorrowInfoPage.html',"修改成功！","修改失败！");
+	   
+	});
+</script>
+<div class="popForm sForm">
+    <form id="form"  method="post">		
+	  	<div class="formitm">
+		     <label class="lab">借款标ID：</label>
+			 <div class="ipt">
+			 	${borrow.id!}
+			 </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">名称：</label>
+		    <div class="ipt">
+				${borrow.name!}	
+			 </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">定向密码：</label>
+		     <div class="ipt">
+				<input type="text" name="pwd" class="w300 easyui-validatebox" value="${borrow.pwd!}" data-options="required: true" maxlength="10"/>
+				<b>*</b>
+			</div>
+		</div>
+		<input name="id" value="${borrow.id!}" type="hidden"/>
+		<input name="borrowInfoToken" value="${borrowInfoToken!}" type="hidden"/>
+		
+	</form>
+</div>

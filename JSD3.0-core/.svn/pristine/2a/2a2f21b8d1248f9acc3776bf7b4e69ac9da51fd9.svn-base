@@ -1,0 +1,91 @@
+package com.ddtkj.p2psys.subbranch.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.subbranch.dao.BranchDao;
+import com.ddtkj.p2psys.subbranch.dao.MarketerBranchDao;
+import com.ddtkj.p2psys.subbranch.dao.MarketerBranchUnModelDao;
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.ddtkj.p2psys.subbranch.model.BranchMarketerModel;
+import com.ddtkj.p2psys.subbranch.service.MarketerBranchService;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.dao.UserIdentifyDao;
+
+/**
+ * @描述：分店市场专员关系service实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月22日 
+ */
+@Service("marketerBranchService")
+public class MarketerBranchServiceImpl implements MarketerBranchService {
+	
+	@Resource
+	private MarketerBranchDao marketerBranchDao;
+	@Resource
+	private BranchDao branchDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private UserIdentifyDao userIdentifyDao;
+	@Resource
+	private MarketerBranchUnModelDao marketerBranchUnModelDao;
+
+	@Override
+	public BranchMarketer save(BranchMarketer bm) {
+		BranchMarketer marketerBranch = marketerBranchUnModelDao.save(bm);
+		if(null != marketerBranch){
+			return marketerBranch;
+		}
+		return null;
+	}
+
+	@Override
+	public List<BranchMarketer> findMarketerByBranchId(long id) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("branchId", id);
+		List<BranchMarketerModel> bmList = marketerBranchDao.findByCriteria(param);
+		List<BranchMarketer> bList = new ArrayList<BranchMarketer>();
+		if(null != bmList && bmList.size()!=0){
+			for(int i=0;i<bmList.size();i++){
+				bList.add(bmList.get(i).prototype());
+			}
+			return bList;
+		}
+		return null;
+	}
+
+	@Override
+	public PageDataList<BranchMarketerModel> pageDataList(UserModel userModel) {
+		
+		
+		PageDataList<BranchMarketerModel> bmmPageDataList = marketerBranchDao.findPageList(userModel);
+		
+		
+		return bmmPageDataList;
+	}
+
+	@Override
+	public PageDataList<BranchMarketerModel> invitePageDataList(
+			UserModel userModel) {
+
+		PageDataList<BranchMarketerModel> invitePageDataList = marketerBranchDao.findInvitePageList(userModel);
+
+		return invitePageDataList;
+	}
+
+	@Override
+	public int findMarketerCountByBranchId(long id) {
+		return marketerBranchDao.findMarketerCountByBranchId(id);
+	}
+
+
+
+}

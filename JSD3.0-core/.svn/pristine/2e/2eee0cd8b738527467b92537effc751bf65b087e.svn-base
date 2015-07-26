@@ -1,0 +1,127 @@
+package com.ddtkj.p2psys.tpp.ymd.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
+import com.rongdu.p2psys.tpp.ips.tool.XmlTool;
+
+/**
+ * 一麻袋查询返回参数
+ * @author wcw
+ * 2014-12-4
+ *
+ */
+public class YmdQueryReturnDetails extends YmdModel{
+     
+	/**
+	 * 交易状态
+	 */
+	private String tradeStatus;
+	/**
+	 * 签名信息
+	 */
+	private String secureCode;
+	/**
+	 * 交易时间
+	 */
+	private String tradeTime;
+	/**
+	 * 商户批号
+	 */
+	private String tradeNo;
+	/**
+	 * 付款人
+	 */
+	private String outNickName;
+	/**
+	 * 收款人
+	 */
+	private String inNickName;
+	/**
+	 * 交易类型
+	 */
+	private String tradeType;
+	
+	/**
+	 * 解析xml字符串
+	 * @param xml
+	 * @return
+	 */
+	public List<YmdQueryReturnDetails> getYmdQueryDetailList(XmlTool xml){
+		NodeList nodeList=xml.getNodeList("tradeInfo");
+    	List<YmdQueryReturnDetails> yrqdList=new ArrayList<YmdQueryReturnDetails>();
+    	for(int i=0;i<nodeList.getLength();i++){
+    		Element node = (Element)nodeList.item(i);
+    		YmdQueryReturnDetails yrqd=new YmdQueryReturnDetails();
+    		String mode=node.getElementsByTagName("mode").item(0).getFirstChild().getNodeValue();
+    		yrqd.setOutTradeNo(node.getElementsByTagName("outTradeNo").item(0).getFirstChild().getNodeValue()); 
+    		yrqd.setMode(node.getElementsByTagName("mode").item(0).getFirstChild().getNodeValue());
+    		yrqd.setTradeStatus(node.getElementsByTagName("tradeStatus").item(0).getFirstChild().getNodeValue());
+    		if("trade".equals(mode)){
+	    		yrqd.setOutNickName(node.getElementsByTagName("outNickName").item(0).getFirstChild().getNodeValue());
+	    		yrqd.setInNickName(node.getElementsByTagName("inNickName").item(0).getFirstChild().getNodeValue());
+	    		yrqd.setTradeNo(node.getElementsByTagName("tradeNo").item(0).getFirstChild().getNodeValue());
+	    		yrqd.setTradeType(node.getElementsByTagName("tradeType").item(0).getFirstChild().getNodeValue());
+    		}else{
+    			yrqd.setNickName(node.getElementsByTagName("nickName").item(0).getFirstChild().getNodeValue());
+    		}
+    		yrqd.setAmount(node.getElementsByTagName("amount").item(0).getFirstChild().getNodeValue());
+    		yrqd.setRemark(node.getElementsByTagName("remark").item(0).getFirstChild().getNodeValue());
+    		yrqd.setSecureCode(node.getElementsByTagName("secureCode").item(0).getFirstChild().getNodeValue());
+    		yrqd.setTradeTime(node.getElementsByTagName("tradeTime").item(0).getFirstChild().getNodeValue());
+    		yrqdList.add(yrqd);
+    	}
+    	return yrqdList;
+	}
+	
+	public YmdQueryReturnDetails() {
+		super();
+	}
+	public String getTradeStatus() {
+		return tradeStatus;
+	}
+	public void setTradeStatus(String tradeStatus) {
+		this.tradeStatus = tradeStatus;
+	}
+	public String getSecureCode() {
+		return secureCode;
+	}
+	public void setSecureCode(String secureCode) {
+		this.secureCode = secureCode;
+	}
+	public String getTradeTime() {
+		return tradeTime;
+	}
+	public void setTradeTime(String tradeTime) {
+		this.tradeTime = tradeTime;
+	}
+	public String getTradeNo() {
+		return tradeNo;
+	}
+	public void setTradeNo(String tradeNo) {
+		this.tradeNo = tradeNo;
+	}
+	public String getOutNickName() {
+		return outNickName;
+	}
+	public void setOutNickName(String outNickName) {
+		this.outNickName = outNickName;
+	}
+	public String getInNickName() {
+		return inNickName;
+	}
+	public void setInNickName(String inNickName) {
+		this.inNickName = inNickName;
+	}
+	public String getTradeType() {
+		return tradeType;
+	}
+	public void setTradeType(String tradeType) {
+		this.tradeType = tradeType;
+	}
+	
+	
+}

@@ -1,0 +1,74 @@
+package com.ddtkj.p2psys.core.quartz.autoTender;
+
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.ddtkj.p2psys.autotender.service.BorrowAutoTenderService;
+import com.ddtkj.p2psys.core.quartz.LoanTask;
+/**
+ * 自动投标队列
+ * @author wcw
+ */
+public class AutoTenderJobQueue<T> {
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Queue<T> queue = new ConcurrentLinkedQueue();
+	private LoanTask task;
+
+	public AutoTenderJobQueue(LoanTask task) {
+		super();
+		this.task = task;
+	}
+
+	public synchronized void offer(T model) {
+		if (!queue.contains(model)) {
+			queue.offer(model);
+			synchronized (task.getLock()) {
+				task.execute();
+			}
+		}
+	}
+
+	public synchronized void offer(List<T> ts) {
+		for (int i = 0; i < ts.size(); i++) {
+			T t = ts.get(i);
+			if (!queue.contains(t)) {
+				queue.offer(t);
+			}
+		}
+		synchronized (task.getLock()) {
+			task.execute();
+		}
+	}
+
+	public synchronized T poll() {
+		return queue.poll();
+	}
+
+	public synchronized T peek() {
+		return queue.peek();
+	}
+
+	public synchronized void remove(T model) {
+		queue.remove(model);
+	}
+
+	public int size() {
+		return queue.size();
+	}
+
+	public static AutoTenderJobQueue<AutoTenderBean> AUTOTENDER = null;
+
+	public static void init(BorrowAutoTenderService borrowAutoTenderService) {
+		AUTOTENDER = new AutoTenderJobQueue<AutoTenderBean>(new AutoTenderTask(borrowAutoTenderService));
+	}
+
+	public static void stop() {
+		AUTOTENDER.task.stop();
+	}
+
+	public void doAutoQueue() {
+	}
+
+}

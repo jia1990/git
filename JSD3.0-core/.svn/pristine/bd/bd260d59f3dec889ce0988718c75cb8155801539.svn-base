@@ -1,0 +1,155 @@
+package com.rongdu.p2psys.borrow.executer;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.account.domain.AccountLog;
+import com.ddtkj.p2psys.account.domain.AccountSum;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.p2psys.account.domain.AccountSumLog;
+import com.rongdu.p2psys.account.exception.AccountException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.constant.enums.EnumAccountSumProperty;
+import com.rongdu.p2psys.core.executer.BaseExecuter;
+
+/**
+ * 标还款扣除本金
+ * 
+ * @author cx
+ * @version 2.0
+ * @since 2014-5-21
+ */
+public class BorrowRepayCapitalExecuter extends BaseExecuter {
+
+	private String accountLogType = Constant.REPAID_CAPITAL;
+	private String sumLogRemarkTemplate = "已还款合计：已还款本金${money}元，标ID：[${borrow.id}]。";
+
+	@Override
+	public String getAccountLogType() {
+		return accountLogType;
+	}
+
+	@Override
+	public void prepare() {
+		super.prepare();
+	}
+
+	@Override
+	public void addAccountLog() {
+		Global.setTransfer("weburl", Global.getString("weburl"));
+		Account account = accountDao.findObjByProperty("user.userId", super.user.getUserId());
+		AccountLog log = new AccountLog(super.user, accountLogType, super.toUser);
+		// 操作金额
+		//JSDBET-785 wcw 2015-3-7 start
+		double currRecharge=0;
+		double currEnter=0;
+		double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+		if(borrowerRechargeUsable>=money){
+			currRecharge=money;
+		}else{
+			currRecharge=borrowerRechargeUsable;
+			currEnter=BigDecimalUtil.sub(money, borrowerRechargeUsable);
+		}
+		//JSDBET-785 wcw 2015-3-7 end
+		log.setBorrowerEnterMoney(currEnter);
+		log.setBorrowerRechargeMoney(currRecharge);
+		// 账户总额
+		log.setAccountTotal(account.getAccountTotal());
+		// 账户各类可用
+		log.setBorrowerEnterUsable(account.getBorrowerEnterUsable());
+		log.setBorrowerRechargeUsable(account.getBorrowerRechargeUsable());
+		// 账户各类冻结
+		log.setBorrowerFreezeUseEnter(account.getBorrowerFreezeUseEnter());
+		log.setBorrowerFreezeUseRecharge(account.getBorrowerFreezeUseRecharge());
+		// 账户待还总额
+		log.setRepaymentTotal(account.getRepaymentTotal());
+		log.setRemark(this.getLogRemark());
+		log.setPaymentsType((byte)2);
+		accountLogDao.save(log);
+	}
+
+	@Override
+	public void handleAccount() {
+		//扣除还款本金
+		Account account = accountDao.getAccountByUserId(user.getUserId());
+		double borrowerRechargeUsable=account.getBorrowerRechargeUsable();
+		//JSDBET-785 wcw 2015-3-7 start
+		double currRecharge=0;
+		double currEnter=0;
+		//JSDBET-785 wcw 2015-3-7 end
+		if(borrowerRechargeUsable>=money){
+			currRecharge=money;
+		}else{
+			currRecharge=borrowerRechargeUsable;
+			currEnter=BigDecimalUtil.sub(money, borrowerRechargeUsable);
+		}
+		double useMoney=BigDecimalUtil.add(currEnter,currRecharge);
+		// 总金额
+		account.setAccountTotal(BigDecimalUtil.add(account.getAccountTotal(),
+				-useMoney));
+		// 可用金额
+		account.setBorrowerEnterUsable(BigDecimalUtil.add(
+				account.getBorrowerEnterUsable(), -currEnter));
+		account.setBorrowerRechargeUsable(BigDecimalUtil.add(
+				account.getBorrowerRechargeUsable(), -currRecharge));
+		//待还款总额
+		account.setRepaymentTotal(BigDecimalUtil.add(
+				account.getRepaymentTotal(), -useMoney));
+		if (account.getBorrowerUsableTotal() < 0.1) {
+			throw new AccountException("扣除借款人本金，可用金额不足！", 1);
+		}
+		if (account.getRepaymentTotal() < 0.1) {
+			throw new AccountException("扣除借款人本金，待还款金额不足！", 1);
+		}
+		// 更新
+		//JSDP-164 wcw 20150527 start
+  		//accountDao.modifyBorrowerAccount(account, user.getUserId());
+  		accountDao.update(account);
+  		//JSDP-164 wcw 20150527 end
+	}
+
+	@Override
+	public void handleAccountSum() {
+		/*this.sumManage();
+		accountSumDao.update(EnumAccountSumProperty.REPAY_CASH.getValue(), super.money, super.user.getUserId());
+
+		AccountSum sum = accountSumDao.findByUserId(super.user.getUserId());
+		AccountSumLog sumLog = new AccountSumLog(super.user, accountLogType, super.toUser);
+		sumLog.setMoney(super.money);
+		this.setAccountSumLogRemarkTemplate(sumLogRemarkTemplate);
+		sumLog.setBeforeMoney(sum.getAccumulativeRepayCash());
+		sumLog.setRemark(getAccountSumLogRemark());
+		sumLog.setAfterMoney(BigDecimalUtil.add(sum.getAccumulativeRepayCash(), super.money));
+		accountSumLogDao.save(sumLog);
+*/
+	}
+
+	@Override
+	public void handlePoints() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleNotice() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void addOperateLog() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleInterface() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void extend() {
+		// TODO Auto-generated method stub
+
+	}
+}

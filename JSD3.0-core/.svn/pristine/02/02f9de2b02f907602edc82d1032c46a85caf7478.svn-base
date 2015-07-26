@@ -1,0 +1,171 @@
+package com.ddtkj.p2psys.webpetcard.dao.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.Query;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.webpetcard.dao.PetCardLogDao;
+import com.ddtkj.p2psys.webpetcard.domain.PetCardLog;
+import com.ddtkj.p2psys.webpetcard.model.PetCardLogModel;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述：储值卡消费日志dao实现类
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月2日 
+ * @JIRA JSDP-171
+ */
+
+@Repository("petCardLogDao")
+public class PetCardLogDaoImpl extends BaseDaoImpl<PetCardLog> implements PetCardLogDao {
+
+	
+	/**
+	 * SQL查询体验卡数据
+	 * 
+	 */
+	@Override
+	public PageDataList<PetCardLog> petCardLogListForSQL(int pageNumber,
+			int pageSize, PetCardLogModel model) {
+
+		StringBuffer sql = new StringBuffer();
+		sql.append(" SELECT DISTINCT(t1.id),t1.consume_money,t2.user_name, "
+				+ " t1.status,t1.consume_time,t1.remark "
+				+ " FROM t_jsd_pet_card_log t1,t_jsd_user t2 "
+				+ " WHERE t1.consume_user = t2.user_id ");
+
+		if (model != null) {
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				sql.append(" and t2.user_name LIKE '%"+model.getUserName()+"%' "); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				sql.append(" AND t1.status = '"+model.getStatus()+"' "); 
+			}
+			// 消费时间——开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				sql.append(" AND t1.consume_time >= '"+model.getStartTime()+"' ");
+			}
+			// 消费时间——结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				sql.append(" AND t1.consume_time < '"+model.getEndTime()+"' ");
+			}
+		}
+		sql.append("  ORDER BY t1.id DESC ");
+		Query query = em.createNativeQuery(sql.toString());
+		// 注意下面的页数和条数改为所接收的值，或者在之前将两个值设置在Model里
+		Page pages = new Page(query.getResultList().size(), pageSize, pageNumber);
+		PageDataList<PetCardLog> pageList = new PageDataList<PetCardLog>();
+		query.setFirstResult((pageNumber - 1) * pageSize);
+		query.setMaxResults(pageSize);
+		List queryList = query.getResultList();
+		List<PetCardLog> petCardList = new ArrayList<PetCardLog>();
+		Object[] object = new Object[10];
+		for(int i=0;i<queryList.size();i++){
+			object = (Object[]) queryList.get(i);
+			PetCardLogModel dataModel = new PetCardLogModel();
+			dataModel.setIdInt((Integer)object[0]);
+			dataModel.setConsumeMoney(Double.valueOf((object[1]).toString()));
+			dataModel.setUserName((String) object[2]);
+			dataModel.setStatus((String) object[3]);
+			dataModel.setConsumeTime((Date) object[4]);
+			dataModel.setRemark((String) object[5]);
+			petCardList.add(dataModel);
+		}
+		pageList.setList(petCardList);
+		pageList.setPage(pages);
+		return pageList;
+	}
+
+
+	/**
+	 * 导出体验卡数据
+	 */
+	@Override
+	public List<PetCardLog> excelPetCardLogList(PetCardLogModel model) {
+		
+		StringBuffer sql = new StringBuffer();
+		
+		sql.append(" SELECT DISTINCT(t1.id),t1.consume_money,t2.user_name, "
+				//+ " t1.status,"
+				+ " CASE t1.status WHEN  'succ' THEN '成功'  WHEN  'fail' THEN '失败' ELSE '未知' END AS statusConsume, "
+				+ " t1.consume_time,t1.remark "
+				+ " FROM t_jsd_pet_card_log t1,t_jsd_user t2 "
+				+ " WHERE t1.consume_user = t2.user_id ");
+		
+		if (model != null) {
+			// 用户名
+			if(StringUtil.isNotBlank(model.getUserName())){
+				sql.append(" AND t1.user_name LIKE '%"+model.getUserName()+"%' "); 
+			}
+			// 状态
+			if(StringUtil.isNotBlank(model.getStatus())){
+				sql.append(" AND t1.status = '"+model.getStatus()+"' "); 
+			}
+			// 开始时间
+			if(StringUtil.isNotBlank(model.getStartTime())){
+				sql.append(" AND t1.consume_time >= '"+model.getStartTime()+"' ");
+			}
+			// 结束时间
+			if(StringUtil.isNotBlank(model.getEndTime())){
+				sql.append(" AND t1.consume_time < '"+model.getEndTime()+"' ");
+			}
+		}
+
+		sql.append("  ORDER BY t1.id DESC ");
+
+		Query query = em.createNativeQuery(sql.toString());
+
+		List userList = query.getResultList();
+		return userList;
+	}
+	// JSDP-171 sxy 2015-06-04 end
+
+
+	//JSDP-171 xingjia 20150609 start
+	@Override
+	public double petCardConsumeMoney(long userId) {
+		String sql = "select sum(consume_money) from t_jsd_pet_card_log where consume_user=:userId"
+				+ " and (status='suc' or status='fzen')";
+		Query query = em.createNativeQuery(sql);
+		if(0!= userId){
+			query.setParameter("userId", userId);
+			Object object = query.getSingleResult();
+			if(null != object){
+				return (Double) object;
+			}else{
+				return 0;
+			}
+		}else{
+			return 0;
+		}
+	}
+	//JSDP-171 xingjia 20150609 end	
+
+
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.webpetcard.dao.PetCardLogDao#petCardConsumeMoneyByTender(long, long, java.lang.String)
+	 */
+	@Override
+	public PetCardLog petCardConsumeMoneyByTender(long userId, long bid,
+			String status) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("consumeBid.id", bid);
+		param.addParam("consumeUser.userId", userId);
+		param.addParam("status", status);
+		PetCardLog petCardLog = super.findByCriteriaForUnique(param);
+		if(null != petCardLog){
+			return petCardLog;
+		}
+		return null;
+	}
+}

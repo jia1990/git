@@ -1,0 +1,497 @@
+package com.ddtkj.p2psys.goods.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.constant.AccountTradeConstant;
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.model.BorrowHelper;
+import com.ddtkj.p2psys.borrow.model.worker.BorrowWorker;
+import com.ddtkj.p2psys.core.quartz.DisruptorUtils;
+import com.ddtkj.p2psys.core.util.TradeIDGenerator;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.goods.dao.GoodsOrderDao;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoods;
+import com.ddtkj.p2psys.goods.domain.DdtkjGoodsPic;
+import com.ddtkj.p2psys.goods.domain.GoodsOrder;
+import com.ddtkj.p2psys.goods.model.GoodsModel;
+import com.ddtkj.p2psys.goods.model.GoodsOrderModel;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.ddtkj.p2psys.goods.service.GoodsPicService;
+import com.ddtkj.p2psys.goods.service.GoodsService;
+import com.ddtkj.p2psys.tpp.YmdTPPWay;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransferDetails;
+import com.ddtkj.p2psys.user.constant.UserConstant;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.user.dao.UserDao;
+import com.rongdu.p2psys.user.domain.UserLogisticsAddress;
+import com.rongdu.p2psys.user.service.UserLogisticsAddressService;
+@Service("goodsOrderSerive")
+public class GoodsOrderServiceImpl implements GoodsOrderService{
+	private static Logger logger = Logger.getLogger(GoodsOrderServiceImpl.class);
+	@Resource
+	private GoodsOrderDao goodsOrderDao;
+	@Resource
+	private GoodsPicService goodsPicService;
+	@Resource
+	private UserLogisticsAddressService userLogisticsAddressService;
+	@Resource
+	private BorrowDao borrowDao ;
+	@Resource
+	private AccountDao accountDao ;
+	@Resource
+	private UserDao userDao ;
+	@Resource
+	private GoodsService goodsService ;
+
+	@Override
+	public PageDataList<GoodsOrderModel> goodsOrderPageList(
+			GoodsOrderModel model) throws Exception {
+		
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(model.getPage(), model.getRows());
+		
+		if(!StringUtil.isBlank(model.getOrderNo())){
+			param.addParam("orderNo", model.getOrderNo());
+		}
+		if(!StringUtil.isBlank(model.getUserName())){
+			param.addParam("user.userName", Operators.LIKE, model.getUserName());
+		}
+		if(!StringUtil.isBlank(model.getStartTime())){
+			param.addParam("addTime", Operators.GT, model.getStartTime());
+		}
+		if(!StringUtil.isBlank(model.getEndTime())){
+			param.addParam("addTime", Operators.LT, model.getEndTime());
+		}
+		//JSDBET-789 xingjia 20150307 start
+		if(StringUtil.isNotBlank(model.getStatus()) && !"all".equals(model.getStatus())){
+			param.addParam("status", model.getStatus());
+		}
+		param.addOrder(OrderType.DESC, "addTime");
+		//JSDBET-789 xingjia 20150307 end
+		
+		PageDataList<GoodsOrder> orderPageList = goodsOrderDao.findPageList(param);
+		List<GoodsOrderModel> orderModelList = new ArrayList<GoodsOrderModel>();
+		PageDataList<GoodsOrderModel> orderModelPageList = new PageDataList<GoodsOrderModel>();
+		for(int i=0;i<orderPageList.getList().size();i++){
+			GoodsOrder goodsOrder = orderPageList.getList().get(i);
+			
+			GoodsOrderModel orderModel = GoodsOrderModel.instance(goodsOrder);
+//			orderModel.setOrderNo(goodsOrder.getOrderNo());
+			
+			if(null != goodsOrder.getBorrow()){
+				orderModel.setBorrowName(goodsOrder.getBorrow().getName());
+				orderModel.setBorrowId(goodsOrder.getBorrow().getId());
+			}else{
+				orderModel.setBorrowName("全额付款");
+			}
+			
+			orderModel.setGoodsNo(goodsOrder.getGoods().getGoodsNo());
+			orderModel.setGoodsName(goodsOrder.getGoods().getName());
+			orderModel.setOrderStatus(orderModel.convertOrderSatus(goodsOrder.getStatus()));
+			orderModel.setUserName(goodsOrder.getUser().getUserName());
+//			orderModel.setOnePay(goodsOrder.getOnePay());
+//			orderModel.setStagePay(goodsOrder.getStagePay());
+			orderModel.setPayWay(orderModel.convertOrderPayWay(goodsOrder.getPayWay()));
+			
+			orderModelList.add(orderModel);
+		}
+		orderModelPageList.setPage(orderPageList.getPage());
+		orderModelPageList.setList(orderModelList);
+		return orderModelPageList;
+	}
+
+	@Override
+	public GoodsOrder findOrderById(long id) throws Exception {
+		GoodsOrder orders = goodsOrderDao.find(id);
+		return orders;
+	}
+
+	@Override
+	public GoodsOrder updateOrder(GoodsOrder order) throws Exception {
+		GoodsOrder orders = goodsOrderDao.merge(order);
+		return orders;
+	}
+
+	@Override
+	public GoodsOrder findOrderByBorrowId(long borrowId) throws Exception {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("borrow.id", borrowId);
+		GoodsOrder goodsOrder = goodsOrderDao.findByCriteriaForUnique(param);
+		return goodsOrder;
+	}
+	  /*775 fgq 2015-03-7 start
+    775 fgq 2015-03-7 end
+ */
+	@Override
+	public PageDataList<GoodsOrderModel> getGoodsOrderPageListWithBorrow(GoodsOrderModel  model){
+		PageDataList<GoodsOrder> orderPageList = null;
+		if(model.getUser()!=null && "11".equals(model.getUser().getUserCache().getUserType())){
+			orderPageList = goodsOrderDao.getList(model);
+		}else if(model.getUser()!=null && "13".equals(model.getUser().getUserCache().getUserType())){
+			orderPageList = goodsOrderDao.getStoreOrderList(model);
+		}
+		
+		List<GoodsOrderModel> orderModelList = new ArrayList<GoodsOrderModel>();
+		PageDataList<GoodsOrderModel> orderModelPageList = new PageDataList<GoodsOrderModel>();
+		for(int i=0;i<orderPageList.getList().size();i++){
+			GoodsOrder goodsOrder = orderPageList.getList().get(i);
+			logger.info(goodsOrder.getUser().getUserName()+"====="+goodsOrder.getGoods().getId());
+			GoodsOrderModel orderModel = GoodsOrderModel.instance(goodsOrder);
+//			orderModel.setOrderNo(goodsOrder.getOrderNo());
+			/*orderModel.setBorrowName(goodsOrder.getBorrow().getName());*/
+			/*orderModel.setBorrowId(goodsOrder.getBorrow().getId());*/
+			orderModel.setGoodsNo(goodsOrder.getGoods().getGoodsNo());
+			orderModel.setGoodsName(goodsOrder.getGoods().getName());
+			//orderModel.setOrderStatus(orderModel.convertOrderSatus(goodsOrder.getStatus()));
+			orderModel.setOrderStatus(orderModel.convertOrderSatus(goodsOrder.getStatus()));
+			orderModel.setOrderNo(goodsOrder.getOrderNo());
+			orderModel.setUserName(goodsOrder.getUser().getUserName());
+			/*orderModel.setAddTime(goodsOrder.getAddTime());*/
+//			orderModel.setOnePay(goodsOrder.getOnePay());
+//			orderModel.setStagePay(goodsOrder.getStagePay());
+			/*orderModel.setPayWay(orderModel.convertOrderPayWay(goodsOrder.getPayWay()));*/
+			List<DdtkjGoodsPic> picList = goodsPicService.getGoodsPicByGoodsId(goodsOrder.getGoods().getId());
+			/*orderModel.setPicList(picList);*/
+			if(picList!=null&&picList.size()>0){
+				orderModel.setPicPath(Global.getValue("adminurl")+picList.get(0).getPicUrl());
+			}
+			UserLogisticsAddress address = userLogisticsAddressService.queryLogisticsAddress(goodsOrder.getAddress().getId());
+			orderModel.setGoodsCost(goodsOrder.getGoods().getCost());
+			orderModel.setAddressDetail(address.getDetailAddress());
+			orderModel.setAddressDetailUserName(address.getName());
+			orderModelList.add(orderModel);
+		}
+		orderModelPageList.setPage(orderPageList.getPage());
+		orderModelPageList.setList(orderModelList);
+		return orderModelPageList;
+    
+		
+	}
+	@Override
+	public GoodsOrder addOne(User user,GoodsModel gm, int period, double onePay,String resultFlag)throws Exception {
+		// 用户的各种判断  
+		GoodsOrder go = fillGoodsOrder(user, gm, onePay,1) ;
+		GoodsOrderModel gom = GoodsOrderModel.instance(go) ;
+		gom.validPublish();
+		Borrow borrow = fillBorrow(user, gm, period, BigDecimalUtil.sub(gm.getCost(),onePay)) ;
+		BorrowWorker worker = BorrowHelper.getWorker(borrow);
+		worker.checkModelData();
+        // 认证校验，信用标额度校验
+        worker.allowPublish(user);
+        worker.setBorrowField(user);
+        //分期宝分期购买纳入并发处理
+     // JSDP-161  wcw 20150525 start
+       // DisruptorUtils.addOneSuccess(go, user, gm, borrow, resultFlag);
+        DisruptorUtils.googsStageBuy(go, borrow,gm,user, resultFlag);
+     // JSDP-161  wcw 20150525 end
+		return go;
+	}
+	@Override
+	public void addOneSuccess(User user,GoodsOrder go,GoodsModel gm,Borrow b)throws Exception {
+        Borrow addBorrow = (Borrow) borrowDao.save(b);
+        if(addBorrow!=null){
+        	go.setBorrow(b); 
+        	go.setOrderNo(b.getDealNo());
+        }
+        //JSDBET-827 wcw 2015-3-17 start
+        //  处理  用户首付资金
+        go = getValidCredit(go, gm) ; 
+        //  处理  用户手续费资金
+        double fee = BigDecimalUtil.decimal(BigDecimalUtil.mul(BigDecimalUtil.round(Global.getValue("stages_fee"),4),b.getAccount()),2) ;
+        Map<String, Object> map=new HashMap<String, Object>();
+		map.put("borrowerRechargeMoney", go.getUseOnePayRecharge());
+		map.put("borrowerEnterMoney", go.getUseOnePayEnter());
+		Global.setTransfer("goodsOrder", go);
+		Global.setTransfer("goods", go.getGoods());
+		Global.setTransfer("go", go);
+		Global.setTransfer("fee", fee);
+		AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("goodsBorrowerExcuter");
+		borrowTenderExecuter.execute(map, user,gm.getUser());  // toUser 现在不确定
+        map=new HashMap<String, Object>();
+        Account act = accountDao.findObjByProperty("user.userId",go.getUser().getUserId());
+        if(fee > act.getBorrowerUsableTotal()){
+			throw new BorrowException("可用余额不足",1) ;
+		}
+    	double currRecharge = 0;
+		double currEnter = 0;
+		//充值可用
+		double rechargeUsable=act.getBorrowerRechargeUsable();
+		//计算提现金额冻结归属（使用充值、入账金额）
+		if(rechargeUsable >= fee){
+			currRecharge = fee;
+		}else{
+			currRecharge = rechargeUsable;
+			currEnter = BigDecimalUtil.sub(fee,rechargeUsable);
+		}
+		map.put("borrowerRechargeMoney", currRecharge);
+		map.put("borrowerEnterMoney", currEnter);
+		Global.setTransfer("goodsOrder", go);
+		Global.setTransfer("goods", go.getGoods());
+		Global.setTransfer("fee", fee);
+		AbstractExecuter goodFeeExecuter = ExecuterHelper.doExecuter("goodsFeeExcuter");
+		goodFeeExecuter.execute(map, user,gm.getUser());  // toUser 现在不确定
+		
+		//商品库存减一
+		DdtkjGoods goods = goodsService.getGoodsById(go.getGoods().getId());
+		goods.setStock(goods.getStock() - 1);
+		goodsService.update(goods);
+		
+		go.setUseFeeEnter(currEnter);
+		go.setUseFeeRecharge(currRecharge);
+		goodsOrderDao.save(go) ;
+		//JSDBET-827 wcw 2015-3-17 end
+	}
+	public GoodsOrder fillGoodsOrder(User user,GoodsModel gm, double onePay,int isBorrow){
+		GoodsOrder go = new GoodsOrder() ;
+		go.setGoods(gm);
+		go.setUser(user);
+		go.setStatus("dw");
+		go.setOnePay(onePay);
+		UserLogisticsAddress uladdr = userLogisticsAddressService.queryLogisticsAddressByUserId(user.getUserId()) ;
+		go.setAddress(uladdr);
+		go.setStagePay(BigDecimalUtil.sub(gm.getCost(),onePay));
+		if(isBorrow==1){
+			if(onePay==0){
+				go.setPayWay(GoodsOrder.ZERO_PAY);
+			}else{
+				go.setPayWay(GoodsOrder.STAGE_PAY);
+			}
+		}else{
+			go.setPayWay(GoodsOrder.ONE_PAY);
+		}
+		go.setAddTime(new Date());
+		go.setAddUser(user.getUserName());
+		return go ;
+	}
+	public Borrow fillBorrow(User user,GoodsModel gm, int period,double account){
+		Borrow b = new Borrow() ;
+		b.setUser(user);
+		b.setName("分期宝 ("+gm.getName()+") 标");
+		b.setStatus(0);
+		b.setPeriod(period-1);
+		b.setBorrowManageCostWay("1");
+		b.setContent("这个是分期宝的标；这儿不知道写啥好");
+		b.setType(Borrow.TYPE_AMORTIZE);
+		b.setAccount(account);
+		b.setAllAccount(account);
+		b.setAccountYes(0.00);
+		b.setScales(0);
+		b.setApr(gm.getGoodsApr());
+		b.setStyle(Borrow.STYLE_INSTALLMENT_REPAYMENT);
+		b.setBorrowUse("");
+		b.setBorrowTimeType(0);
+		b.setTimeLimit(period);
+		b.setValidTime(10);
+		b.setAddTime(new Date());
+		b.setBorrowUse("8");
+		b.setPortfolioProp("质押");
+		b.setDealNo(new Date().getTime()+"");  // 订单号
+		b.setDealParent(b.getDealNo());
+		b.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_INVEST));//标批次号（作为第三方转账对账使用）
+		b.setBorrowManageFeeTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_SORT_BORROWER_FEE));
+		QueryParam param = QueryParam.getInstance(); // 获取担保公司
+        param.addParam("userCache.userType", "12");
+        param.addParam("userIdentify.emailStatus", "81");
+        param.addParam("isLocked", UserConstant.USER_LOCK_NO);
+        List<User> userlist = userDao.findByCriteria(param);
+        if(userlist!=null && userlist.size()>0){
+        	b.setVouchFirm(userlist.get(0));
+        }
+		return b ;
+	}
+	
+	private GoodsOrder getValidCredit(GoodsOrder go,GoodsModel gm){
+		
+		Account act = accountDao.findObjByProperty("user.userId",go.getUser().getUserId());
+		//worker.checkTender(tender);
+		//--------wcw---------------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----start-------
+		double usableMoney=BigDecimalUtil.add(act.getBorrowerRechargeUsable(),act.getBorrowerEnterUsable());
+		//double validAccount = BigDecimalUtil.add(go.getOnePay(),fee) ;
+		double validAccount = go.getOnePay() ;
+		if("11".equals(go.getPayWay())){
+			validAccount = go.getGoods().getCost() ;
+		}
+		if(validAccount > usableMoney){
+			throw new BorrowException("可用余额不足",1) ;
+		}
+    	double currRecharge = 0;
+		double currEnter = 0;
+		//充值可用
+		double rechargeUsable=act.getBorrowerRechargeUsable();
+		//计算提现金额冻结归属（使用充值、入账金额）
+		if(rechargeUsable >= validAccount){
+			currRecharge = validAccount;
+		}else{
+			currRecharge = rechargeUsable;
+			currEnter = BigDecimalUtil.sub(validAccount,rechargeUsable);
+		}
+		go.setUseOnePayRecharge(currRecharge);
+		go.setUseOnePayEnter(currEnter);
+		//------------wcw-----------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----end-------
+		return go;
+	}
+
+	@Override
+	public GoodsOrder addOneByNoBorrow(User user, GoodsModel gm,String resultFlag)
+			throws Exception {
+		//805  fgq  start
+		// 用户的各种判断  
+		GoodsOrder go = fillGoodsOrder(user, gm,0,2) ;
+		go.setOrderNo(new Date().getTime()+"");
+		GoodsOrderModel gom = GoodsOrderModel.instance(go) ;
+		gom.validPublish();
+		go = getValidCredit(go, gm) ; // 需计算手续费
+        //  处理  用户资金
+		// JSDP-161  wcw 20150525 start
+		//DisruptorUtils.goodsBuySuccess(go, user, resultFlag);
+		DisruptorUtils.googsBuy(go, user, resultFlag);
+		// JSDP-161  wcw 20150525 end
+		//805  fgq  end
+		return go;
+	}
+	
+	@Override
+	public void addByNoBorrowSuccess(User user, GoodsOrder go)throws Exception {
+		//805  fgq  start
+		go=goodsOrderDao.save(go) ;
+		//805  fgq  end
+		// 分期宝 直接购买处理
+		if(GoodsOrder.ONE_PAY.equals(go.getPayWay())){ // 是直接购买
+			//分期宝用户   扣除资金
+			GoodsOrderModel gom = GoodsOrderModel.instance(go) ;
+			gom.validPublish(); 
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("money", BigDecimalUtil.add(go.getUseOnePayRecharge(),go.getUseOnePayEnter())) ;
+			map.put("borrowerRechargeMoney", go.getUseOnePayRecharge());
+			map.put("borrowerEnterMoney", go.getUseOnePayEnter());
+			Global.setTransfer("goods", go.getGoods());
+			Global.setTransfer("go", go);
+			AbstractExecuter goodsNoBorrowerExcuter = ExecuterHelper.doExecuter("goodsNoBorrowerExcuter");
+			goodsNoBorrowerExcuter.execute(map, user,go.getGoods().getUser());
+			
+			//JSDBET-827 wcw 2015-3-17  start
+			//商户用户  新增资金
+			map=new HashMap<String, Object>();
+			Global.setTransfer("money", BigDecimalUtil.add(go.getUseOnePayRecharge(),go.getUseOnePayEnter()));
+			map.put("money", BigDecimalUtil.add(go.getUseOnePayRecharge(),go.getUseOnePayEnter())) ;
+			AbstractExecuter gnbExcuter = ExecuterHelper.doExecuter("borrowGoodsSuccessExecuter");
+			gnbExcuter.execute(map, go.getGoods().getUser());
+			//JSDBET-827 wcw 2015-3-17  end
+			// 给商户转账
+			YmdTransfer ymdTransfer=handleCreditTranferSuccess(go);
+			if(!"0000".equals(ymdTransfer.getErrCode())){
+				//throw new BussinessException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败")+"】", 1);
+				//JSDBET-812 gjh 2015-3-16 start
+    			throw new HandleException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败")+"】",
+    					"商品直接购买失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_GOODS,
+    					ErrorLogConstant.CODE_TENDER_GOODS_TPOS,go.getUser(),ErrorLogConstant.MODULE_GOODS_ORDER,
+    					go.getId(),1);
+    			//JSDBET-812 gjh 2015-3-16 end 
+			}
+			
+			//商品库存减一
+			DdtkjGoods goods = goodsService.getGoodsById(go.getGoods().getId());
+			goods.setStock(goods.getStock() - 1);
+			goodsService.update(goods);
+			
+			
+			// 处理订单状态
+			go.setStatus(GoodsOrder.ORDER_SUC);
+			goodsOrderDao.update(go) ;
+			// 通知用户
+			//805  fgq  start
+			Global.setTransfer("user", user);
+			Global.setTransfer("goods", go.getGoods());
+			BaseMsg msg = new BaseMsg(NoticeConstant.GOODS_BUY_SUC);
+			msg.doEvent();
+			//805  fgq  end
+		}else{
+			throw new BorrowException("该分期宝不是全额付款",1) ;
+		}
+	}
+	
+	private YmdTransfer handleCreditTranferSuccess(GoodsOrder go){
+		YmdTransfer ymdTransfer = new  YmdTransfer();
+		if(go!=null&&go.getGoods()!=null&&go.getGoods().getCost()>0){
+			List<YmdTransferDetails> list=new ArrayList<YmdTransferDetails>();
+			ymdTransfer.setAccountNumber(ymdTransfer.getNumberId());
+			ymdTransfer.setTradeNo(TradeIDGenerator.createTradeBN(AccountTradeConstant.TRADE_LARGE_SORT_SALE));
+			ymdTransfer.setTradeType(AccountTradeConstant.TRADE_YMD_TRADE);
+			//债权转让人服务费转账
+			YmdTransferDetails row=new YmdTransferDetails();
+			row.setOutTradeNo(TradeIDGenerator.createTradeSN(AccountTradeConstant.TRADE_WAY_PC, AccountTradeConstant.TRADE_SMALL_TYPE_CA_SELLER_FEE));
+			//付款者
+			row.setOutName(go.getUser().getUserName());
+			//接收者
+			row.setInName(go.getGoods().getUser().getUserName());  //TODO 商户账户  需修改
+			
+			row.setAmount(go.getGoods().getCost()+"");
+			row.setRemark("分期宝直接购买通过,"+ymdTransfer.getTradeNo()+"从转让人用户"+go.getUser().getUserName()+"向商城"+go.getGoods().getUser().getUserName()+"用户转账：金额为"+go.getGoods().getCost()+"元");
+			list.add(row); 
+			ymdTransfer =YmdTPPWay.transfer(AccountTradeConstant.TRADE_YMD_TRADE, ymdTransfer.getTradeNo(), list);
+		}
+		return ymdTransfer;
+	}
+	
+	
+	/**
+	 * 查询用户完成订单数
+	 * @author 孙晓勇 
+	 */
+	@Override
+	public int orderCountByUser(int userId) {
+		
+        return goodsOrderDao.orderCountByUser(userId);
+	}
+	
+	/**
+	 * 查询用户完成订单金额
+	 * @author 孙晓勇 
+	 */
+	@Override
+	public int orderMoneyCountByUser(int userId) {
+		
+		return goodsOrderDao.orderMoneyCountByUser(userId);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 start
+	@Override
+	public List<GoodsOrderModel> excelGoodsOrderList(GoodsOrderModel model)
+			throws Exception {
+		return goodsOrderDao.excelListOrder(model);
+	}
+	//JSDP-116 fengguoqin 2015-05-19 end
+	
+	
+	
+	
+	
+	
+	
+	
+}

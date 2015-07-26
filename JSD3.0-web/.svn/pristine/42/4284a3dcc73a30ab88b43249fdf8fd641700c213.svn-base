@@ -1,0 +1,194 @@
+package com.ddtkj.mobile.common.id5;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
+import java.security.Key;
+import java.security.SecureRandom;
+import java.security.spec.AlgorithmParameterSpec;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.DESKeySpec;
+import javax.crypto.spec.IvParameterSpec;
+
+import org.apache.axis.encoding.Base64;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
+import org.xml.sax.InputSource;
+
+public class ZCXY_ID5 {
+	
+	
+	public static void main(String[] args){
+		try {
+			new ZCXY_ID5().validRealInfo("杨晓波", "211322198205217512");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	//ID5验证实名信息
+	public static boolean validRealInfo(String name, String id) throws Exception {
+		QueryValidatorServicesProxy proxy = new QueryValidatorServicesProxy();
+		proxy.setEndpoint("http://211.147.7.47/zcxy/services/QueryValidatorServices?wsdl");
+		QueryValidatorServices service = proxy.getQueryValidatorServices();
+		String userName = "sxxjsdzsw";//用户名
+		String password = "wzm8y9a7gc";//密码
+		System.setProperty("javax.net.ssl.trustStore", "CheckID.keystore");
+		String resultXML = "";
+		String datasource = "1A020202";//数据类型
+		
+		//单条
+		String param = name+","+id;//输入参数 
+		
+		userName = ID5Decode.encode("12345678", userName.getBytes());
+		password = ID5Decode.encode("12345678", password.getBytes());
+		datasource = ID5Decode.encode("12345678", datasource.getBytes());
+		param = ID5Decode.encode("12345678", param.getBytes("gbk"));		
+		resultXML = service.querySingle(userName, password, datasource, param);
+		
+		//批量
+		//String  params  =  "曹铁拴 ,410323198606071019";
+		//resultXML = service.queryBatch(userName, password, datasource, params);
+		
+		String result = new String(ID5Decode.decode("12345678",Base64.decode(resultXML)),"gbk");
+		List<Map<String, Object>> list = ID5Decode.parse(result);
+		System.out.println(list.toString());
+		
+		if (list != null && list.size() > 0) {
+			// 查询成功status=1
+			String status = list.get(0).get("status").toString();
+
+			if (status.equals("0")) {
+				String compStatus = list.get(1).get("compStatus").toString(); // 1
+														// 服务结果:库中无此号，请到户籍所在地进行核实！2
+														// 不一致 3
+														// 一致
+				int compStatusInt = Integer.parseInt(compStatus);
+				System.out.println("可用次数_状态：" + compStatusInt);
+
+				if (compStatusInt == 1) {
+					throw new Exception("未能查到您的身份证信息！");
+				}else if (compStatusInt == 2) {
+					throw new Exception("真实姓名与身份证信息不一致！");
+				}else if (compStatusInt == 3) {		
+					System.out.println("实名认证成功!");
+					return true;
+				}
+			} else {
+				throw new Exception("未能查到您的身份证信息！");
+			}
+		}
+		return false;
+	}
+	
+	//解密
+	public static byte[] decode(String key,byte[] data) throws Exception{
+		try{
+			SecureRandom sr = new SecureRandom();
+			DESKeySpec dks = new DESKeySpec(key.getBytes());
+			SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+			//key 的长度不能够小于 8 位字节
+			Key secretKey = keyFactory.generateSecret(dks);
+			Cipher cipher = Cipher.getInstance("DES/CBC/PKCS5Padding");
+			IvParameterSpec iv = new IvParameterSpec("12345678".getBytes());
+			AlgorithmParameterSpec paramSpec = iv;
+			cipher.init(Cipher.DECRYPT_MODE, secretKey,paramSpec);
+			return cipher.doFinal(data);
+		} catch (Exception e){
+			e.printStackTrace();
+			throw new Exception(e);
+		}
+	}
+	
+	//加密
+	public static String encode(String key, byte[] data) throws Exception {
+		DESKeySpec dks = new DESKeySpec(key.getBytes());
+		SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+		// key的长度不能够小于8位字节
+		Key secretKey = keyFactory.generateSecret(dks);
+		Cipher cipher = Cipher.getInstance("DES/CBC/PKCS5Padding");
+		IvParameterSpec iv = new IvParameterSpec("12345678".getBytes());// 向量
+		AlgorithmParameterSpec paramSpec = iv;
+		cipher.init(Cipher.ENCRYPT_MODE, secretKey, paramSpec);
+		byte[] bytes = cipher.doFinal(data);
+		return Base64.encode(bytes);
+	}
+	
+	public static String changeCharset(String str, String newCharset)
+			throws UnsupportedEncodingException {
+		if (str != null) {
+			// 用默认字符编码解码字符串。
+			byte[] bs = str.getBytes();
+			// 用新的字符编码生成字符串
+			return new String(bs, newCharset);
+		}
+		return null;
+	}
+
+	public static String changeCharset(String str, String oldCharset,
+			String newCharset) throws UnsupportedEncodingException {
+		if (str != null) {
+			// 用旧的字符编码解码字符串。解码可能会出现异常。
+			byte[] bs = str.getBytes(oldCharset);
+			// 用新的字符编码生成字符串
+			return new String(bs, newCharset);
+		}
+		return null;
+	}
+	
+	/**
+	 * 解析xml字符串成List<Map>
+	 * 
+	 * @param String
+	 * @return List
+	 */
+	@SuppressWarnings("unchecked")
+	public static List<Map<String, Object>> parse(String xmlDoc) {
+		// 创建一个新的字符串
+		StringReader xmlString = new StringReader(xmlDoc);
+		// 创建新的输入源SAX 解析器将使用 InputSource 对象来确定如何读取 XML 输入
+		InputSource source = new InputSource(xmlString);
+		// 创建一个新的SAXBuilder
+		SAXBuilder saxb = new SAXBuilder();
+		List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
+		try {
+			// 通过输入源构造一个Document
+			Document doc = saxb.build(source);
+			// 取的根元素
+			Element root = doc.getRootElement();
+
+			Map<String, Object> map = new HashMap<String, Object>();
+			Element message = root.getChild("message");
+			List<Map<String, Object>> messageChild = message.getChildren(); // 得到内层子节点
+			for (int i = 0; i < messageChild.size(); i++) {
+				Element subEt = (Element) messageChild.get(i); // 循环依次得到子元素
+				map.put(subEt.getName(), subEt.getText()); // 装入到Map中
+			}
+			result.add(map);
+			if ("0".equals(map.get("status"))) {
+				map = new HashMap<String, Object>();
+				Element policeCheckInfo = root.getChild("policeCheckInfos").getChild("policeCheckInfo");
+				List<Map<String, Object>> policeCheckInfoChild = policeCheckInfo.getChildren(); // 得到内层子节点
+				for (int i = 0; i < policeCheckInfoChild.size(); i++) {
+					Element subEt = (Element) policeCheckInfoChild.get(i); // 循环依次得到子元素
+					map.put(subEt.getName(), subEt.getText()); // 装入到Map中
+				}
+				result.add(map);
+			}
+		} catch (JDOMException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return result;
+	}
+}

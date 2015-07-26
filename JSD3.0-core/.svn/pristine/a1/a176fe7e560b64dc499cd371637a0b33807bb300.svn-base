@@ -1,0 +1,150 @@
+
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.redpacket.dao.RpProduceDao;
+import com.ddtkj.p2psys.redpacket.dao.RpWeixinDataDao;
+import com.ddtkj.p2psys.redpacket.dao.RpWeixinLogDao;
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.ddtkj.p2psys.redpacket.domain.RpWeixinData;
+import com.ddtkj.p2psys.redpacket.domain.RpWeixinLog;
+import com.ddtkj.p2psys.redpacket.service.RpWeixinLogService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-5-22   
+ */
+@Service("rpWeixinLogService")
+public class RpWeixinLogServiceImpl implements RpWeixinLogService {
+	
+	private static Logger logger = Logger.getLogger(RpWeixinLogServiceImpl.class);
+
+	@Resource 
+	RpWeixinLogDao rpWeixinLogDao;
+	@Resource 
+	RpWeixinDataDao rpWeixinDataDao;
+	@Resource 
+	RpProduceDao rpProduceDao;
+	@Resource 
+	UserDao userDao;
+	
+	private Map<String, Object> data = new HashMap<String, Object>();
+	
+	@Override
+	public RpWeixinLog getEntityById(long id) {
+		return rpWeixinLogDao.find(id);
+	}
+
+	@Override
+	public RpWeixinLog save(RpWeixinLog rpWxLog) {
+		return rpWeixinLogDao.save(rpWxLog);
+	}
+
+	@Override
+	public void doSaveWeiXinReward() {
+		RpWeixinData wxData = rpWeixinDataDao.getRpWeixinDataByStatus(RpWeixinData.STATUS_NO);
+		if(null != wxData && StringUtil.isNotBlank(wxData.getSn())) {
+			logger.info("weixin reward start,wxData sn:"+wxData.getSn()+",wxData size:"+wxData.getSize());
+			int back = 0;
+			User user = null;
+			int wxLogSize = 0;
+			try {
+				JSONArray items = JSONArray.parseArray(wxData.getItems());
+				for(int i=0; i < items.size(); i++) {
+					Map map = null;
+					map = (Map)items.get(i);
+					map.put("sn", wxData.getSn());
+					int count = rpWeixinLogDao.verifyCondition(map);
+					// 同一好友只能拆一次红包
+					if(count == 0) {
+						back = rpWeixinLogDao.saveWeixinReward(map);
+						if (back == 1) {
+							wxLogSize = wxLogSize + 1;	
+						}
+					}
+				}
+				logger.info("weixin reward end,wxLogSize:"+wxLogSize+",back:"+back);
+				if (wxLogSize > 0) {
+					rpWeixinDataDao.updateRpWeixinDataStatus(wxData);
+				}
+			} catch (Exception e) {
+				throw new HandleException("微信奖励数据异常，异常信息："+e.getMessage()+e.getCause(), "微信奖励数据异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_AWAED,
+						ErrorLogConstant.CODE_AWAED_RPWEIXIN_SYS, user, ErrorLogConstant.MODULE_RPWEIXIN_DATA, wxData.getId(), 1);
+			}
+		}
+		data = null;
+	}
+	
+	private RpProduce fillRpProduce() {
+		RpProduce rp = new RpProduce();
+		rp.setRpDynamicRes(RpProduce.DYNAMIC_RP_RES_WXAWARD);
+		rp.setRpType(RpProduce.RP_DYNAMIC);
+		rp.setRpCreateTime(new Date());
+		return rp;
+	}
+
+	@Override
+	public void doHandelWeixinLog() {
+		List<RpWeixinLog> wxList = rpWeixinLogDao.getRpWeixinLogList(RpWeixinLog.STATUS_NOUSE);
+		logger.info("doHandelWeixinLog start,list size-->"+wxList.size());
+		User user = null;
+		RpWeixinLog rpWeixinLog = null;
+		double rpValue = 0;
+		int wxSize = 0;
+		try {
+			if (wxList != null && wxList.size() > 0) {
+				for (int i = 0; i < wxList.size(); i++) {
+					rpWeixinLog = wxList.get(i);
+					user = userDao.findObjByProperty("mobilePhone", rpWeixinLog.getPhone());
+					if (user != null) {
+						wxSize = wxSize + 1;
+						//更新微信奖励记录状态,为此批次号同一手机号的用户
+						List<RpWeixinLog> wxLogList = rpWeixinLogDao.getRpWeixinLogListByPhone(rpWeixinLog.getPhone(), rpWeixinLog.getSn(), RpWeixinLog.STATUS_NOUSE);
+						for (RpWeixinLog wxLog : wxLogList) {
+							wxLog.setStatus(RpWeixinLog.STATUS_USED);
+						}
+						rpWeixinLogDao.update(wxLogList);
+						// 获取此批号同一手机号微信红包总金额
+						RpProduce rp = fillRpProduce();
+						rpValue = rpWeixinLogDao.getRpWeixinLogMoney(rpWeixinLog.getPhone(), rpWeixinLog.getSn(), RpWeixinLog.STATUS_NOUSE);
+						rp.setRpDynamicMoney(rpValue);
+						rp.setUser(user);
+						rpProduceDao.save(rp);
+						//更新账户资金
+						data.put("money", rpValue);
+						data.put("awardMoney", rpValue);
+						Global.setTransfer("rpDynamicProduce", rpValue);
+						AbstractExecuter rpProduceExecuter = ExecuterHelper.doExecuter("rpDynamicProduceExecuter");
+						rpProduceExecuter.execute(data, user, userDao.getUserById(1));
+					}
+				}	
+			}		
+			logger.info("doHandelWeixinLog wxSize:"+wxSize);	
+		} catch (Exception e) {
+			throw new HandleException("微信奖励红包记录产生异常，异常信息："+e.getMessage()+e.getCause(), "微信奖励红包记录产生异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_AWAED,
+					ErrorLogConstant.CODE_AWAED_RPWEIXIN_SYS, user, ErrorLogConstant.MODULE_RPWEIXIN_LOG, rpWeixinLog.getId(), 1);
+		}
+	}
+	
+}

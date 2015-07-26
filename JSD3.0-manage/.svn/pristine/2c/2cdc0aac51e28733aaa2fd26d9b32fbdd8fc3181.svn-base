@@ -1,0 +1,197 @@
+
+package com.ddtkj.manage.action.sms;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.sms.domain.SmsInterface;
+import com.ddtkj.p2psys.sms.exception.SmsInterfaceException;
+import com.ddtkj.p2psys.sms.model.SmsInterfaceModel;
+import com.ddtkj.p2psys.sms.service.SmsInterfaceService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.domain.OperationLog;
+import com.rongdu.p2psys.core.service.OperationLogService;
+import com.rongdu.p2psys.core.sms.PublicSmsPortalImpl;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述: 后台短信接口配置
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-2-12   
+ */
+public class ManageSmsInterfaceAction extends BaseAction implements ModelDriven<SmsInterfaceModel> {
+	
+	private static Logger logger = Logger.getLogger(ManageSmsInterfaceAction.class);
+
+	@Resource
+	private SmsInterfaceService smsInterfaceService;
+	@Resource
+	private OperationLogService operationLogService;
+	
+	private SmsInterfaceModel model = new SmsInterfaceModel();
+
+	private Map<String, Object> map = new HashMap<String, Object>();
+
+	public SmsInterfaceModel getModel() {
+		return model;
+	}
+
+
+	/**
+	 * 短信通道页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/smsInterfaceManage")
+	public String smsInterfaceManage() throws Exception {
+		
+		return "smsInterfaceManage";
+	}
+	
+	/**
+	 * 短信通道列表
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/smsInterfaceList")
+	public void getSmsInterfaceList() throws Exception {
+		
+		PageDataList<SmsInterfaceModel> list = smsInterfaceService.getSmsInterfaceList(model); 
+		map.put("rows", list.getList());
+		map.put("total", list.getPage().getTotal());
+		printJson(getStringOfJpaObj(map));
+	}
+	
+	/**
+	 * 短信通道添加页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/smsAddPage")
+	public String smsAddPage() throws Exception {
+		saveToken("addSmsToken");
+		return "smsAddPage";
+	}
+	
+	/**
+	 * 添加短信通道
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/addSmsInterface")
+	public void addSmsInterface() throws Exception {
+		String actionType = paramString("actionType");
+		model.validSmsInterfaceAdd(model);
+		if (checkHasEnable(model)) {
+			throw new SmsInterfaceException("启用的短信通道有且最多有一条！", 1);
+		}
+		checkToken("addSmsToken");
+		smsInterfaceService.addSmsInterface(initSmsInterface(actionType));
+		printResult("添加短信通道成功！", true);
+	}
+	
+	/**
+	 * 初始化短信通道接口信息
+	 * @param  actionType
+	 * @return SmsInterface 
+	 * @throws Exception   
+	 */ 
+	private SmsInterface initSmsInterface(String actionType) {
+		SmsInterface sms = smsInterfaceService.findById(model.getId());
+		if ("add".equals(actionType)) {
+			model.setAddTime(new Date());
+			model.setAddUser(getOperator());
+		}else if ("modify".equals(actionType)){
+			model.setAddTime(sms.getAddTime());
+			model.setUpdateTime(new Date());
+			model.setAddUser(sms.getAddUser());
+			model.setOperateUser(getOperator());
+		}	
+		sms = model.prototype();
+		return sms;
+	}
+	
+	/**
+	 * 查看短信通道
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/viewSmsManage")
+	public String viewSmsManage() throws Exception {
+		SmsInterface sms = smsInterfaceService.findById(model.getId());
+		request.setAttribute("sms", sms);
+		return "viewSmsManage";
+	}
+	
+	/**
+	 * 修改短信通道页面
+	 * @return String 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/showSmsPage")
+	public String showSmsPage() throws Exception {
+		SmsInterface sms = smsInterfaceService.findById(model.getId());
+		request.setAttribute("sms", sms);
+		return "showSmsPage";
+	}
+	
+	/**
+	 * 更新短信通道信息
+	 * @return void 
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/updateSmsInterface")
+	public void updateSmsInterface() throws Exception {
+		String actionType = paramString("actionType");
+		model.validSmsInterfaceAdd(model);
+		if (checkHasEnable(model)) {
+			throw new SmsInterfaceException("启用的短信通道有且最多有一条！", 1);
+		}
+		smsInterfaceService.updateSmsInterface(initSmsInterface(actionType));
+		OperationLog log = new OperationLog(null, getOperator(), "edit_scoreaward_rule");
+		log.setOperationResult("用户名为" + getOperator().getUserName() + "（"
+				+ Global.getIP() + "）的操作员修改短信通道(短信接口ID："+model.getId()+")");
+		operationLogService.save(log);
+		printResult("修改短信通道成功！", true);
+	}
+	
+	/**
+	 * 校验当前是否有启用的短信通道
+	 * @param  model
+	 * @throws Exception   
+	 */ 
+	private boolean checkHasEnable(SmsInterfaceModel smsModel) {
+		boolean hasEnable = false;
+		SmsInterface sms = smsInterfaceService.findByStatusAndId(SmsInterface.SMS_STATUS_ENABLE, smsModel.getId());
+		if (sms != null && SmsInterface.SMS_STATUS_ENABLE.equals(smsModel.getStatus())) {
+			hasEnable = true;
+		}
+		return hasEnable;
+	}
+	
+	/**
+	 * 查询短信余额
+	 * @return String
+	 * @throws Exception   
+	 */ 
+	@Action("/modules/system/sms/queryBalance")							
+	public String queryBalance() throws Exception {
+		SmsInterface sms = smsInterfaceService.findById(model.getId());
+		request.setAttribute("sms", sms);
+		Map<String, Object> data = new PublicSmsPortalImpl().getSmsUseInfo(sms);
+		logger.info("sms balance data info.remainNum:"+data.get("remainNum")+",productID:"+data.get("productID")+",result:"+data.get("result"));
+		request.setAttribute("remainNum", data.get("remainNum"));
+		request.setAttribute("productID", data.get("productID"));
+		request.setAttribute("result", data.get("result"));
+		return "smsBalanceManage";
+	}
+	
+}

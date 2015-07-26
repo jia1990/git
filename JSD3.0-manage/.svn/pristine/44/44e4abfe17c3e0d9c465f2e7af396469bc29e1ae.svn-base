@@ -1,0 +1,115 @@
+<script type="text/javascript">
+	$(function() {
+	    $.fn.dataGridOptions.formSubFun("#form",'/modules/loan/borrow/borrowUpdateDes.html');
+	});
+</script>
+
+<div class="popShow">
+	<div class="showItem">
+		<span>借款人：</span>
+		${borrowUser!}
+	</div>
+	<div class="showItem">
+		<span>状态：</span>
+		招标中
+	</div>
+	<div class="showItem">
+		<span>借款用途：</span>
+		${borrow.borrowUse!}
+<!-- 		<@linkage plantext='plantext' nid="borrow_use"/>
+		<@linkage plantext='plantext'  nid="borrow_use" /> -->
+	</div>
+	<div class="showItem">
+		<span>借款期限：</span>
+		<#if borrow.borrowTimeType==1>${borrow.timeLimit!"-"} 天<#else>${borrow.timeLimit!"-"} 个月</#if>
+	</div>
+	<div class="showItem">
+		<span>进度：</span>
+		${borrow.scales!}%
+	</div>
+	<div class="showItem">
+		<span>还款方式：</span>
+		<@linkage plantext='plantext' default=borrow.style nid="borrow_style"/>
+	</div>
+	<div class="showItem">
+		<span>借贷总金额：</span>
+		${borrow.account!}元
+	</div>
+	<div class="showItem">
+		<span>年利率：</span>
+		${borrow.apr!}%
+	</div>
+	<#if borrow.type!=110>
+	<div class="showItem">
+		<span>最低投标金额：</span>
+		<#if borrow.lowestAccount??&&borrow.lowestAccount?number gt 0>${borrow.lowestAccount!}元<#else>无限制</#if>
+	</div>
+	<div class="showItem">
+		<span>最多投标总额：</span>
+		<#if borrow.mostAccount??&&borrow.mostAccount?number gt 0>${borrow.mostAccount!}元<#else>无限制</#if>
+	</div>
+	<#else>
+	<div class="showItem">
+		<span>单笔最低投标金额：</span>
+		<#if borrow.lowestSingleLimit??&&(borrow.lowestSingleLimit?c)?number gt 0>${borrow.lowestSingleLimit!}元<#else>无限制</#if>
+	</div>
+	<div class="showItem">
+		<span>单笔最多投标总额：</span>
+		<#if borrow.mostSingleLimit??&&(borrow.mostSingleLimit?c)?number gt 0>${borrow.mostSingleLimit!}元<#else>无限制</#if>
+	</div>
+	</#if>
+	<div class="showItem">
+		<span>有效时间：</span>
+		${borrow.validTime!}天
+	</div>
+	<div class="showItem">
+		<span>定时时间：</span>
+		<#if borrow.fixedTime??>${borrow.fixedTime?string("yyyy-MM-dd HH:mm:ss")}</#if>
+	</div>
+	<div class="showItem">
+		<span>添加时间：</span>
+		${borrow.addTime?string("yyyy-MM-dd HH:mm:ss")}
+	</div>
+	<div class="showItem">
+		<span>添加IP：</span>
+		${borrow.addIp!}
+	</div>
+	
+	
+	<form id="form"  method="post" style="padding-left:40px;">
+		<div class="formitm">
+			<label class="lab">借款详情：</label>
+			<div class="ipt">
+				<script id="content" name="content" type="text/plain">${borrow.content!}</script>
+			</div>
+		</div>
+		<input type="hidden" value="${borrow.id!}" name="id"/>
+		<input type="hidden" value="${updateBorrowDesToken!}" name="updateBorrowDesToken"/>
+	</form>
+</div>
+
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+var descriptionBox = UE.getEditor('content', {
+    autoHeight: false,
+    initialFrameWidth:610,
+    toolbars: [
+               ['fullscreen', 'source', '|', 'undo', 'redo', '|',
+                'bold', 'italic', 'underline', 'fontborder', 'strikethrough', 'superscript', 'subscript', 'removeformat', 'formatmatch', 'autotypeset', 'blockquote', 'pasteplain', '|', 'forecolor', 'backcolor', 'insertorderedlist', 'insertunorderedlist', 'selectall', 'cleardoc', '|',
+                'rowspacingtop', 'rowspacingbottom', 'lineheight', '|',
+                'customstyle', 'paragraph', 'fontfamily', 'fontsize', '|',
+                'directionalityltr', 'directionalityrtl', 'indent', '|',
+                'justifyleft', 'justifycenter', 'justifyright', 'justifyjustify', '|', 'touppercase', 'tolowercase', '|',
+                'link', 'unlink', 'anchor', '|', 'imagenone', 'imageleft', 'imageright', 'imagecenter', '|',
+                'simpleupload', 'insertimage', 'insertvideo', 'attachment',  'insertcode',  'pagebreak', 'template', '|',
+                'horizontal', 'date', 'time', 'spechars', 'wordimage', '|',
+                'inserttable', 'deletetable', 'insertparagraphbeforetable', 'insertrow', 'deleterow', 'insertcol', 'deletecol', 'mergecells', 'mergeright', 'mergedown', 'splittocells', 'splittorows', 'splittocols', 'charts', '|',
+                'print', 'searchreplace', 'drafts'
+               ]
+           ]
+    
+});
+   
+</script>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>转账查询</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	var winWidth =  420;
+	var winHeight = 380;
+	var addTitle = "用户转账";
+	var addUrl =  "/modules/account/transfer/addAccountTransferPage.html";
+	var verifyTitle = "初审";
+	var verifyUrl = "/modules/account/transfer/accountTransferVerifyPage.html?transferNo={0}";
+	var verifyWinParmeters = "'{1}','" + verifyTitle + "',530,450,'"
+	+ verifyUrl + "','确定'";
+	
+	var contrastTitle = "第三方对比";
+	//JSDP-159 XINGJIA 2015-05-25 START
+	var contrastUrl = "/modules/account/transfer/accountTransferContrastPage.html";
+	var contrastWinParmeters = "'{0}','" + contrastTitle + "',550,580,'" + contrastUrl + "'";
+	//JSDP-156 xingjia 2015-05-22 start
+	var contrast2Title = "云购对账";
+	var contrast2Url =  "/modules/account/transfer/accountTransferContrastPage2.html";
+	var contrast2WinParmeters = "'{0}','"+contrast2Title+ "',550,580,'" + contrast2Url+"'";
+	//JSDP-159 XINGJIA 2015-05-25 END
+	//JSDP-156 xingjia 2015-05-22 start
+
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : 'accountTransferList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'transferNo',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'transferNo', title: '编号', width: 200,fixed: true,sortable:true},
+			{ field: 'userName', title: '用户名', width: 100},
+			{ field: 'popUserName', title: '转出用户名', width: 100},
+			{ field: 'transferAmount', title: '转账金额', width: 60},
+			{ field: 'transferStatusStr', title: '转账状态', width: 100},
+			//JSDP-199 gjh 2015-6-27 start
+			{ field: 'transferType', title: '转账类型', width: 100,
+				formatter : function(value){
+					if(value == 0){
+						return "汇潮转账";
+					}else if(value == 1){
+						return "充值卡转账";
+					}else if(value == 2){
+						return "还款转账";
+					}else if(value == 3){
+						return "1.0转账3.0";
+					}else if(value == 4){
+						return "3.0转账云购";
+					}
+				}
+			},
+			//JSDP-199 gjh 2015-6-27 end
+			{ field: 'addTime', title: '转账时间', width: 150,formatter:function(value,row,index){
+				return getLocalTime(value,4);
+			}},
+			/*JSDP-156 xingjia 2015-05-22 start*/
+			/*{ field: 'transferMsg', title: '添加备注', width: 100},*/
+			/*JSDP-156 xingjia 2015-05-22 start*/
+			{ field: 'remark', title: '审核备注', width: 100},
+			{ field: 'addIp', title: 'IP', width: 100},
+			{
+				field : 'action',
+				title : '操作',
+				width : 85,
+				fixed : true,
+				formatter : function(value, row, index) {
+					var str = '';
+					if(row.transferStatus == "00" || row.transferStatus == "66" || row.transferStatus == "99"){
+						str += "<@secAuthorizeUrl value='/modules/account/transfer/accountTransferVerifyBtn.html'>";
+						//JSDP-159 XINGJIA 2015-05-25 START
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFunTransfer2('+contrastWinParmeters+');" src="{1}" title="对账"/>', row.transferNo, '${theme_dir}/css/images/extjs_icons/zoom/zoom.png');
+						str += "</@secAuthorizeUrl>";
+						//JSDP-159 XINGJIA 2015-05-25 END
+						str += '&nbsp;';
+
+					}
+					if((row.transferNo.indexOf("B9") != -1||row.transferNo.indexOf("35") != -1 || row.transferNo.indexOf("P27") !=-1) && row.transferStatus == "66"){
+						str += "<@secAuthorizeUrl value='/modules/account/transfer/accountTransferVerifyBtn.html'>";
+						str += $
+								.formatString(
+										'<img onclick="$.fn.dataGridOptions.editFun('
+												+ verifyWinParmeters
+												+ ');" src="{2}" title="初审"/>',
+										row.transferNo,row.id,
+										'${theme_dir}/css/images/extjs_icons/key.png');
+						str += "</@secAuthorizeUrl>";
+						str += '&nbsp;';
+					}
+					/* JSDP-156 xingjia 2015-05-22 start */
+					//JSDP-159 XINGJIA 2015-05-25 START
+					if(row.transferStatus=="05" &&  row.transferType=="4"){
+						str += "<@secAuthorizeUrl value='/modules/account/transfer/transferYunGouVerifyBtn.html'>";
+						str += $.formatString('<img onclick="$.fn.dataGridOptions.editFunTransfer('+contrast2WinParmeters+');" src="{1}" title="云购补单"/>', row.transferNo, '${theme_dir}/css/images/extjs_icons/world/world_go.png');
+						str += "</@secAuthorizeUrl>";
+					}
+					//JSDP-159 XINGJIA 2015-05-25 END
+					/* JSDP-156 xingjia 2015-05-22 start */
+					return str;
+				}
+			}
+			]],
+			toolbar : '#toolbar'
+		});	
+		$(".transfers").change(function(){
+			if(this.value != ""){
+				$("#transfer").show();
+				//JSDP-55 gjh 2015-5-21 start
+				addUrl = "/modules/account/transfer/addAccountTransferPage.html?type="+ this.value;
+				//JSDP-55 gjh 2015-5-21 end
+			}else{
+				$("#transfer").hide();
+			}
+		});
+	});
+		
+	function exportExcel(){
+		var url = '/modules/account/transfer/accountTransferListExcel.html?type="export"';
+		var sou = "";
+        var userName = $("#userName").val();
+        if (userName != ""){
+            sou += "&userName=" + userName;
+        }
+        var transferNo = $("#transferNo").val();
+        if (transferNo != ""){
+            sou += "&transferNo=" + transferNo;
+        }
+        var startTime = $("#startTime").val();
+        if (startTime != ""){
+            sou += "&startTime=" + startTime;
+        }
+        var endTime = $("#endTime").val();
+        if (endTime != ""){
+            sou += "&endTime=" + endTime;
+        }
+        if (sou != ""){
+        	window.location.href = url + sou;
+        }else{
+        	window.location.href = url;
+        }
+	}
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		 <div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件</h2>
+			<form id="searchForm">
+				<ul>
+					<li>编号：<input type="text" name="transferNo" id="transferNo" autocomplete="off"/></li>
+					<li>转入用户名：<input type="text" name="userName" id="userName" autocomplete="off"/></li>
+					<li>转出用户名：<input type="text" name="popUserName" id="popUserName" autocomplete="off"/></li>
+					<!-- JSDP-156 xingjia 2015-05-22 start -->
+					<li>转账状态：<select name="transferStatus" id="transferStatus" class="type">
+								<option value="89">全部</option>
+								<option value="00">转账成功</option>
+								<option value="99">转账失败</option>
+								<option value="66">转账申请中</option>
+								<option value="77">转账审核不通过</option>
+							</select></li>
+					<li>转账类型：
+						<select name="transferType" id="transferType" class="type">
+		                  <option value="99" selected="selected">全部</option>
+		                  <option value="03">1.0转账3.0</option>
+		                  <option value="04">3.0转账云购</option>
+		                  <option value="01">充值卡转账</option>
+		                  <option value="02">还款转账</option>
+		                  <option value="00">汇潮转账</option>
+		                </select>
+					</li>
+					<!-- JSDP-156 xingjia 2015-05-22 end -->
+					<li>时间：<input type="text" name="startTime" id="startTime" class="searchTime" style="width:140px;"/>&nbsp;-&nbsp;<input type="text" name="endTime" id="endTime"  class="searchTime" style="width:140px;"/></li>
+					<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/modules/account/transfer/addAccountTransferBtn.html' >
+		<select class="transfers">
+			<option value="">请选择转账类型</option>
+		<#list transfers as transfer>
+			<option value="${transfer.value!}">${transfer.name!}</option>
+		</#list>
+		</select>
+		<a id="transfer" onclick="$.fn.dataGridOptions.addFun(-1,addTitle,winWidth,winHeight,addUrl);" href="javascript:void(0);" class="addBtn"  ondragstart="return false" style="display:none;">转账</a>
+		</@secAuthorizeUrl>
+		<@secAuthorizeUrl value='account/transferExcel.html' >
+		<a href="javascript:void(0);" onclick="exportExcel();" class="exportBtn" id="a">导出Excel</a>
+		</@secAuthorizeUrl>
+	</div>
+	<script src="/plugins/laydate-v1.1/laydate.js"></script>
+	<script src="/themes/theme_default/js/date2.js"></script>
+</body>
+</html>

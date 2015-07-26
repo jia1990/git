@@ -1,0 +1,212 @@
+package com.ddtkj.p2psys.subbranch.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.subbranch.domain.Branch;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述：分店Model
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+public class BranchModel extends Branch{
+	
+	
+	
+	/** 当前页码 */
+	private int page = 1;
+
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	private String provinceStr;//省的转化
+	private String cityStr;//市的转化
+	private String areaStr;//县的转化
+	private long id;//加盟商id
+	private String branchName;//加盟商名称
+	private String detail;//地址
+	private String isDelete;//是否删除
+	
+	/**
+	 * @return the inviteCounts
+	 */
+	public long getInviteCounts() {
+		return inviteCounts;
+	}
+
+	/**
+	 * @param inviteCounts the inviteCounts to set
+	 */
+	public void setInviteCounts(long inviteCounts) {
+		this.inviteCounts = inviteCounts;
+	}
+
+	/**
+	 * @return the validCounts
+	 */
+	public long getValidCounts() {
+		return validCounts;
+	}
+
+	/**
+	 * @param validCounts the validCounts to set
+	 */
+	public void setValidCounts(long validCounts) {
+		this.validCounts = validCounts;
+	}
+
+	private long inviteCounts;//邀请人数
+	private long validCounts;//有效邀请人数
+	
+	/**
+	 * 实体转化为model
+	 * @param branch
+	 * @return
+	 */
+	public static BranchModel instance(Branch branch) {
+		BranchModel branchModel = new BranchModel();
+		BeanUtils.copyProperties(branch, branchModel);
+		return branchModel;
+	}
+	
+	/**
+	 * model转化为实体
+	 * @return
+	 */
+	public Branch prototype() {
+		Branch branch = new Branch();
+		BeanUtils.copyProperties(this, branch);
+		return branch;
+	}
+
+	/**
+	 * @return  当前页码
+	 */
+	public int getPage() {
+		return page;
+	}
+
+	/**
+	 * @param  当前页码
+	 */
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	/**
+	 * @return 每页条数
+	 */
+	public int getSize() {
+		return size;
+	}
+
+	/**
+	 * @param 每页条数
+	 */
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	/**
+	 * @return 省
+	 */
+	public String getProvinceStr() {
+		return provinceStr;
+	}
+
+	/**
+	 * @param 省
+	 */
+	public void setProvinceStr(String provinceStr) {
+		this.provinceStr = provinceStr;
+	}
+
+	/**
+	 * @return 市
+	 */
+	public String getCityStr() {
+		return cityStr;
+	}
+
+	/**
+	 * @param 市
+	 */
+	public void setCityStr(String cityStr) {
+		this.cityStr = cityStr;
+	}
+
+	/**
+	 * @return 县
+	 */
+	public String getAreaStr() {
+		return areaStr;
+	}
+
+	/**
+	 * @param 县
+	 */
+	public void setAreaStr(String areaStr) {
+		this.areaStr = areaStr;
+	}
+
+	/**
+	 * @return 加盟商id
+	 */
+	public long getId() {
+		return id;
+	}
+
+	/**
+	 * @param 加盟商id
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	/**
+	 * @return the branchName
+	 */
+	public String getBranchName() {
+		return branchName;
+	}
+
+	/**
+	 * @param branchName the branchName to set
+	 */
+	public void setBranchName(String branchName) {
+		this.branchName = branchName;
+	}
+
+	
+
+	/**
+	 * @return the detail
+	 */
+	public String getDetail() {
+		return detail;
+	}
+
+	/**
+	 * @param detail the detail to set
+	 */
+	public void setDetail(String detail) {
+		this.detail = detail;
+	}
+
+	/**
+	 * @return the isDelete
+	 */
+	public String getIsDelete() {
+		return isDelete;
+	}
+
+	/**
+	 * @param isDelete the isDelete to set
+	 */
+	public void setIsDelete(String isDelete) {
+		this.isDelete = isDelete;
+	}
+	
+	
+	
+}

@@ -1,0 +1,177 @@
+
+<script type="text/javascript">
+$(function() {
+	
+	$("#linkAll").hide();
+	
+	$(".showWay").click(function(){
+		if($('.way2').attr("checked")){
+			$("#linkAll").hide();
+			$("#contentAll").show();
+			
+	 	}else{
+	 		$("#linkAll").show();
+			$("#contentAll").hide();
+	    }
+	});
+	
+	
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/column/article/articleAdd.html'); //表单提交  参数1：表单id 参数2：表单action地址		
+});
+</script>
+
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">栏目：</label>
+		     <div class="ipt">
+		     	<input type="text" class="w400 easyui-validatebox" name="siteNewName" value="${siteNew.name!}"  readonly="readonly">
+		     	<input type="hidden" name="siteId" value="${siteNew.id!}">
+		     	<input type="hidden" name="siteNid" value="media">
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间开始 -->
+	<!-- 	<div class="formitm" id="time" style="display:none">
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="onlineTime" id="startTime" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="nolineTime" id="endTime" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div> -->
+		<!-- 添加时间结束 -->
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" class="w400 easyui-validatebox" data-options="required: true" maxlength="50"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">展示方式：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="showWay" class="showWay way2" value="2" checked="checked"/>&nbsp;&nbsp;本站展示&nbsp;&nbsp;
+		     	<input type="radio" name="showWay" class="showWay way1" value="1"/>&nbsp;&nbsp;第三方跳转&nbsp;&nbsp;&nbsp;&nbsp;(此功能应用于文章内容的展示方式)
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="0" />&nbsp;&nbsp;隐藏
+				<input type="radio" name="status" value="1" checked="checked"/>&nbsp;&nbsp;显示
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" class="easyui-numberbox" value="${sortId!1}" data-options="required: true" maxlength="4"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">是否推荐：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isRecommend" value="0" checked="checked"/>&nbsp;&nbsp;否
+				<input type="radio" name="isRecommend" value="1"/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">是否置顶：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isTop" value="0" checked="checked"/>&nbsp;&nbsp;否
+				<input type="radio" name="isTop" value="1"/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="files" accept="image/*">	
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">媒体logo：</label>
+		     <div class="ipt">
+		     	<input type="file" name="files" accept="image/*">
+		     		*(注：不添加logo会影响首页展示)
+		     </div>
+		</div>
+		<div class="formitm" id="linkAll">
+		     <label class="lab">链接地址：</label>
+		     <div class="ipt">
+		     	<input type="text" name="link" class="w400 easyui-validatebox"/>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea type="areatext" class="w400 easyui-validatebox" name="introduction"  maxlength="120"></textarea>	
+		     </div>
+		</div>
+		<div class="formitm" id="contentAll">
+		     <label class="lab">内容：</label>
+		     <!-- 
+		     <div class="ipt">
+		     	<textarea type="areatext" class="w400 easyui-validatebox" name="content"></textarea>
+		     	
+		     </div> -->
+		     
+		     <div class="ipt">
+				<script id="content" name="content" type="text/plain"></script>
+			 </div>
+		</div>
+		<input type="hidden" name="fileIndex" id="fileIndex" />
+		<input type="hidden" name="fileSize" id="fileSize" />
+		
+		<input name="articleAddToken" value="${articleAddToken!}" type="hidden"> 	
+	</form>
+</div>
+<script type="text/javascript">seajs.use("${theme_dir}/js/ajaxfileupload");seajs.use("${theme_dir}/js/upload");</script>
+<script>
+
+$(function(){
+	$(function(){
+		$("#form").submit(function(){
+			var files = $("input[name='files']");
+			var fileIndex = "";
+			for(var i = 0; i < files.length; i++){
+				if(files[i].value != ""){
+					fileIndex = fileIndex+i+",";
+				}
+			}
+			$("#fileIndex").val(fileIndex.substring(0,fileIndex.length-1));
+			$("#fileSize").val(files.length);
+		});
+	});
+	
+});
+
+</script>
+<!-- 编辑器 -->
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/ueditor.all.min.js"> </script>
+<script type="text/javascript" charset="utf-8" src="/plugins/ueditor/lang/zh-cn/zh-cn.js"></script>
+<script type="text/javascript">
+var descriptionBox = UE.getEditor('content', {
+    autoHeight: false,
+    initialFrameWidth:710,
+    toolbars: [
+               ['fullscreen', 'source', '|', 'undo', 'redo', '|',
+                'bold', 'italic', 'underline', 'fontborder', 'strikethrough', 'superscript', 'subscript', 'removeformat', 'formatmatch', 'autotypeset', 'blockquote', 'pasteplain', '|', 'forecolor', 'backcolor', 'insertorderedlist', 'insertunorderedlist', 'selectall', 'cleardoc', '|',
+                'rowspacingtop', 'rowspacingbottom', 'lineheight', '|',
+                'customstyle', 'paragraph', 'fontfamily', 'fontsize', '|',
+                'directionalityltr', 'directionalityrtl', 'indent', '|',
+                'justifyleft', 'justifycenter', 'justifyright', 'justifyjustify', '|', 'touppercase', 'tolowercase', '|',
+                'link', 'unlink', 'anchor', '|', 'imagenone', 'imageleft', 'imageright', 'imagecenter', '|',
+                'simpleupload', 'insertimage', 'insertvideo', 'attachment',  'insertcode',  'pagebreak', 'template', '|',
+                'horizontal', 'date', 'time', 'spechars', 'wordimage', '|',
+                'inserttable', 'deletetable', 'insertparagraphbeforetable', 'insertrow', 'deleterow', 'insertcol', 'deletecol', 'mergecells', 'mergeright', 'mergedown', 'splittocells', 'splittorows', 'splittocols', 'charts', '|',
+                'print', 'searchreplace', 'drafts'
+               ]
+           ]
+    
+});
+   
+</script>

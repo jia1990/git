@@ -1,0 +1,41 @@
+package com.ddtkj.p2psys.redpacket.dao.impl;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.redpacket.dao.RedPacketDao;
+import com.ddtkj.p2psys.redpacket.domain.RedPacket;
+import com.rongdu.common.dao.jpa.BaseDaoImpl;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+
+@Repository("redPacketDao")
+public class RedPacketDaoImpl extends BaseDaoImpl<RedPacket> implements RedPacketDao {
+
+	@Override
+	public RedPacket getEntityById(long id) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("id",Operators.EQ,id);
+		return findByCriteriaForUnique(param) ;
+	}
+
+	@Override
+	public PageDataList<RedPacket> getEntityByIsOpen(String isopen,int currentPage,int pagenum) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(currentPage, pagenum);
+		param.addParam("isopen",Operators.EQ,isopen);
+		return findPageList(param);
+	}
+
+	@Override
+	public RedPacket getEntityByTypeCode(String typecode) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("typeCode",Operators.EQ,typecode);
+		return  findByCriteriaForUnique(param) ;
+	}
+
+	@Override
+	public PageDataList<RedPacket> getEntityList(QueryParam param) {
+		return super.findPageList(param);
+	}
+}

@@ -1,0 +1,65 @@
+<script type="text/javascript">
+	$(function() {
+		$.fn.dataGridOptions.formSubFun("#form",'/modules/account/accountRecharge/platformTransfer.html');
+		
+		$('#userName').blur(function (){
+			$.ajax({
+				 "url": "/modules/user/user/user/userIsExist.html",
+				 "type": "post",
+				 "data": {userName:$("#userName").val()},
+				 "success": function(data){
+					  if(data.result){
+						  $("#realName").val(data.realName);
+					  }else{
+						  $("#realName").val(data.msg);
+					  }
+				  },
+				 "error": function(){
+					  $.messager.alert("用户查询失败请重新输入");		
+				 }
+			  });
+		 }); 
+	});
+</script>
+<style>
+#form b{color: #ff0000;}
+</style>
+<form id="form" method="post" enctype="multipart/form-data">
+	<div class="borrowForm" style="border-top: none;">
+		<ul>
+
+			<li><span>订单号：</span><input type="text" name="transferNo"  
+				id="transferNo" maxlength="35" autocomplete="off" size="15"
+				class="borrowFormTxt2 easyui-validatebox" data-options="required: true"/><b>*</b>
+			</li>
+			<li><span>用户名：</span><input type="text" name="userName"
+				id="userName" maxlength="35" autocomplete="off" size="15"
+				class="borrowFormTxt2 easyui-validatebox" 
+				 data-options="required: true"/><b>*</b>
+			</li>
+			<li><span>姓名：</span><input type="text" name="realName"
+				id="realName" maxlength="35" autocomplete="off" size="15"
+				class="borrowFormTxt2 easyui-validatebox" disabled="disabled" />
+			</li>
+			
+
+			<li><span>转账类型：</span>
+				<@linkage name="transferType" id="use"
+				class="borrowFormTxt J_input" type="value" nid="platform_transfer"/>
+			</li>
+			<li><span>转账金额：</span><input type="text" name="transferAmount"
+				id="transferAmount" maxlength="35" autocomplete="off" size="15"
+				class="borrowFormTxt2 easyui-validatebox"
+				data-options="required: true,validType:'num'"/><b>*</b></li>
+		</ul>
+
+	</div>
+
+
+ 	<input name="platforTransferToken" value="${platforTransferToken!}" type="hidden" />
+</form>
+
+
+
+
+

@@ -1,0 +1,235 @@
+package com.rongdu.p2psys.web.borrow;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.autotender.domain.BorrowAutoSet;
+import com.ddtkj.p2psys.autotender.model.BorrowAutoSetModel;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoSetService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.domain.UserIdentify;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.constant.enums.EnumRuleNid;
+import com.rongdu.p2psys.core.rule.AutoTenderConfRuleCheck;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+
+/**
+ * @描述:用户自动投标设置信息
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间: 2014-12-17
+ */
+public class BorrowAutoSetAction extends BaseAction implements ModelDriven<BorrowAutoSetModel> {
+
+	private BorrowAutoSetModel model = new BorrowAutoSetModel();
+
+	@Override
+	public BorrowAutoSetModel getModel() {
+		return model;
+	}
+
+	@Resource
+	private BorrowAutoSetService borrowAutoSetService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+
+	private Map<String, Object> jsonMsgData = new HashMap<String, Object>();
+	private User user;
+	
+	/**
+	 * 我的自动投标设置信息
+	 * @param
+	 * @return
+	 */
+	@Action("/member/autoInvest/detail")
+	public String detail() throws Exception {
+		user = getSessionUser();
+		BorrowAutoSet auto = borrowAutoSetService.init(user);
+		request.setAttribute("auto", auto);
+		return "autodetail";
+	}
+
+	/**
+	 * 修改自动投标设置
+	 * @param
+	 * @return
+	 */
+	@Action("/member/autoInvest/modify")
+	public void modify() throws Exception {
+		user = getSessionUser();
+		BorrowAutoSet autoSet = initAutoSet(model);
+		autoSet.setUser(user);
+		autoSet.setIsVip("N1".equals(user.getMemberLevel()) ? "N" : "Y");
+		autoSet.setVipLevel(user.getMemberLevel());
+		String[] productEnable = request.getParameterValues("productEnable");
+		int energyEnable = 0;
+		int carEnable = 0;
+		int networkEnable = 0;
+		int amortizeEnable = 0;
+		if(productEnable != null && productEnable.length >= 4){
+			energyEnable = StringUtil.toInt(productEnable[0]);
+			carEnable = StringUtil.toInt(productEnable[1]);	
+			networkEnable = StringUtil.toInt(productEnable[2]);
+			amortizeEnable = StringUtil.toInt(productEnable[3]);	
+		}
+		if(energyEnable == 1){
+			autoSet.setEnergyEnable(true);
+		}else{
+			autoSet.setEnergyEnable(false);
+		}
+		if(carEnable == 1){
+			autoSet.setCarEnable(true);
+		}else{
+			autoSet.setCarEnable(false);
+		}
+		if(networkEnable == 1){
+			autoSet.setNetworkEnable(true);
+		}else{
+			autoSet.setNetworkEnable(false);
+		}
+		if(amortizeEnable == 1){
+			autoSet.setAmortizeEnable(true);
+		}else{
+			autoSet.setAmortizeEnable(false);
+		}
+		borrowAutoSetService.modifyBorrowAutoSet(autoSet);
+		redirect("/member/autoInvest/detail.html");
+	}
+
+	/**
+	 * 初始化用户自动投标设置
+	 * @param model
+	 * @throws Exception   
+	 */ 
+	private BorrowAutoSet initAutoSet(BorrowAutoSetModel model){
+		BorrowAutoSet auto = model.prototype();
+		String status = paramString("status");
+		int aprEnable = paramInt("aprEnable");
+		int awardEnable = paramInt("awardEnable");
+		int timelimitMonthEnable = paramInt("timelimitMonthEnable");
+		int timelimitDayEnable = paramInt("timelimitDayEnable");
+		int borrowStyleEnable = paramInt("borrowStyleEnable");
+		if(aprEnable == 1){
+			auto.setAprEnable(true);
+		}else{
+			auto.setAprEnable(false);
+		}
+		if(awardEnable == 1){
+			auto.setAwardEnable(true);
+		}else{
+			auto.setAwardEnable(false);
+		}
+		if(timelimitMonthEnable == 1){
+			auto.setTimelimitMonthEnable(true);
+		}else{
+			auto.setTimelimitMonthEnable(false);
+		}
+		if(timelimitDayEnable == 1){
+			auto.setTimelimitDayEnable(true);
+		}else{
+			auto.setTimelimitDayEnable(false);
+		}
+		if(borrowStyleEnable == 1){
+			auto.setBorrowStyleEnable(true);
+		}else{
+			auto.setBorrowStyleEnable(false);
+		}
+		auto.setStatus(status);
+		return auto;
+	}
+	
+	/**
+	 * 修改自动投标状态
+	 * @param
+	 * @return
+	 */
+	@Action("/member/autoInvest/modifyStatus")
+	public void modifyStatus() throws Exception {
+		String status = paramString("status");
+		user = getSessionUser();
+	/*	if(status == 1){
+			checkBorrowAutoTender(user);					//TODO 沈国平   开启自动投标设置前的异常处理
+		}*/
+		BorrowAutoSet auto = model.prototype();
+		auto.setStatus(status);
+		auto.setUser(user);
+		borrowAutoSetService.modifyStatus(auto);
+		redirect("/member/autoInvest/detail.html");
+		sendBorrowAutoSetMsg(user, status);
+	}	
+	
+	/**
+	 * 发送修改自动投标设置状态信息
+	 * @param  user
+	 * @throws Exception   
+	 */ 
+	private void sendBorrowAutoSetMsg(User user, String status) {
+		Global.setTransfer("user", user);
+		Global.setTransfer("noticeTime", new Date());
+		Global.setTransfer("status", BorrowAutoSetModel.convertAutoSetStatus(status));
+		BaseMsg msg = new BaseMsg(NoticeConstant.BORROW_AUTO_SET_NOTICE);
+		msg.doEvent();
+	}
+	
+	/**
+	 * 开启自动投标前的认证校验
+	 * @param  user
+	 * @return boolean 
+	 * @throws Exception   
+	 */ 
+	private void checkBorrowAutoTender(User user) throws Exception {
+		UserIdentify attestation = userIdentifyService.findByUserId(user.getUserId());
+		AutoTenderConfRuleCheck check = (AutoTenderConfRuleCheck) Global
+				.getRuleCheck(EnumRuleNid.AUTO_TENDER_CONF.getValue());
+		if (check != null) {
+			if (check.getTender_valid().getStatus() == 1) {
+				if (check.getTender_valid().getReal_enable() == 1
+						&& !"83".equals(attestation.getRealNameStatus())) {
+					jsonMsgData.put("return", false);
+					jsonMsgData.put("code", "99A");
+					jsonMsgData.put("msg", "您还未通过实名认证，请先进行实名认证！");
+					printJson(getStringOfJpaObj(jsonMsgData));
+					//JSDP-86 wcw 2015-05-05 start
+					jsonMsgData=null;
+					//JSDP-86 wcw 2015-05-05 end
+					return ;
+					//throw new BorrowException("您还未通过实名认证，请先进行实名认证！", 1);
+				}
+				if (check.getTender_valid().getEmail_enable() == 1
+						&& !"81".equals(attestation.getEmailStatus())) {
+					jsonMsgData.put("return", false);
+					jsonMsgData.put("code", "99B");
+					jsonMsgData.put("msg", "您还未通过邮箱认证，请先进行邮箱认证！");
+					printJson(getStringOfJpaObj(jsonMsgData));
+					//JSDP-86 wcw 2015-05-05 start
+					jsonMsgData=null;
+					//JSDP-86 wcw 2015-05-05 end
+					return ;
+					//throw new BorrowException("您还未通过邮箱认证，请先进行邮箱认证！", 1);
+				}
+				if (check.getTender_valid().getPhone_enable() == 1
+						&& !"86".equals(attestation.getMobilePhoneStatus())) {
+					jsonMsgData.put("return", false);
+					jsonMsgData.put("code", "99C");
+					jsonMsgData.put("msg", "您还未通过手机认证，请先进行手机认证！");
+					printJson(getStringOfJpaObj(jsonMsgData));
+					//JSDP-86 wcw 2015-05-05 start
+					jsonMsgData=null;
+					//JSDP-86 wcw 2015-05-05 end
+					return ;
+					//throw new BorrowException("您还未通过手机认证，请先进行手机认证！", 1);
+				}
+			}
+		}
+	}
+		
+}

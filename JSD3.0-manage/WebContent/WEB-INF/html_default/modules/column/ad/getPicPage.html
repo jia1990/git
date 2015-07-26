@@ -1,0 +1,34 @@
+<!-- 图片预览 -->
+
+<script type="text/javascript">
+$(function(){
+	
+	// 图片大小限制提示
+	// 轮展图
+	if($('#siteNid').val() == 'indexAd'){	
+		$('#a').html('<img style="padding-top:50px;" src="${articleNew.picPath!}" title="${articleNew.title!}" ondragstart="return false">');
+	}else if($('#siteNid').val() == 'borrowAd'){
+		
+		$('#a').html('<img style="padding-top:30px;" src="${articleNew.picPath!}" title="${articleNew.title!}" ondragstart="return false">');
+	}else{
+		$('#a').html('<div style="height:100px;"></div><div style="width:100%;text-align:center;">该栏目暂无图片预览</div>');
+	}
+	
+	//$(".formitm").parent(".dialog-content").css("background-color","#EFEFEF");
+	$(".formitm").parent(".dialog-content").css("background","url('${theme_dir}/css/images/bj01.png')");
+	
+});
+</script>
+
+
+<!-- 图片预览 -->
+<div class="formitm" style="text-align:center;height:100%;">
+	
+	<input type="hidden" name="article" id="siteNid"  value="${siteNew.nid!}"/>
+	
+	<a id="a" class="fileshow"></a>
+</div>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow123").fancybox();
+</script>

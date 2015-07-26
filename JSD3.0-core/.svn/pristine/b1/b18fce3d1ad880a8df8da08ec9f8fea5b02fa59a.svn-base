@@ -1,0 +1,38 @@
+
+package com.ddtkj.p2psys.score.dao;
+
+import java.util.List;
+
+import com.ddtkj.p2psys.score.domain.ScoreAward;
+import com.rongdu.common.dao.BaseDao;
+
+/**
+ * @描述: 抽奖奖品规则DAO
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+public interface ScoreAwardDao extends BaseDao<ScoreAward>{
+	
+	/**
+	 * 根据规则ID取得奖品规则列表
+	 * @param ruleId 规则ID
+	 * @return 奖品规则信息
+	 */
+	List<ScoreAward> getAwardObjectListByRuleId(long ruleId);
+
+	/**
+	 * 根据奖品ID取得奖品信息
+	 * @param awardId 奖品ID
+	 * @return 奖品信息
+	 */
+	ScoreAward getAwardObjectById(long awardId);
+
+	/**
+	 * 更新奖品规则表的领用数量
+	 * @param ruleId 规则ID
+	 * @param awardId 奖品ID
+	 */
+	void updateBestow(long ruleId, long awardId);
+
+	
+}

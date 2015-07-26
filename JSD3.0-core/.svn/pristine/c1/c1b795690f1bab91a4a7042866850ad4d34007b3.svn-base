@@ -1,0 +1,40 @@
+
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.redpacket.dao.RpWeixinDataDao;
+import com.ddtkj.p2psys.redpacket.domain.RpWeixinData;
+import com.ddtkj.p2psys.redpacket.service.RpWeixinDataService;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-6-1   
+ */
+@Service("rpWeixinDataService")
+public class RpWeixinDataServiceImpl implements RpWeixinDataService {
+
+	@Resource
+	private RpWeixinDataDao rpWeixinDataDao;
+	
+	@Override
+	public RpWeixinData save(RpWeixinData rpWxData) {
+		
+		return rpWeixinDataDao.save(rpWxData);
+	}
+
+	@Override
+	public RpWeixinData getEntityById(long id) {
+		return rpWeixinDataDao.find(id);
+	}
+
+	@Override
+	public RpWeixinData getEntityBySn(String sn) {
+		return rpWeixinDataDao.findObjByProperty("sn", sn);
+	}
+	
+	
+}

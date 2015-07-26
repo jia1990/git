@@ -1,0 +1,138 @@
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date.js"></script>
+<script type="text/javascript">
+$(function(){
+	
+	// 图片大小限制提示
+	if($('#siteNid').val() == 'scrollPic'){			// 轮展图
+		$('#imgSize').html('建议大小：(1900 * 405)');
+	}else if($('#siteNid').val() == 'indexAd'){		// 首页广告条
+		$('#imgSize').html('建议大小：1900 * 80');
+	}else{											// 其他
+		$('#imgSize').html('建议大小：无');
+	}
+	
+	
+	
+	//聚焦
+	/* $("#startTime").blur(function() {
+		//alert("000");
+		$(".laydate_box").css("display","block");
+		$(".laydate_box").css({ display: "block", index-z: "10000" });
+	});
+	//聚焦
+	$("#endTime").blur(function() {
+		//alert("000");
+		$(".laydate_box").css("display","block");
+		$(".laydate_box").css({ display: "block", index-z: "10000" });
+		
+	}); */
+	
+	
+	
+	
+    $.fn.dataGridOptions.formSubFun("#form",'/modules/column/article/articleEdit.html'); //表单提交  参数1：表单id 参数2：表单action地址
+});
+</script>
+
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	<div class="formitm">
+		     <label class="lab">栏目：</label>
+		     <div class="ipt">
+		     	<input type="text" id="siteNewName" class="w400 easyui-validatebox" name="siteNewName" value="${siteNew.name!}" readonly="readonly">
+		     	<input type="hidden" id="siteId" name="siteId" value="${siteNew.id!}">
+		     	<input type="hidden" id="siteNid" name="siteNid" value="${siteNew.nid!}">
+		     	<b>*</b>
+		     </div>
+		</div>
+		
+		<!-- 添加时间开始 -->
+		<div class="formitm" >
+		     <label class="lab">开始时间：</label>
+		     <div class="ipt">
+		     	<input type="text" class="dateInput w200 easyui-validatebox" name="onlineTime" id="startTime"  value="${articleNew.onlineTime?string('yyyy-MM-dd HH:mm:ss')!}" data-options="required: true"/>
+		     	<b>*</b>
+		     	&nbsp;
+		     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="nolineTime" id="endTime"   value="${articleNew.nolineTime?string('yyyy-MM-dd HH:mm:ss')!}" data-options="required: true"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<!-- 添加时间结束 -->
+		
+		<div class="formitm">
+		     <label class="lab">标题：</label>
+		     <div class="ipt">
+		     	<input type="text" name="title" value="${articleNew.title}" class="w400 easyui-validatebox" data-options="required: true" maxlength="50"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="0" <#if articleNew.status?? && articleNew.status ==0>checked="checked"</#if>/>&nbsp;&nbsp;隐藏
+				<input type="radio" name="status" value="1" <#if articleNew.status?? && articleNew.status ==1>checked="checked"</#if>/>&nbsp;&nbsp;显示
+		     </div>
+		</div>
+		<div class="formitm" hidden="hidden">
+		     <label class="lab">排序：</label>
+		     <div class="ipt">
+		     	<input type="text" name="sort" value="${articleNew.sort}" class="easyui-numberbox"  maxlength="4"/>
+		     	<b>*</b>
+		     </div>
+		</div>
+		<div class="formitm" hidden="hidden">
+		     <label class="lab">是否推荐：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isRecommend" value="0" <#if articleNew.isRecommend?? && articleNew.isRecommend ==0>checked="checked"</#if>/>&nbsp;&nbsp;否
+				<input type="radio" name="isRecommend" value="1" <#if articleNew.isRecommend?? && articleNew.isRecommend ==1>checked="checked"</#if>/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+		<div class="formitm" hidden="hidden">
+		     <label class="lab">是否置顶：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="isTop" value="0" <#if articleNew.isTop?? && articleNew.isTop ==0>checked="checked"</#if>/>&nbsp;&nbsp;否
+				<input type="radio" name="isTop" value="1" <#if articleNew.isTop?? && articleNew.isTop ==1>checked="checked"</#if>/>&nbsp;&nbsp;是
+		     </div>
+		</div>
+ 		 
+		<div class="formitm">
+		     <label class="lab">图片：</label>
+		     <div class="ipt">
+		     	<input type="file" name="file">	<br /><a id="imgSize"></a>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <div class="ipt">
+		     	<a href="${articleNew.picPath!}" class="fileshow"  rel="group1" ondragstart="return false"><img src="${articleNew.picPath!}" title="点击预览"></a>
+		     </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">图片链接：</label>
+		     <div class="ipt">
+				<input type="text" name="link" value="${articleNew.content!}" class="w400 easyui-validatebox" />
+			 </div>
+		</div>
+		<div class="formitm">
+		     <label class="lab">简介：</label>
+		     <div class="ipt">
+		     	<textarea class="w400 easyui-validatebox" name="introduction"  maxlength="120">${articleNew.introduction!}</textarea>	
+		     </div>
+		</div>
+		<input name="addTime" value="${articleNew.addTime?string('yyyy-MM-dd HH:mm:ss')}" type="hidden"/>
+		<input name="picPath" value="${articleNew.picPath!}" type="hidden"/>
+		<input name="addIp" value="${articleNew.addIp}" type="hidden"/>
+		<input name="clicks" value="${articleNew.clicks}" type="hidden"/>
+		<input name="id" value="${articleNew.id}" type="hidden"/>
+		
+		<input name="articleEditToken" value="${articleEditToken!}" type="hidden">
+	</form>
+</div>
+<div id="siteNewDialog">
+	<ul id="siteNewTree"></ul>
+</div>
+<!-- 图片预览-->
+<script type="text/javascript">
+	$(".fileshow").fancybox();
+</script>
+

@@ -1,0 +1,181 @@
+
+package com.ddtkj.transfer;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.webpetcard.domain.PetCard;
+import com.ddtkj.p2psys.webpetcard.model.PetCardModel;
+import com.ddtkj.p2psys.webpetcard.service.PetCardService;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.core.sms.sendMsg.RegisterMobileMsg;
+import com.rongdu.p2psys.core.web.BaseAction;
+
+/**
+ * @描述:
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-6-13   
+ */
+public class PetCardAction extends BaseAction<PetCardModel> implements ModelDriven<PetCardModel> {
+
+	private static Logger logger = Logger.getLogger(PetCardAction.class);
+
+	@Resource
+	private PetCardService petCardService;
+	@Resource
+	private NoticeService noticeService;
+	
+	PetCardModel model = new PetCardModel();
+	Map<String, Object> data = null;
+	
+	public PetCardModel getModel() {
+		return model;
+	}
+
+	public void setModel(PetCardModel model) {
+		this.model = model;
+	}
+
+	private User user;
+	
+	@Action("/member/score/showPetCard")
+	public String showPetCard() throws Exception {
+		double totalMoney = petCardService.getPetCardSumByStatusAndType(getSessionUserId(), PetCard.TYPE_PET_CARD_YG, PetCard.UD_CARD_STATUS);
+		double useMoney = petCardService.getPetCardSumByStatusAndType(getSessionUserId(), PetCard.TYPE_PET_CARD_YG, PetCard.ED_CARD_STATUS);;
+		double expiredMoney = petCardService.getPetCardSumByStatusAndType(getSessionUserId(), PetCard.TYPE_PET_CARD_YG, PetCard.DD_CARD_STATUS);;
+		request.setAttribute("totalMoney", totalMoney);
+		request.setAttribute("useMoney", useMoney);
+		request.setAttribute("expiredMoney", expiredMoney);
+		return "petCard";
+	}
+	
+	/**
+	 * 前台展示云购体验卡列表
+	 * @throws Exception   
+	 */ 
+	@Action("/member/score/getPetCardList")
+	public void petCardList() throws Exception {
+		user = getSessionUser();
+		PageDataList<PetCardModel> pageDataList = null;
+		data = new HashMap<String,Object>();
+		if (user != null) {
+			model.setUserId(user.getUserId());
+			pageDataList = petCardService.petCardList(model);
+		}
+		data.put("data", pageDataList);
+		printJson(getStringOfJpaObj(data));
+		data = null;
+	}
+	/**
+	 * 根据类型查看用户云购体验卡包
+	 * @throws Exception
+	 */
+	@Action("/member/score/getPetCardPackList")
+	public void getCardPackList() throws Exception{
+		user = getSessionUser();
+		data = new HashMap<String,Object>();
+		String status = paramString("status");
+		List<Object[]> petCardPackList = null;
+		double petCardSum = 0;
+		int petCardCount = 0;
+		if(user != null){
+			petCardPackList = petCardService.getPetCardPackSumByStatusAndType(user.getUserId(), PetCard.TYPE_PET_CARD_YG,status);
+			petCardSum = petCardService.getPetCardSumByStatusAndType(user.getUserId(), PetCard.TYPE_PET_CARD_YG,status);
+		}
+		List<Map<String,Object>> list = new ArrayList<Map<String,Object>>();
+		if(petCardPackList!=null){
+			for(Object[] petCard:petCardPackList){
+				Map<String,Object> map = new HashMap<String,Object>();
+				map.put("money", petCard[0]);
+				map.put("count", petCard[1]);
+				list.add(map);
+				petCardCount += Integer.parseInt(petCard[1].toString());
+			}
+		}
+		data.put("petCardPackList", list);
+		data.put("petCardSum", petCardSum);
+		data.put("petCardCount", petCardCount);
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		return;
+	}
+	
+	
+	
+	/**
+	 * 更改为已读
+	 * @throws Exception
+	 */
+	@Action("/member/score/updateIsCheck")
+	public void updateIsCheck() throws Exception{
+		user = getSessionUser();
+		data = new HashMap<String,Object>();
+		String status = paramString("status");
+		boolean flag = false;
+		if(user != null){
+			model.setUserId(getSessionUserId());
+			model.setStatus(status);
+			model.setType(PetCard.TYPE_PET_CARD_YG);
+			flag = petCardService.updateIsCheck(model);
+		}
+		data.put("result", flag);
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		return;
+	}
+	/**
+	 * 更改为已读
+	 * @throws Exception
+	 */
+	@Action("/member/score/sendPhoneCode")
+	public void sendPhoneCode() throws Exception{
+		user = getSessionUser();
+		RegisterMobileMsg msg = new RegisterMobileMsg(NoticeConstant.NOTICE_PHONE_ACTIVE,user) ;
+		msg.setMobile(user.getMobilePhone());
+		msg.doEvent();
+		return;
+	}
+	
+	/**
+	 * 手机验证码校验
+	 * @throws Exception
+	 */
+	@Action("/member/socre/checkPhoneCode")
+	public void checkPhoneCode()throws Exception{
+		user = getSessionUser();
+		data = new HashMap<String,Object>();
+		String validCode = paramString("validCode");
+		if(user != null){
+			String phoneCode = (String) request.getSession().getAttribute(user.getMobilePhone() + "_" + NoticeConstant.NOTICE_PHONE_ACTIVE + "_code");
+			long verifyTime = noticeService.getNoticeAddTime(NoticeConstant.NOTICE_PHONE_ACTIVE,user.getMobilePhone());//获取发送时间
+			long vtime = StringUtil.toLong(Global.getValue("verify_code_time"));//获取系统时间
+			if(validCode.equals(phoneCode) && (System.currentTimeMillis() - verifyTime < vtime * 1000)){
+				data.put("result", true);
+				data.put("msg", "验证通过！");
+			}else{
+				if(!(System.currentTimeMillis() - verifyTime < vtime * 1000)){
+					request.getSession().removeAttribute(user.getMobilePhone() + "_" + NoticeConstant.NOTICE_PHONE_ACTIVE + "_code");
+				}
+				data.put("result", false);
+				data.put("msg", "验证码有误,或已失效！");
+			}
+		}
+		printJson(getStringOfJpaObj(data));
+		data = null;
+		return;
+		
+	}
+}

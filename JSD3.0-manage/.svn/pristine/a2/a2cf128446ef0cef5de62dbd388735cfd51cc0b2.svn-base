@@ -1,0 +1,111 @@
+<!-- 添加体验卡 -->
+<script type="text/javascript">
+$(function(){
+	
+	$("#yes").click(function() {
+		$('#validTime').show(300);
+		$('#validTime2').attr('disabled',false);
+	});
+	$("#no").click(function() {
+		$('#validTime').hide(300);
+		$('#validTime2').attr('disabled',true);
+		
+	});
+
+	$("#validTime").change(function() {
+		var valid = parseInt($(".validTime").val());
+		if(valid <= 0){
+			$(".validTime").val("");
+			parent.$.messager.alert('提示', '有效时间必须大于0天！', 'info');
+		};
+	});
+	
+	$("#cardSize").change(function() {
+		var card = parseInt($("#cardSize").val());
+		if(card <= 0){
+			$(".cardSize").val("1");
+			parent.$.messager.alert('提示', '数量必须大于0！', 'info');
+		};
+	});
+	
+	$.fn.dataGridOptions.formSubFun("#form",'/modules/petcard/petcard/addPetCard.html');
+});
+</script>
+
+
+<style>
+	.lab{
+		font-size:15px;
+		color:#393939;
+	}
+
+</style>
+<div class="popForm">
+    <form id="form"  method="post" enctype="multipart/form-data">
+    	
+		<div class="formitm">
+		     <div class="ipt">
+		     	<span style="font-size:35px;text-align:center;color:#3D9EEF">晋商贷体验卡</span>
+		     </div>
+		</div>
+		<br />
+		<hr width="80%" color="#999"/>
+		<br />
+		<div class="formitm">
+		     <label class="lab" id="title_label">类型：</label>
+		     <div class="ipt">
+		     	<input type="text" name="typeStr" value="晋商贷体验卡" style="width:200px;" class="w200 easyui-validatebox" data-options="required: true" maxlength="50" disabled="disabled"/>
+		     	<!-- <b>*</b> -->
+		     </div>
+		</div>
+		<input type="hidden" name="type" value="pt"/>
+		<div class="formitm">
+		     <label class="lab">状态：</label>
+		     <div class="ipt">
+		     	<input type="radio" name="status" value="ua" id="ua" checked="checked" disabled="disabled"/> <label for="ua" style="color:#666;"> 未激活</label>&nbsp;&nbsp;
+				<input type="radio" name="status" value="da" id="da" disabled="disabled"/> <label for="da" style="color:#666;"> 已激活</label>&nbsp;&nbsp;
+				<input type="radio" name="status" value="dd" id="dd" disabled="disabled"/> <label for="dd" style="color:#666;"> 已失效</label>&nbsp;&nbsp;
+		     </div>
+		</div>
+		<div class="formitm" >
+		     <label class="lab">金额：</label>
+		     <div class="ipt">
+		     	<input type="text" name="money" onkeyup="this.value=this.value.replace(/\D/g,'')" autocomplete="off" style="width:200px;" class="w200 easyui-validatebox" onkeyup="value=value.replace(/[^0-9]/g,'')" size="15"  data-options="required: true,validType:'accout[1,100000]'">&nbsp;<b>*</b>&nbsp;<span style="color:#666;">元</span>
+		     	<!-- <b>*</b> -->
+		     </div>
+		</div>
+		<div class="formitm" id="isValid" >
+		     <label class="lab">有效类型：</label>
+		     <div class="ipt">
+		     	<input type="radio" value="0" name="isValid" checked="checked"  id="yes"/><label for="yes" style="color:#666;" title="有效时间必须大于0"> 短期有效</label>&nbsp;&nbsp;
+				<input type="radio" value="1" name="isValid"  id="no"/><label for="no" style="color:#666;" title="有效时间默认为0"> 永久有效</label>
+		     </div>
+		</div>
+		<div class="formitm" id="validTime">
+		     <label class="lab">有效时间：</label>
+		     <div class="ipt">
+		     	<input type="text" name="validTime" id="validTime2" onkeyup="this.value=this.value.replace(/\D/g,'')" autocomplete="off"  style="width:200px;" maxlength="20" class="w200 borrowFormTxt1 easyui-validatebox validTime" data-options="required: true,validType:'maxNum[0,60]'">&nbsp;<b>*</b>&nbsp;<span style="color:#666;">天</span>
+		     	<!-- <input type="radio" name="validTime" value="0" checked="checked"/>&nbsp;&nbsp;否 -->
+		     </div>
+		</div>
+		
+		<div class="formitm">
+		     <label class="lab">生成数量：</label>
+		     <div class="ipt">
+		     	<input type="text" name="cardSize" id="cardSize" onkeyup="this.value=this.value.replace(/\D/g,'')" autocomplete="off" style="width:200px;" min="5.5" max="20"  maxlength="20" class="w200 borrowFormTxt1 easyui-validatebox cardSize" data-options="required: true">&nbsp;<b>*</b>&nbsp;<span style="color:#666;">张</span>
+		     	<!-- <b>*</b> -->
+		     </div>
+		</div>
+		
+		
+		<input name="petCardAddToken" value="${petCardAddToken!}" type="hidden"> 	
+	</form>
+</div>
+
+<script>
+
+	
+
+
+</script>
+

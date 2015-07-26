@@ -1,0 +1,407 @@
+package com.ddtkj.p2psys.redpacket.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.borrow.dao.BorrowTenderDao;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityDao;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityProduceDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.user.dao.UserDao;
+
+
+/**
+ * @描述：活动红包的产生service接口     JSDP-184
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年6月15日 
+ */
+@Service("rpActivityProduceService")
+public class RpActivityProduceServiceImpl implements RpActivityProduceService {
+
+	@Resource
+	private RpActivityProduceDao rpActivityProduceDao;
+	@Resource
+	private BorrowDao borrowDao;
+	
+	@Resource
+	private BorrowTenderDao tenderDao;
+	@Resource
+	private UserDao userDao;
+	@Resource
+	private RpActivityDao rpActivityDao;
+	@Override
+	public PageDataList<RpActivityProduceModel> getPageList(
+			RpActivityProduceModel model) {
+		QueryParam param = QueryParam.getInstance();
+		param.addPage(model.getPage(), model.getSize());
+		if(StringUtil.isNotBlank(model.getUserName())){
+			param.addParam("user.userName", Operators.LIKE, model.getUserName());
+		}
+		if(StringUtil.isNotBlank(model.getType()) && !"99".equals(model.getType())){
+			param.addParam("activityType", model.getType());
+		}
+		if(StringUtil.isNotBlank(model.getStartTime())){
+			param.addParam("addTime", Operators.GTE, model.getStartTime());
+		}
+		if(StringUtil.isNotBlank(model.getEndTime())){
+			param.addParam("addTime", Operators.LT, model.getEndTime());
+		}
+		//JSDP-203 xingjia 20150702 start
+		if(StringUtil.isNotBlank(model.getAwardType()) && !"99".equals(model.getAwardType())){
+			if("Y".equals(model.getAwardType())){
+				param.addParam("awardType", Operators.NOTEQ, RpActivityProduce.RP_AWARD_OLD_MOST_TENDER);
+			}else{
+				param.addParam("awardType", Operators.EQ,  RpActivityProduce.RP_AWARD_OLD_MOST_TENDER);
+			}
+		}
+		//fengguoqin@ddtkj.com  JSDP-215  20150709 start
+		if(model.getUserId()!=0){
+			param.addParam("awardUser.userId", model.getUserId());
+		}
+		//fengguoqin@ddtkj.com  JSDP-215  20150709 end
+		//JSDP-203 xingjia 20150702 end
+		PageDataList<RpActivityProduce> pageList = rpActivityProduceDao.findPageList(param);
+		
+		List<RpActivityProduce> rapList =  pageList.getList();
+		List<RpActivityProduceModel> rpModelList = new ArrayList<RpActivityProduceModel>();
+		PageDataList<RpActivityProduceModel> pageModelList = new PageDataList<RpActivityProduceModel>(); 
+		for(int i=0;i<rapList.size();i++){
+			RpActivityProduce rpActivityProduce = rapList.get(i);
+			Borrow borrow = borrowDao.find(rpActivityProduce.getBorrowId());
+			RpActivityProduceModel rpModel = RpActivityProduceModel.instance(rpActivityProduce);
+			rpModel.setUserName(rpActivityProduce.getAwardUser().getUserName());
+			rpModel.setRealName(rpActivityProduce.getAwardUser().getRealName());
+			//JSDP-203 20150720 xingjia start
+			if(null !=borrow){
+				rpModel.setBorrowStr(borrow.getName());
+			}
+			//JSDP-203 20150720 xingjia end
+			//fengguoqin@ddtkj.com  JSDP-215  20150709 start
+			RpActivity rpActivity = rpActivityDao.getRpActivityByType(rpActivityProduce.getActivityType());
+			rpModel.setActivityType(rpActivity.getActivityName());
+			/*rpModel.setActivityType(rpModel.activityTypeTransfer(rpActivityProduce.getActivityType()));*/
+			rpModel.setAddTime(rpActivityProduce.getAddTime());
+			rpModel.setActivityAward(rpActivityProduce.getActivityAward());
+			//fengguoqin@ddtkj.com  JSDP-215  20150709 end
+			rpModelList.add(rpModel);
+		}
+		pageModelList.setPage(pageList.getPage());
+		pageModelList.setList(rpModelList);
+		
+		return pageModelList;
+	}
+	@Override
+	public List<RpActivityProduceModel> getSumListRpProduce(
+			RpActivityProduceModel model) {
+		
+		return rpActivityProduceDao.getSumListRpProduce(model);
+	}
+	@Override
+	public List excelListRpProduce(RpActivityProduceModel model) {
+		
+		return rpActivityProduceDao.excelListRpProduce(model);
+	}
+	@Override
+	public List<Map<String,Object>> getRpActivityList(String activityType) {
+		//端午节活动 wcw 2015-6-19 start
+		//RedPacketProduceRuleCheck redPacketRule = (RedPacketProduceRuleCheck) Global.getRuleCheck(RpProduce.RP_RPODUCE_RULE);
+		//Map<String,Object> activityRp = redPacketRule.activityRp();
+		Date startTime =  null;
+		Date endTime =  null;
+		//if(!activityRp.isEmpty()){
+			//startTime =  (Date) activityRp.get("activityRp_start_time");
+			//endTime =  (Date) activityRp.get("activityRp_end_time");
+		//}
+		List rpActivityList = rpActivityProduceDao.getBorrowId(activityType,startTime,endTime);
+		//端午节活动 wcw 2015-6-19 end
+		Map<Integer, Long> borrowIdMap = new HashMap<Integer, Long>();
+		for(int j=0;j<rpActivityList.size();j++){
+			borrowIdMap.put(j, Long.parseLong(rpActivityList.get(j)+""));
+		}
+		List<RpActivityProduceModel> rpActivityModelList = null;
+		
+		
+		List<Map<String,Object>> rpActivityListrr = new ArrayList<Map<String,Object>>();
+		
+		for(int k = 0;k<borrowIdMap.size();k++){
+			Map<String,Object> rpActivityMap = new HashMap<String, Object>();
+			QueryParam paramr = QueryParam.getInstance();
+			paramr.addParam("borrowId", borrowIdMap.get(k));
+			paramr.addParam("activityType", activityType);
+			paramr.addParam("awardType", Operators.NOTEQ, RpActivityProduce.RP_AWARD_OLD_MOST_TENDER);
+			//端午节活动 wcw 2015-6-19 start
+			if(startTime!=null){
+			   paramr.addParam("addTime",Operators.GTE,startTime);
+			}
+			if(endTime!=null){
+			   paramr.addParam("addTime",Operators.LT,endTime);
+			}
+			//JSDP-203 xingjia 20150702 start
+			paramr.addOrder(OrderType.ASC, "awardType");
+			//JSDP-203 xingjia 20150702 end
+			//端午节活动 wcw 2015-6-19 end
+			List<RpActivityProduce> rpActivityListr = rpActivityProduceDao.findByCriteria(paramr);
+			String borrowNameStr = null;
+			rpActivityModelList = new ArrayList<RpActivityProduceModel>();
+			for(int i =0;i<rpActivityListr.size();i++){
+				RpActivityProduce rpActivity = rpActivityListr.get(i);
+				RpActivityProduceModel rpm = new RpActivityProduceModel();
+				Borrow borrow = borrowDao.find(rpActivity.getBorrowId());
+				
+				borrowNameStr = (borrow.getName());
+				if(rpActivity.getAwardType().equals(RpActivityProduce.RP_AWARD_FIRST_TENDER)){
+					rpm.setAwardName("带头大哥");
+				}else if(rpActivity.getAwardType().equals(RpActivityProduce.RP_AWARD_MOST_TENDER)){
+					rpm.setAwardName("土豪");
+				}else if(rpActivity.getAwardType().equals(RpActivityProduce.RP_AWARD_TERMINATOR_TENDER)){
+					rpm.setAwardName("终结者");
+				}
+				rpm.setTenderMoney(rpActivity.getTenderMoney());
+				rpm.setAwardMoney(rpActivity.getActivityAward());
+				borrowNameStr += ","+(borrow.getApr()+"");
+				rpm.setUserName(rpActivity.getAwardUser().getUserName());
+				rpActivityModelList.add(rpm);
+			}
+			if(null != borrowNameStr && borrowNameStr.length()!=0 && rpActivityModelList.size() != 0){
+				rpActivityMap.put("borrowNameStr", borrowNameStr);
+				rpActivityMap.put("borrowId", borrowIdMap.get(k));
+				borrowNameStr = null;
+				rpActivityMap.put("list", rpActivityModelList);
+			}
+			
+			rpActivityListrr.add(rpActivityMap);
+		}
+		
+		return rpActivityListrr;
+	}
+	@Override
+	public void save(RpActivityProduce rpActivityProduce) {
+		rpActivityProduceDao.save(rpActivityProduce);
+	}
+	@Override
+	public boolean findReapetData(long borrowId, String awardType,String isEnable) {
+		QueryParam param = QueryParam.getInstance();
+		param.addParam("borrowId", borrowId);
+		param.addParam("awardType", awardType);
+		if(StringUtil.isNotBlank(isEnable)){
+			param.addParam("isEnable", Integer.parseInt(isEnable));
+		}
+		RpActivityProduce rpActivityProduce = rpActivityProduceDao.findByCriteriaForUnique(param);
+		if(null != rpActivityProduce){
+			return true;
+		}
+		return false;
+	}
+	@Override
+	public RpActivityProduce findMostTender(long borrowId, String awardType) {
+		QueryParam param = QueryParam.getInstance();
+		//JSDP-203 xingjia 20150702 start
+		param.addParam("borrowId", borrowId);
+		//JSDP-203 xingjia 20150702 end
+		param.addParam("awardType", awardType);
+		RpActivityProduce rpActivityProduce = rpActivityProduceDao.findByCriteriaForUnique(param);
+		if(null != rpActivityProduce){
+			return rpActivityProduce;
+		}
+		return null;
+	}
+	@Override
+	public boolean updateMostTender(RpActivityProduce rp) {
+		boolean flag = false;
+		RpActivityProduce rpp = rpActivityProduceDao.update(rp);
+		if(null != rpp){
+			flag = true;
+		}
+		return flag;
+	}
+	@Override
+	public void rpActivityProduce(long borrowId,Date startTime,Date endTime,RpActivityProduceModel rpm){
+		Map<String, Object> map=tenderDao.findMostMoneyByBorrowId(borrowId,startTime,endTime);
+		if(!map.isEmpty()){
+			double tenderMoney = Double.parseDouble(map.get("tenderMoney")+"");
+			long userId = Long.parseLong(map.get("userId")+"");
+			rpm.setAwardType("mt");
+			//端午节    活动  土豪最新产生记录
+			RpActivityProduce  rp=rpActivityProduceDao.getRpActivityProduce(rpm);
+			if(rp==null){
+				rp=new RpActivityProduce();
+				User user=userDao.find(userId);
+				rp.setAwardUser(user);
+				rp.setAwardType("mt");
+				rp.setTenderMoney(tenderMoney);
+				rp.setActivityAward(Math.floor(rp.getTenderMoney()/1000*5));
+				rp.setActivityType("dragon");
+				rp.setBorrowId(borrowId);
+				rp.setAddTime(new Date());
+				rp.setIsEnable(0);
+				rpActivityProduceDao.save(rp);
+				return ;
+			}
+			if(rp!=null&&tenderMoney>rp.getTenderMoney()){
+				//端午节    活动  土豪旧产生记录新增
+				rp.setTenderMoney(rp.getTenderMoney());
+				rp.setAwardType("ot");
+				rp.setIsEnable(0);
+				rpActivityProduceDao.save(rp);
+				
+				
+				////端午节    活动  土豪最新产生记录更新
+				rpm.setAwardType("mt");
+				RpActivityProduce rp_=rpActivityProduceDao.getRpActivityProduce(rpm);
+				if(rp_!=null){
+					rp_.setTenderMoney(tenderMoney);
+					User user=userDao.find(userId);
+					rp_.setAwardUser(user);
+					rp.setIsEnable(0);
+					rpActivityProduceDao.update(rp_);
+				}
+				
+			}
+		}
+	}
+	@Override
+	public void rpActivityProduceAndAccount(long borrowId,Map<String,Object> activityRp)throws Exception{
+		String awardFormula = (String) activityRp.get("activityRp_award_formula");
+		Date startTime =  (Date) activityRp.get("activityRp_start_time");
+		Date endTime =  (Date) activityRp.get("activityRp_end_time");
+		String borrowFormula = (String) activityRp.get("activityRp_borrow");
+		String[] af = awardFormula.split(",");
+		String[] bf = borrowFormula.split(",");
+		ScriptEngine se = new ScriptEngineManager().getEngineByName("JavaScript");
+		Borrow borrow = borrowDao.find(borrowId);
+		double awardAmountI = 0;//取整的金额
+		double awardAmountD = 0;//获得奖励的金额
+		//判断标是否已满，已满则取最多投标记录和最后投标记录，保存红包产生记录
+		if((borrow.getAccount() == borrow.getAccountYes()&& endTime.after(new Date()))||endTime.before(new Date())){
+			//判断此记录是否已存入数据库
+			boolean isProduceMt = RpActivityProduceModel.findReapetData(borrowId, RpActivityProduce.RP_AWARD_MOST_TENDER,"1");
+			if(!isProduceMt){
+				Map<String,Object> activityMap = tenderDao.findMostMoneyByBorrowId(borrowId,startTime,endTime);
+		        if(null!=activityMap){
+					String str = activityMap.get("tenderMoney")+ af[0].trim();
+					Long userId=Long.parseLong(activityMap.get("userId")+"");
+					User user=userDao.find(userId);
+					awardAmountI = Math.floor((Double) se.eval(str));
+					String str2 = awardAmountI + af[1].trim();
+					awardAmountD = (Double) se.eval(str2);
+					if(null != activityMap && activityMap.size() != 0){
+						RpActivityProduce rpActivityPro = new RpActivityProduce();
+						rpActivityPro.setActivityType(RpActivityProduce.RP_RPODUCE_DRAGON);
+						rpActivityPro.setActivityAward(awardAmountD);
+						rpActivityPro.setAddTime(new Date());
+						rpActivityPro.setAwardType(RpActivityProduce.RP_AWARD_MOST_TENDER);
+						rpActivityPro.setAwardUser(user);
+						rpActivityPro.setBorrowId(borrowId);
+						rpActivityPro.setTenderMoney(Double.parseDouble( activityMap.get("tenderMoney")+""));
+						rpActivityPro.setRemark(RpActivityProduce.RP_RPODUCE_DRAGON+":"+user.getUserId()+"金额"+activityMap.get("tenderMoney"));
+						rpActivityPro.setIsEnable(1);
+						rpActivityProduceDao.save(rpActivityPro);
+						//账户资金变动
+						Global.setTransfer("user", user);
+						Global.setTransfer("rpMoney", awardAmountD);
+						Map<String, Object> map=new HashMap<String, Object>();
+						map.put("logType", "activityRp");
+						map.put("rechargeMoney", awardAmountD);
+		    			AbstractExecuter executer = ExecuterHelper.doExecuter("petCardRechargeSuccessInvesterExecuter");
+		    			executer.execute(map, user);
+					}
+				}
+			}
+		}
+		if(borrow.getAccount() == borrow.getAccountYes()&& endTime.after(new Date())){
+			//判断此记录是否已存入数据库(终结者)
+			boolean isProduceTt = RpActivityProduceModel.findReapetData(borrowId, RpActivityProduce.RP_AWARD_TERMINATOR_TENDER,"1");
+			if(!isProduceTt){
+				Map<String,Object> activityMap = tenderDao.findMostMoneyByBorrowId(borrowId,startTime,endTime);
+				List<BorrowTender> tenderList = tenderDao.getTenderByBorrowIdAndAddTime(borrowId,startTime,endTime);
+				if(tenderList.size()!= 0){
+					BorrowTender tender = tenderList.get(0);
+
+					String str = tender.getAccount()+ af[0].trim();
+					awardAmountI = Math.floor((Double) se.eval(str));
+					String str2 = awardAmountI + af[1].trim();
+					awardAmountD = (Double) se.eval(str2);
+					
+					RpActivityProduce rpActivityPro = new RpActivityProduce();
+					rpActivityPro.setActivityType(RpActivityProduce.RP_RPODUCE_DRAGON);
+					rpActivityPro.setActivityAward(awardAmountD);
+					rpActivityPro.setAddTime(new Date());
+					rpActivityPro.setAwardType(RpActivityProduce.RP_AWARD_TERMINATOR_TENDER);
+					rpActivityPro.setAwardUser(tender.getUser());
+					rpActivityPro.setBorrowId(borrowId);
+					rpActivityPro.setTenderMoney(tender.getAccount());
+					rpActivityPro.setRemark(RpActivityProduce.RP_RPODUCE_DRAGON+":"+tender.getUser().getUserId()+"金额"+tender.getAccount());
+					rpActivityPro.setIsEnable(1);
+					rpActivityProduceDao.save(rpActivityPro);
+					
+					//账户资金变动
+					Global.setTransfer("user", tender.getUser());
+					Global.setTransfer("rpMoney", awardAmountD);
+					Map<String, Object> map=new HashMap<String, Object>();
+					map.put("logType", "activityRp");
+					map.put("rechargeMoney", awardAmountD);
+					AbstractExecuter executer = ExecuterHelper.doExecuter("petCardRechargeSuccessInvesterExecuter");
+					executer.execute(map, tender.getUser());
+				}
+			}
+		}
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.service.RpActivityProduceService#rpActivityProduceListByActivity(java.lang.String, int)
+	 */
+	@Override
+	public List<RpActivityProduce> rpActivityProduceListByActivity(String activityType,
+			int validTime) {
+		return rpActivityProduceDao.getRpActivityProdceListUnvalid(activityType,validTime);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.service.RpActivityProduceService#updateRpActivtyProduce(com.ddtkj.p2psys.redpacket.domain.RpActivityProduce)
+	 */
+	@Override
+	public RpActivityProduce updateRpActivtyProduce(
+			RpActivityProduce rpActivityProduce) {
+		return rpActivityProduceDao.update(rpActivityProduce);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.service.RpActivityProduceService#rpActivityProduceUnvalid(java.lang.String, int)
+	 */
+	@Override
+	public List rpActivityProduceUnvalid(String activityType, int validTime) {
+		
+		return rpActivityProduceDao.rpActivityProduceUnvalid(activityType, validTime);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.redpacket.service.RpActivityProduceService#getRpActivityProduce(java.lang.String, double, long)
+	 */
+	@Override
+	public RpActivityProduce getRpActivityProduce(String activityType,
+			double awardMoney, long userId) {
+		return rpActivityProduceDao.getRpActivityProduce(activityType, awardMoney, userId);
+	}
+	
+	
+}

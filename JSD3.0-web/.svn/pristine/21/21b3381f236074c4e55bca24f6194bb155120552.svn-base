@@ -1,0 +1,95 @@
+package com.rongdu.p2psys.web.redpacket;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.account.service.AccountService;
+import com.ddtkj.p2psys.activity.service.ActivityGoodsLogService;
+import com.ddtkj.p2psys.activity.service.ActivityGoodsService;
+import com.ddtkj.p2psys.redpacket.model.RpActivityProduceModel;
+import com.ddtkj.p2psys.redpacket.service.RpActivityProduceService;
+import com.ddtkj.p2psys.redpacket.service.RpActivitySumService;
+import com.ddtkj.p2psys.redpacket.service.RpProduceService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserIdentifyService;
+import com.rongdu.p2psys.user.service.UserService;
+/**
+ * 活动红包的产生查询 JSDP-215
+ * @author xingjia
+ *
+ */
+public class RpActivityAction extends BaseAction implements ModelDriven<RpActivityProduceModel> {
+	private RpActivityProduceModel model = new RpActivityProduceModel();
+	
+	@Resource
+	private RpActivityProduceService rpActivityProduceService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private UserIdentifyService userIdentifyService;
+	@Resource
+	private RpActivitySumService rpActivitySumService;
+	@Resource
+	private RpProduceService rpProduceService;
+	@Resource
+	private ActivityGoodsService activityGoodsService;
+	@Resource
+	private ActivityGoodsLogService activityGoodsLogService;
+	@Resource
+	private AccountService accountService;
+	
+	private Map<String, Object> data;
+	
+	public RpActivityProduceModel getModel() {
+		return model;
+	}
+	public void setModel(RpActivityProduceModel model) {
+		this.model = model;
+	}
+	//fengguoqin JSDP-215 20150709  start
+	/**
+	 * 活动红包的产生
+	 */
+	@Action("/rpActivity/rpActivityProduceList")
+	public void rpActivityProduceList()throws Exception{
+		User user = this.getSessionUser();
+		data = new HashMap<String, Object>();
+		if(user==null){
+			this.redirect("/user/login.html");
+		}else{
+			model.setUserId(user.getUserId());
+			PageDataList<RpActivityProduceModel> rpActivityProduceDataList = rpActivityProduceService.getPageList(model);
+			data.put("data", rpActivityProduceDataList);
+			printJson(getStringOfJpaObj(data));
+			data=null;
+		}
+		//fengguoqin JSDP-215 20150709  end
+	}
+	/**
+	 * 查询用户是否获得开启宝箱的条件  JSDP-203
+	 * @throws Exception
+	 */
+	@Action("/rpActivity/rpActivityProduceOpen")
+	public void rpActivityProduceIndianaJonesList()throws Exception{
+		User user = getSessionUser();
+		data = new HashMap<String, Object>();
+		if(null != user){
+			if(StringUtil.isNotBlank(model.getIndex())){
+				data = rpActivityProduceService.getRpActivityProduceByOpen(user, model.getIndex());
+			}
+		}else{
+			data.put("result", false);
+			data.put("msg", "请先登录！");
+		}
+		printJson(getStringOfJpaObj(data));
+		data=null;
+	}
+}

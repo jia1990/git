@@ -1,0 +1,24 @@
+<#if karmaEnabled && post.userId != 1>
+	<script type="text/javascript">writeStars(${user.karma.karmaPoints}, "${user.id}${post.id}");</script>
+</#if>
+
+<span class="gensmall">
+<div class="user_img"><img src="${request.getContextPath()}/imgurl.html?userid=${user.id?c}&size=middle" border="0" /></div>
+
+    用户等级：${rank.getRankTitle(user.rankId, user.totalPosts)}<br />
+	${I18n.getMessage("PostShow.userRegistrationDate")}：${user.registrationDate}<br />
+	发表${I18n.getMessage("PostShow.userTotalMessages")}：${user.totalPosts}<br />
+
+<#if (user.from?exists && user.from?length > 0)>
+	${I18n.getMessage("PostShow.userFrom")}: ${user.from?html}
+
+</#if>
+
+<#if post.userId != 1>
+<#if user.isOnline()>
+	用户状态：<span class="online">${I18n.getMessage("PostShow.userOnline")}</span>
+<#else>
+	用户状态：<span class="offline">${I18n.getMessage("PostShow.userOffline")} </span>
+</#if>
+</#if>
+</span>

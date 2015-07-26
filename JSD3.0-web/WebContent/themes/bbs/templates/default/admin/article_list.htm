@@ -1,0 +1,93 @@
+<#setting number_format = "#"/>
+<#import "../../macros/pagination.ftl" as pagination>
+<#import "macros/group_macros.ftl" as lib>
+<script src="${request.getContextPath()}/themes/admin/js/jquery.js" type="text/javascript"></script>
+<style type="text/css">@import url(${contextPath}/bbs/templates/${templateName}/styles/style.css?${startupTime} );</style>
+<script type="text/javascript">
+$(document).ready(function(){
+	$('#search_forum').val('${forumId}');
+});
+	
+function deleteTopic(){
+	 if(confirm("确定删除吗?")){
+		 document.forms["deleteForm"].submit();
+	 }else{
+		 return false;
+	 }
+}	
+
+function topicList(topicId){
+	window.open("${contextPath}/posts/list/"+topicId+".page");
+}
+</script>
+<table class="forumline" cellspacing="1" cellpadding="3" width="100%" border="0">
+	<tr>
+		<th class="thhead" valign="middle" colspan="6" height="25">${I18n.getMessage("Admin.articleManagement")}</th>
+	</tr>
+
+	<tr>
+		<td class="gen" align="center" colspan="6">
+			<form id="formusersearch" action="${JForumContext.encodeURL("/jforum")}" accept-charset="${encoding}" method="post">
+			<span class="gensmall">
+			${I18n.getMessage("Search.typeKeywords")}: 
+			<input type="hidden" name="action" value="allArticle" />
+			<input type="hidden" name="module" value="${moduleName}" />
+
+			<input type="text" name="search_keywords" value="${searchkey}" />&nbsp;
+			${I18n.getMessage("Search.forum")}: 
+			<span class="genmed">
+				<select class="post" id="search_forum" name="search_forum" >
+					<option value="0" selected="selected">${I18n.getMessage("Search.allAvailable")}</option>
+					<#list categories as c>
+						<optgroup label="${c.name}">
+							<#list c.getForums() as f>
+								<option value="${f.id}">${f.name}</option>
+							</#list>
+						</optgroup>
+					</#list>
+				</select>
+			<input type="submit" value="${I18n.getMessage("ForumBase.search")}" class="mainoption"/>
+			</form>
+		</td>
+	</tr>
+
+	<form accept-charset="${encoding}" name="deleteForm" action="${JForumContext.encodeURL("/jforum")}" method="post">
+	<input type="hidden" name="action" value="articleDelete" />
+	<input type="hidden" name="module" value="${moduleName}" />
+	<tr align="right">
+	<td class="catbottom" colspan="4"></td>
+		<td align="center" class="catbottom">
+			<input class="mainoption"  type="button" onclick="javascripts:deleteTopic();" value="${I18n.getMessage("Attachments.remove")}" />
+		</td>
+		<td class="catbottom"></td>
+	</tr>
+	<tr>
+		<td class="row2" align="center"><span class="gen"><b>${I18n.getMessage("ForumIndex.topics")}</b></span></td>
+		<td class="row2"><span class="gen"><b>${I18n.getMessage("ForumIndex.answers")}</b></span></td>
+		<td class="row2" align="center"><span class="gen"><b>${I18n.getMessage("ForumIndex.author")}</b></span></td>
+		<td class="row2" align="center"><span class="gen"><b>${I18n.getMessage("ForumIndex.views")}</b></span></td>
+		<td class="row2"  align="center"><span class="gen"><b></b></span></td>
+		<td class="row2"  align="center"><span class="gen"></span></td>
+	</tr>
+	<#list topicList as topic>
+		<tr>
+			<td class="row1" align="center"><span class="gen">
+			<a href="#" onclick="javascripts:topicList(${topic.id});">
+			<#if topic.title?length gt 30>${topic.title?substring(0,30)}...<#else>${topic.title}</#if></a>
+			</span></td>
+			<td class="row1"><span class="gen">${topic.totalReplies}</span></td>
+			<td class="row1" align="center"><span class="gen">${topic.username}</span></td>
+			<td class="row1" align="center"><span class="gen">${topic.totalViews}</span></td>
+			<td class="row1" align="center"><input type="checkbox" name="topic_id" value="${topic.id}" /></td>
+			<td class="row2"  align="center"><span class="gen"></span></td>
+		</tr>
+	</#list>
+	<tr align="right">
+      <td colspan="6" class="nav" nowrap="nowrap" align="right">
+      	<#assign paginationData>
+          <@pagination.doPagination action/>
+       </#assign>
+        ${paginationData} </td>
+       </tr>
+</table>
+</form>

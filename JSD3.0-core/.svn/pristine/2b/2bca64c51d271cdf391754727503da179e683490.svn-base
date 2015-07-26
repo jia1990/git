@@ -1,0 +1,115 @@
+
+package com.ddtkj.p2psys.sms.model;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.sms.domain.SmsInterface;
+import com.ddtkj.p2psys.sms.exception.SmsInterfaceException;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+
+/**
+ * @描述: 短信通道配置model
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2015-2-12   
+ */
+public class SmsInterfaceModel extends SmsInterface {
+
+	private static final long serialVersionUID = 447892175936169049L;
+	
+	/** 当前页码 */
+	private int page = 1;
+	/** 每页数据条数 */
+	private int size = Page.ROWS;
+	/** 开始时间 **/
+	private String startTime;
+	/** 结束时间 **/
+	private String endTime;
+	/** 日期范围：0：全部，1：最近七天 2：最近一个月 3：最近两个月，4 最近三个月 **/
+	private int time;
+	
+	private String addUserName;			//添加用户名
+	private String operateUserName;		//操作用户名
+	
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getSize() {
+		return size;
+	}
+	public void setSize(int size) {
+		this.size = size;
+	}
+	public String getStartTime() {
+		return startTime;
+	}
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+	public String getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	public int getTime() {
+		return time;
+	}
+	public void setTime(int time) {
+		this.time = time;
+	}
+	public String getAddUserName() {
+		return addUserName;
+	}
+	public void setAddUserName(String addUserName) {
+		this.addUserName = addUserName;
+	}
+	public String getOperateUserName() {
+		return operateUserName;
+	}
+	public void setOperateUserName(String operateUserName) {
+		this.operateUserName = operateUserName;
+	}
+
+	public SmsInterfaceModel() {
+		super();
+	}
+	
+	public static SmsInterfaceModel instance(SmsInterface sms){
+		SmsInterfaceModel model = new SmsInterfaceModel();
+		BeanUtils.copyProperties(sms, model);
+		return model;
+	}
+	
+	public SmsInterface prototype(){
+		SmsInterface sms = new SmsInterface();
+		BeanUtils.copyProperties(this, sms);
+		return sms;
+	}
+	
+	/**
+	 * 校验短信通道的添加
+	 * @param  model 
+	 * @throws Exception   
+	 */ 
+	public void validSmsInterfaceAdd(SmsInterfaceModel model){
+		if(model != null){
+			if (StringUtil.isBlank(model.getName())){
+				throw new SmsInterfaceException("短信通道名必须填写", 1);
+			}
+			if (StringUtil.isBlank(model.getNid())){
+				throw new SmsInterfaceException("短信通道简称必须填写", 1);
+			}
+			if (StringUtil.isBlank(model.getRemark())) {
+				throw new SmsInterfaceException("短信通道备注必须填写", 1);
+			}
+			if (StringUtil.isBlank(model.getSmsNoticeUrl())) {
+				throw new SmsInterfaceException("短信通道请求地址必须填写", 1);
+			}
+		}
+	}
+	
+}

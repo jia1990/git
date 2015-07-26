@@ -1,0 +1,79 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.user.domain;
+
+import java.io.Serializable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+/**
+ * @描述：用户邀请人数
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2015年1月22日
+ */
+@Entity
+@Table(name = "t_jsd_user_invited_summary")
+public class UserInvitedSummary implements Serializable{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5405062406334245236L;
+	
+	@Id
+	private long userId;// 平台用户ID
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "user_id")
+	private User user;
+	private int inviteTotal;// 邀请还有种人数
+	private int inviteUsedTotal;// 邀请好友已兑换VIP人数
+	
+	public UserInvitedSummary(){
+		
+	}
+
+	public UserInvitedSummary(User user){
+		this.userId = user.getUserId();
+		this.user = user ;
+	}
+	
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public int getInviteTotal() {
+		return inviteTotal;
+	}
+
+	public void setInviteTotal(int inviteTotal) {
+		this.inviteTotal = inviteTotal;
+	}
+
+	public int getInviteUsedTotal() {
+		return inviteUsedTotal;
+	}
+
+	public void setInviteUsedTotal(int inviteUsedTotal) {
+		this.inviteUsedTotal = inviteUsedTotal;
+	}
+
+	public long getUserId() {
+		return userId;
+	}
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+}

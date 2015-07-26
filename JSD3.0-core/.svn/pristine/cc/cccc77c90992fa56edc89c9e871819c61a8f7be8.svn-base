@@ -1,0 +1,179 @@
+package com.ddtkj.p2psys.redpacket.model;
+
+import java.util.Date;
+
+import org.springframework.beans.BeanUtils;
+
+import com.ddtkj.p2psys.redpacket.domain.RpProduce;
+import com.rongdu.common.util.Page;
+
+/**
+ * @描述：红包产生model
+ * @作者：lijianyun@ddtkj.com
+ * @创建时间：2014年12月31日
+ */
+public class RpProduceModel extends RpProduce {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3304998381653149486L;
+	/** 当前页码 */
+	private int page = 1;
+	/** 每页总数 **/
+	private int size = Page.ROWS;
+	//JSDP-167 xingjia 2015-05-28 start
+	private Page pages;
+	//JSDP-167 xingjia 2015-05-28 end
+
+	private String userName;
+	private Date addTime;
+	private Date deadTime;
+	
+	//JSDP-167 xingjia 2015-05-28 start
+	private String startTime;//开始时间 （查询条件）
+	private String endTime;//结束时间（查询条件）
+	private String realName;//真实姓名
+	private String rpProMoney;//红包产生金额
+	private String rpUsedMoney;//红包消费金额
+	private String type;//红包类型
+	private String rpStatus;//红包状态
+	private String typeConsume;//消费红包类型
+	//JSDP-167 xingjia 2015-05-28 end
+	private String rpStaticRes;//红包描述	
+	//JSDP-195 xingjia 20150625 start
+	private String rpStaticReferrerName;//被推荐人用户名
+	//JSDP-195 xingjia 20150625 end
+	
+	
+
+	public String getRpProMoney() {
+		return rpProMoney;
+	}
+	public void setRpProMoney(String rpProMoney) {
+		this.rpProMoney = rpProMoney;
+	}
+
+	public String getRpUsedMoney() {
+		return rpUsedMoney;
+	}
+
+	public void setRpUsedMoney(String rpUsedMoney) {
+		this.rpUsedMoney = rpUsedMoney;
+	}
+
+	public Date getDeadTime() {
+		return deadTime;
+	}
+
+	public void setDeadTime(Date deadTime) {
+		this.deadTime = deadTime;
+	}
+
+
+
+	public static RpProduceModel instance(RpProduce rpProduce) {
+		RpProduceModel rpProduceModel = new RpProduceModel();
+		BeanUtils.copyProperties(rpProduce, rpProduceModel);
+		return rpProduceModel;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public int getSize() {
+		return size > 0 ? size : Page.ROWS;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getRpStatus() {
+		return rpStatus;
+	}
+
+	public void setRpStatus(String rpStatus) {
+		this.rpStatus = rpStatus;
+	}
+
+	public String getRealName() {
+		return realName;
+	}
+
+	public void setRealName(String realName) {
+		this.realName = realName;
+	}
+	public String getTypeConsume() {
+		return typeConsume;
+	}
+	public void setTypeConsume(String typeConsume) {
+		this.typeConsume = typeConsume;
+	}
+	public Page getPages() {
+		return pages;
+	}
+	public void setPages(Page pages) {
+		this.pages = pages;
+	}
+	public String getRpStaticRes() {
+		return rpStaticRes;
+	}
+	public void setRpStaticRes(String rpStaticRes) {
+		this.rpStaticRes = rpStaticRes;
+	}
+	public String getRpStaticReferrerName() {
+		return rpStaticReferrerName;
+	}
+	public void setRpStaticReferrerName(String rpStaticReferrerName) {
+		this.rpStaticReferrerName = rpStaticReferrerName;
+	}
+	
+	
+
+}

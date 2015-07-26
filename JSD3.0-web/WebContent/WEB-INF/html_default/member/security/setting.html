@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<#include "../../include/resource1.html"> 
+<body>
+	<#assign nid="my_account"> 
+	<#include "../../include/member_header.html">
+	<!--header-end-->
+	<!--用户中心的主栏目 开始-->
+	<div id="container" class="clearfix" >
+		<div class="usermain clearfix">
+			<!--左边的导航 开始-->
+			<div class="user_left">
+            	<#assign mid="m_security" >
+				<#include "../account_menu.html">
+			</div>		
+			<div class="user_right">
+				<h2 class="user_title clearfix">基本信息</h2>
+				<div class="user_tab clearfix">
+					<ul>
+						<li><a href="${webroot}/member/info/detail.html">个人资料</a></li>
+						<li class="active"><a href="${webroot}/member/security/setting.html">安全中心</a></li>
+					</ul>
+				</div>
+				<div class="pd30">
+					<dl class="setting">
+						<dt>
+							<i class="settingIco iconfont">&#xe607;</i>
+							<div class="setting_status">
+								<div class="setting_infobar">您的账号安全度 <strong>
+								<#if realNameStatus==0>低<#else>高</#if>
+								</strong></div>
+								<div class="setting_statusbar"><span style="width:<#if realNameStatus==0>30%<#else>100%</#if>;"></span></div>
+								<label>如果您的邮箱已认证，则账号安全度等级为低。如果您的邮箱和手机都已认证，则账户安全等级为中。如果邮箱、手机和实名都已认证，则您的安全等级为高。</label>
+							</div>
+						</dt>
+						<dd>
+							<div class="settingbar clearfix">
+								<i class="itemico iconfont">&#xe617;</i>
+								<span class="itemtxt">
+									登录密码
+									<em>登录账户时需要输入的密码，定期更换密码让您的账户更安全。</em>
+								</span>								
+								<a href="javascript:;" class="setting_btn" title="修改" id="modifyPwdBtn">修改</a>	
+							</div>
+							<!-- S 修改登录密码 -->
+							<div class="setting_form" id="modifyPwdBox" style="display:none;" >
+								<form action="/member/security/modifyPwd.html" method="post" id="modifyPwdForm">
+									<ul class="setting_formbd">
+										<li><label>原密码</label><input type="password" name="pwd" id="oldpassword" class="setting_txt"/><span><i class="iconfont">&#xe614;</i><em>请输入原密码</em></span></li>
+										<li><label>新密码</label><input type="password" name="newPwd" id="password" class="setting_txt" /><span><i class="iconfont">&#xe614;</i><em>请输入新密码</em></span></li>
+										<li><label>确认新密码</label><input type="password" name="confirmNewPwd" id="confirm_password" class="setting_txt" /><span><i class="iconfont">&#xe614;</i><em>请输入确认新密码</em></span></li>
+										<li><label>&nbsp;</label><input type="submit" class="setting_sub_btn" value="确认" /></li>
+									</ul>															
+								</form>
+							</div>
+							<!-- E 修改登录密码 -->	
+						</dd>
+					</dl>
+
+				</div>
+
+			</div>
+		</div>
+	</div>
+	<!--用户中心的主栏目 结束-->
+	<script>seajs.use('member/security_setting');</script>
+	<#include "../../include/footer.html">
+</body>
+</html>

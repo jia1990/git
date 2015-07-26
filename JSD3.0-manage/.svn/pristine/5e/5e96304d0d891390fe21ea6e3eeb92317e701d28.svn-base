@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户重复积分</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	var deleteUrl = "/modules/user/score/delRepeatScore.html";	//删除记录接口地址
+	var deleteWinParmeters = "'{0}','"+deleteUrl+"'";
+	
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : '/modules/user/score/repeatScoreList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'desc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : true,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width: 50,sortable:true},
+			{ field: 'userName', title: '用户名', width: 60},
+			{ field: 'scoreTypeName', title: '类型', width: 100},
+			{ field: 'score', title: '操作积分', width: 60},
+			{ field: 'validScore', title: '有效积分', width: 60},
+			{ field: 'freezeScore', title: '冻结积分', width: 60},
+			{ field: 'addTime', title: '添加时间', width: 130,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{field:'remark', title:'备注',width: 150},
+			{field:'action',title:'操作',width:80,formatter : function(value, row, index) {
+				var str = '';
+				str += '&nbsp;';
+				str += "<@secAuthorizeUrl value='/score/repeatScoreDelBtn.html'>";
+				str += $.formatString('<img onclick="$.fn.dataGridOptions.deleteFun('+deleteWinParmeters+');" src="{1}" title="删除" ondragstart="return false"/>', row.id, '${theme_dir}/css/images/extjs_icons/cancel.png');
+				str += "</@secAuthorizeUrl>";
+				return str;
+			}}
+			 ]],
+			
+			toolbar : '#toolbar'
+		});
+	});
+	
+</script>
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,660 @@
+package com.ddtkj.p2psys.credit.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import com.ddtkj.p2psys.account.dao.AccountDao;
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.credit.dao.CreditAssignmentDao;
+import com.ddtkj.p2psys.credit.dao.CreditLogDao;
+import com.ddtkj.p2psys.credit.domain.CreditAssignment;
+import com.ddtkj.p2psys.credit.domain.CreditLog;
+import com.ddtkj.p2psys.credit.exception.CreditException;
+import com.ddtkj.p2psys.credit.model.CreditHelper;
+import com.ddtkj.p2psys.credit.model.CreditLogModel;
+import com.ddtkj.p2psys.credit.model.worker.CreditWorker;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.errorlog.constant.ErrorLogConstant;
+import com.ddtkj.p2psys.errorlog.exception.HandleException;
+import com.ddtkj.p2psys.statistics.domain.StatisticsData;
+import com.ddtkj.p2psys.tpp.ymd.model.YmdTransfer;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.rongdu.common.exception.BussinessException;
+import com.rongdu.common.model.jpa.OrderFilter.OrderType;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.common.model.jpa.SearchFilter.Operators;
+import com.rongdu.common.util.BigDecimalUtil;
+import com.rongdu.common.util.DateUtil;
+import com.rongdu.common.util.Page;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.dao.BorrowCollectionDao;
+import com.rongdu.p2psys.borrow.dao.BorrowDao;
+import com.rongdu.p2psys.borrow.domain.Borrow;
+import com.rongdu.p2psys.borrow.exception.BorrowException;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.NoticeConstant;
+import com.rongdu.p2psys.core.disruptor.DisruptorUtils;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.CreditSwingOutRuleCheck;
+import com.rongdu.p2psys.core.sms.sendMsg.BaseMsg;
+
+/**
+ * @描述：债权转让购买者Service实现
+ * @作者：yujunfei@ddtkj.com
+ * @创建时间：2015年1月11日 
+ */
+@Service("creditLogService")
+public class CreditLogServiceImpl implements CreditLogService{
+	
+	private static final Logger logger = Logger.getLogger(CreditLogServiceImpl.class);
+	@Resource
+	private BorrowDao borrowDao ;
+	@Resource
+	private BorrowCollectionDao borrowCollectionDao ;
+	@Resource
+	private CreditLogDao creditLogDao ;
+	@Resource
+	private CreditAssignmentDao creditAssignmentDao;
+	@Resource
+	private AccountDao accountDao ;
+	
+	
+	@Override
+	public PageDataList<CreditLog> getAll(QueryParam param) {
+		return creditLogDao.getAll(param);
+	}
+	@Override
+	public PageDataList<CreditLog> getDateByUser(UserModel user) {
+		return creditLogDao.getDateByUser(user.prototype(),user.getPage(),Page.ROWS);
+	}
+	@Override
+	public CreditLog save(User user, CreditAssignment creditAssignment,int buyCopies, double buyAccount)throws Exception {
+		CreditLog cl = fillCreditLog(user, creditAssignment, buyCopies, buyAccount);
+		//CreditWorker cworker = new CreditWorker(creditAssignment, cl);
+		CreditWorker cworker=CreditHelper.getWorker(creditAssignment, cl);
+		try {
+			cworker.validateBeforeBuy() ;  // 购买前验证
+			cl = getValidCredit(cl,creditAssignment) ;
+			creditAssignment.setSoldAccount(BigDecimalUtil.add(creditAssignment.getSoldAccount(),buyAccount));
+			creditAssignment.setSellCopies(creditAssignment.getSellCopies()+buyCopies);
+			creditAssignment = creditAssignmentDao.update(creditAssignment);
+			//冻结购买者资金
+			Global.setTransfer("creditLog", cl);
+			Global.setTransfer("money", cl.getBuyAccount());
+			Global.setTransfer("creditAssignment", creditAssignment);
+			Global.setTransfer("user", cl.getBuyUser());
+			Global.setTransfer("borrow", creditAssignment.getBorrow());
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("rechargeMoney", cl.getUseRecharge());
+			map.put("awardMoney", cl.getUseAward());
+			map.put("interestMoney", cl.getUseInterest());
+			map.put("returnCapitalMoney", cl.getUseReturnedMoney());
+			AbstractExecuter borrowTenderExecuter = ExecuterHelper.doExecuter("creditBuyFreezeExcuter");
+			borrowTenderExecuter.execute(map, user, creditAssignment.getUser());
+			// 通知
+			if(Borrow.TYPE_MORTGAGE==creditAssignment.getBorrow().getType()){
+				//需要满标复审的标
+				if(creditAssignment.getCreditCopies()==creditAssignment.getSellCopies()){
+					CreditSwingOutRuleCheck spRuleCheck = (CreditSwingOutRuleCheck) Global.getRuleCheck("creditSwingOut");
+					if(spRuleCheck.getIs_verify_full_auto()!=2){
+						creditAssignment.setStatus(CreditAssignment.CREDIT_CHECK2_SUCCESS);
+						creditAssignment = creditAssignmentDao.update(creditAssignment);
+						String resultFlag = System.currentTimeMillis()+""+Math.random()*10000;
+				        DisruptorUtils.creditVerifyFullSuccess(creditAssignment,resultFlag);
+			        }
+				}
+			}else{
+				// 如果即买即生息，需要产生利息
+				cworker.handleCreditTenderSuccess(cl);
+				cworker.handleCreditSellerSuccess(cl);
+				
+				 //第三方转账
+	            YmdTransfer ymdTransfer=cworker.handleCreditTranferSuccess(cl);
+	            if(!"0000".equals(ymdTransfer.getErrCode())){
+	            	//throw new BussinessException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败")+"】", 1);
+	            	//JSDBET-812 gjh 2015-3-16 start
+	    			throw new HandleException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败")+"】",
+	    					"债权购买失败--第三方错误",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_CREDIT,
+	    					ErrorLogConstant.CODE_CREDIT_RECHECKED_TPOS,creditAssignment.getUser(),ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT,
+	    					creditAssignment.getId(),1);
+	    			//JSDBET-812 gjh 2015-3-16 end 
+	            }
+				
+				// 发送通知
+				User sellUser = creditAssignment.getUser();
+				Global.setTransfer("creditAssignment", creditAssignment);
+				Global.setTransfer("user", sellUser);
+				AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccExecuter");
+				succExecuter.execute(0, user);
+				// 给购买者发送通知
+				AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccBuyExecuter");
+	            Global.setTransfer("creditLog", cl);
+	            Global.setTransfer("user", cl.getBuyUser());
+	            succBuyExecuter.execute(0, cl.getBuyUser());
+	            
+		    }
+		} catch (Exception e) {
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("债权购买失败，异常信息："+e.getMessage()+e.getCause(), "债权购买失败异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CREDIT, ErrorLogConstant.CODE_CREDIT_BUY_SYS, cl.getBuyUser(), ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT, cl.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+		return cl;
+	}
+	
+	private CreditLog fillCreditLog(User user, CreditAssignment creditAssignment,int buyCopies, double buyAccount) {
+		CreditLog cl = new CreditLog();
+		cl.setAddIp(Global.getIP());
+		cl.setAddTime(new Date());
+		cl.setBuyAccount(buyAccount);
+		cl.setBuyCopies(buyCopies);
+		cl.setBuyFee(getBuyFee(BigDecimalUtil.mul(BigDecimalUtil.div(buyCopies, creditAssignment.getCreditCopies()), creditAssignment.getCreditAccount()),creditAssignment.getBorrow()));
+		cl.setBuyFeeStatus(0);
+		cl.setIsSell(2);
+		cl.setBuyTime(new Date());
+		cl.setBuyUser(user);
+		System.out.println(BigDecimalUtil.div(buyCopies,creditAssignment.getCreditCopies()));
+		System.out.println(BigDecimalUtil.mul(creditAssignment.getCreditValue(),BigDecimalUtil.div(buyCopies,creditAssignment.getCreditCopies())));
+		cl.setBuyValue(BigDecimalUtil.decimal(BigDecimalUtil.mul(buyCopies,BigDecimalUtil.div(creditAssignment.getCreditValue(),creditAssignment.getCreditCopies())),2));
+		cl.setCreditAssignment(creditAssignment);
+		cl.setSellFee(getSellFee(creditAssignment,buyCopies));
+		cl.setSellFeeStatus(0);
+		cl.setStatus(CreditLog.CRELOG_STATUS_NO);
+		return cl;
+	}
+	
+	private double getBuyFee(double account,Borrow borrow){ // 计算购买手续费
+		CreditSwingOutRuleCheck creditSwingOutRuleCheck = (CreditSwingOutRuleCheck) Global.getRuleCheck("creditSwingOut");  // 添加规则
+		// 获取手续费
+		if(creditSwingOutRuleCheck.getOutFeeType(borrow.getType())==1){ //  1 比率  2 金额
+			return BigDecimalUtil.mul(account, creditSwingOutRuleCheck.buyRateFee(borrow.getType()));
+		}else{ 
+			return creditSwingOutRuleCheck.buyAccountFee(borrow.getType(),account);
+		}
+	}
+	private double getSellFee(CreditAssignment creditAssignment,int buyCopies){ // 计算出售手续费
+		double dis = BigDecimalUtil.div(creditAssignment.getSellFee(),creditAssignment.getCreditCopies()) ;
+		return BigDecimalUtil.decimal(BigDecimalUtil.mul(buyCopies, dis) , 2);
+	}
+	/**
+	 * 
+	 * @param tender
+	 * @param borrow
+	 * @param model
+	 * @return
+	 */
+	private CreditLog getValidCredit(CreditLog creditLog, CreditAssignment ca) {
+		// 获取最新的数据库的记录
+		CreditAssignment data = creditAssignmentDao.find(creditLog.getCreditAssignment().getId());
+		//CreditWorker cw = CreditHelper.getWorker(ca, creditLog);
+		Account act = accountDao.findObjByProperty("user.userId", creditLog.getBuyUser().getUserId());
+		//worker.checkTender(tender);
+		//--------wcw---------------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----start-------
+		double usableMoney=BigDecimalUtil.add(act.getRechargeUsable(),act.getAwardUsable(),act.getInterestUsable(),act.getReturnCapitalUsable());
+		double validAccount = creditLog.getBuyAccount() ;
+		if(creditLog.getBuyAccount() > usableMoney){
+			throw new CreditException("可用余额不足",1) ;
+		}
+    	double currRecharge = 0;
+		double currAward = 0;
+		double currInterest = 0;
+		double currReturnCapital = 0;
+		//充值可用
+		double rechargeUsable=act.getRechargeUsable();
+		//奖励可用
+		double awardUsable=act.getAwardUsable();
+		//回款本金可用
+		double returnCapitalUsable=act.getReturnCapitalUsable();
+		logger.info("冻结rechargeMoney："+currRecharge);
+		logger.info("冻结awardMoney："+currAward);
+		logger.info("冻结interestMoney："+currInterest);
+		logger.info("冻结returnCapitalMoney："+currReturnCapital);
+		//计算提现金额冻结归属（使用充值、使用奖励、使用利息、使用回款）
+		if(rechargeUsable>=validAccount){
+			currRecharge=validAccount;
+		}else{
+			if((rechargeUsable+awardUsable)>=validAccount){
+				currRecharge=rechargeUsable;
+				currAward=BigDecimalUtil.sub(validAccount,rechargeUsable);
+			}else{
+				double currMoney=BigDecimalUtil.add(rechargeUsable,awardUsable,returnCapitalUsable);
+				if(currMoney>=validAccount){
+					currRecharge=rechargeUsable;
+					currAward=awardUsable;
+					currReturnCapital=BigDecimalUtil.add(validAccount,-rechargeUsable,-awardUsable);
+				}else{
+					currRecharge=rechargeUsable;
+					currAward=awardUsable;
+					currReturnCapital=returnCapitalUsable;
+					currInterest=BigDecimalUtil.sub(validAccount, currMoney);
+				}
+			}
+		}
+		logger.info("冻结rechargeMoney："+currRecharge);
+		logger.info("冻结awardMoney："+currAward);
+		logger.info("冻结interestMoney："+currInterest);
+		logger.info("冻结returnCapitalMoney："+currReturnCapital);
+		creditLog.setUseAward(BigDecimalUtil.decimal(currAward, 2));
+		creditLog.setUseInterest(BigDecimalUtil.decimal(currInterest, 2));
+		creditLog.setUseRecharge(BigDecimalUtil.decimal(currRecharge, 2));
+		creditLog.setUseReturnedMoney(BigDecimalUtil.decimal(currReturnCapital, 2));
+		//------------wcw-----------将账户可用金额拆分为充值可用金额、奖励可用金额、利息可用金额、回款本金可用金额----end-------
+		creditLog = creditLogDao.save(creditLog);
+		return creditLog;
+	}
+	
+	
+	
+	@Override
+	public void creditVerifyFullSuccess(CreditAssignment ca) throws Exception{
+		//JSDBET-838 wcw 2015-3-20 start
+		try{
+			//JSDBET-838 wcw 2015-3-20 start
+			creditAssignmentDao.update(ca);
+			//JSDBET-838 wcw 2015-3-20 end
+			//需要判断是否有复审
+			if(Borrow.TYPE_MORTGAGE== ca.getBorrow().getType()){
+				// 满标后生息
+				if(ca.getCreditCopies() == ca.getSellCopies()){ // 已经满了，可以生成待收信息。所有人的利息计算都以 初审时间计算
+					// 验证
+					if(!CreditAssignment.CREDIT_CHECK2_SUCCESS.equals(ca.getStatus())){
+						logger.error("该债权没有通过复审！");
+						return ;
+					}
+					// 取得所有购买者
+					QueryParam param = QueryParam.getInstance() ;
+					param.addParam("creditAssignment", ca) ;
+					List<CreditLog> clList = this.creditLogDao.findByCriteria(param);
+					CreditWorker caworker = new CreditWorker(ca);
+					
+					caworker.handleCreditTenderAfterFullSuccess(clList);
+					caworker.handleCreditSellerAfterFullSuccess(clList);
+					System.out.println("本地逻辑完毕，第三方开始");
+					// 第三方转账
+					YmdTransfer ymdTransfer=caworker.handleCreditTranferSuccess(clList);
+					if(!"0000".equals(ymdTransfer.getErrCode())){
+						//throw new BussinessException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败")+"】", 1);
+						//JSDBET-812 gjh 2015-3-16 start
+		    			throw new HandleException("交易批次号："+ymdTransfer.getTradeNo()+"，返回状态码：【"+ymdTransfer.getErrMsg(ymdTransfer.getErrCode(), "一麻袋请求失败")+"】",
+		    					"转账失败",ErrorLogConstant.LEVEL_SERIOUS,ErrorLogConstant.TYPE_CREDIT,
+		    					ErrorLogConstant.CODE_CREDIT_RECHECKED_TPOS,ca.getUser(),ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT,
+		    					ca.getId(),1);
+		    			//JSDBET-812 gjh 2015-3-16 end 
+					}
+					System.out.println("本地逻辑完毕，第三方结束");
+						
+					// 发送通知
+					User user = ca.getUser();
+			        user.getUserId();
+					Global.setTransfer("creditAssignment", ca);
+					Global.setTransfer("user", user);
+					AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccExecuter");
+					succExecuter.execute(0, user);
+					// 给购买者发送通知
+					for (CreditLog creditLog : clList) {
+						AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifySuccBuyExecuter");
+			            Global.setTransfer("creditLog", creditLog);
+			            Global.setTransfer("user", creditLog.getBuyUser());
+			            succBuyExecuter.execute(0, creditLog.getBuyUser());
+					}
+				}
+			}
+		}catch(Exception e){
+			//throw new BorrowException("债权复审失败",1) ;
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("债权复审通过失败，异常信息："+e.getMessage()+e.getCause(), "债权复审通过失败异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CREDIT, ErrorLogConstant.CODE_CREDIT_RECHECKED_SUCC_SYS, ca.getUser(), ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT, ca.getId(), 1);
+		//JSDBET-838 wcw 2015-3-20 end
+		}
+	}
+
+
+	@Override
+	public PageDataList<CreditLogModel> getCreditLogList(CreditLogModel model) {
+		
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		PageDataList<CreditLog> list = creditLogDao.findPageList(param);
+		logger.info("债权转让购买记录param:"+param.toMap().toString()+",list size:"+list.getList().size());
+		List<CreditLogModel> modelList = new ArrayList<CreditLogModel>();
+		PageDataList<CreditLogModel> pageDataList = new PageDataList<CreditLogModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				CreditLog creditLog = (CreditLog)list.getList().get(i);
+				CreditLogModel cLogModel = CreditLogModel.instance(creditLog);
+				User sellUser = creditLog.getCreditAssignment().getUser();
+				User buyUser = creditLog.getBuyUser();
+				CreditAssignment ca = creditLog.getCreditAssignment();
+				cLogModel.setSellUserName(sellUser.getUserName());
+				cLogModel.setBuyUserName(buyUser.getUserName());
+				cLogModel.setCaId(ca.getId());
+				cLogModel.setCaName(ca.getBorrow().getName());
+				cLogModel.setCaBorrowId(ca.getBorrow().getId());
+				cLogModel.setCaBorrowAddTime(ca.getBorrow().getAddTime());
+				cLogModel.setCaApr(ca.getBorrow().getApr());
+				cLogModel.setCreditStartPeriod(ca.getCreditStartPeriod());
+				cLogModel.setCreditEndPeriod(ca.getCreditEndPeriod());
+				modelList.add(cLogModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	
+	/**
+	 * 
+	 * 债权转让(买入)
+	 * 
+	 * // JSDPBUG-99 20150505  sxy
+	 * 
+	 */
+	@Override
+	public PageDataList<CreditLogModel> getCreditInLogList(CreditLogModel model) {
+		
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		
+		Date nowdate = DateUtil.getDate(System.currentTimeMillis()/1000 + "");
+		
+		if(StringUtil.isNotBlank(model.getTimeType())){
+			
+			// 昨天债权转让金额
+			if(StatisticsData.DATA_TIME_YESTERDAY.equals(model.getTimeType())){
+				param.addParam("addTime", Operators.GTE, DateUtil.rollDay(nowdate, -1));
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.LT, start);
+			}
+			// 今天债权转让金额
+			if(StatisticsData.DATA_TIME_TODAY.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 10) + " 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, nowdate);
+				
+			}
+			// 一周债权转让金额
+			if(StatisticsData.DATA_TIME_WEEK.equals(model.getTimeType())){
+				param.addParam("addTime", Operators.GTE,DateUtil.rollDay(nowdate, -7));
+				param.addParam("addTime", Operators.LTE, nowdate);
+			}
+			// 本月债权转让金额
+			if(StatisticsData.DATA_TIME_MONTH.equals(model.getTimeType())){
+				Date start = DateUtil.valueOf((DateUtil.dateStr4(new Date())).substring(0, 7) + "-01 00:00:00");
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LT, nowdate);
+			}
+			// 时间段
+			if(StatisticsData.DATA_TIME_AREA.equals(model.getTimeType())){
+				if(StringUtil.isNotBlank(model.getStartTime()) && StringUtil.isNotBlank(model.getEndTime())){
+					Date start = DateUtil.valueOf(model.getStartTime());
+					Date end = DateUtil.valueOf(model.getEndTime());
+					param.addParam("addTime", Operators.GTE, start);
+					param.addParam("addTime", Operators.LTE, end);
+				}
+			}
+		
+		}
+		
+		
+		PageDataList<CreditLog> list = creditLogDao.findPageList(param);
+		logger.info("债权转让购买记录param:"+param.toMap().toString()+",list size:"+list.getList().size());
+		List<CreditLogModel> modelList = new ArrayList<CreditLogModel>();
+		PageDataList<CreditLogModel> pageDataList = new PageDataList<CreditLogModel>();
+		pageDataList.setPage(list.getPage());
+		if(list.getList().size() > 0){
+			for(int i=0; i < list.getList().size(); i++){
+				CreditLog creditLog = (CreditLog)list.getList().get(i);
+				CreditLogModel cLogModel = CreditLogModel.instance(creditLog);
+				User sellUser = creditLog.getCreditAssignment().getUser();
+				User buyUser = creditLog.getBuyUser();
+				CreditAssignment ca = creditLog.getCreditAssignment();
+				cLogModel.setSellUserName(sellUser.getUserName());
+				cLogModel.setBuyUserName(buyUser.getUserName());
+				cLogModel.setCaId(ca.getId());
+				cLogModel.setCaName(ca.getBorrow().getName());
+				cLogModel.setCaBorrowId(ca.getBorrow().getId());
+				cLogModel.setCaBorrowAddTime(ca.getBorrow().getAddTime());
+				cLogModel.setCaApr(ca.getBorrow().getApr());
+				cLogModel.setCreditStartPeriod(ca.getCreditStartPeriod());
+				cLogModel.setCreditEndPeriod(ca.getCreditEndPeriod());
+				modelList.add(cLogModel);
+			}
+		}
+		pageDataList.setList(modelList);
+		return pageDataList;
+	}
+	public List<CreditLogModel> getCreditLogListTwo(CreditLogModel model){
+		QueryParam param = QueryParam.getInstance();
+		searchParam(param, model);
+		param.addOrder(OrderType.DESC, "id");
+		List<CreditLog> list = creditLogDao.findByCriteria(param) ;
+		List<CreditLogModel> modelList = new ArrayList<CreditLogModel>();
+		if(list.size() > 0){
+			for(int i=0; i < list.size(); i++){
+				CreditLog creditLog = (CreditLog)list.get(i);
+				CreditLogModel cLogModel = CreditLogModel.instance(creditLog);
+				User sellUser = creditLog.getCreditAssignment().getUser();
+				User buyUser = creditLog.getBuyUser();
+				CreditAssignment ca = creditLog.getCreditAssignment();
+				cLogModel.setSellUserName(sellUser.getUserName());
+				cLogModel.setBuyUserName(buyUser.getUserName());
+				cLogModel.setCaId(ca.getId());
+				cLogModel.setCaName(ca.getBorrow().getName());
+				cLogModel.setCaBorrowId(ca.getBorrow().getId());
+				cLogModel.setCaBorrowAddTime(ca.getBorrow().getAddTime());
+				cLogModel.setCaApr(ca.getBorrow().getApr());
+				cLogModel.setCreditStartPeriod(ca.getCreditStartPeriod());
+				cLogModel.setCreditEndPeriod(ca.getCreditEndPeriod());
+				modelList.add(cLogModel);
+			}
+		}
+		return modelList;
+	}
+	private QueryParam searchParam(QueryParam param, CreditLogModel model) {
+		if(model != null){
+			if (model.getBuyUser() != null && model.getBuyUser().getUserId() > 0) {
+				param.addParam("buyUser.userId", model.getBuyUser().getUserId());
+			}
+			if (model.getCaId() > 0) {
+				param.addParam("creditAssignment.id", model.getCaId());
+			}
+			if (StringUtil.isNotBlank(model.getBuyUserName())){
+				param.addParam("buyUser.userName",  Operators.LIKE, model.getBuyUserName());
+			}
+			if (StringUtil.isNotBlank(model.getCaName())){
+				param.addParam("creditAssignment.borrow.name",  Operators.LIKE, model.getCaName());
+			}
+			if (StringUtil.isNotBlank(model.getStatus()) && !CreditLog.CRELOG_STATUS_ALL.equals(model.getStatus())){
+				param.addParam("status", model.getStatus());
+			}
+			Date d = DateUtil.getDayEndTime(System.currentTimeMillis()/1000);
+			Date start = null;
+			if (model.getTime() == 7) {
+			    start = DateUtil.getDayStartTime(DateUtil.rollDay(d, -7).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			} else if (model.getTime()>0 && model.getTime()<4){
+			    start = DateUtil.getDayStartTime(DateUtil.rollMon(d, -model.getTime()).getTime() / 1000);
+				param.addParam("addTime", Operators.GTE, start);
+				param.addParam("addTime", Operators.LTE, d);
+			}
+			if (StringUtil.isNotBlank(model.getStartTime())) {
+				//start = DateUtil.valueOf(model.getStartTime() + " 00:00:00");
+				start = DateUtil.valueOf(model.getStartTime());
+				param.addParam("addTime", Operators.GTE, start);
+			}
+			if (StringUtil.isNotBlank(model.getEndTime())) {
+				//Date end = DateUtil.valueOf(model.getEndTime() + " 23:59:59");
+				Date end = DateUtil.valueOf(model.getEndTime());
+				param.addParam("addTime", Operators.LTE, end);
+			}
+			param.addPage(model.getPage(), model.getSize());
+		}
+		return param;
+	}
+	
+	@Override
+	public double buyCreditMoneyTotal(User user, String status) {
+		
+		return creditLogDao.buyCreditMoneyTotal(user, status);
+	}
+	
+	@Override
+	public double buyCreditMoneyTotal(User user, String status, Date startTime,
+			Date endTime) {
+		return creditLogDao.buyCreditMoneyTotal(user, status, startTime,endTime);
+	}
+	
+	@Override
+	public double buyCreditMoneyTotal(User user, String status, Date endTime) {
+		// TODO Auto-generated method stub
+		return creditLogDao.buyCreditMoneyTotal(user, status, endTime);
+	}
+	
+	@Override
+	public int buyCreditCount(User user, String status) {
+		
+		return creditLogDao.buyCreditCount(user, status);
+	}
+	
+	@Override
+	public int buyCreditCount(User user, String status, Date startTime,
+			Date endTime) {
+		return creditLogDao.buyCreditCount(user, status, startTime, endTime);
+	}
+
+	@Override
+	public void creditReCall(CreditAssignment ca) {
+		if(Borrow.TYPE_MORTGAGE == ca.getBorrow().getType()){
+			if(ca.getCreditCopies() != ca.getSellCopies()){ // 确实没满 ，撤回
+				// 取得所有购买者
+				QueryParam param = QueryParam.getInstance() ;
+				param.addParam("creditAssignment", ca) ;
+				List<CreditLog> clList = this.creditLogDao.findByCriteria(param);
+				CreditWorker caworker = new CreditWorker(ca);
+				try{
+					caworker.creditReCall(clList);
+				}catch(Exception e){
+					e.printStackTrace();
+					//JSDBET-812 sgp 2015-3-14 start
+					throw new HandleException("债权撤回失败，异常信息："+e.getMessage()+e.getCause(), "债权撤回异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CREDIT, ErrorLogConstant.CODE_CREDIT_CANCLE_SYS, ca.getUser(), ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT, ca.getId(), 1);
+					//JSDBET-812 sgp 2015-3-14 end
+				}
+				ca.setStatus(CreditAssignment.CREDIT_REPEAL);
+				//JSDP-35 gjh 2015-4-30 start
+				creditAssignmentDao.update(ca) ;
+				// 发送通知
+				User user = ca.getUser();
+		        user.getUserId();
+				Global.setTransfer("creditAssignment", ca);
+				Global.setTransfer("user", user);
+				Global.setTransfer("borrow", ca.getBorrow());
+				BaseMsg msg = new BaseMsg(NoticeConstant.CREDIT_RECALL);
+				msg.doEvent();
+				/*AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifyFailExecuter");
+				succExecuter.execute(0, user);*/
+				// 给购买者发送通知 ======>已在worker中处理
+				/*for (CreditLog creditLog : clList) {
+					AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifyBuyFailExecuter");
+		            Global.setTransfer("creditLog", creditLog);
+		            Global.setTransfer("user", creditLog.getBuyUser());
+		            succBuyExecuter.execute(0, creditLog.getBuyUser());
+				}*/
+				//JSDP-35 gjh 2015-4-30 end
+			}
+		}
+	}
+
+	@Override
+	public int buyCreditCopiesCount(User user, String status) {
+		
+		return creditLogDao.buyCreditCopiesCount(user, status);	
+	}
+
+	@Override
+	public double calcProfitAndLoss(User user, String status) {
+		
+		return creditLogDao.calcProfitAndLoss(user, status);	
+	}
+	@Override
+	public CreditLog getById(long id) {
+		return creditLogDao.find(id);
+	}
+	
+	@Override
+	public void creditVerifyFullFail(CreditAssignment ca) {
+		//JSDBET-838 wcw 2015-3-20 start
+		try{
+			//JSDBET-838 wcw 2015-3-20 start
+			creditAssignmentDao.update(ca);
+			//JSDBET-838 wcw 2015-3-20 end
+			// 符合债权满标复审的条件
+			if (Borrow.TYPE_MORTGAGE == ca.getBorrow().getType() && ca.getSellCopies() == ca.getCreditCopies()) {
+				QueryParam param = QueryParam.getInstance();
+				param.addParam("creditAssignment", ca);
+				List<CreditLog> clList = this.creditLogDao.findByCriteria(param);
+				CreditWorker caworker = new CreditWorker(ca);
+				
+				caworker.creditFullVerifyFail(clList);
+				// 发送通知
+				User user = ca.getUser();
+				Global.setTransfer("creditAssignment", ca);
+				Global.setTransfer("user", user);
+				AbstractExecuter succExecuter = ExecuterHelper.doExecuter("creditFullVerifyFailExecuter");
+				succExecuter.execute(0, user);
+				// 给购买者发送通知
+				for (CreditLog creditLog : clList) {
+					AbstractExecuter succBuyExecuter = ExecuterHelper.doExecuter("creditFullVerifyBuyFailExecuter");
+		            Global.setTransfer("creditLog", creditLog);
+		            Global.setTransfer("user", creditLog.getBuyUser());
+		            succBuyExecuter.execute(0, creditLog.getBuyUser());
+				}
+			}
+		}catch(Exception e){
+			logger.info("债权复审不通过异常:"+e.getMessage());
+			//JSDBET-812 sgp 2015-3-14 start
+			throw new HandleException("债权复审不通过异常，异常信息："+e.getMessage()+e.getCause(), "债权复审不通过异常", ErrorLogConstant.LEVEL_SERIOUS, ErrorLogConstant.TYPE_CREDIT, ErrorLogConstant.CODE_CREDIT_RECHECKED_FAIL_SYS, ca.getUser(), ErrorLogConstant.MODULE_CREDIT_ASSIGNMENT, ca.getId(), 1);
+			//JSDBET-812 sgp 2015-3-14 end
+		}
+		//JSDBET-838 wcw 2015-3-20 end
+	}
+
+	@Override
+	public PageDataList<CreditLog> getBuyBorrow(long borrowid,int page,int size) {
+		return creditLogDao.getByBorrow(borrowid, page, size) ;
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.credit.service.CreditLogService#updateCL(com.ddtkj.p2psys.credit.domain.CreditLog)
+	 */
+	@Override
+	public void updateCL(CreditLog cl) {
+		this.creditLogDao.update(cl) ;
+	}
+	@Override
+	public List excelListCreditLog(CreditLogModel model) {
+		
+		return creditLogDao.excelListCreditLog(model);
+	}
+	
+	// 99 20150527 sxy
+	@Override
+	public PageDataList<CreditLog> getCreditInAssignmentListForSQL(CreditLogModel model,int page,int size) {
+		
+		return creditLogDao.getCreditInAssignmentListForSQL(model,page,size);
+	}
+	// 99 20150527 sxy
+	
+	
+	
+}

@@ -1,0 +1,16 @@
+<script src="${webroot}${theme_dir}/media/js/jquery.js"></script>
+<style>
+	.c_invest_li{color:#0697da;}
+</style>
+<dl class="c_aside_nav c_comm_question">   
+	<dd class="c_finance_helper">理财帮手</dd>
+	<dd <#if type=="faManageMoney">class="c_invest_this"</#if>><a href="faManageMoney.html" hidefocus>如何理财</a></dd>
+	<dd <#if type=="faborrowMoney">class="c_invest_this"</#if>><a href="faborrowMoney.html" hidefocus>如何借款</a></dd>
+	<dd <#if questionsList??>class="c_invest_this"</#if>><a href="faquestions.html" hidefocus>常见问题</a></dd>
+	<#if questionsList??>
+	<#list questionsList as question>
+		<dd><a <#if type==question.nid>class="c_invest_li"</#if> style="padding-left:28px;" href="faquestions.html?type=${question.nid}" hidefocus>${question.name}</a></dd>
+	</#list>
+	</#if>
+	<div class="c_clear"></div>
+</dl>

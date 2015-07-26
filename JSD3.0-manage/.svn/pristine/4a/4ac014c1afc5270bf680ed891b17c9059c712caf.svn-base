@@ -1,0 +1,72 @@
+package com.ddtkj.manage.action.subbranch;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.struts2.convention.annotation.Action;
+
+import com.ddtkj.p2psys.subbranch.domain.Branch;
+import com.ddtkj.p2psys.subbranch.domain.BranchMarketer;
+import com.ddtkj.p2psys.subbranch.model.BranchMarketerModel;
+import com.ddtkj.p2psys.subbranch.model.BranchModel;
+import com.ddtkj.p2psys.subbranch.service.BranchService;
+import com.ddtkj.p2psys.subbranch.service.MarketerBranchService;
+import com.ddtkj.p2psys.subbranch.service.MarketerBranchUnModelService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.ddtkj.p2psys.user.model.UserModel;
+import com.opensymphony.xwork2.ModelDriven;
+import com.rongdu.common.model.jpa.PageDataList;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.core.web.BaseAction;
+import com.rongdu.p2psys.user.service.UserService;
+
+/**
+ * @描述：市场专员管理
+ * @作者:xingjia@ddtkj.com
+ * @创建时间:  2015年4月21日 
+ */
+public class ManageInviterAction extends BaseAction<UserModel> implements ModelDriven<UserModel> {
+	
+	@Resource
+	private BranchService branchService;
+	@Resource
+	private UserService userService;
+	@Resource
+	private MarketerBranchService marketerBranchService;
+	@Resource
+	private MarketerBranchUnModelService marketerBranchUnModelService;
+	
+	private Map<String, Object> data;
+	private Map<String, Object> map = new HashMap<String, Object>();
+	
+	
+	/**
+	 * 邀请人查询展示页面
+	 * @return
+	 */
+	@Action("/modules/sub/invite/inviteManager")
+	public String inviteManager(){
+		return "inviteManager";
+	}
+	/**
+	 * 查询邀请人列表
+	 * @throws IOException 
+	 */
+	@Action("/modules/sub/invite/inviteList")
+	public void inviteList() throws IOException{
+		data = new HashMap<String, Object>();
+		PageDataList<BranchMarketerModel> inviteeList = marketerBranchService.invitePageDataList(model);
+		
+		
+		int totalPage = inviteeList.getPage().getTotal();// 总页数
+		data.put("total", totalPage);
+		data.put("rows", inviteeList.getList());
+		printJson(getStringOfJpaObj(data));
+	}
+
+
+}

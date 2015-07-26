@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>用户积分</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<#include "../../../include/resources.html">
+<script type="text/javascript">
+	var dataGrid;
+	$(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : '/modules/user/score/scoreDetailList.html',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			sortName : 'id',
+			sortOrder : 'desc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'id', title: '编号', width: 50,sortable:true},
+			{ field: 'userName', title: '用户名', width: 100},
+			{ field: 'scoreTypeName', title: '积分类型', width: 100},
+			{ field: 'score', title: '变动积分', width: 100},
+			{ field: 'validScore', title: '剩余有效积分', width: 100},
+			{ field: 'freezeScore', title: '冻结积分', width: 100},
+			{ field: 'addTime', title: '添加时间', width: 100,
+				formatter: function(value,row,index){
+					if (value){
+						return getLocalTime(value,4);
+					} else {
+						return "";
+					}
+				}
+			},
+			{field:'addIp', title:'添加IP',width: 80}
+			 ]],
+			onRowContextMenu : function(e, rowIndex, rowData) {
+				e.preventDefault();
+				$(this).datagrid('unselectAll').datagrid('uncheckAll');
+				$(this).datagrid('selectRow', rowIndex);
+				$('#menu').menu('show', {
+					left : e.pageX,
+					top : e.pageY
+				});
+			}
+		});
+	});
+</script>
+
+</head>
+<body style="padding:0 20px;" >
+	<div class="easyui-layout" data-options="fit : true,border : false">
+		<div data-options="region:'north',border:false,collapsible:false" id="searchBox">
+        	<h2 class="searchTitle">查询条件 <font color="#0587E7">（输入用户名查询用户信息）</font></h2>
+			<form id="searchForm">
+				<ul>
+            		<li>用户名：<input type="text" name="userName" autocomplete="off"/></li>
+            		<!-- <li>积分类型：<input type="text" name="scoreTypeName" autocomplete="off"></li>
+            		 -->
+            		<li><span>积分类型：</span>
+						<select name="scoreTypeName" id="vouchId">
+						<option value="">全部</option>
+						<#list list as item>
+							<option value="${item.name}">
+							${item.name}
+							</option>
+						</#list>
+						</select>
+					</li>
+			            		
+            		
+            		<li>开始时间
+            			<input type="text" class="dateInput w200 easyui-validatebox" name="startTime" id="startTime" />
+				     	&nbsp;
+				     	结束时间：<input type="text" class="dateInput w200 easyui-validatebox" name="endTime" id="endTime" />
+            		</li>
+            		<li><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.searchFun('#searchForm');">查询</a><a href="javascript:void(0);" class="searchBtn" onclick="$.fn.dataGridOptions.cleanFun('#searchForm');">清空</a></li>
+            	</ul>
+			</form>
+		</div>
+		<div data-options="region:'center'" style="margin-top:30px;padding-bottom:30px;">
+			<table id="dataGrid"></table>
+		</div>
+	</div>
+</body>
+</html>
+<script src="/plugins/laydate-v1.1/laydate.js"></script>
+<script src="/themes/theme_default/js/date2.js"></script>

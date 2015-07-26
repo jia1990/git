@@ -1,0 +1,201 @@
+package com.rongdu.p2psys.core.web.listener;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionBindingEvent;
+
+import org.apache.log4j.Logger;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import com.ddtkj.p2psys.account.service.AccountDrawCashService;
+import com.ddtkj.p2psys.account.service.AccountRechargeService;
+import com.ddtkj.p2psys.autotender.service.BorrowAutoTenderService;
+import com.ddtkj.p2psys.borrow.service.AutoBorrowService;
+import com.ddtkj.p2psys.borrow.service.BorrowTenderService;
+import com.ddtkj.p2psys.core.cache.GlobalCache;
+import com.ddtkj.p2psys.core.quartz.autoTender.AutoTenderJobQueue;
+import com.ddtkj.p2psys.core.quartz.creditAssignment.CreditAssignmentJobQueue;
+import com.ddtkj.p2psys.core.quartz.draw.DrawJobQueue;
+import com.ddtkj.p2psys.core.quartz.goods.GoodsJobQueue;
+import com.ddtkj.p2psys.core.quartz.openAccount.OpenAccountJobQueue;
+import com.ddtkj.p2psys.core.quartz.recharge.RechargeJobQueue;
+import com.ddtkj.p2psys.core.quartz.repay.RepayJobQueue;
+import com.ddtkj.p2psys.core.quartz.tender.TenderJobQueue;
+import com.ddtkj.p2psys.core.quartz.verifyFullBorrow.VerifyFullBorrowJobQueue;
+import com.ddtkj.p2psys.core.quartz.vip.VipJobQueue;
+import com.ddtkj.p2psys.credit.service.CreditLogService;
+import com.ddtkj.p2psys.goods.service.GoodsOrderService;
+import com.ddtkj.p2psys.member.service.MemberVipAwardService;
+import com.ddtkj.p2psys.member.service.MemberVipService;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.util.StringUtil;
+import com.rongdu.p2psys.borrow.service.BorrowService;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.constant.Constant;
+import com.rongdu.p2psys.core.domain.Site;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.model.SystemConfigModel;
+import com.rongdu.p2psys.core.model.Tree;
+import com.rongdu.p2psys.core.notice.email.EmailNoticeJobQueue;
+import com.rongdu.p2psys.core.notice.message.MessageNoticeJobQueue;
+import com.rongdu.p2psys.core.notice.sms.SmsNoticeJobQueue;
+import com.rongdu.p2psys.core.protocol.ProtocolHelper;
+import com.rongdu.p2psys.core.service.ArticleService;
+import com.rongdu.p2psys.core.service.NoticeService;
+import com.rongdu.p2psys.user.service.UserCacheService;
+/**
+ * @描述:前端监听
+ * @作者:xinggenwang@ddtkj.com
+ * @创建时间: 2014年12月26日
+ */
+public class WebConfigContextListener implements ServletContextListener,
+		HttpSessionAttributeListener {
+	private static Logger logger = Logger
+			.getLogger(WebConfigContextListener.class);
+	private Object lock = new Object();
+
+	@Override
+	public void contextDestroyed(ServletContextEvent event) {
+
+	}
+
+	@Override
+	public void contextInitialized(ServletContextEvent event) {
+
+		ServletContext context = event.getServletContext();
+		ApplicationContext ctx = WebApplicationContextUtils
+				.getRequiredWebApplicationContext(context);
+
+		NoticeService noticeService = (NoticeService) ctx
+				.getBean("noticeService");
+
+		ArticleService articleService = (ArticleService) ctx
+				.getBean("articleService");
+		Tree<Site> tree = articleService.getSiteTree();
+		context.setAttribute("tree", tree);
+		
+		//SiteService siteService = (SiteService) ctx.getBean("siteService");
+		
+		String adminurl = Global.getValue("adminurl");
+		
+		context.setAttribute("adminurl", adminurl);
+		
+		SystemConfigModel info = GlobalCache.getSystemConfigModel();
+		setWebConfig(context, info);
+
+		// 消息发送
+		SmsNoticeJobQueue.init(noticeService);
+		MessageNoticeJobQueue.init(noticeService);
+		EmailNoticeJobQueue.init(noticeService);
+		
+		
+		//队列初始化
+		AccountRechargeService rechargeService = (AccountRechargeService) ctx
+				.getBean("rechargeService");
+		UserCacheService userCacheService = (UserCacheService) ctx
+				.getBean("userCacheService");
+		BorrowService borrowService = (BorrowService) ctx
+				.getBean("borrowService");
+		AutoBorrowService autoBorrowService = (AutoBorrowService) ctx
+				.getBean("autoBorrowService");
+		BorrowAutoTenderService borrowAutoTenderService = (BorrowAutoTenderService) ctx
+				.getBean("borrowAutoTenderService");
+		BorrowTenderService borrowTenderService = (BorrowTenderService) ctx
+				.getBean("borrowTenderService");
+		MemberVipService memberVipService = (MemberVipService) ctx
+				.getBean("memberVipService");
+		MemberVipAwardService memberVipAwardService = (MemberVipAwardService) ctx
+				.getBean("memberVipAwardService");
+		CreditLogService creditLogService = (CreditLogService) ctx
+				.getBean("creditLogService");
+		GoodsOrderService goodsOrderService=(GoodsOrderService) ctx.getBean("goodsOrderSerive");
+		AccountDrawCashService accountDrawCashService=(AccountDrawCashService) ctx.getBean("accountDrawCashService");
+		//开户回调队列初始化
+		OpenAccountJobQueue.init(userCacheService);
+		//充值回调队列初始化
+		RechargeJobQueue.init(rechargeService);
+		//投标队列初始化
+		TenderJobQueue.init(borrowTenderService);
+		//满标复审队列初始化
+		VerifyFullBorrowJobQueue.init(autoBorrowService);
+		//复审标还款队列初始化
+		RepayJobQueue.init(autoBorrowService);
+		//自动投标队列初始化
+		AutoTenderJobQueue.init(borrowAutoTenderService);
+		//vip队列初始化
+		VipJobQueue.init(memberVipService, memberVipAwardService);
+		//债权队列初始化
+		CreditAssignmentJobQueue.init(creditLogService);
+		//分期宝队列初始化
+		GoodsJobQueue.init(goodsOrderService);;
+		//提现银行处理失败
+		DrawJobQueue.init(accountDrawCashService);
+		
+		// 初始化系统指定对象
+		ExecuterHelper.init();
+		// 初始化协议指定对象
+		ProtocolHelper.init();
+	}
+
+	private void setWebConfig(ServletContext context, SystemConfigModel info) {
+		String[] webinfo = Global.SYSTEMNAME;
+		for (String s : webinfo) {
+			context.setAttribute(s, info.getValue(s));
+			if (s.equals("theme_dir") && StringUtil.isBlank(info.getValue(s))) {
+				context.setAttribute(s, "/themes/soonmes_default");
+			}
+		}
+		context.setAttribute("webroot", context.getContextPath());
+	}
+
+	@Override
+	public void attributeAdded(HttpSessionBindingEvent event) {
+		User user = getSessionUser(event);
+		if (user != null) {
+			synchronized (lock) {
+				// 刷新登录时间
+				Global.SESSION_MAP.put(user.getUserName(),
+						System.currentTimeMillis());
+			}
+		}
+	}
+
+	@Override
+	public void attributeRemoved(HttpSessionBindingEvent event) {
+		User user = getSessionUser(event);
+		if (user != null) {
+			synchronized (lock) {
+				if (Global.SESSION_MAP.containsKey(user.getUserName())) {
+				}
+			}
+		}
+	}
+
+	@Override
+	public void attributeReplaced(HttpSessionBindingEvent event) {
+		User user = getSessionUser(event);
+		if (user == null) {
+			synchronized (lock) {
+				if (Global.SESSION_MAP.containsKey(event.getName())
+						&& event.getValue() == null) {
+					Global.SESSION_MAP.remove(event.getName());
+				}
+			}
+		}
+
+	}
+
+	public User getSessionUser(HttpSessionBindingEvent event) {
+		if (StringUtil.isNull(event.getName()).equals(Constant.SESSION_USER)) {
+			Object obj = event.getValue();
+			if (obj != null) {
+				return (User) obj;
+			}
+		}
+		return null;
+	}
+
+}

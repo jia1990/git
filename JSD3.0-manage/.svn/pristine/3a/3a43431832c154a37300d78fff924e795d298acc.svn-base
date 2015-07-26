@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>标信息</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+.datagrid-body a{cursor:pointer;color:#0B83CA}
+</style>
+<script type="text/javascript">
+    var dataGrid;
+   
+    $(function() {
+		dataGrid = $('#dataGrid').datagrid({
+			url : '/modules/redPackage/rpDetailManagePageList.html?userName=${userName!}'
+				+'&startTime=${startTime!}&endTime=${endTime!}&type=${type!}&typeConsume=${typeConsume!}',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			pageSize : 10,
+			pageNums :1,
+			pageList : [ 10, 20, 30, 40, 50 ],
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			singleSelect:true,
+			columns : [[ 			
+			{ field: 'userName', title: '用户名', width:80},
+			{ field: 'realName', title: '真实姓名', width: 80},
+			{ field: 'type', title: '红包类型', width: 100},
+			{ field: 'rpStaticRes', title: '红包描述', width: 120,formatter:function(value, row, index){
+				if(value=='static_rp_recommend'){
+					return "推荐好友";
+				}else if(value=='static_rp_identify'){
+					return "认证"
+				}else if(value=='static_rp_invited_first_invest'){
+					return "被推荐人首次投资";
+				}
+				return value;
+			}},
+			{ field: 'rpProMoney', title: '产生总额', width: 100,formatter:function(value, row, index){
+				
+				if(value=='null'){
+					return "0";
+				}
+				return value;
+			}},
+			{ field: 'rpUsedMoney', title: '消费总额', width: 100 ,formatter:function(value, row, index){
+				if(value=='null'){
+					return "0";
+				}
+				return value;
+			}},
+			{ field: 'addTime', title: '添加时间', width: 150,fixed:true,formatter: function(value,row,index){
+          	  return getLocalTime(value,4);
+          	} }
+			 ]],
+			 toolbar : '#toolbar',
+			 onLoadSuccess : function() {
+					$('#searchForm table').show();
+					parent.$.messager.progress('close');
+					$(this).datagrid('tooltip',['content']);
+			 }
+		});
+		
+	});
+    function exportExcel(){
+		var url = "/modules/redPackage/rpDetailExcel.html";
+		var sou = "?userName=${userName!}&startTime=${startTime!}&endTime=${endTime!}&type=${type!}&typeConsume=${typeConsume!}";
+		
+		window.location.href = url + sou;
+	}
+</script>
+</head>
+
+	<table id="dataGrid"></table>
+
+	<div id="toolbar" style="display: none;">
+		<@secAuthorizeUrl value='/redPackage/rpDetailExcelBtn.html'>
+		<a id="a" onclick="exportExcel();" href="javascript:void(0);" class="exportBtn">导出excel</a>
+		</@secAuthorizeUrl>	
+	</div>

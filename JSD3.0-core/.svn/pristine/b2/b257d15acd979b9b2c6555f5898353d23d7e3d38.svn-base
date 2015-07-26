@@ -1,0 +1,102 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.redpacket.worker;
+
+import java.util.Calendar;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+import com.ddtkj.p2psys.account.domain.Account;
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityConsumeDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityConsume;
+import com.ddtkj.p2psys.redpacket.domain.RpActivityProduce;
+import com.rongdu.p2psys.core.Global;
+import com.rongdu.p2psys.core.executer.AbstractExecuter;
+import com.rongdu.p2psys.core.executer.ExecuterHelper;
+import com.rongdu.p2psys.core.rule.RpActivityProduceAndConsumeRuleCheck;
+import com.rongdu.p2psys.core.util.BeanUtil;
+
+/**
+ * @描述：活动红包的消费（端午节）
+ * @作者：wangchangwei@ddtkj.com  JSDP-203
+ * @创建时间：2015年4月14日 
+ */
+public class RpActivityRpMoneyIndianaJonesConsumeWorker extends RpActivityBaseWorker{
+	
+	public RpActivityRpMoneyIndianaJonesConsumeWorker(Account account,BorrowTender tender,double consumeMoney){
+		super(account,tender, consumeMoney);
+	}
+
+	@Override
+	public void autoHandld() {
+		RpActivityConsumeDao rpActivityConsumeDao = (RpActivityConsumeDao) BeanUtil.getBean("rpActivityConsumeDao");
+		
+		double validAccount = tender.getAccount();
+		RpActivityProduceAndConsumeRuleCheck redPacketRule = (RpActivityProduceAndConsumeRuleCheck) Global.getRuleCheck(RpActivityProduce.RP_ACTIVITY_RPODUCE_RULE);
+		//消费规则没有的话，按照正常使用
+		String activityConsume = redPacketRule.getIndianaJones().getActivity_consume();
+		
+		double rpActivityUseableMoney = 0;
+		if(null != activityConsume){
+			
+			ScriptEngine se = new ScriptEngineManager().getEngineByName("JavaScript");
+			String str = consumeMoney + activityConsume.trim();
+			double awardAmountI = 0;
+			try {
+				if(tender.getBorrow().getBorrowTimeType()==0){
+					awardAmountI = ((Double) se.eval(str)) * (tender.getBorrow().getTimeLimit());
+				}else if(tender.getBorrow().getBorrowTimeType()==1){
+					awardAmountI = ((Double) se.eval(str)) * (tender.getBorrow().getTimeLimit()/30);
+				}
+				if(awardAmountI > 0){
+					rpActivityUseableMoney = awardAmountI;
+				}
+			} catch (ScriptException e) {
+				e.printStackTrace();
+			}
+			
+			
+		}
+
+		//按照消费规则计算可以消费的金额
+		double unFreezeActivity = 0.0;//此次需要解冻红包金额
+			
+		if(rpActivityUseableMoney > 0){
+			if(rpActivityUseableMoney >= validAccount){
+				unFreezeActivity = validAccount;
+			}else if(rpActivityUseableMoney < validAccount){
+				unFreezeActivity = rpActivityUseableMoney;
+			}
+		}
+		if(unFreezeActivity > 0){
+			
+			RpActivityConsume rpConsume = new RpActivityConsume();
+			rpConsume.setActivityType(RpActivity.ACTIVITY_DRAGON);
+			rpConsume.setAddTime(Calendar.getInstance().getTime());
+			rpConsume.setConsumeMoney(unFreezeActivity);
+			rpConsume.setConsumeStatus(RpActivityConsume.RP_CONSUME_STATUS_SUC);
+			rpConsume.setConsumeType("vt");
+			rpConsume.setConsumeUser(tender.getUser());
+			rpConsume.setRemark(RpActivity.ACTIVITY_DRAGON+":"+tender.getBorrow().getId()+"金额"+unFreezeActivity);
+			rpActivityConsumeDao.save(rpConsume);
+			
+			//记录活动红包的消费资金日志，第三方不需要处理
+			Global.setTransfer("user", tender.getUser());
+			Global.setTransfer("rpMoney", unFreezeActivity);
+			
+			map.put("rechargeMoney", unFreezeActivity);
+			map.put("logType", "indianaJonesConsume");
+			AbstractExecuter executer = ExecuterHelper.doExecuter("rpActivityConsumeInvesterExecuter");
+			executer.execute(map, tender.getUser());
+		}
+
+
+	}
+	
+
+}

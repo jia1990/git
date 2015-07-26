@@ -1,0 +1,67 @@
+/**
+ * 
+ */
+package com.ddtkj.p2psys.question.service.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Repository;
+
+import com.ddtkj.p2psys.borrow.domain.BorrowTender;
+import com.ddtkj.p2psys.question.dao.QuestionAnswerDao;
+import com.ddtkj.p2psys.question.domain.QuestionAnswer;
+import com.ddtkj.p2psys.question.service.QuestionAnswerService;
+import com.ddtkj.p2psys.redpacket.dao.RpActivityDao;
+import com.ddtkj.p2psys.redpacket.domain.RpActivity;
+import com.ddtkj.p2psys.redpacket.worker.RpActivityHelper;
+import com.ddtkj.p2psys.redpacket.worker.RpActivityWorker;
+import com.ddtkj.p2psys.user.domain.User;
+import com.rongdu.common.model.jpa.QueryParam;
+import com.rongdu.p2psys.core.Global;
+
+/**
+ * @描述：用户答案业务层实现
+ * @作者：guojunhui@ddtkj.com
+ * @创建时间：2015-7-22 
+ */
+@Repository("QuestionAnawerService")
+public class QuestionAnswerServiceImpl implements QuestionAnswerService{
+
+	@Resource
+	private QuestionAnswerDao questionAnawerDao;
+	@Resource
+	private RpActivityDao rpActivityDao;
+	
+	@Override
+	public List<QuestionAnswer> getListByParam(QueryParam param) {
+		return questionAnawerDao.findByCriteria(param);
+	}
+	
+	@Override
+	public QuestionAnswer save(QuestionAnswer answer) {
+		answer.setAddTime(new Date());
+		answer.setAddIp(Global.getIP());
+		return questionAnawerDao.save(answer);
+	}
+	
+	@Override
+	public QuestionAnswer find(long id) {
+		
+		return questionAnawerDao.find(id);
+	}
+	/* (non-Javadoc)
+	 * @see com.ddtkj.p2psys.question.service.QuestionAnswerService#answerRewardHandle(com.ddtkj.p2psys.user.domain.User)
+	 */
+	@Override
+	public void answerRewardHandle(User user) {
+		
+		RpActivity rpActivityQuesetions = rpActivityDao.getActivitingList(RpActivity.ACTIVITY_QUESTIONS);
+		BorrowTender tender = new BorrowTender();
+		tender.setUser(user);
+		RpActivityWorker rpActivityWorker = RpActivityHelper.getWorker(rpActivityQuesetions,tender);
+		rpActivityWorker.autoHandld();
+	}
+}

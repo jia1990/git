@@ -1,0 +1,255 @@
+
+package com.ddtkj.p2psys.score.domain;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * @描述: 抽奖规则表
+ * @作者:shenguoping@ddtkj.com
+ * @创建时间:  2014-12-30   
+ */
+@Entity
+@Table(name = "t_jsd_score_rule_award")
+public class ScoreRuleAward implements Serializable {
+
+	private static final long serialVersionUID = -3378231215092008446L;
+	
+	/** 抽奖规则启用状态 **/
+	public static final String RULE_AWARD_STATUS_ENABLE = "11";
+	public static final String RULE_AWARD_STATUS_DISABLE = "22";
+	
+	/** 抽奖活动类型  积分抽奖 */
+	public static final String ACTIVITY_TYPE_SCOREAWARD = "1";
+	/** 抽奖活动类型  砸金蛋 */
+	public static final String ACTIVITY_TYPE_GOLDHAMMER = "2";
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private long id;
+	
+	private String name;				//规则名
+	private String status;				//状态	(22不启用, 11启用)
+	private Date startDate;				//抽奖开始时间
+	private Date endDate;			    //抽奖结束时间	
+	private int awardType;				//抽奖类型(1按积分抽奖, 2按次数抽奖, 3按倍率抽奖)	
+	private int timeLimit;  			//抽奖次数限制(0不限制, 1限制用户总次数, 2限制当天总次数)	
+	private int maxTimes;  				//最多抽奖次数
+	private int basePoint;  			//基准积分
+	private int moneyLimit;  			//金额限制	
+	private double totalMoney;  		//总金额	
+	private double bestowMoney;  		//领用金额	
+	private int isAbsolute;  			//是否100%中奖  (0否, 1是)	
+	private int msgType;  				//中奖提醒 (0:不需要, 1:站内信, 2:短信, 3:邮件)
+	private String context;  			//发送中奖提醒信息内容模板
+	private String subject;  			//发送中奖提醒信息内容模板标题	
+	private String content;  			//规则描述	
+	private int backType;				//返现方式(1自动返现, 2人工返现)
+	private Date addTime;				//添加时间
+	private String addIp;				//添加IP	
+	private Date updateTime;			//更新时间
+	private String updateIp;			//更新IP	
+	
+	private String activityType;		//活动类型（每个活动类型启用的抽奖规则有且只有1条）
+	
+	public ScoreRuleAward() {
+		super();
+	}
+
+	public long getId() {
+		return id;
+	}
+	
+	public void setId(long id) {
+		this.id = id;
+	}
+	
+	public String getName() {
+		return name;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
+	}
+	
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public Date getStartDate() {
+		return startDate;
+	}
+	
+	public void setStartDate(Date startDate) {
+		this.startDate = startDate;
+	}
+	
+	public Date getEndDate() {
+		return endDate;
+	}
+	
+	public void setEndDate(Date endDate) {
+		this.endDate = endDate;
+	}
+	
+	public int getAwardType() {
+		return awardType;
+	}
+	
+	public void setAwardType(int awardType) {
+		this.awardType = awardType;
+	}
+	
+	public int getTimeLimit() {
+		return timeLimit;
+	}
+	
+	public void setTimeLimit(int timeLimit) {
+		this.timeLimit = timeLimit;
+	}
+
+	public int getMaxTimes() {
+		return maxTimes;
+	}
+
+	public void setMaxTimes(int maxTimes) {
+		this.maxTimes = maxTimes;
+	}
+
+	public int getBasePoint() {
+		return basePoint;
+	}
+	
+	public void setBasePoint(int basePoint) {
+		this.basePoint = basePoint;
+	}
+	
+	public int getMoneyLimit() {
+		return moneyLimit;
+	}
+	
+	public void setMoneyLimit(int moneyLimit) {
+		this.moneyLimit = moneyLimit;
+	}
+	
+	public double getTotalMoney() {
+		return totalMoney;
+	}
+	
+	public void setTotalMoney(double totalMoney) {
+		this.totalMoney = totalMoney;
+	}
+	
+	public double getBestowMoney() {
+		return bestowMoney;
+	}
+	
+	public void setBestowMoney(double bestowMoney) {
+		this.bestowMoney = bestowMoney;
+	}
+	
+	public int getIsAbsolute() {
+		return isAbsolute;
+	}
+	
+	public void setIsAbsolute(int isAbsolute) {
+		this.isAbsolute = isAbsolute;
+	}
+	
+	public int getMsgType() {
+		return msgType;
+	}
+
+	public void setMsgType(int msgType) {
+		this.msgType = msgType;
+	}
+
+	public String getContext() {
+		return context;
+	}
+	
+	public void setContext(String context) {
+		this.context = context;
+	}
+
+	public String getSubject() {
+		return subject;
+	}
+	
+	public void setSubject(String subject) {
+		this.subject = subject;
+	}
+	
+	public String getContent() {
+		return content;
+	}
+
+	public void setContent(String content) {
+		this.content = content;
+	}
+	
+	public int getBackType() {
+		return backType;
+	}
+	
+	public void setBackType(int backType) {
+		this.backType = backType;
+	}
+
+	public Date getAddTime() {
+		return addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public String getAddIp() {
+		return addIp;
+	}
+
+	public void setAddIp(String addIp) {
+		this.addIp = addIp;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public String getUpdateIp() {
+		return updateIp;
+	}
+
+	public void setUpdateIp(String updateIp) {
+		this.updateIp = updateIp;
+	}
+
+	/**
+	 * @return the activityType
+	 */
+	public String getActivityType() {
+		return activityType;
+	}
+
+	/**
+	 * @param activityType the activityType to set
+	 */
+	public void setActivityType(String activityType) {
+		this.activityType = activityType;
+	}
+	
+}
